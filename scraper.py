@@ -1,10 +1,11 @@
 import feedparser
-from datetime import datetime
+from datetime import datetime, timedelta
+import time
 import pytz
 import json
 import random
 
-# 국내외 주요 RSS 피드 소스 리스트
+# RSS 피드 소스 리스트
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"}
@@ -46,7 +47,6 @@ GLOBAL_COORDS = {
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    # 제외 대상 (경제, 주가, 연예, 사후 정치 공방 등)
     exclude_keywords = [
         '엔비디아', '코스피', '외국인', '매도', '하락', '상승', '주가', '증시', '최고경영자', '사임', '합병', '투자',
         '특검', '국정조사', '재판', '공판', '선고', '항소', '상고', '여야', '정치권', '규탄', '공방', 
@@ -55,7 +55,6 @@ def categorize_incident(title, content):
     if any(kw in text for kw in exclude_keywords):
         return None 
 
-    # 1. 해외 분쟁·테러 (우크라이나, 러시아, 이란, 전쟁, 공습, 미사일 공격, 테러 등)
     global_conflict_keywords = [
         '우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동 전쟁', 
         '공습', '미사일 공격', '폭격', '전쟁', '테러', '무력 충돌', '군사 작전', '드론 공격'
@@ -63,22 +62,18 @@ def categorize_incident(title, content):
     if any(kw in text for kw in global_conflict_keywords):
         return "해외 분쟁·테러"
 
-    # 2. 국가 안보 (국내 군사적 위기, 북한 도발 등)
     security_incidents = ['계엄 선포', '비상계엄', '군 병력', '북한 도발', '미사일 발사', '영공 침범', '국방 비상']
     if any(kw in text for kw in security_incidents):
         return "국가 안보"
 
-    # 3. 강력·치안
     crime_keywords = ['살인', '강도', '인질', '폭행', '흉기 난동', '마약', '긴급 체포', '수배', '112 출동', '경찰 출동', '구속영장', '투신']
     if any(kw in text for kw in crime_keywords):
         return "강력·치안"
 
-    # 4. 사이버·금융
     cyber_keywords = ['해킹', '랜섬웨어', '개인정보 유출', '전산 장애', '서버 다운', '금융 사고', '보안 취약점', '스캠 피해']
     if any(kw in text for kw in cyber_keywords):
         return "사이버·금융"
 
-    # 5. 재난·안전
     disaster_keywords = ['화재', '폭발', '붕괴', '지진', '홍수', '산사태', '침수', '119 출동', '구조', '교통 통제', '가스 유출', '정전 사고', '전복']
     if any(kw in text for kw in disaster_keywords):
         return "재난·안전"
@@ -86,12 +81,10 @@ def categorize_incident(title, content):
     return None
 
 def extract_location(text):
-    # 1. 해외 분쟁 지역 키워드 매칭 우선 검사
     for keyword, info in GLOBAL_COORDS.items():
         if keyword in text:
             return info["label"], info["lat"], info["lng"]
 
-    # 2. 국내 지역 매칭 검사
     for sido, s_data in REGION_COORDS.items():
         if sido in text:
             for sigungu, g_data in s_data["sigungu"].items():
@@ -107,16 +100,24 @@ def extract_location(text):
 def scrape_news():
     kst = pytz.timezone('Asia/Seoul')
     now = datetime.now(kst)
+    five_days_ago = now - timedelta(days=5)  # 5일 전 시점 계산
     collected_items = []
     
     item_id = int(now.timestamp())
 
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
-        for entry in parsed.entries[:25]:
+        for entry in parsed.entries[:40]:  # 탐색 범위를 40개로 상향
             title = entry.get("title", "")
             summary = entry.get("summary", title)
             link = entry.get("link", "")
+            
+            # 5일 이내 기사인지 날짜 검증
+            published_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+            if published_parsed:
+                pub_dt = datetime.fromtimestamp(time.mktime(published_parsed), kst)
+                if pub_dt < five_days_ago:
+                    continue  # 5일이 지난 기사는 수집 대상에서 제외
             
             full_text = title + " " + summary
             
@@ -126,7 +127,7 @@ def scrape_news():
                 
             location_str, lat, lng = extract_location(full_text)
             if not location_str:
-                continue  # 지역 정보가 명확히 매칭되지 않으면 제외
+                continue
             
             lat += (random.random() - 0.5) * 0.01
             lng += (random.random() - 0.5) * 0.01
@@ -140,7 +141,7 @@ def scrape_news():
                 "location": location_str,
                 "lat": round(lat, 4),
                 "lng": round(lng, 4),
-                "time": "방금 전",
+                "time": "최근 5일 이내",
                 "source": feed_info["source"],
                 "link": link
             }
@@ -153,4 +154,4 @@ if __name__ == "__main__":
     data = scrape_news()
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped and filtered {len(data)} items into news.json")
+    print(f"Successfully scraped and filtered {len(data)} items within 5 days into news.json")
