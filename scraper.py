@@ -131,11 +131,16 @@ CONFLICT_KEYWORDS = [
     'hostage', 'terrorist', 'terrorism', 'assassination', 'clash', 'artillery', 'defense'
 ]
 
+WEEKDAYS_KR = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
+
+def format_date_with_weekday(dt):
+    weekday_str = WEEKDAYS_KR[dt.weekday()]
+    return f"{dt.strftime('%Y.%m.%d')} ({weekday_str})"
+
 def calculate_priority_score(title, content, category):
     text = (title + " " + content).lower()
-    score = 10  # 기본 점수
+    score = 10
 
-    # 1. 카테고리별 가중치 (해외 분쟁·테러 및 국가 안보 최우선)
     if category == "해외 분쟁·테러":
         score += 50
     elif category == "국가 안보":
@@ -145,14 +150,12 @@ def calculate_priority_score(title, content, category):
     elif category == "재난·안전":
         score += 25
 
-    # 2. 긴급 군사 충돌 키워드 가산점 (공습, 미사일, 전쟁, 핵 등)
     critical_terms = ['공습', '미사일', '폭격', '전쟁', '핵무기', 'strike', 'missile', 'war', 'invasion']
     for term in critical_terms:
         if term in text:
             score += 20
             break
 
-    # 3. 주요 국제 분쟁 국가 언급 가산점
     major_hotspots = ['우크라이나', '러시아', '이란', '이스라엘', '중동', '대만', '북한']
     for spot in major_hotspots:
         if spot in text:
@@ -220,6 +223,7 @@ def extract_location(text):
 def scrape_telegram_channel(channel_info):
     items = []
     url = channel_info["url"]
+    kst = pytz.timezone('Asia/Seoul')
     
     try:
         req = urllib.request.Request(
@@ -262,6 +266,8 @@ def scrape_telegram_channel(channel_info):
                 location_str, lat, lng = extract_location(translated_text)
                 real_source_name = extract_domain_source(target_link)
                 priority = calculate_priority_score(title, translated_text, category)
+                
+                date_str = format_date_with_weekday(datetime.now(kst))
 
                 items.append({
                     "title": title,
@@ -271,7 +277,7 @@ def scrape_telegram_channel(channel_info):
                     "lat": lat,
                     "lng": lng,
                     "category": category,
-                    "time": "최근 5일 이내",
+                    "time": date_str,
                     "source": real_source_name,
                     "link": target_link,
                     "priority": priority
@@ -296,11 +302,14 @@ def scrape_news():
             summary = entry.get("summary", title)
             link = entry.get("link", "")
             
+            pub_dt = now
             published_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
             if published_parsed:
                 pub_dt = datetime.fromtimestamp(time.mktime(published_parsed), kst)
                 if pub_dt < five_days_ago:
                     continue
+            
+            date_str = format_date_with_weekday(pub_dt)
             
             full_text = title + " " + summary
             category = categorize_incident(title, summary)
@@ -322,7 +331,7 @@ def scrape_news():
                 "location": location_str,
                 "lat": round(lat, 4),
                 "lng": round(lng, 4),
-                "time": "최근 5일 이내",
+                "time": date_str,
                 "source": feed_info["source"],
                 "link": link,
                 "priority": priority
@@ -338,7 +347,6 @@ def scrape_news():
             collected_items.append(item)
             item_id += 1
 
-    # 중요도 점수(priority)가 높은 순서대로 전체 정렬
     collected_items.sort(key=lambda x: x["priority"], reverse=True)
 
     return collected_items
