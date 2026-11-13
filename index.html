@@ -62,8 +62,8 @@
                 <i class="fa-solid fa-bullhorn"></i> 실시간 제보하기
             </button>
             <div class="h-6 w-px bg-slate-800"></div>
-            <button onclick="addNewAlertSimulation()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs md:text-sm font-medium px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2">
-                <i class="fa-solid fa-bolt text-amber-400 animate-pulse"></i> 새 속보 시뮬레이션
+            <button onclick="loadIncidentsFromJSON()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs md:text-sm font-medium px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2">
+                <i class="fa-solid fa-rotate text-emerald-400"></i> 뉴스 새로고침
             </button>
         </div>
     </header>
@@ -79,7 +79,7 @@
                     <span class="font-semibold text-slate-300 flex items-center gap-1">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 지역 맞춤 필터 (동 단위)
                     </span>
-                    <button onclick="refreshNewsFeed()" class="hover:text-white flex items-center gap-1 transition text-slate-300"><i class="fa-solid fa-rotate text-red-500"></i> 새로고침</button>
+                    <button onclick="refreshNewsFeed()" class="hover:text-white flex items-center gap-1 transition text-slate-300"><i class="fa-solid fa-rotate text-red-500"></i> 초기화</button>
                 </div>
                 <!-- 3단계 동(洞) 필터 선택 바 -->
                 <div class="grid grid-cols-3 gap-1.5">
@@ -243,96 +243,60 @@
             }
         };
 
-        let newsData = [
-            {
-                id: 1,
-                category: "국가 안보",
-                title: "[합참] 동해상 북한 단거리 탄도미사일(SRBM) 발사 포착",
-                summary: "합동참모본부는 북한이 오늘 아침 동해상으로 미상 단거리 탄도미사일 수 발을 발사했다고 밝혔습니다. 한미 정보당국은 정밀 분석 중입니다.",
-                content: "합동참모본부는 오늘 오전 평양 일대에서 동해상으로 발사된 단거리 탄도미사일(SRBM) 추정 발사체를 포착했다고 발표했습니다. 비행거리 및 고도 등 제원을 정밀 분석 중이며, 우리 군은 감시 및 경계를 강화한 상태에서 미국·일본 당국과 실시간 공조 정보를 긴밀히 공유하고 있습니다.",
-                sido: "강원특별자치도",
-                sigungu: "춘천시",
-                dong: "온의동",
-                lat: 37.8813,
-                lng: 127.7298,
-                time: "3분 전",
-                source: "군사·안보 브리핑",
-                type: "news"
-            },
-            {
-                id: 2,
-                category: "국가 안보",
-                title: "서해 NLL 인근 백령도·연평도 대남 GPS 전파 교란 감지",
-                summary: "국방부는 북측 지역에서 서해 NLL 일대로 GPS 전파 교란 신호가 탐지되어 조업 중인 어선과 인근 선박들이 주의를 기울이고 있다고 전했습니다.",
-                content: "군 당국에 따르면 오늘 서해 북방한계선(NLL) 인근 백령도 및 연평도 일대에서 북한 측으로부터 발신된 것으로 추정되는 GPS 전파 교란 시도가 포착되었습니다. 해경과 해군이 관내 조업 어선들의 항법 장치 이상 여부를 실시간 모니터링 중입니다.",
-                sido: "인천광역시",
-                sigungu: "중구",
-                dong: "운서동",
-                lat: 37.4692,
-                lng: 126.4505,
-                time: "12분 전",
-                source: "국방부 상황실",
-                type: "news"
-            },
-            {
-                id: 3,
-                category: "강력·치안",
-                title: "서울 강남구 역삼동 상가 건물 화재 및 일대 교통 통제",
-                summary: "역삼동 테헤란로 인근 5층 상가 건물 3층에서 화재가 발생해 소방서 대응 1단계를 발령하고 진화 작업 중입니다.",
-                content: "오늘 오후 서울 강남구 역삼동 테헤란로 이면도로의 5층 상가 건물에서 원인을 알 수 없는 화재가 발생했습니다. 소방대원들이 출동해 인명 수색 및 진화 작업을 벌이고 있으며, 주변 교통이 전면 통제되어 우회가 필요합니다.",
-                sido: "서울특별시",
-                sigungu: "강남구",
-                dong: "역삼동",
-                lat: 37.5006,
-                lng: 127.0364,
-                time: "25분 전",
-                source: "소방재난본부",
-                type: "news"
-            },
-            {
-                id: 4,
-                category: "사이버·금융",
-                title: "성남시 분당구 판교 테크노밸리 랜섬웨어 피해 주의보",
-                summary: "판교 IT 기업 밀집 지역 내 일부 중소기업 서버에서 신종 랜섬웨어 감염 정황이 포착되어 한국인터넷진흥원(KISA)이 조사에 착수했습니다.",
-                content: "판교 테크노밸리 내 소프트웨어 개발사들을 타깃으로 한 피싱 메일 유포 및 랜섬웨어 감염 신고가 접수되었습니다. KISA와 경찰청 사이버수사대가 피해 확산을 막기 위해 긴급 보안 점검 및 백업 권고를 내렸습니다.",
-                sido: "경기도",
-                sigungu: "성남시 분당구",
-                dong: "삼평동",
-                lat: 37.4005,
-                lng: 127.1105,
-                time: "40분 전",
-                source: "KISA 보안경보",
-                type: "news"
-            },
-            {
-                id: 5,
-                category: "실시간 제보",
-                title: "[시민제보] 여의도 한강공원 인근 대규모 도로 침수 우려",
-                summary: "여의도동 마포대교 남단 하부 도로 일부가 배수구 막힘으로 인해 침수되고 있으니 차량 운전자분들께서는 주의바랍니다.",
-                content: "시민 제보자가 현장에서 직접 촬영한 제보입니다. 갑작스러운 집중 호우로 인해 배수구가 원활하게 작동하지 않아 마포대교 남단 진입로 부근에 물이 차오르고 있습니다.",
-                sido: "서울특별시",
-                sigungu: "영등포구",
-                dong: "여의도동",
-                lat: 37.5283,
-                lng: 126.9328,
-                time: "5분 전",
-                source: "시민 직접 제보",
-                type: "user_report",
-                tag: "도로 통제·우회 필요",
-                mediaType: "image",
-                mediaUrl: "https://images.unsplash.com/photo-1514692327993-9d22fc099b7e?auto=format&fit=crop&w=800&q=80"
-            }
-        ];
-
+        // 외부 JSON 파일에서 실시간 데이터를 로드하도록 변경
+        let newsData = [];
         let currentCategory = 'all';
         let selectedNewsId = 1;
         let map, markersLayer;
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
+            loadIncidentsFromJSON();
+        });
+
+        // news.json 데이터를 불러오는 함수
+        async function loadIncidentsFromJSON() {
+            try {
+                const response = await fetch('news.json?t=' + Date.now());
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        newsData = data;
+                    }
+                }
+            } catch (error) {
+                console.log("news.json을 불러오지 못했거나 파일이 없습니다. 기본 데이터를 유지합니다.");
+            }
+
+            // 데이터가 비어있을 경우를 대비한 기본 폴백 데이터 (초기 구동용)
+            if (newsData.length === 0) {
+                newsData = [
+                    {
+                        id: 1,
+                        category: "국가 안보",
+                        title: "[안내] 실시간 자동 수집 대기 중",
+                        summary: "GitHub Actions 및 파이썬 수집기를 통해 국내외 실시간 뉴스가 이 곳에 자동 반영됩니다.",
+                        content: "파이썬 크롤링 및 API 연동 스크립트가 실행되면 최신 뉴스 및 외신 번역 데이터가 news.json을 통해 실시간으로 갱신됩니다.",
+                        sido: "서울특별시",
+                        sigungu: "강남구",
+                        dong: "역삼동",
+                        lat: 37.5006,
+                        lng: 127.0364,
+                        time: "방금 전",
+                        source: "시스템 안내",
+                        type: "news"
+                    }
+                ];
+            }
+
+            if (selectedNewsId && !newsData.some(n => n.id === selectedNewsId)) {
+                selectedNewsId = newsData[0].id;
+            }
+
             renderNewsList();
             renderDetailView(selectedNewsId);
-        });
+            updateMapMarkers();
+        }
 
         function initMap() {
             map = L.map('map').setView([37.5665, 126.9780], 11);
@@ -346,6 +310,7 @@
         }
 
         function updateMapMarkers(filteredList) {
+            if (!markersLayer) return;
             markersLayer.clearLayers();
             const listToMap = filteredList || newsData;
 
@@ -459,6 +424,14 @@
                     ${news.tag ? `
                         <div class="inline-block bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold px-3 py-1 rounded-full">
                             <i class="fa-solid fa-triangle-exclamation"></i> ${news.tag}
+                        </div>
+                    ` : ''}
+
+                    ${news.link ? `
+                        <div class="pt-1">
+                            <a href="${news.link}" target="_blank" class="inline-flex items-center gap-2 text-xs text-blue-400 hover:text-blue-300 bg-blue-950/30 border border-blue-900/50 px-3 py-1.5 rounded-lg transition">
+                                <i class="fa-solid fa-external-link-alt"></i> 원문 기사 보기
+                            </a>
                         </div>
                     ` : ''}
 
@@ -600,7 +573,7 @@
             }
 
             const newReport = {
-                id: newsData.length + 1,
+                id: Date.now(),
                 category: '실시간 제보',
                 title: `[시민제보] ${title}`,
                 summary: content || title,
@@ -620,32 +593,9 @@
             newsData.unshift(newReport);
             closeReportModal();
             selectNews(newReport.id);
+            renderNewsList();
+            updateMapMarkers();
             alert('성공적으로 제보가 등록되었습니다!');
-        }
-
-        function addNewAlertSimulation() {
-            const simulated = [
-                {
-                    id: newsData.length + 1,
-                    category: '국가 안보',
-                    title: '[긴급] 한미 연합 지휘소 연습(CPX) 평택 험프리스 기지서 돌입',
-                    summary: '한미 양국 군이 연합 방위태세 확립을 위한 하반기 전술 토의 및 지휘소 연습에 돌입했습니다.',
-                    content: '한미 연합사령부는 오늘부터 평택 캠프 험프리스 전시지휘소에서 한반도 안보 정세 대응을 위한 연합 연습을 시작했다고 밝혔습니다.',
-                    sido: '경기도',
-                    sigungu: '평택시',
-                    dong: '팽성읍',
-                    lat: 36.9556,
-                    lng: 127.0314,
-                    time: '방금 전',
-                    source: '합참 공보실',
-                    type: 'news'
-                }
-            ];
-
-            const item = simulated[0];
-            newsData.unshift(item);
-            selectNews(item.id);
-            alert('새로운 속보가 실시간 수신되었습니다!');
         }
     </script>
 </body>
