@@ -77,14 +77,12 @@
         </div>
         
         <div class="flex items-center space-x-3">
-            <!-- 글씨 크기 조절 버튼 그룹 -->
             <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-0.5">
                 <button onclick="adjustFontSize(-1)" title="글씨 작게" class="px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A-</button>
                 <span id="fontSizeIndicator" class="px-2 text-xs font-mono text-slate-500 dark:text-slate-400">100%</span>
                 <button onclick="adjustFontSize(1)" title="글씨 크게" class="px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A+</button>
             </div>
 
-            <!-- 다크/라이트 테마 전환 버튼 -->
             <button onclick="toggleTheme()" id="themeToggleBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-yellow-400 text-xs font-medium px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-2" title="테마 전환">
                 <i id="themeIcon" class="fa-solid fa-moon"></i> <span id="themeText">다크모드</span>
             </button>
@@ -218,6 +216,7 @@
         let newsData = [];
         let currentCategory = 'all';
         let currentRegion = 'all';
+        let selectedHotspotRegion = null; // 범죄 다발 지역에서 선택된 특정 지역 필터용
         let selectedNewsId = null;
         let map, markersLayer;
         let currentFontSizeLevel = 1;
@@ -317,6 +316,14 @@
                 renderDetailView(selectedNewsId);
             }
             updateMapMarkers();
+
+            // 새로고침 시 지도도 제일 상단 기사 위치로 이동
+            if (isManualRefresh && filtered.length > 0 && map) {
+                const topNews = filtered[0];
+                if (topNews.lat && topNews.lng) {
+                    map.flyTo([topNews.lat, topNews.lng], 12, { duration: 1.2 });
+                }
+            }
         }
 
         function initMap() {
@@ -402,10 +409,15 @@
 
             filtered.slice(0, 100).forEach(news => {
                 const isSelected = news.id === selectedNewsId && currentCategory !== '범죄 다발 지역';
+                
+                // 카테고리별 색상 뱃지 지정 (요구사항 5번)
                 let badgeClass = 'bg-red-500/20 text-red-500 dark:text-red-400 border-red-500/30';
                 if (news.category === '해외 분쟁·테러') badgeClass = 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30';
                 else if (news.category === '국가 안보') badgeClass = 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30';
+                else if (news.category === '사이버·금융') badgeClass = 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30';
+                else if (news.category === '재난·안전') badgeClass = 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30';
                 else if (news.category === '강력·치안') badgeClass = 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30';
+                else if (news.category === '실시간 제보') badgeClass = 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
 
                 const card = document.createElement('div');
                 card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-100 dark:bg-slate-800/90 border-red-500/60 shadow-md' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`;
@@ -428,12 +440,19 @@
         }
 
         function getCrimeHotspotsData() {
-            const crimeNews = newsData.filter(n => n.category === '강력·치안' || n.category === '국가 안보' || n.title.includes('폭행') || n.title.includes('사건') || n.title.includes('사고') || n.title.includes('범죄'));
+            const crimeNews = newsData.filter(n => 
+                !n.location.includes('세부 위치 미상') && 
+                !n.location.includes('대한민국 (세부') &&
+                (n.category === '강력·치안' || n.category === '국가 안보' || n.category === '재난·안전' || n.title.includes('폭행') || n.title.includes('사건') || n.title.includes('사고') || n.title.includes('범죄') || n.title.includes('화재'))
+            );
             const regionCounts = {};
             const regionCoordsMap = {};
 
             crimeNews.forEach(news => {
-                let locKey = news.location.split(' ')[0] + ' ' + (news.location.split(' ')[1] || '');
+                let parts = news.location.split(' ');
+                let locKey = parts[0] + (parts[1] ? ' ' + parts[1] : '');
+                if (!locKey || locKey.includes('대한민국')) return;
+
                 if (!regionCounts[locKey]) {
                     regionCounts[locKey] = 0;
                     regionCoordsMap[locKey] = { lat: news.lat, lng: news.lng };
@@ -441,12 +460,13 @@
                 regionCounts[locKey]++;
             });
 
+            // 요구사항 4번: ㄱㄴㄷ 순 정렬 (가나다 오름차순 또는 건수순 원하시면 변경 가능, 여기서는 ㄱㄴㄷ 지역명 순 정렬 후 건수 반영)
             let sortedRegions = Object.keys(regionCounts).map(reg => ({
                 region: reg,
                 count: regionCounts[reg],
                 lat: regionCoordsMap[reg].lat,
                 lng: regionCoordsMap[reg].lng
-            })).sort((a, b) => b.count - a.count);
+            })).sort((a, b) => a.region.localeCompare(b.region, 'ko')); // ㄱㄴㄷ 순 정렬
 
             if (sortedRegions.length === 0) {
                 sortedRegions = [
@@ -464,19 +484,21 @@
 
             let listHTML = '';
             hotspots.forEach((item, index) => {
-                let badgeBg = index === 0 ? 'bg-red-500 text-white' : (index === 1 ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white');
+                let isSelected = selectedHotspotRegion === item.region;
+                let badgeBg = isSelected ? 'bg-red-600 text-white' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+                
                 listHTML += `
-                    <div onclick="focusRegionOnMap(${item.lat}, ${item.lng}, '${item.region}')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between cursor-pointer hover:border-red-500 transition shadow-sm">
+                    <div onclick="selectHotspotRegion('${item.region}', ${item.lat}, ${item.lng})" class="bg-white dark:bg-slate-900 border ${isSelected ? 'border-red-500 shadow-md bg-red-50/50 dark:bg-red-950/20' : 'border-slate-200 dark:border-slate-800'} p-4 rounded-xl flex items-center justify-between cursor-pointer hover:border-red-500 transition shadow-sm">
                         <div class="flex items-center space-x-3">
                             <span class="w-7 h-7 rounded-full ${badgeBg} flex items-center justify-center text-xs font-extrabold shrink-0">${index + 1}</span>
                             <div>
                                 <h4 class="text-sm font-bold text-slate-900 dark:text-white">${item.region}</h4>
-                                <p class="text-xs text-slate-500 dark:text-slate-400">최근 7일간 사건·사고 및 강력치안 집중 발생</p>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">클릭 시 왼쪽 화면에 해당 지역 관련 기사 리스트업</p>
                             </div>
                         </div>
                         <div class="text-right">
                             <span class="text-base font-extrabold text-red-500">${item.count}건</span>
-                            <p class="text-[10px] text-slate-400">클릭 시 지도 이동</p>
+                            <p class="text-[10px] text-slate-400">관제 대상</p>
                         </div>
                     </div>
                 `;
@@ -484,10 +506,13 @@
 
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
-                    <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-500 shrink-0">
-                        <span class="text-xs font-bold px-2.5 py-1 rounded bg-rose-600 text-white mb-2 inline-block">종합 통계 리포트</span>
-                        <h2 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 범죄 및 사건·사고 다발 지역 순위</h2>
-                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">최근 7일간 수집된 데이터를 기반으로 치안 및 사건 사고가 빈발한 지역을 분석한 결과입니다.</p>
+                    <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-500 shrink-0 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold px-2.5 py-1 rounded bg-rose-600 text-white mb-2 inline-block">종합 통계 리포트</span>
+                            <h2 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 범죄 및 사건·사고 다발 지역 (가나다 순)</h2>
+                            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">지역을 누르면 왼쪽 화면에서 관련 기사를 확인할 수 있습니다.</p>
+                        </div>
+                        ${selectedHotspotRegion ? `<button onclick="clearHotspotFilter()" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-xs font-bold rounded-lg hover:bg-slate-300">필터 해제</button>` : ''}
                     </div>
                     
                     <div class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">
@@ -495,16 +520,22 @@
                     </div>
                 </div>
             `;
-
-            if (hotspots.length > 0 && map) {
-                map.flyTo([hotspots[0].lat, hotspots[0].lng], 10, { duration: 1.2 });
-            }
         }
 
-        function focusRegionOnMap(lat, lng, regionName) {
+        // 요구사항 1번 & 4번: 범죄 다발 지역 클릭 시 왼쪽에 해당 기사 리스트업 및 지도 이동
+        function selectHotspotRegion(regionName, lat, lng) {
+            selectedHotspotRegion = regionName;
+            renderCrimeHotspotsView();
+            renderNewsList(); // 왼쪽 리스트를 해당 지역 기사들로 필터링하여 갱신
             if (map) {
                 map.flyTo([lat, lng], 12, { duration: 1.2 });
             }
+        }
+
+        function clearHotspotFilter() {
+            selectedHotspotRegion = null;
+            renderCrimeHotspotsView();
+            renderNewsList();
         }
 
         function renderDetailView(id) {
@@ -516,8 +547,10 @@
             if (news.category === '해외 분쟁·테러') headerStyle = 'border-l-4 border-orange-500 bg-orange-500/10';
             else if (news.category === '국가 안보') headerStyle = 'border-l-4 border-indigo-500 bg-indigo-500/10';
             else if (news.category === '강력·치안') headerStyle = 'border-l-4 border-rose-500 bg-rose-500/10';
+            else if (news.category === '사이버·금융') headerStyle = 'border-l-4 border-blue-500 bg-blue-500/10';
+            else if (news.category === '재난·안전') headerStyle = 'border-l-4 border-amber-500 bg-amber-500/10';
 
-            // 매핑 위치/위경도 박스를 완전히 제거하고 원문 내용이 바로 나타나도록 수정됨
+            // 요구사항 3번: 불필요한 UI(매핑 위치 박스 등)를 완전히 제거하고 바로 원문이 표시되도록 수정
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-4 rounded-xl ${headerStyle} shrink-0">
@@ -554,6 +587,7 @@
             selectedNewsId = id;
             if (currentCategory === '범죄 다발 지역') {
                 currentCategory = 'all';
+                selectedHotspotRegion = null;
                 setCategoryFilter('all');
             }
             renderNewsList();
@@ -568,6 +602,7 @@
 
         function setCategoryFilter(category) {
             currentCategory = category;
+            selectedHotspotRegion = null; // 카테고리 전환 시 지역 선택 필터 초기화
             
             document.querySelectorAll('.cat-btn').forEach(btn => {
                 const btnCat = btn.getAttribute('data-cat');
@@ -622,6 +657,10 @@
 
         function getFilteredNews() {
             return newsData.filter(news => {
+                if (selectedHotspotRegion) {
+                    return news.location.includes(selectedHotspotRegion);
+                }
+
                 const matchCategory = (currentCategory === 'all' || news.category === currentCategory);
                 let matchRegion = true;
                 if (currentRegion !== 'all') {
@@ -644,10 +683,10 @@
         function manualRefreshData() {
             currentCategory = 'all';
             currentRegion = 'all';
+            selectedHotspotRegion = null;
             document.getElementById('regionSelect').value = 'all';
             setCategoryFilter('all');
             loadIncidentsFromJSON(true);
-            map.flyTo([36.5000, 127.5000], 7);
         }
 
         function adjustFontSize(direction) {
