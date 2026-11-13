@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>우리동네 사건사고 - 실시간 관제 시스템</title>
+    <title>우리동네 사건사고 - 글로벌 실시간 관제 시스템</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -18,7 +18,6 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* 레이더 스위프 바 회전 애니메이션 */
         @keyframes radar-sweep {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -33,27 +32,21 @@
     <!-- 상단 헤더 -->
     <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between shrink-0 shadow-md">
         <div class="flex items-center space-x-3">
-            <!-- 레이더 로고 아이콘 -->
             <div class="relative w-10 h-10 bg-slate-950 rounded-xl border border-red-500/50 flex items-center justify-center overflow-hidden shadow-lg shadow-red-500/20">
                 <div class="absolute inset-1 rounded-full border border-red-500/30"></div>
                 <div class="absolute inset-3 rounded-full border border-red-500/40"></div>
                 <div class="absolute w-full h-0.5 bg-red-500/20"></div>
                 <div class="absolute h-full w-0.5 bg-red-500/20"></div>
-                
-                <!-- 회전하는 레이더 스위프 바 -->
                 <div class="absolute top-1/2 left-1/2 w-5 h-5 origin-top-left animate-radar-sweep bg-gradient-to-tr from-red-500/60 to-transparent rounded-tr-full"></div>
-                
-                <!-- 중앙 탐지 점 -->
                 <div class="absolute w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
                 <div class="absolute w-1.5 h-1.5 bg-red-400 rounded-full"></div>
             </div>
             <div>
                 <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
                     우리동네 사건사고 
-                    <!-- 야간투시경 초록색 감성의 '실시간 관제' 뱃지 -->
-                    <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-mono shadow-[0_0_10px_rgba(16,185,129,0.2)]">실시간 관제</span>
+                    <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-mono shadow-[0_0_10px_rgba(16,185,129,0.2)]">글로벌 실시간 관제</span>
                 </h1>
-                <p class="text-xs text-slate-400">국내 사건·사고, 국가 안보 및 동(洞) 단위 실시간 시민 제보 플랫폼</p>
+                <p class="text-xs text-slate-400">국내외 사건·사고, 국가 안보 및 해외 분쟁·테러 실시간 모니터링 플랫폼</p>
             </div>
         </div>
         
@@ -68,86 +61,47 @@
         </div>
     </header>
 
-    <!-- 메인 3분할 관제 레이아웃 -->
+    <!-- 메인 3분할 레이아웃 -->
     <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
         
-        <!-- [1번 화면] 왼쪽: 실시간 뉴스 및 제보 피드 (너비: 3칸) -->
+        <!-- 왼쪽: 뉴스 피드 (3칸) -->
         <section class="lg:col-span-3 bg-slate-900/90 border-r border-slate-800 flex flex-col h-full overflow-hidden">
-            <!-- 지역 및 카테고리 필터 영역 -->
             <div class="p-3 border-b border-slate-800 bg-slate-900/50 space-y-2">
                 <div class="flex items-center justify-between text-xs text-slate-400">
                     <span class="font-semibold text-slate-300 flex items-center gap-1">
-                        <i class="fa-solid fa-location-dot text-red-500"></i> 지역 맞춤 필터 (동 단위)
+                        <i class="fa-solid fa-location-dot text-red-500"></i> 지역 맞춤 필터
                     </span>
                     <button onclick="refreshNewsFeed()" class="hover:text-white flex items-center gap-1 transition text-slate-300"><i class="fa-solid fa-rotate text-red-500"></i> 초기화</button>
                 </div>
-                <!-- 3단계 동(洞) 필터 선택 바 -->
-                <div class="grid grid-cols-3 gap-1.5">
-                   <select id="filterSido" onchange="onSidoChange()" class="bg-slate-800 text-xs text-slate-200 rounded px-2 py-1.5 border border-slate-700 focus:outline-none focus:border-red-500">
-                        <option value="">전체 시·도</option>
-                        <option value="서울특별시">서울특별시</option>
-                        <option value="부산광역시">부산광역시</option>
-                        <option value="대구광역시">대구광역시</option>
-                        <option value="인천광역시">인천광역시</option>
-                        <option value="광주광역시">광주광역시</option>
-                        <option value="대전광역시">대전광역시</option>
-                        <option value="울산광역시">울산광역시</option>
-                        <option value="세종특별자치시">세종특별자치시</option>
-                        <option value="경기도">경기도</option>
-                        <option value="강원특별자치도">강원특별자치도</option>
-                        <option value="충청북도">충청북도</option>
-                        <option value="충청남도">충청남도</option>
-                        <option value="전북특별자치도">전북특별자치도</option>
-                        <option value="전라남도">전라남도</option>
-                        <option value="경상북도">경상북도</option>
-                        <option value="경상남도">경상남도</option>
-                        <option value="제주특별자치도">제주특별자치도</option>
-                    </select>
-                    <select id="filterSigungu" onchange="onSigunguChange()" class="bg-slate-800 text-xs text-slate-200 rounded px-2 py-1.5 border border-slate-700 focus:outline-none focus:border-red-500" disabled>
-                        <option value="">시·군·구 선택</option>
-                    </select>
-                    <select id="filterDong" onchange="filterNewsList()" class="bg-slate-800 text-xs text-slate-200 rounded px-2 py-1.5 border border-slate-700 focus:outline-none focus:border-red-500" disabled>
-                        <option value="">읍·면·동 선택</option>
-                    </select>
-                </div>
             </div>
-
-            <!-- 뉴스 피드 리스트 -->
-            <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5">
-                <!-- 자바스크립트로 동적 렌더링됨 -->
-            </div>
+            <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
         </section>
 
-        <!-- [2번 화면] 중앙: 상세 기사 / 제보 뷰어 (너비: 5칸) -->
+        <!-- 중앙: 상세 뷰어 (5칸) -->
         <section class="lg:col-span-5 bg-slate-950 flex flex-col h-full overflow-hidden border-r border-slate-800">
             <!-- 카테고리 탭 바 -->
             <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto shrink-0">
                 <button onclick="setCategoryFilter('all')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm">전체</button>
+                <button onclick="setCategoryFilter('해외 분쟁·테러')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">🌍 해외 분쟁·테러</button>
                 <button onclick="setCategoryFilter('국가 안보')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">국가 안보</button>
                 <button onclick="setCategoryFilter('강력·치안')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">강력·치안</button>
                 <button onclick="setCategoryFilter('사이버·금융')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">사이버·금융</button>
                 <button onclick="setCategoryFilter('재난·안전')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">재난·안전</button>
                 <button onclick="setCategoryFilter('실시간 제보')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">실시간 제보</button>
             </div>
-
-            <!-- 상세 내용 표시 영역 -->
-            <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-6">
-                <!-- 자바스크립트로 동적 렌더링됨 -->
-            </div>
+            <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-6"></div>
         </section>
 
-        <!-- [3번 화면] 오른쪽: 대한민국 인터랙티브 지도 (너비: 4칸) -->
+        <!-- 오른쪽: 인터랙티브 지도 (4칸) -->
         <section class="lg:col-span-4 bg-slate-900 flex flex-col h-full relative overflow-hidden">
-            <!-- 지도 테마 변경 및 활성화 상태 컨트롤러 -->
             <div class="absolute top-3 right-3 z-[400] flex items-center gap-2">
-                <!-- 테마 선택 버튼 그룹 -->
                 <div class="bg-slate-900/90 backdrop-blur border border-slate-700 p-1 rounded-lg shadow-lg flex items-center gap-1">
                     <button onclick="setMapTheme('dark')" id="themeDarkBtn" class="px-2 py-1 rounded text-[11px] font-semibold bg-red-600 text-white transition">다크 테마</button>
                     <button onclick="setMapTheme('light')" id="themeLightBtn" class="px-2 py-1 rounded text-[11px] font-medium text-slate-300 hover:text-white transition">라이트 테마</button>
                 </div>
                 <div class="bg-slate-900/90 backdrop-blur border border-slate-700 text-xs px-3 py-1.5 rounded-lg shadow-lg text-slate-300 flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span>관제 지도</span>
+                    <span>글로벌 관제 지도</span>
                 </div>
             </div>
             <div id="map" class="flex-1 w-full h-full z-10"></div>
@@ -155,179 +109,8 @@
 
     </main>
 
-    <!-- 실시간 제보 모달 -->
-    <div id="reportModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
-                <h3 class="font-bold text-base text-white flex items-center gap-2">
-                    <i class="fa-solid fa-bullhorn text-red-500"></i> 현장 실시간 제보 등록
-                </h3>
-                <button onclick="closeReportModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            
-            <div class="p-6 overflow-y-auto custom-scrollbar space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">제보 제목</label>
-                    <input type="text" id="reportTitle" placeholder="예: 역삼역 사거리 교통 통제 상황" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
-                </div>
-                
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">시·도</label>
-                        <select id="reportSido" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
-                            <option value="서울특별시">서울특별시</option>
-                            <option value="부산광역시">부산광역시</option>
-                            <option value="대구광역시">대구광역시</option>
-                            <option value="인천광역시">인천광역시</option>
-                            <option value="광주광역시">광주광역시</option>
-                            <option value="대전광역시">대전광역시</option>
-                            <option value="울산광역시">울산광역시</option>
-                            <option value="세종특별자치시">세종특별자치시</option>
-                            <option value="경기도">경기도</option>
-                            <option value="강원특별자치도">강원특별자치도</option>
-                            <option value="충청북도">충청북도</option>
-                            <option value="충청남도">충청남도</option>
-                            <option value="전북특별자치도">전북특별자치도</option>
-                            <option value="전라남도">전라남도</option>
-                            <option value="경상북도">경상북도</option>
-                            <option value="경상남도">경상남도</option>
-                            <option value="제주특별자치도">제주특별자치도</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">시·군·구 / 동(洞)</label>
-                        <input type="text" id="reportLocationDetail" placeholder="예: 강남구 역삼동" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">상황 태그</label>
-                    <div class="flex flex-wrap gap-2">
-                        <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1 rounded text-xs text-slate-300 flex items-center gap-1">
-                            <input type="radio" name="reportTag" value="112/119 출동 확인" checked class="text-red-600"> 112/119 출동
-                        </label>
-                        <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1 rounded text-xs text-slate-300 flex items-center gap-1">
-                            <input type="radio" name="reportTag" value="도로 통제·우회 필요" class="text-red-600"> 도로 통제
-                        </label>
-                        <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-700 px-3 py-1 rounded text-xs text-slate-300 flex items-center gap-1">
-                            <input type="radio" name="reportTag" value="긴급 안전 주의" class="text-red-600"> 긴급 안전
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">현장 사진 또는 동영상 첨부</label>
-                    <div class="border-2 border-dashed border-slate-700 rounded-xl p-4 text-center hover:border-red-500 transition cursor-pointer relative">
-                        <input type="file" id="reportMediaFile" accept="image/*,video/*" capture="environment" onchange="previewMedia(this)" class="absolute inset-0 opacity-0 cursor-pointer">
-                        <div id="mediaUploadPlaceholder" class="space-y-1">
-                            <i class="fa-solid fa-camera text-2xl text-slate-400"></i>
-                            <p class="text-xs text-slate-300 font-medium">탭하여 사진/동영상 촬영 또는 파일 선택</p>
-                        </div>
-                        <div id="mediaPreviewContainer" class="hidden relative">
-                            <img id="imagePreview" class="max-h-36 mx-auto rounded-lg hidden object-cover">
-                            <video id="videoPreview" class="max-h-36 mx-auto rounded-lg hidden" controls></video>
-                            <p class="text-xs text-emerald-400 mt-2 font-medium"><i class="fa-solid fa-check"></i> 미디어 파일 첨부 완료</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">상세 코멘트</label>
-                    <textarea id="reportContent" rows="3" placeholder="현장 상황을 간략하게 작성해주세요..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white focus:outline-none focus:border-red-500"></textarea>
-                </div>
-            </div>
-
-            <div class="px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex justify-end space-x-2">
-                <button onclick="closeReportModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 rounded-lg">취소</button>
-                <button onclick="submitReport()" class="px-5 py-2 bg-red-600 hover:bg-red-500 text-xs font-semibold text-white rounded-lg shadow-lg shadow-red-600/30">제보 등록하기</button>
-            </div>
-        </div>
-    </div>
-
     <!-- 스크립트 로직 -->
     <script>
-        const regionData = {
-            "서울특별시": {
-                "중구": ["전체 읍·면·동", "명동", "을지로동", "신당동", "회현동", "소공동", "광희동"],
-                "강남구": ["전체 읍·면·동", "역삼동", "청담동", "삼성동", "대치동", "개포동", "도곡동"],
-                "송파구": ["전체 읍·면·동", "잠실동", "가락동", "문정동", "방이동", "석촌동"],
-                "마포구": ["전체 읍·면·동", "합정동", "서교동", "상암동", "망원동", "공덕동"],
-                "영등포구": ["전체 읍·면·동", "여의도동", "영등포동", "문래동", "당산동"]
-            },
-            "부산광역시": {
-                "중구": ["전체 읍·면·동", "남포동", "중앙동", "보수동", "동광동"],
-                "해운대구": ["전체 읍·면·동", "우동", "중동", "좌동", "재송동", "반여동"],
-                "부산진구": ["전체 읍·면·동", "서면", "부전동", "전포동", "가야동"],
-                "영도구": ["전체 읍·면·동", "대교동", "동삼동", "봉래동"]
-            },
-            "대구광역시": {
-                "중구": ["전체 읍·면·동", "동성로", "삼덕동", "남산동", "대신동"],
-                "수성구": ["전체 읍·면·동", "범어동", "만촌동", "수성동", "지산동"],
-                "달서구": ["전체 읍·면·동", "상인동", "진천동", "월성동", "이곡동"]
-            },
-            "인천광역시": {
-                "중구": ["전체 읍·면·동", "신포동", "연안동", "영종동", "운서동", "용유동"],
-                "연수구": ["전체 읍·면·동", "송도동", "연수동", "동춘동"],
-                "강화군": ["전체 읍·면·동", "강화읍", "선원면", "길상면", "화도면"]
-            },
-            "광주광역시": {
-                "서구": ["전체 읍·면·동", "상무동", "치평동", "금호동", "광천동"],
-                "북구": ["전체 읍·면·동", "용봉동", "운암동", "매곡동", "문흥동"]
-            },
-            "대전광역시": {
-                "서구": ["전체 읍·면·동", "둔산동", "월평동", "갈마동", "관저동"],
-                "유성구": ["전체 읍·면·동", "봉명동", "어은동", "노은동", "전민동"]
-            },
-            "울산광역시": {
-                "남구": ["전체 읍·면·동", "삼산동", "신정동", "달동", "야음동"],
-                "울주군": ["전체 읍·면·동", "온산읍", "언양읍", "범서읍", "서생면"]
-            },
-            "세종특별자치시": {
-                "세종시": ["전체 읍·면·동", "조치원읍", "반곡동", "소담동", "보람동", "대평동", "나성동", "도담동"]
-            },
-            "경기도": {
-                "수원시": ["전체 읍·면·동", "장안구", "권선구", "팔달구", "영통구"],
-                "성남시": ["전체 읍·면·동", "수정구", "중원구", "분당구"],
-                "고양시": ["전체 읍·면·동", "덕양구", "일산동구", "일산서구"],
-                "용인시": ["전체 읍·면·동", "처인구", "기흥구", "수지구"],
-                "화성시": ["전체 읍·면·동", "병점동", "동탄동", "향남읍", "남양읍"]
-            },
-            "강원특별자치도": {
-                "춘천시": ["전체 읍·면·동", "효자동", "후평동", "석사동", "온의동"],
-                "원주시": ["전체 읍·면·동", "단계동", "단구동", "무실동", "반곡관설동"],
-                "강릉시": ["전체 읍·면·동", "교동", "포남동", "옥천동", "경포동"]
-            },
-            "충청북도": {
-                "청주시": ["전체 읍·면·동", "상당구", "서원구", "흥덕구", "청원구"],
-                "충주시": ["전체 읍·면·동", "칠금동", "교현동", "연수동"]
-            },
-            "충청남도": {
-                "천안시": ["전체 읍·면·동", "동남구", "서북구"],
-                "아산시": ["전체 읍·면·동", "온양동", "배방읍", "탕정면"]
-            },
-            "전북특별자치도": {
-                "전주시": ["전체 읍·면·동", "완산구", "덕진구"],
-                "군산시": ["전체 읍·면·동", "수송동", "나운동", "조촌동"]
-            },
-            "전라남도": {
-                "목포시": ["전체 읍·면·동", "하당동", "상동", "용당동"],
-                "여수시": ["전체 읍·면·동", "여서동", "문수동", "웅천동", "돌산읍"]
-            },
-            "경상북도": {
-                "포항시": ["전체 읍·면·동", "남구", "북구", "오천읍", "대송면"],
-                "경주시": ["전체 읍·면·동", "황성동", "동천동", "불국동"],
-                "울릉군": ["전체 읍·면·동", "울릉읍(도동/사동/저동)", "서면", "북면", "독도리"]
-            },
-            "경상남도": {
-                "창원시": ["전체 읍·면·동", "의창구", "성산구", "마산회원구", "마산합포구", "진해구"],
-                "김해시": ["전체 읍·면·동", "내외동", "북부동", "장유동"]
-            },
-            "제주특별자치도": {
-                "제주시": ["전체 읍·면·동", "이도동", "제주공항", "노형동", "연동", "애월읍", "조천읍", "한림읍", "구좌읍", "우도면"],
-                "서귀포시": ["전체 읍·면·동", "중문동", "동홍동", "서홍동", "성산읍", "표선면", "남원읍", "대정읍", "안덕면", "마라도"]
-            }
-        };
-
         let newsData = [];
         let currentCategory = 'all';
         let selectedNewsId = 1;
@@ -348,25 +131,22 @@
                     }
                 }
             } catch (error) {
-                console.log("news.json을 불러오지 못했거나 파일이 없습니다. 기본 데이터를 유지합니다.");
+                console.log("news.json 로드 실패, 기본 데이터 유지");
             }
 
             if (newsData.length === 0) {
                 newsData = [
                     {
                         id: 1,
-                        category: "국가 안보",
-                        title: "[안내] 실시간 자동 수집 대기 중",
-                        summary: "GitHub Actions 및 파이썬 수집기를 통해 국내외 실시간 뉴스가 이 곳에 자동 반영됩니다.",
-                        content: "파이썬 크롤링 및 API 연동 스크립트가 실행되면 최신 뉴스 및 외신 번역 데이터가 news.json을 통해 실시간으로 갱신됩니다.",
-                        sido: "서울특별시",
-                        sigungu: "강남구",
-                        dong: "역삼동",
-                        lat: 37.5006,
-                        lng: 127.0364,
+                        category: "해외 분쟁·테러",
+                        title: "[안내] 글로벌 관제 시스템 대기 중",
+                        summary: "우크라이나, 러시아, 중동 등 해외 분쟁 및 테러 관련 외신 속보가 실시간 수집됩니다.",
+                        content: "파이썬 크롤러를 통해 글로벌 분쟁 및 국내 사건·사고 데이터가 수집됩니다.",
+                        location: "우크라이나 키이우",
+                        lat: 50.4501,
+                        lng: 30.5234,
                         time: "방금 전",
-                        source: "시스템 안내",
-                        type: "news"
+                        source: "시스템 안내"
                     }
                 ];
             }
@@ -381,45 +161,26 @@
         }
 
         function initMap() {
-            map = L.map('map').setView([37.5665, 126.9780], 11);
-            
-            // 기본 다크 테마 적용 (워터마크 없는 안전한 오픈소스 다크 스타일 타일)
+            map = L.map('map').setView([30.0000, 15.0000], 3); // 세계 지도가 잘 보이도록 초기 줌 조정
             setMapTheme('dark');
-
             markersLayer = L.layerGroup().addTo(map);
             updateMapMarkers();
         }
 
-        // 맵 테마 변경 함수 (워터마크 없는 다크 / 라이트)
         function setMapTheme(theme) {
-            if (currentTileLayer) {
-                map.removeLayer(currentTileLayer);
-            }
-
+            if (currentTileLayer) map.removeLayer(currentTileLayer);
             const darkBtn = document.getElementById('themeDarkBtn');
             const lightBtn = document.getElementById('themeLightBtn');
 
             if (theme === 'dark') {
-                // API 키 없이 무료로 사용 가능한 깔끔한 다크 테마 타일
-                currentTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                    attribution: '&copy; OpenStreetMap contributors & CARTO',
-                    maxZoom: 19
-                });
-                // 만약 완전한 칠흑색 다크 배경을 원하시면 아래 주석을 풀고 위 타일을 대체하셔도 됩니다 (현재는 보기 편한 깔끔한 모던 다크 적용)
-                // currentTileLayer = L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
-
+                currentTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
                 darkBtn.className = "px-2 py-1 rounded text-[11px] font-semibold bg-red-600 text-white transition";
                 lightBtn.className = "px-2 py-1 rounded text-[11px] font-medium text-slate-300 hover:text-white transition";
             } else {
-                // 라이트 테마 타일 (OpenStreetMap 표준)
-                currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap contributors',
-                    maxZoom: 19
-                });
+                currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
                 lightBtn.className = "px-2 py-1 rounded text-[11px] font-semibold bg-red-600 text-white transition";
                 darkBtn.className = "px-2 py-1 rounded text-[11px] font-medium text-slate-300 hover:text-white transition";
             }
-
             currentTileLayer.addTo(map);
         }
 
@@ -429,10 +190,10 @@
             const listToMap = filteredList || newsData;
 
             listToMap.forEach(news => {
-                let markerColor = '#ef4444';
-                if (news.category === '국가 안보') markerColor = '#6366f1';
-                else if (news.category === '사이버·금융') markerColor = '#3b82f6';
-                else if (news.category === '실시간 제보') markerColor = '#f59e0b';
+                let markerColor = '#ef4444'; // 기본 빨강
+                if (news.category === '해외 분쟁·테러') markerColor = '#f97316'; // 주황/오렌지 (해외 분쟁)
+                else if (news.category === '국가 안보') markerColor = '#6366f1'; // 인디고
+                else if (news.category === '사이버·금융') markerColor = '#3b82f6'; // 파랑
 
                 const customIcon = L.divIcon({
                     className: 'custom-div-icon',
@@ -441,15 +202,12 @@
                     iconPoint: [7, 7]
                 });
 
-                const lat = news.lat || 37.5665;
-                const lng = news.lng || 126.9780;
-
-                const marker = L.marker([lat, lng], { icon: customIcon });
+                const marker = L.marker([news.lat, news.lng], { icon: customIcon });
                 marker.bindPopup(`
                     <div style="color: #0f172a; font-family: sans-serif; max-width: 200px;">
                         <span style="font-size: 10px; font-weight: bold; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${news.category}</span>
                         <h4 style="font-size: 13px; font-weight: bold; margin: 6px 0 4px 0;">${news.title}</h4>
-                        <p style="font-size: 11px; color: #475569; margin: 0;">${news.location || `${news.sido || ''} ${news.sigungu || ''} ${news.dong || ''}`}</p>
+                        <p style="font-size: 11px; color: #475569; margin: 0;">${news.location}</p>
                     </div>
                 `);
 
@@ -464,30 +222,29 @@
             const filtered = getFilteredNews();
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">해당 조건에 일치하는 뉴스나 제보가 없습니다.</div>`;
+                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">해당 조건의 기사가 없습니다.</div>`;
                 return;
             }
 
             filtered.forEach(news => {
                 const isSelected = news.id === selectedNewsId;
                 let badgeClass = 'bg-red-500/20 text-red-400 border-red-500/30';
-                if (news.category === '국가 안보') badgeClass = 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30';
-                else if (news.category === '사이버·금융') badgeClass = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-                else if (news.category === '실시간 제보') badgeClass = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+                if (news.category === '해외 분쟁·테러') badgeClass = 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+                else if (news.category === '국가 안보') badgeClass = 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30';
 
                 const card = document.createElement('div');
-                card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-800/90 border-red-500/60 shadow-lg shadow-red-500/10' : 'bg-slate-900 border-slate-800 hover:bg-slate-800/50'}`;
+                card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-800/90 border-red-500/60 shadow-lg' : 'bg-slate-900 border-slate-800 hover:bg-slate-800/50'}`;
                 card.onclick = () => selectNews(news.id);
 
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-1.5">
                         <span class="text-[10px] px-2 py-0.5 rounded border ${badgeClass} font-semibold">${news.category}</span>
-                        <span class="text-[10px] text-slate-400">${news.time || news.published || '방금 전'}</span>
+                        <span class="text-[10px] text-slate-400">${news.time}</span>
                     </div>
                     <h3 class="text-xs font-bold text-white line-clamp-2 mb-1">${news.title}</h3>
                     <p class="text-[11px] text-slate-400 line-clamp-2 mb-2">${news.summary}</p>
                     <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-800">
-                        <span><i class="fa-solid fa-location-dot text-red-500"></i> ${news.location || `${news.sido || ''} ${news.sigungu || ''} ${news.dong || ''}`}</span>
+                        <span><i class="fa-solid fa-globe text-orange-500"></i> ${news.location}</span>
                         <span class="font-medium text-slate-400">${news.source}</span>
                     </div>
                 `;
@@ -501,48 +258,26 @@
             if (!news) return;
 
             let headerStyle = 'border-l-4 border-red-500 bg-red-500/10';
-            if (news.category === '국가 안보') headerStyle = 'border-l-4 border-indigo-500 bg-indigo-500/10';
-            else if (news.category === '실시간 제보') headerStyle = 'border-l-4 border-amber-500 bg-amber-500/10';
-
-            let mediaHtml = '';
-            if (news.mediaUrl) {
-                mediaHtml = `<div class="my-4 rounded-xl overflow-hidden border border-slate-800"><img src="${news.mediaUrl}" class="w-full max-h-72 object-cover"></div>`;
-            }
+            if (news.category === '해외 분쟁·테러') headerStyle = 'border-l-4 border-orange-500 bg-orange-500/10';
+            else if (news.category === '국가 안보') headerStyle = 'border-l-4 border-indigo-500 bg-indigo-500/10';
 
             container.innerHTML = `
                 <div class="space-y-4 animate-fadeIn">
                     <div class="p-4 rounded-xl ${headerStyle}">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-bold px-2.5 py-1 rounded bg-slate-900 text-white">${news.category}</span>
-                            <span class="text-xs text-slate-400">${news.time || news.published || '방금 전'} · 출처: ${news.source}</span>
+                            <span class="text-xs text-slate-450">${news.time} · 출처: ${news.source}</span>
                         </div>
                         <h2 class="text-base md:text-lg font-extrabold text-white leading-snug">${news.title}</h2>
                     </div>
 
                     <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center justify-between text-xs text-slate-300">
                         <span class="flex items-center gap-1.5 font-medium">
-                            <i class="fa-solid fa-map-pin text-red-500"></i> 발생 위치: 
-                            <strong class="text-white">${news.location || `${news.sido || ''} ${news.sigungu || ''} ${news.dong || ''}`}</strong>
+                            <i class="fa-solid fa-globe text-orange-500"></i> 발생 지역: 
+                            <strong class="text-white">${news.location}</strong>
                         </span>
-                        <span class="text-[11px] text-slate-400 font-mono">위도: ${news.lat || 37.5665}, 경도: ${news.lng || 126.9780}</span>
+                        <span class="text-[11px] text-slate-400 font-mono">위도: ${news.lat}, 경도: ${news.lng}</span>
                     </div>
-
-                    ${news.category === '국가 안보' ? `
-                        <div class="bg-indigo-950/40 border border-indigo-800/50 p-4 rounded-xl space-y-2">
-                            <div class="flex items-center gap-2 text-indigo-400 font-bold text-xs">
-                                <i class="fa-solid fa-shield-cat"></i> 국방·안보 전략 브리핑 요약
-                            </div>
-                            <p class="text-xs text-indigo-200 leading-relaxed">
-                                본 사안은 대한민국 국방부 및 합동참모본부의 실시간 작전 통제 기준에 의거하여 전파되는 국가 안보 사안입니다.
-                            </p>
-                        </div>
-                    ` : ''}
-
-                    ${news.tag ? `
-                        <div class="inline-block bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-semibold px-3 py-1 rounded-full">
-                            <i class="fa-solid fa-triangle-exclamation"></i> ${news.tag}
-                        </div>
-                    ` : ''}
 
                     ${news.link ? `
                         <div class="pt-1">
@@ -551,8 +286,6 @@
                             </a>
                         </div>
                     ` : ''}
-
-                    ${mediaHtml}
 
                     <div class="text-xs md:text-sm text-slate-300 leading-relaxed space-y-3 pt-2">
                         <p>${news.content || news.summary}</p>
@@ -568,14 +301,16 @@
 
             const news = newsData.find(n => n.id === id);
             if (news && map && news.lat && news.lng) {
-                map.flyTo([news.lat, news.lng], 15, { duration: 1.2 });
+                // 해외 지역은 넓게(줌 5), 국내 세부 지역은 가깝게(줌 12) 자동 줌인
+                const zoomLevel = news.category === '해외 분쟁·테러' ? 5 : 12;
+                map.flyTo([news.lat, news.lng], zoomLevel, { duration: 1.2 });
             }
         }
 
         function setCategoryFilter(category) {
             currentCategory = category;
             document.querySelectorAll('.cat-btn').forEach(btn => {
-                if (btn.textContent.trim() === category || (category === 'all' && btn.textContent.trim() === '전체')) {
+                if (btn.textContent.includes(category) || (category === 'all' && btn.textContent.trim() === '전체')) {
                     btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm';
                 } else {
                     btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap';
@@ -585,147 +320,14 @@
             updateMapMarkers(getFilteredNews());
         }
 
-        function onSidoChange() {
-            const sido = document.getElementById('filterSido').value;
-            const sigunguSelect = document.getElementById('filterSigungu');
-            const dongSelect = document.getElementById('filterDong');
-
-            sigunguSelect.innerHTML = '<option value="">시·군·구 선택</option>';
-            dongSelect.innerHTML = '<option value="">읍·면·동 선택</option>';
-            dongSelect.disabled = true;
-
-            if (sido && regionData[sido]) {
-                sigunguSelect.disabled = false;
-                Object.keys(regionData[sido]).forEach(sigungu => {
-                    const opt = document.createElement('option');
-                    opt.value = sigungu;
-                    opt.textContent = sigungu;
-                    sigunguSelect.appendChild(opt);
-                });
-            } else {
-                sigunguSelect.disabled = true;
-            }
-            filterNewsList();
-        }
-
-        function onSigunguChange() {
-            const sido = document.getElementById('filterSido').value;
-            const sigungu = document.getElementById('filterSigungu').value;
-            const dongSelect = document.getElementById('filterDong');
-
-            dongSelect.innerHTML = '<option value="">읍·면·동 선택</option>';
-
-            if (sido && sigungu && regionData[sido][sigungu]) {
-                dongSelect.disabled = false;
-                regionData[sido][sigungu].forEach(dong => {
-                    const opt = document.createElement('option');
-                    opt.value = dong;
-                    opt.textContent = dong;
-                    dongSelect.appendChild(opt);
-                });
-            } else {
-                dongSelect.disabled = true;
-            }
-            filterNewsList();
-        }
-
-        function filterNewsList() {
-            renderNewsList();
-            updateMapMarkers(getFilteredNews());
+        function getFilteredNews() {
+            return newsData.filter(news => currentCategory === 'all' || news.category === currentCategory);
         }
 
         function refreshNewsFeed() {
-            document.getElementById('filterSido').value = '';
-            document.getElementById('filterSigungu').innerHTML = '<option value="">시·군·구 선택</option>';
-            document.getElementById('filterSigungu').disabled = true;
-            document.getElementById('filterDong').innerHTML = '<option value="">읍·면·동 선택</option>';
-            document.getElementById('filterDong').disabled = true;
             currentCategory = 'all';
             setCategoryFilter('all');
-            map.flyTo([37.5665, 126.9780], 11);
-        }
-
-        function getFilteredNews() {
-            const sido = document.getElementById('filterSido').value;
-            const sigungu = document.getElementById('filterSigungu').value;
-            const dong = document.getElementById('filterDong').value;
-
-            return newsData.filter(news => {
-                const matchCategory = (currentCategory === 'all' || news.category === currentCategory);
-                let matchLocation = true;
-
-                if (sido) {
-                    const locStr = news.location || `${news.sido || ''} ${news.sigungu || ''} ${news.dong || ''}`;
-                    if (sigungu && sigungu !== "전체 읍·면·동") {
-                        if (dong && dong !== "전체 읍·면·동") {
-                            matchLocation = locStr.includes(sido) && locStr.includes(sigungu) && locStr.includes(dong);
-                        } else {
-                            matchLocation = locStr.includes(sido) && locStr.includes(sigungu);
-                        }
-                    } else {
-                        matchLocation = locStr.includes(sido);
-                    }
-                }
-
-                return matchCategory && matchLocation;
-            });
-        }
-
-        function openReportModal() { document.getElementById('reportModal').classList.remove('hidden'); }
-        function closeReportModal() { document.getElementById('reportModal').classList.add('hidden'); }
-
-        function previewMedia(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                document.getElementById('mediaUploadPlaceholder').classList.add('hidden');
-                document.getElementById('mediaPreviewContainer').classList.remove('hidden');
-                reader.onload = function(e) {
-                    const img = document.getElementById('imagePreview');
-                    img.src = e.target.result;
-                    img.classList.remove('hidden');
-                }
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function submitReport() {
-            const title = document.getElementById('reportTitle').value;
-            const sido = document.getElementById('reportSido').value;
-            const locationDetail = document.getElementById('reportLocationDetail').value;
-            const tag = document.querySelector('input[name="reportTag"]:checked').value;
-            const content = document.getElementById('reportContent').value;
-
-            if (!title || !locationDetail) {
-                alert('제목과 지역 상세 정보를 모두 입력해주세요.');
-                return;
-            }
-
-            const newReport = {
-                id: Date.now(),
-                category: '실시간 제보',
-                title: `[시민제보] ${title}`,
-                summary: content || title,
-                content: content || '시민이 직접 현장에서 촬영하여 등록한 실시간 제보 내용입니다.',
-                sido: sido,
-                sigungu: locationDetail.split(' ')[0] || '강남구',
-                dong: locationDetail.split(' ')[1] || '역삼동',
-                location: `${sido} ${locationDetail}`,
-                lat: 37.5000 + (Math.random() - 0.5) * 0.05,
-                lng: 127.0300 + (Math.random() - 0.5) * 0.05,
-                time: '방금 전',
-                source: '시민 직접 제보',
-                type: 'user_report',
-                tag: tag,
-                mediaUrl: 'https://images.unsplash.com/photo-1541872703-74c5e44368f9?auto=format&fit=crop&w=800&q=80'
-            };
-
-            newsData.unshift(newReport);
-            closeReportModal();
-            selectNews(newReport.id);
-            renderNewsList();
-            updateMapMarkers();
-            alert('성공적으로 제보가 등록되었습니다!');
+            map.flyTo([30.0000, 15.0000], 3);
         }
     </script>
 </body>
