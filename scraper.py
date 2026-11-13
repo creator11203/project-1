@@ -97,7 +97,6 @@ def parse_date_string(date_str):
     clean_str = re.sub(r'\s+', ' ', date_str.strip())
     kst = pytz.timezone('Asia/Seoul')
     
-    # 1. "2026.11.13.오후 10:32" 또는 "2026.11.13. 오후 7:50" 형태 처리
     match_am_pm = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})\.?[^\d]*(오전|오후)\s*(\d{1,2}):(\d{2})', clean_str)
     if match_am_pm:
         year, month, day, meridian, hour, minute = match_am_pm.groups()
@@ -112,7 +111,6 @@ def parse_date_string(date_str):
         except ValueError:
             pass
 
-    # 2. "2026.11.13.16:05" 또는 "2026-11-13 21:25" 등 24시간제 형태 처리
     match_24 = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})\D+(\d{1,2}):(\d{2})', clean_str)
     if match_24:
         year, month, day, hour, minute = match_24.groups()
@@ -122,7 +120,6 @@ def parse_date_string(date_str):
         except ValueError:
             pass
 
-    # 3. 날짜만 있는 경우 ("2026.11.13" 등)
     match_date_only = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})', clean_str)
     if match_date_only:
         year, month, day = match_date_only.groups()
@@ -135,16 +132,15 @@ def parse_date_string(date_str):
     return datetime.now(kst).timestamp()
 
 RSS_FEEDS = [
-    {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+OR+%EC%82%AC%EA%B1%B4+OR+%ED%8F%AD%ED%96%89+OR+%EA%B2%BD%EC%B0%B0+OR+%EA%B5%AC%EC%86%8D+OR+%EC%82%AC%EA%B8%B0+OR+%ED%99%94%EC%9E%AC&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (종합 사건사고)"},
+    {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+OR+%EC%82%AC%EA%B1%B4+OR+%ED%8F%AD%ED%96%89+OR+%EA%B2%BD%EC%B0%B0+OR+%EA%B5%AC%EC%86%8D+OR+%EC%82%AC%EC%88%98+OR+%ED%99%94%EC%9E%AC&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (종합 사건사고)"},
     {"url": "https://news.google.com/rss/search?q=%EC%82%B4%EC%9D%B8+OR+%EB%A7%88%EC%95%BD+OR+%EC%8A%A4%ED%86%A0%ED%82%B9+OR+%ED%9D%B9%EA%B8%B0+OR+%EC%84%B1%EB%B2%94%EC%A3%84+OR+%EC%9C%A0%EC%B6%9C+OR+%ED%95%B4%ED%82%B9&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (강력범죄·마약·사이버)"},
-    {"url": "https://news.google.com/rss/search?q=%EC%95%88%EC%A0%84+OR+%EC%82%AC%EA%B3%A0+OR+%EA%B5%90%ED%86%B5%EC%82%AC%EA%B3%A0+OR+%EB%B6%95%EA%B4%B4+OR+%EC%82%B0%EC%82%AC%ED%83%9C+OR+%EC%B9%A8%EC%88%98+OR+%EC%A0%95%EC%A0%84&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"},
+    {"url": "https://news.google.com/rss/search?q=%EC%95%88%EC%A0%84+OR+%EC%82%AC%EA%B3%A0+OR+%EA%B5%90%ED%86%B5%EC%82%AC%EA%B3%A0+OR+%EB%B6%95%EA%B4%B4+OR+%EC%82%AC%EC%82%AC%ED%83%9C+OR+%EC%B9%A8%EC%88%98+OR+%EC%A0%95%EC%A0%84&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"},
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSS", "source": "SBS"},
-    {"url": "https://news.kbs.co.kr/rss/rss.do", "source": "KBS"}
-]
-
-TELEGRAM_CHANNELS = [
-    {"url": "https://t.me/s/cahier_de_market", "source": "Telegram 채널"}
+    {"url": "https://news.kbs.co.kr/rss/rss.do", "source": "KBS"},
+    {"url": "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml", "source": "조선일보"},
+    {"url": "https://fs.jtbc.co.kr/RSS/newsflash.xml", "source": "JTBC"},
+    {"url": "https://imnews.imbc.com/rss/news/news_00.xml", "source": "MBC"}
 ]
 
 KR_CITY_COORDS = {
@@ -202,25 +198,25 @@ def categorize_incident(title, content):
     if any(kw in text for kw in strict_exclude_keywords):
         return None 
 
-    if any(kw in text for kw in ['살인', '흉기', '난동', '묻지마', '조폭', '조직폭력배', '폭행', '상해', '특수상해', '특수폭행']):
+    if any(kw in text for kw in ['살인', '살해', '토막', '토막살인', '토막 살인', '토막시신', '흉기', '난동', '묻지마', '조폭', '조직폭력배', '폭행', '상해', '특수상해', '특수폭행']):
         return "강력범죄"
 
-    if any(kw in text for kw in ['성범죄', '성폭행', '성추행', '몰카', '마약', '필로폰', '대마초', '스토킹']):
+    if any(kw in text for kw in ['성범죄', '성폭행', '성추행', '불법촬영', '몰카', '몰래카메라', '카메라등이용촬영', '마약', '필로폰', '대마초', '스토킹', '교제폭력', '데이트폭력']):
         return "성범죄·마약"
 
-    if any(kw in text for kw in ['사기', '절도', '강도', '해킹', '개인정보', '보이스피싱', '스미싱', '갈취', '공갈', '협박']):
+    if any(kw in text for kw in ['사기', '절도', '강도', '해킹', '개인정보', '보이스피싱', '스미싱', '갈취', '공갈', '협박', '전세사기']):
         return "사기·금융"
 
-    if any(kw in text for kw in ['화재', '폭발', '붕괴', '산사태', '홍수', '침수', '정전', '가스', '지진', '구조']):
+    if any(kw in text for kw in ['화재', '폭발', '붕괴', '산사태', '홍수', '침수', '정전', '가스', '지진', '구조', '안전사고']):
         return "재난·사고"
 
-    if any(kw in text for kw in ['교통사고', '뺑소니', '충돌', '추돌', '차량']):
+    if any(kw in text for kw in ['교통사고', '뺑소니', '충돌', '추돌', '차량', '음주운전']):
         return "교통사고"
 
     if any(kw in text for kw in ['사고', '사건', '경찰', '구속', '입건', '실종', '수사', '출동', '피해', '안전']):
         return "실종·제보"
 
-    return "실종·제보" # 안전·사고 관련 기사가 누락되지 않도록 기본 포용
+    return "실종·제보"
 
 def extract_location(title, content):
     search_text = title + " " + content
@@ -246,7 +242,6 @@ def scrape_news():
                 clean_content = remove_html_tags(entry.get("summary", title))
                 link = entry.get("link", "")
                 
-                # 날짜 문자열 추출 및 다중 포맷 통합 파싱 적용
                 date_str = entry.get("published", "") or entry.get("updated", "")
                 pub_timestamp = parse_date_string(date_str)
                 
