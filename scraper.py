@@ -134,7 +134,7 @@ def parse_date_string(date_str):
 RSS_FEEDS = [
     {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+OR+%EC%82%AC%EA%B1%B4+OR+%ED%8F%AD%ED%96%89+OR+%EA%B2%BD%EC%B0%B0+OR+%EA%B5%AC%EC%86%8D+OR+%EC%82%AC%EC%88%98+OR+%ED%99%94%EC%9E%AC&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (종합 사건사고)"},
     {"url": "https://news.google.com/rss/search?q=%EC%82%B4%EC%9D%B8+OR+%EB%A7%88%EC%95%BD+OR+%EC%8A%A4%ED%86%A0%ED%82%B9+OR+%ED%9D%B9%EA%B8%B0+OR+%EC%84%B1%EB%B2%94%EC%A3%84+OR+%EC%9C%A0%EC%B6%9C+OR+%ED%95%B4%ED%82%B9&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (강력범죄·마약·사이버)"},
-    {"url": "https://news.google.com/rss/search?q=%EC%95%88%EC%A0%84+OR+%EC%82%AC%EA%B3%A0+OR+%EA%B5%0부...교통사고+OR+%EB%B6%95%EA%B4%B4+OR+%EC%82%AC%EC%82%AC%ED%83%9C+OR+%EC%B9%A8%EC%88%98+OR+%EC%A0%95%EC%A0%84&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"},
+    {"url": "https://news.google.com/rss/search?q=%EC%95%88%EC%A0%84+OR+%EC%82%AC%EA%B3%A0+OR+%EA%B5%90%ED%86%B5%EC%82%AC%EA%B3%A0+OR+%EB%B6%95%EA%B4%B4+OR+%EC%82%AC%EC%82%AC%ED%83%9C+OR+%EC%B9%A8%EC%88%98+OR+%EC%A0%95%EC%A0%84&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"},
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSS", "source": "SBS"},
     {"url": "https://news.kbs.co.kr/rss/rss.do", "source": "KBS"},
@@ -201,22 +201,28 @@ def categorize_incident(title, content):
     if any(kw in text for kw in strict_exclude_keywords):
         return None 
 
-    if any(kw in text for kw in ['살인', '살해', '토막', '토막살인', '토막 살인', '토막시신', '흉기', '난동', '묻지마', '조폭', '조직폭력배', '폭행', '상해', '특수상해', '특수폭행']):
+    # 1. 강력범죄 (납치, 유괴, 감금, 인질, 살인미수, 방화, 특수협박 등 추가)
+    if any(kw in text for kw in ['살인', '살해', '살인미수', '토막', '토막살인', '토막 살인', '토막시신', '흉기', '난동', '묻지마', '조폭', '조직폭력배', '폭행', '상해', '특수상해', '특수폭행', '납치', '유괴', '감금', '인질', '방화', '특수협박']):
         return "강력범죄"
 
-    if any(kw in text for kw in ['성범죄', '성폭행', '성추행', '불법촬영', '몰카', '몰래카메라', '카메라등이용촬영', '마약', '필로폰', '대마초', '스토킹', '교제폭력', '데이트폭력']):
+    # 2. 성범죄·마약 (딥페이크, 디지털성범죄, 성착취, 강제추행, 준강간, 강간, 케타민, 프로포폴, 향정신성의약품 등 추가)
+    if any(kw in text for kw in ['성범죄', '강간', '준강간', '성폭행', '성추행', '강제추행', '불법촬영', '몰카', '몰래카메라', '카메라등이용촬영', '딥페이크', '디지털성범죄', '성착취', '마약', '필로폰', '대마초', '케타민', '프로포폴', '향정신성의약품', '스토킹', '교제폭력', '데이트폭력']):
         return "성범죄·마약"
 
-    if any(kw in text for kw in ['사기', '절도', '강도', '해킹', '개인정보', '보이스피싱', '스미싱', '갈취', '공갈', '협박', '전세사기']):
+    # 3. 사기·금융 (횡령, 배임, 투자사기, 리딩방, 주가조작, 유사수신, 랜섬웨어 등 추가)
+    if any(kw in text for kw in ['사기', '절도', '강도', '해킹', '랜섬웨어', '개인정보', '보이스피싱', '스미싱', '갈취', '공갈', '협박', '전세사기', '횡령', '배임', '투자사기', '리딩방', '주가조작', '유사수신']):
         return "사기·금융"
 
-    if any(kw in text for kw in ['화재', '폭발', '붕괴', '산사태', '홍수', '침수', '정전', '가스', '지진', '구조', '안전사고']):
+    # 4. 재난·사고 (싱크홀, 도로함몰, 화학물질, 유독가스, 산불, 질식, 끼임, 추락 등 추가)
+    if any(kw in text for kw in ['화재', '폭발', '붕괴', '산사태', '산불', '홍수', '침수', '정전', '가스', '유독가스', '지진', '구조', '안전사고', '싱크홀', '도로함몰', '화학물질', '질식', '끼임', '추락']):
         return "재난·사고"
 
-    if any(kw in text for kw in ['교통사고', '뺑소니', '충돌', '추돌', '차량', '음주운전']):
+    # 5. 교통사고 (무면허, 역주행, 보행자, 음주측정거부 등 추가)
+    if any(kw in text for kw in ['교통사고', '뺑소니', '충돌', '추돌', '차량', '음주운전', '무면허', '역주행', '보행자', '음주측정거부']):
         return "교통사고"
 
-    if any(kw in text for kw in ['사고', '사건', '경찰', '구속', '입건', '실종', '수사', '출동', '피해', '안전']):
+    # 6. 실종·제보 (변사체, 시신 발견, 행방불명, 수배 등 추가)
+    if any(kw in text for kw in ['사고', '사건', '경찰', '구속', '입건', '실종', '행방불명', '수배', '변사체', '시신 발견', '수사', '출동', '피해', '안전']):
         return "실종·제보"
 
     return "실종·제보"
@@ -240,7 +246,6 @@ def scrape_news():
     for feed_info in RSS_FEEDS:
         try:
             parsed = feedparser.parse(feed_info["url"])
-            # 각 피드당 수집 한도를 300개로 확대
             for entry in parsed.entries[:300]:
                 title = remove_html_tags(entry.get("title", ""))
                 clean_content = remove_html_tags(entry.get("summary", title))
