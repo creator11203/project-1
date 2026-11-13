@@ -5,6 +5,7 @@ import pytz
 import json
 import random
 import urllib.request
+import urllib.parse
 import re
 from html.parser import HTMLParser
 
@@ -26,17 +27,52 @@ def remove_html_tags(html_content):
     f.feed(html_content)
     return f.get_data()
 
-# RSS 피드 소스 리스트
+# 구글 번역 무료 API를 활용한 자동 한글 번역 함수
+def translate_to_korean(text):
+    if not text:
+        return ""
+    try:
+        # 한글이 이미 포함되어 있거나 너무 짧으면 패스
+        encoded_text = urllib.parse.quote(text[:500])
+        url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ko&dt=t&q={encoded_text}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=3) as response:
+            res_data = json.loads(response.read().decode('utf-8'))
+            translated = "".join([item[0] for item in res_data[0] if item[0]])
+            return translated
+    except Exception as e:
+        return text  # 번역 실패 시 원문 반환
+
+# 기본 RSS 피드 소스 리스트
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"}
 ]
 
-# 연동할 텔레그램 공개 채널 목록 (t.me/s/ 형태의 웹 미리보기 페이지 활용)
+# 연동할 텔레그램 공개 채널 목록
 TELEGRAM_CHANNELS = [
     {"url": "https://t.me/s/FastStockNews", "source": "FastStockNews (텔레그램)"},
     {"url": "https://t.me/s/FastStockNewsUSA", "source": "FastStockNewsUSA (텔레그램)"},
     {"url": "https://t.me/s/cahier_de_market", "source": "cahier_de_market (텔레그램)"}
+]
+
+# 요청하신 15개의 X(트위터) 프로필 리스트 (RSSHub 연동)
+X_PROFILES = [
+    {"id": "financialjuice", "source": "FinancialJuice (X)"},
+    {"id": "jukan05", "source": "Jukan (X)"},
+    {"id": "LiveSquawk", "source": "LiveSquawk (X)"},
+    {"id": "WatcherGuru", "source": "WatcherGuru (X)"},
+    {"id": "FirstSquawk", "source": "FirstSquawk (X)"},
+    {"id": "Kalshi", "source": "Kalshi (X)"},
+    {"id": "Alisvolatprop12", "source": "Alisvolatprop12 (X)"},
+    {"id": "mindmoon_108", "source": "심월 (X)"},
+    {"id": "_junhoyeo", "source": "Junho Yeo (X)"},
+    {"id": "RyanGreenblatt", "source": "Ryan Greenblatt (X)"},
+    {"id": "laylaperfume", "source": "Humble (X)"},
+    {"id": "aleabitoreddit", "source": "Serenity (X)"},
+    {"id": "gCaptain", "source": "gCaptain (X)"},
+    {"id": "tradewindsnews", "source": "TradeWinds (X)"},
+    {"id": "Splash_247", "source": "Splash (X)"}
 ]
 
 # 3단계 국내 지역 매핑 데이터
@@ -85,7 +121,8 @@ def categorize_incident(title, content):
 
     global_conflict_keywords = [
         '우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동 전쟁', 
-        '공습', '미사일 공격', '폭격', '전쟁', '테러', '무력 충돌', '군사 작전', '드론 공격'
+        '공습', '미사일 공격', '폭격', '전쟁', '테러', '무력 충돌', '군사 작전', '드론 공격',
+        'strike', 'missile', 'war', 'attack', 'conflict', 'explosion'
     ]
     if any(kw in text for kw in global_conflict_keywords):
         return "해외 분쟁·테러"
@@ -137,8 +174,6 @@ def scrape_telegram_channel(channel_info):
         )
         with urllib.request.urlopen(req, timeout=5) as response:
             html = response.read().decode('utf-8')
-            
-            # 텔레그램 웹 미리보기 페이지에서 메시지 박스 추출
             message_blocks = re.findall(r'<div class="tgme_widget_message_text[^>]*>(.*?)</div>', html, re.DOTALL)
             link_blocks = re.findall(r'<a href="(https?://[^"]+)"[^>]*>.*?</a>', html, re.DOTALL)
             
@@ -147,56 +182,101 @@ def scrape_telegram_channel(channel_info):
                 if not clean_text:
                     continue
                 
-                # 메시지 본문 안에 포함된 외부 링크 추출 시도
                 urls_in_msg = re.findall(r'(https?://[^\s]+)', clean_text)
                 target_link = ""
                 for u in urls_in_msg:
-                    # 텔레그램 자체 링크나 단축 링크가 아닌 실제 원문 링크 우선 선택
                     if "t.me" not in u:
                         target_link = u
                         break
                 
-                # 본문에 링크가 없으면 채널 포스트에 포함된 외부 링크 매칭 시도
                 if not target_link and i < len(link_blocks):
                     candidate = link_blocks[i]
                     if "t.me" not in candidate:
                         target_link = candidate
                 
-                # 만약 원문 링크를 못 찾았으면 기본 채널 링크 사용
                 if not target_link:
                     target_link = url
 
-                title = clean_text.split('\n')[0][:50]
-                summary = clean_text[:120] + "..."
+                # 한글 번역 적용
+                translated_text = translate_to_korean(clean_text)
+                title = translated_text.split('\n')[0][:50]
+                summary = translated_text[:120] + "..."
                 
-                category = categorize_incident(title, clean_text)
+                category = categorize_incident(title, translated_text)
                 if not category:
-                    # 카테고리가 안 잡히면 기본적으로 분쟁/안전 관련일 때 '해외 분쟁·테러' 또는 기본 분류 부여
-                    if any(w in clean_text.lower() for w in ['우크라이나', '러시아', '이란', '미국', '전쟁', '공습', '충돌']):
+                    if any(w in translated_text.lower() for w in ['우크라이나', '러시아', '이란', '미국', '전쟁', '공습', '충돌']):
                         category = "해외 분쟁·테러"
                     else:
                         continue
 
-                location_str, lat, lng = extract_location(clean_text)
+                location_str, lat, lng = extract_location(translated_text)
                 if not location_str:
-                    # 위치가 명시되지 않은 글로벌 채널 기사는 미국/중동 기본값 또는 우크라이나 매칭
                     location_str, lat, lng = "미국 워싱턴D.C.", 38.8951, -77.0364
 
                 items.append({
                     "title": title,
                     "summary": summary,
-                    "content": clean_text,
+                    "content": translated_text,
                     "location": location_str,
                     "lat": lat,
                     "lng": lng,
                     "category": category,
                     "time": "최근 5일 이내",
                     "source": source_name,
-                    "link": target_link  # 원문 기사/웹사이트 링크로 대체됨
+                    "link": target_link
                 })
     except Exception as e:
         print(f"Error scraping telegram {url}: {e}")
         
+    return items
+
+def scrape_x_profile(profile_info):
+    items = []
+    username = profile_info["id"]
+    source_name = profile_info["source"]
+    rss_url = f"https://rsshub.app/twitter/user/{username}"
+
+    try:
+        parsed = feedparser.parse(rss_url)
+        for entry in parsed.entries[:10]:
+            title = entry.get("title", "")
+            summary = entry.get("summary", title)
+            link = entry.get("link", f"https://x.com/{username}")
+            
+            clean_content = remove_html_tags(summary).strip()
+            full_text = title + " " + clean_content
+
+            # 한글 번역 적용
+            translated_title = translate_to_korean(title if title else clean_content[:50])
+            translated_content = translate_to_korean(clean_content)
+            summary_text = translated_content[:120] + "..."
+
+            category = categorize_incident(translated_title, translated_content)
+            if not category:
+                if any(w in translated_content.lower() for w in ['우크라이나', '러시아', '이란', '이스라엘', '전쟁', '공습', '미사일', '충돌', '폭격']):
+                    category = "해외 분쟁·테러"
+                else:
+                    continue
+
+            location_str, lat, lng = extract_location(translated_content)
+            if not location_str:
+                location_str, lat, lng = "미국 워싱턴D.C.", 38.8951, -77.0364
+
+            items.append({
+                "category": category,
+                "title": translated_title,
+                "summary": summary_text,
+                "content": translated_content,
+                "location": location_str,
+                "lat": lat,
+                "lng": lng,
+                "time": "최근 5일 이내",
+                "source": source_name,
+                "link": link
+            })
+    except Exception as e:
+        print(f"Error scraping X profile @{username}: {e}")
+
     return items
 
 def scrape_news():
@@ -207,10 +287,10 @@ def scrape_news():
     
     item_id = int(now.timestamp())
 
-    # 1. 기존 RSS 뉴스 수집
+    # 1. RSS 뉴스 수집
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
-        for entry in parsed.entries[:40]:
+        for entry in parsed.entries[:30]:
             title = entry.get("title", "")
             summary = entry.get("summary", title)
             link = entry.get("link", "")
@@ -248,10 +328,20 @@ def scrape_news():
             })
             item_id += 1
 
-    # 2. 텔레그램 공개 채널 수집 및 원문 링크 매핑
+    # 2. 텔레그램 채널 수집
     for channel in TELEGRAM_CHANNELS:
         tg_items = scrape_telegram_channel(channel)
         for item in tg_items:
+            item["id"] = item_id
+            item["lat"] = round(item["lat"] + (random.random() - 0.5) * 0.01, 4)
+            item["lng"] = round(item["lng"] + (random.random() - 0.5) * 0.01, 4)
+            collected_items.append(item)
+            item_id += 1
+
+    # 3. X(트위터) 15개 프로필 수집 및 한글 번역 적용
+    for profile in X_PROFILES:
+        x_items = scrape_x_profile(profile)
+        for item in x_items:
             item["id"] = item_id
             item["lat"] = round(item["lat"] + (random.random() - 0.5) * 0.01, 4)
             item["lng"] = round(item["lng"] + (random.random() - 0.5) * 0.01, 4)
@@ -264,4 +354,4 @@ if __name__ == "__main__":
     data = scrape_news()
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped and filtered {len(data)} items (including Telegram) into news.json")
+    print(f"Successfully scraped, translated, and filtered {len(data)} items into news.json")
