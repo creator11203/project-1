@@ -26,7 +26,6 @@
             animation: radar-sweep 3s linear infinite;
         }
 
-        /* 3분할 리사이저 스타일 */
         .resizer {
             width: 6px;
             background-color: #1e293b;
@@ -86,10 +85,10 @@
         </div>
     </header>
 
-    <!-- 메인 3분할 플렉스 레이아웃 (크기 자유 조절 가능) -->
+    <!-- 메인 3분할 플렉스 레이아웃 -->
     <main id="splitContainer" class="flex-1 flex flex-col lg:flex-row overflow-hidden w-full">
         
-        <!-- 1. 왼쪽: 뉴스 피드 패널 (초기 너비 26%) -->
+        <!-- 1. 왼쪽: 뉴스 피드 패널 -->
         <section id="leftPane" style="width: 26%; min-width: 240px;" class="bg-slate-900/90 flex flex-col h-full overflow-hidden shrink-0">
             <div class="p-3 border-b border-slate-800 bg-slate-900/50 space-y-2">
                 <div class="flex items-center justify-between text-xs text-slate-400">
@@ -100,7 +99,6 @@
                         <i class="fa-solid fa-rotate text-emerald-400"></i> 새로고침
                     </button>
                 </div>
-                <!-- 지역 선택 드롭다운 -->
                 <div>
                     <select id="regionSelect" onchange="filterByRegion()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-red-500">
                         <option value="all">전체 지역 (국내외 통합)</option>
@@ -118,31 +116,31 @@
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5 select-text"></div>
         </section>
 
-        <!-- 리사이저 1 (왼쪽 <-> 중앙) -->
+        <!-- 리사이저 1 -->
         <div id="resizer1" class="resizer hidden lg:block" title="드래그하여 창 크기 조절"></div>
 
-        <!-- 2. 중앙: 상세 원문 뷰어 패널 (초기 너비 42%) -->
+        <!-- 2. 중앙: 상세 원문 뷰어 패널 -->
         <section id="centerPane" style="width: 42%; min-width: 300px;" class="bg-slate-950 flex flex-col h-full overflow-hidden shrink-0">
+            <!-- 카테고리 선택 버튼 바 (선택 시 각 고유 색상 적용) -->
             <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto shrink-0">
-                <button onclick="setCategoryFilter('all')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm">전체</button>
-                
-                <button onclick="setCategoryFilter('국가 안보')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">국가 안보</button>
-                <button onclick="setCategoryFilter('강력·치안')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">강력·치안</button>
-                <button onclick="setCategoryFilter('사이버·금융')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">사이버·금융</button>
-                <button onclick="setCategoryFilter('재난·안전')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">재난·안전</button>
-                <button onclick="setCategoryFilter('실시간 제보')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">실시간 제보</button>
+                <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm">전체</button>
+                <button onclick="setCategoryFilter('국가 안보')" data-cat="국가 안보" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">국가 안보</button>
+                <button onclick="setCategoryFilter('강력·치안')" data-cat="강력·치안" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">강력·치안</button>
+                <button onclick="setCategoryFilter('사이버·금융')" data-cat="사이버·금융" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">사이버·금융</button>
+                <button onclick="setCategoryFilter('재난·안전')" data-cat="재난·안전" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">재난·안전</button>
+                <button onclick="setCategoryFilter('실시간 제보')" data-cat="실시간 제보" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">실시간 제보</button>
                 
                 <div class="h-5 w-px bg-slate-700 shrink-0 mx-1"></div>
                 
-                <button onclick="setCategoryFilter('해외 분쟁·테러')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-orange-400 hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30">🌍 해외 분쟁·테러</button>
+                <button onclick="setCategoryFilter('해외 분쟁·테러')" data-cat="해외 분쟁·테러" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-orange-400 hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30">🌍 해외 분쟁·테러</button>
             </div>
             <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-5 select-text flex flex-col"></div>
         </section>
 
-        <!-- 리사이저 2 (중앙 <-> 오른쪽) -->
+        <!-- 리사이저 2 -->
         <div id="resizer2" class="resizer hidden lg:block" title="드래그하여 창 크기 조절"></div>
 
-        <!-- 3. 오른쪽: 인터랙티브 지도 패널 (나머지 전체 영역 자동 차지) -->
+        <!-- 3. 오른쪽: 인터랙티브 지도 패널 -->
         <section id="rightPane" style="flex: 1; min-width: 240px;" class="bg-slate-900 flex flex-col h-full relative overflow-hidden">
             <div class="absolute top-3 right-3 z-[400] flex items-center gap-2">
                 <div class="bg-slate-900/90 backdrop-blur border border-slate-700 text-xs px-3 py-1.5 rounded-lg shadow-lg text-slate-300 flex items-center gap-2">
@@ -209,11 +207,9 @@
             initResizers();
             loadIncidentsFromJSON();
 
-            // 30초마다 자동으로 news.json 불러와 화면 실시간 갱신
             setInterval(loadIncidentsFromJSON, 30000);
         });
 
-        // 3분할 창 크기 자유 조절(드래그 리사이저) 초기화
         function initResizers() {
             const container = document.getElementById('splitContainer');
             const leftPane = document.getElementById('leftPane');
@@ -224,13 +220,13 @@
             let isResizing1 = false;
             let isResizing2 = false;
 
-            resizer1.addEventListener('mousedown', (e) => {
+            resizer1.addEventListener('mousedown', () => {
                 isResizing1 = true;
                 resizer1.classList.add('resizing');
                 document.body.style.cursor = 'col-resize';
             });
 
-            resizer2.addEventListener('mousedown', (e) => {
+            resizer2.addEventListener('mousedown', () => {
                 isResizing2 = true;
                 resizer2.classList.add('resizing');
                 document.body.style.cursor = 'col-resize';
@@ -400,7 +396,6 @@
 
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
-                    <!-- 기사 헤더 -->
                     <div class="p-4 rounded-xl ${headerStyle} shrink-0">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-bold px-2.5 py-1 rounded bg-slate-900 text-white">${news.category}</span>
@@ -409,7 +404,6 @@
                         <h2 class="text-base md:text-lg font-extrabold text-white leading-snug">${news.title}</h2>
                     </div>
 
-                    <!-- 발생 지역 정보 바 -->
                     <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center justify-between text-xs text-slate-300 shrink-0">
                         <span class="flex items-center gap-1.5 font-medium">
                             <i class="fa-solid fa-location-dot text-red-500"></i> 매핑 위치: 
@@ -418,7 +412,6 @@
                         <span class="text-[11px] text-slate-400 font-mono">위도: ${news.lat}, 경도: ${news.lng}</span>
                     </div>
 
-                    <!-- 수집된 전체 기사 본문 -->
                     <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-xs md:text-sm text-slate-200 leading-relaxed space-y-3 shrink-0">
                         <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
                             <span class="text-[11px] font-bold text-emerald-400"><i class="fa-solid fa-file-lines"></i> 수집된 원문 내용</span>
@@ -431,7 +424,6 @@
                         <p class="whitespace-pre-line">${news.content || news.summary}</p>
                     </div>
 
-                    <!-- 기사 원문 웹페이지 뷰어 (iframe) -->
                     ${news.link ? `
                         <div class="flex-1 flex flex-col min-h-[360px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
                             <div class="bg-slate-800/80 px-3 py-1.5 text-[11px] text-slate-400 flex items-center justify-between border-b border-slate-700">
@@ -457,19 +449,40 @@
             }
         }
 
+        // 카테고리 필터 클릭 시 각 카테고리별 맞춤 색상(클래스)이 적용되도록 수정
         function setCategoryFilter(category) {
             currentCategory = category;
+            
             document.querySelectorAll('.cat-btn').forEach(btn => {
-                if (btn.textContent.includes(category) || (category === 'all' && btn.textContent.trim() === '전체')) {
-                    btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm';
+                const btnCat = btn.getAttribute('data-cat');
+                
+                if (btnCat === category) {
+                    // 선택된 카테고리별 고유 색상 부여
+                    if (category === 'all') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm';
+                    } else if (category === '국가 안보') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition whitespace-nowrap shadow-sm';
+                    } else if (category === '강력·치안') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 text-white transition whitespace-nowrap shadow-sm';
+                    } else if (category === '사이버·금융') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white transition whitespace-nowrap shadow-sm';
+                    } else if (category === '재난·안전') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 text-white transition whitespace-nowrap shadow-sm';
+                    } else if (category === '실시간 제보') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 text-white transition whitespace-nowrap shadow-sm';
+                    } else if (category === '해외 분쟁·테러') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-600 text-white transition whitespace-nowrap shadow-sm border border-orange-400';
+                    }
                 } else {
-                    if (btn.textContent.includes('해외 분쟁·테러')) {
+                    // 비선택 상태의 기본 스타일
+                    if (btnCat === '해외 분쟁·테러') {
                         btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-orange-400 hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30';
                     } else {
                         btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap';
                     }
                 }
             });
+
             renderNewsList();
             updateMapMarkers();
         }
