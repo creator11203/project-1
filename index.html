@@ -71,7 +71,10 @@
                     <span class="font-semibold text-slate-300 flex items-center gap-1">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 지역 맞춤 필터
                     </span>
-                    <button onclick="refreshNewsFeed()" class="hover:text-white flex items-center gap-1 transition text-slate-300"><i class="fa-solid fa-rotate text-red-500"></i> 초기화</button>
+                    <!-- 기존 초기화 버튼을 클릭 시 즉시 수동 업데이트가 되는 새로고침 버튼으로 변경 -->
+                    <button onclick="manualRefreshData()" class="hover:text-white flex items-center gap-1 transition text-slate-300 bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded border border-slate-700">
+                        <i class="fa-solid fa-rotate text-emerald-400"></i> 새로고침
+                    </button>
                 </div>
             </div>
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
@@ -357,9 +360,11 @@
             return newsData.filter(news => currentCategory === 'all' || news.category === currentCategory);
         }
 
-        function refreshNewsFeed() {
+        // '새로고침' 버튼을 누를 때 호출되는 함수 (필터 초기화와 동시에 즉시 최신 데이터 로드)
+        function manualRefreshData() {
             currentCategory = 'all';
             setCategoryFilter('all');
+            loadIncidentsFromJSON();
             map.flyTo([30.0000, 15.0000], 3);
         }
 
