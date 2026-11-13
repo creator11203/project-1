@@ -62,7 +62,7 @@ def export_db_to_json():
     cursor.execute('DELETE FROM news WHERE timestamp < ?', (cutoff_timestamp,))
     conn.commit()
 
-    cursor.execute('SELECT * FROM news ORDER BY timestamp DESC LIMIT 400')
+    cursor.execute('SELECT * FROM news ORDER BY timestamp DESC LIMIT 600')
     rows = cursor.fetchall()
     
     news_list = [dict(row) for row in rows]
@@ -104,35 +104,50 @@ def translate_to_korean(text):
     except Exception:
         return text
 
-def extract_domain_source(url):
-    if not url or "t.me" in url:
-        return ""
-    try:
-        parsed_url = urllib.parse.urlparse(url)
-        netloc = parsed_url.netloc.lower()
-        netloc = re.sub(r'^www\.', '', netloc)
-        
-        domain_mapping = {
-            'yna.co.kr': '연합뉴스',
-            'news.google.com': 'Google News',
-            'hankyung.com': '한국경제',
-            'edaily.co.kr': '이데일리',
-            'reuters.com': 'Reuters',
-            'bloomberg.com': 'Bloomberg',
-            'apnews.com': 'AP News',
-            'bbc.com': 'BBC'
-        }
-        for d, name in domain_mapping.items():
-            if d in netloc:
-                return name
-        return netloc
-    except Exception:
-        return "외부 원문 기사"
-
+# 💡 주요 언론사 공식 RSS 및 키워드 기반 구글 뉴스 실시간 서치 피드 대거 통합
 RSS_FEEDS = [
+    # 주요 종합일간지 및 통신사 공식 RSS
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
-    {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"},
-    {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+%EC%82%AC%EA%B1%B4+%ED%8F%AD%ED%96%89+%EA%B2%BD%EC%B0%B0+%EC%86%A1%EC%B9%98+%EA%B5%AC%EC%86%8D+%EC%82%AC%EA%B8%B0+%ED%8F%AD%ED%8C%8D&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (사건·사고)"}
+    {"url": "https://www.chosun.com/arc/outboundbyfeed/rss/?outputType=xml", "source": "조선일보"},
+    {"url": "https://rss.joins.com/joins_news_list.xml", "source": "중앙일보"},
+    {"url": "https://rss.donga.com/total.xml", "source": "동아일보"},
+    {"url": "https://www.hankyung.com/feed/all", "source": "한국경제"},
+    {"url": "https://www.mk.co.kr/rss/30000001/", "source": "매일경제"},
+    {"url": "https://www.hani.co.kr/rss/", "source": "한겨레"},
+    {"url": "https://www.khan.co.kr/rss/rssdata/total_news.xml", "source": "경향신문"},
+    {"url": "https://www.segye.com/rss/all.xml", "source": "세계일보"},
+    {"url": "https://rss.kmib.co.kr/data/kmibAllNews.xml", "source": "국민일보"},
+    {"url": "https://www.seoul.co.kr/xml/rss.xml", "source": "서울신문"},
+
+    # 방송 및 뉴스통신사 공식 RSS
+    {"url": "https://news.kbs.co.kr/rss/rss.do", "source": "KBS"},
+    {"url": "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSS", "source": "SBS"},
+    {"url": "https://imnews.imbc.com/rss/news/news_00.xml", "source": "MBC"},
+    {"url": "https://www.ytn.co.kr/rss/rss.xml", "source": "YTN"},
+    {"url": "https://www.yonhapnewstv.co.kr/browse/feed", "source": "연합뉴스TV"},
+    {"url": "https://rss.ichannela.com/rss/channels_news.xml", "source": "채널A"},
+    {"url": "https://news.tvchosun.com/svc/common/rss/rss.xml", "source": "TV조선"},
+    {"url": "https://www.mbn.co.kr/rss/", "source": "MBN"},
+    {"url": "https://www.newsis.com/RSS/sisa.xml", "source": "뉴시스"},
+    {"url": "https://www.news1.kr/rss/", "source": "뉴스1"},
+
+    # 경제·전문지 공식 RSS
+    {"url": "https://www.wowtv.co.kr/newscenter/rss", "source": "한국경제TV"},
+    {"url": "https://biz.sbs.co.kr/rss/rss.xml", "source": "SBS Biz"},
+    {"url": "https://biz.chosun.com/arc/outboundbyfeed/rss/?outputType=xml", "source": "조선비즈"},
+    {"url": "https://rss.mt.co.kr/mt_news.xml", "source": "머니투데이"},
+    {"url": "https://www.edaily.co.kr/rss/edaily_news.xml", "source": "이데일리"},
+    {"url": "https://www.fnnews.com/rss/fn_realnews.xml", "source": "파이낸셜뉴스"},
+    {"url": "https://www.sedaily.com/Rss/RssList", "source": "서울경제"},
+    {"url": "https://www.asiae.co.kr/rss/", "source": "아시아경제"},
+    {"url": "https://www.dt.co.kr/rss/dt_rss.xml", "source": "디지털타임스"},
+    {"url": "https://rss.etnews.com/EtNewsSection.xml", "source": "전자신문"},
+    {"url": "https://zdnet.co.kr/rss/all.xml", "source": "ZDNet Korea"},
+
+    # 💡 강력범죄·사건사고 키워드가 강력하게 반영된 구글 뉴스 실시간 검색 RSS 쿼리들
+    {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+OR+%EC%82%AC%EA%B1%B4+OR+%ED%8F%AD%ED%96%89+OR+%EA%B2%BD%EC%B0%B0+OR+%EA%B5%AC%EC%86%8D+OR+%EC%82%AC%EA%B8%B0+OR+%ED%8F%AD%ED%8C%8D+OR+%ED%99%94%EC%9E%AC&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (종합 사건사고)"},
+    {"url": "https://news.google.com/rss/search?q=%EC%82%B4%EC%9D%B8+OR+%EB%A7%88%EC%95%BD+OR+%EC%8A%A4%ED%86%A0%ED%82%B9+OR+%ED%9D%B9%EA%B8%B0+OR+%EC%84%B1%EB%B2%94%EC%A3%84+OR+%EC%9C%A0%EC%B6%9C+OR+%ED%95%B4%ED%82%B9&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (강력범죄·마약·사이버)"},
+    {"url": "https://news.google.com/rss/search?q=%EA%B5%90%ED%86%B5%EC%82%AC%EA%B3%A0+OR+%EB%BF%5B%5D%EB%86%80%EB%8B%88+OR+%EB%B6%95%EA%B4%B4+OR+%EC%82%B0%EC%82%AC%ED%83%9C+OR+%EC%B9%A8%EC%88%98+OR+%EC%A0%95%EC%A0%84+OR+%EA%B0%80%EC%8A%A4%EC%9C%A0%EC%B6%9C&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"}
 ]
 
 TELEGRAM_CHANNELS = [
@@ -196,7 +211,7 @@ def format_datetime_with_weekday(dt):
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    # 💡 1단계: 주식, 증시, 기업인(젠슨황 등), 연예, 가십(불륜 등) 무조건 제외하는 강력 필터링
+    # 💡 금융, 주식, 연예, 가십성 노이즈 철저 차단 필터
     strict_exclude_keywords = [
         '비트코인', '이더리움', '코인', '가상화폐', '암호화폐', '주가', '증시', '코스피', '코스닥', 
         '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '젠슨 황', '엔비디아', '테슬라', 
@@ -207,37 +222,37 @@ def categorize_incident(title, content):
     if any(kw in text for kw in strict_exclude_keywords):
         return None 
 
-    # 2단계: 해외 분쟁·테러
+    # 해외 분쟁·테러
     if any(c.lower() in text for c in WORLD_COUNTRIES) and any(t in text for t in CONFLICT_KEYWORDS):
-        return "해외 분쟁·테러"
+        return "해외 분쟁"
 
-    # 3단계: 국가 안보
+    # 국가 안보
     if any(kw in text for kw in ['계엄', '군 병력', '북한 도발', '미사일 발사', '영공 침범', '국방 비상']):
         return "국가 안보"
 
-    # 4단계: 강력·치안 (범죄 및 안전 관련 키워드)
-    crime_keywords = [
-        '스토킹', '마약', '해킹', '개인정보 유출', '몰카', '소형카메라', '화장실 몰카', '흉기 난동', 
-        '방화', '묻지마 폭행', '난투극', '조폭', '조직폭력배', '원한 범죄', '집단 폭행', '폭행', 
-        '집단 성폭행', '성폭행', '성추행', '성범죄', '그루밍', '자살', '동반 자살', '실종', 
-        '납치', '절도', '강도', '특수 절도', '상해', '사기죄', '금품 갈취', '살인', '마약류', 
-        '필로폰', '대마초', '공갈', '협박', '특수상해', '특수폭행', '경찰 출동', '구속영장', '입건'
-    ]
-    if any(kw in text for kw in crime_keywords):
-        return "강력·치안"
+    # 세분화 카테고리 매칭 1: 살인·폭행·흉기 (강력범죄)
+    if any(kw in text for kw in ['살인', '흉기 난동', '묻지마 폭행', '난투극', '조폭', '조직폭력배', '원한', '집단 폭행', '폭행', '상해', '특수상해', '특수폭행']):
+        return "강력범죄"
 
-    # 5단계: 재난·안전 및 사고
-    safety_keywords = [
-        '교통사고', '뺑소니', '건물 붕괴', '다리 붕괴', '지반 붕괴', '고속도로 사고', 
-        '우회전 사고', '자전거 충돌', '보행자 사고', '화재', '폭발', '지진', '홍수', '산사태', 
-        '침수', '정전', '가스 유출', '구조 작전', '교통 통제', '차량 충돌'
-    ]
-    if any(kw in text for kw in safety_keywords):
-        return "재난·안전"
+    # 세분화 카테고리 매칭 2: 성범죄·마약·스토킹
+    if any(kw in text for kw in ['성범죄', '성폭행', '성추행', '몰카', '소형카메라', '마약', '필로폰', '대마초', '스토킹', '그루밍']):
+        return "성범죄·마약"
 
-    # 6단계: 사이버·금융 사고 (보이스피싱, 해킹 등 실제 사고만 해당)
-    if any(kw in text for kw in ['랜섬웨어', '전산 장애', '서버 다운', '금융 사고', '보안 취약점', '보이스피싱', '스미싱']):
-        return "사이버·금융"
+    # 세분화 카테고리 매칭 3: 사기·절도·해킹
+    if any(kw in text for kw in ['사기', '절도', '강도', '해킹', '개인정보 유출', '보이스피싱', '스미싱', '금품 갈취', '공갈', '협박', '특수 절도']):
+        return "사기·금융"
+
+    # 세분화 카테고리 매칭 4: 화재·붕괴·안전 (재난·사고)
+    if any(kw in text for kw in ['화재', '폭발', '건물 붕괴', '다리 붕괴', '지반 붕괴', '산사태', '홍수', '침수', '정전', '가스 유출', '지진', '구조 작전']):
+        return "재난·사고"
+
+    # 세분화 카테고리 매칭 5: 교통사고·뺑소니
+    if any(kw in text for kw in ['교통사고', '뺑소니', '고속도로 사고', '우회전 사고', '자전거 충돌', '보행자 사고', '차량 충돌', '추돌사고']):
+        return "교통사고"
+
+    # 일반 강력·치안 (기타 입건/구속 등)
+    if any(kw in text for kw in ['경찰 출동', '구속영장', '입건', '실종', '자살']):
+        return "실종·제보"
 
     return None
 
@@ -276,7 +291,6 @@ def scrape_telegram_channel(channel_info):
                 translated_text = translate_to_korean(clean_text)
                 title = translated_text.split('\n')[0][:60]
                 
-                # 엄격한 필터링 적용
                 category = categorize_incident(title, translated_text)
                 if not category:
                     continue
@@ -307,40 +321,43 @@ def scrape_news():
     collected_items = []
 
     for feed_info in RSS_FEEDS:
-        parsed = feedparser.parse(feed_info["url"])
-        for entry in parsed.entries[:120]:
-            title = remove_html_tags(entry.get("title", ""))
-            clean_content = remove_html_tags(entry.get("summary", title))
-            link = entry.get("link", "")
-            
-            pub_dt = now
-            published_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
-            if published_parsed:
-                pub_dt = datetime.fromtimestamp(time.mktime(published_parsed), kst)
-                if pub_dt < seven_days_ago:
-                    continue
-            
-            category = categorize_incident(title, clean_content)
-            if not category:
-                continue
+        try:
+            parsed = feedparser.parse(feed_info["url"])
+            for entry in parsed.entries[:60]:
+                title = remove_html_tags(entry.get("title", ""))
+                clean_content = remove_html_tags(entry.get("summary", title))
+                link = entry.get("link", "")
                 
-            location_str, lat, lng = extract_location(title, clean_content)
-            lat += (random.random() - 0.5) * 0.005
-            lng += (random.random() - 0.5) * 0.005
+                pub_dt = now
+                published_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+                if published_parsed:
+                    pub_dt = datetime.fromtimestamp(time.mktime(published_parsed), kst)
+                    if pub_dt < seven_days_ago:
+                        continue
+                
+                category = categorize_incident(title, clean_content)
+                if not category:
+                    continue
+                    
+                location_str, lat, lng = extract_location(title, clean_content)
+                lat += (random.random() - 0.5) * 0.005
+                lng += (random.random() - 0.5) * 0.005
 
-            collected_items.append({
-                "category": category,
-                "title": title,
-                "summary": clean_content[:130] + ("..." if len(clean_content) > 130 else ""),
-                "content": clean_content,
-                "location": location_str,
-                "lat": round(lat, 4),
-                "lng": round(lng, 4),
-                "time": format_datetime_with_weekday(pub_dt),
-                "source": feed_info["source"],
-                "link": link,
-                "timestamp": pub_dt.timestamp()
-            })
+                collected_items.append({
+                    "category": category,
+                    "title": title,
+                    "summary": clean_content[:130] + ("..." if len(clean_content) > 130 else ""),
+                    "content": clean_content,
+                    "location": location_str,
+                    "lat": round(lat, 4),
+                    "lng": round(lng, 4),
+                    "time": format_datetime_with_weekday(pub_dt),
+                    "source": feed_info["source"],
+                    "link": link,
+                    "timestamp": pub_dt.timestamp()
+                })
+        except Exception as e:
+            print(f"RSS 수집 오류 ({feed_info['source']}): {e}")
 
     for channel in TELEGRAM_CHANNELS:
         collected_items.extend(scrape_telegram_channel(channel))
@@ -348,7 +365,7 @@ def scrape_news():
     return collected_items
 
 if __name__ == "__main__":
-    print("=== 엄격한 키워드 필터링 관제 크롤러 실행 ===")
+    print("=== 대규모 언론사 및 구글 검색 RSS 기반 관제 크롤러 실행 ===")
     init_db()
     try:
         data = scrape_news()
