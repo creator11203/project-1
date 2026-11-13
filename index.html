@@ -165,12 +165,15 @@
         <!-- 3. 오른쪽: 지도 패널 -->
         <section id="rightPane" style="flex: 1; min-width: 240px;" class="bg-white dark:bg-slate-900 flex flex-col h-full relative overflow-hidden">
             <div class="absolute top-3 right-3 z-[400] flex items-center gap-2">
+                <button id="alertButton" onclick="toggleAlertPanel()" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-amber-400 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-800 whitespace-nowrap"><i class="fa-regular fa-bell"></i> 알림 설정</button>
                 <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-700 text-xs px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                     <span>전국 동(洞) 단위 정밀 관제 지도</span>
                 </div>
             </div>
             <div id="map" class="flex-1 w-full h-full z-10"></div>
+            <div id="alertPanel" class="hidden absolute top-14 right-3 w-64 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3" style="z-index: 1100;"></div>
+            <div id="alertToasts" class="absolute bottom-7 right-3 flex flex-col gap-2 items-end" style="z-index: 1100;"></div>
         </section>
     </main>
 
@@ -217,7 +220,7 @@
 
     <!-- 우리동네 커뮤니티 창 -->
     <div id="communityModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="height: 85vh;">
+        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="height: 88vh;">
             <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 shrink-0">
                 <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                     <i class="fa-solid fa-people-group text-emerald-500"></i> <span id="commTitle">우리동네 커뮤니티</span>
@@ -225,7 +228,11 @@
                 <button onclick="closeCommunity()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div id="commBody" class="flex-1 min-h-0 flex flex-col select-text"></div>
+            <div id="commProfileCard" onclick="closeProfile()" class="hidden absolute inset-0 z-10 bg-black/50 flex items-center justify-center p-4"></div>
         </div>
+    </div>
+    <div id="commMediaView" onclick="closeMedia()" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out" style="z-index: 60;">
+        <img id="commMediaImg" class="max-w-full max-h-full rounded-lg" alt="">
     </div>
 
     <!-- 스크립트 로직 -->
@@ -545,6 +552,8 @@
             // 가운데 창 크기가 바뀌면 기사 원문 크기도 다시 맞춤
             if (window.ResizeObserver) new ResizeObserver(fitArticleFrame).observe(document.getElementById('detailViewContainer'));
             window.addEventListener('resize', fitArticleFrame);
+            // 브라우저는 사용자가 화면을 한 번 눌러야 소리를 낼 수 있어서, 첫 클릭 때 소리를 준비
+            document.addEventListener('click', ensureAudio, { once: true });
             // 날짜 메뉴 바깥을 누르면 닫기
             document.addEventListener('click', (e) => {
                 if (e.target && e.target.closest && !e.target.closest('#dateBarWrap')) toggleDateMenu(false);
@@ -722,6 +731,7 @@
                         const sig = data.length + ':' + data[0].id + ':' + data[data.length - 1].id;
                         if (sig !== lastSig || isManualRefresh) {
                             newsData = localReports.concat(data);
+                            checkNewIncidents(data);   // 우리 동네 새 사건 알림
                             lastSig = sig;
                             changed = true;
                         }
@@ -1156,8 +1166,190 @@
             });
         }
 
+        // ================= 우리 동네 사건사고 알림 =================
+        // 새 기사가 들어왔을 때 '알림 지역'에 해당하면 지도 오른쪽 아래에 알림 창을 띄우고 소리를 냅니다.
+        const ALERT_SOUNDS = { dingdong: '띵동', bell: '종소리', siren: '경보음', none: '소리 없음' };
+        let alertCfg = (() => {
+            const base = { enabled: true, sound: 'dingdong', volume: 70, scope: 'sigungu', region: null };
+            try { return Object.assign(base, JSON.parse(localStorage.getItem('alert_cfg') || '{}')); } catch (e) { return base; }
+        })();
+        let alertSeenIds = null;      // 이미 본 기사 번호 (처음 불러올 때는 알림을 띄우지 않음)
+        let alertAudioCtx = null;
+
+        function saveAlertCfg() { try { localStorage.setItem('alert_cfg', JSON.stringify(alertCfg)); } catch (e) {} }
+        function alertRegion() {
+            if (alertCfg.region && alertCfg.region.sido) return alertCfg.region;
+            if (typeof myTown !== 'undefined' && myTown) return { sido: myTown.sido, sigungu: myTown.sigungu, dong: myTown.dong };
+            return null;
+        }
+        function alertRegionText() {
+            const r = alertRegion();
+            if (!r) return '아직 정하지 않음';
+            return [r.sido, r.sigungu, (alertCfg.scope === 'dong' ? r.dong : '')].filter(Boolean).join(' ');
+        }
+        function matchAlertRegion(news) {
+            const r = alertRegion();
+            if (!r) return false;
+            const loc = news.location || '';
+            if (!loc.includes(r.sido)) return false;
+            if (r.sigungu) {
+                const city = r.sigungu.split(' ')[0];
+                if (!(loc.includes(r.sigungu) || (r.sigungu.includes(' ') && loc.split(' ').pop() === city))) return false;
+            }
+            if (alertCfg.scope === 'dong' && r.dong) {
+                if (!(loc.includes(r.dong) || loc.includes(dongStem(r.dong)))) return false;
+            }
+            return true;
+        }
+
+        // 새로 들어온 기사 확인 (loadIncidentsFromJSON 에서 호출)
+        function checkNewIncidents(list) {
+            if (alertSeenIds === null) { alertSeenIds = new Set(list.map(n => n.id)); return; }
+            const fresh = list.filter(n => !alertSeenIds.has(n.id));
+            fresh.forEach(n => alertSeenIds.add(n.id));
+            if (!alertCfg.enabled) return;
+            const mine = fresh.filter(matchAlertRegion);
+            if (mine.length === 0) return;
+            mine.slice(0, 3).forEach(n => showAlertToast({
+                head: '🔔 우리 동네 새 사건사고', badge: n.category, title: n.title,
+                foot: (n.location || '') + ' · ' + (n.source || ''), newsId: n.id
+            }));
+            if (mine.length > 3) showAlertToast({ head: '🔔 우리 동네 새 사건사고', title: '외 ' + (mine.length - 3) + '건이 더 있습니다.', foot: alertRegionText() });
+            playAlertSound();
+        }
+
+        // 알림 창 (지도 오른쪽 아래 네모 상자)
+        function showAlertToast(o) {
+            const box = document.getElementById('alertToasts');
+            if (!box) return;
+            const el = document.createElement('div');
+            el.className = 'w-72 max-w-[80vw] rounded-xl border-2 ' + (o.danger ? 'border-red-600' : 'border-amber-500') + ' bg-white dark:bg-slate-900 shadow-2xl p-3 text-left cursor-pointer';
+            el.innerHTML = `
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <span class="text-[0.6875rem] font-extrabold ${o.danger ? 'text-red-600' : 'text-amber-600'}">${esc(o.head || '알림')}</span>
+                    <button class="alert-x text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm leading-none px-1" title="닫기">✕</button>
+                </div>
+                ${o.badge ? `<span class="inline-block text-[0.625rem] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold mb-1">${esc(o.badge)}</span>` : ''}
+                <div class="text-xs font-bold text-slate-900 dark:text-white leading-snug" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${esc(o.title || '')}</div>
+                ${o.foot ? `<div class="text-[0.625rem] text-slate-500 mt-1 truncate">${esc(o.foot)}</div>` : ''}`;
+            const close = () => { if (el.parentNode) el.parentNode.removeChild(el); };
+            el.onclick = (e) => {
+                if (e && e.target && e.target.classList && e.target.classList.contains('alert-x')) { close(); return; }
+                if (o.newsId) {
+                    const n = newsData.find(x => x.id === o.newsId);
+                    if (n) { currentCategory = 'all'; currentSub = null; selectedHotspotRegion = null; selectedDate = dateKey(n.timestamp); renderCategoryBar(); updateMapMarkers(); selectNews(n.id); }
+                } else if (o.openCommunity) { openCommunity(); }
+                close();
+            };
+            box.appendChild(el);
+            while (box.children && box.children.length > 4) box.removeChild(box.children[0]);
+            setTimeout(close, 60000);
+        }
+
+        // 알림 소리 (별도 음원 파일 없이 브라우저가 직접 소리를 만듭니다)
+        function ensureAudio() {
+            try {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return null;
+                if (!alertAudioCtx) alertAudioCtx = new AC();
+                if (alertAudioCtx.state === 'suspended') alertAudioCtx.resume();
+                return alertAudioCtx;
+            } catch (e) { return null; }
+        }
+        function playAlertSound(name, volume) {
+            const kind = name || alertCfg.sound;
+            if (kind === 'none') return;
+            const ctx = ensureAudio();
+            if (!ctx) return;
+            const vol = Math.max(0, Math.min(1, (volume == null ? alertCfg.volume : volume) / 100));
+            if (vol === 0) return;
+            const tone = (freq, start, dur, type) => {
+                const osc = ctx.createOscillator(), gain = ctx.createGain();
+                osc.type = type || 'sine';
+                osc.frequency.value = freq;
+                const t0 = ctx.currentTime + start;
+                gain.gain.setValueAtTime(0.0001, t0);
+                gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol * 0.5), t0 + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.start(t0); osc.stop(t0 + dur + 0.05);
+            };
+            if (kind === 'dingdong') { tone(880, 0, 0.45); tone(660, 0.35, 0.7); }
+            else if (kind === 'bell') { tone(1318, 0, 1.2); tone(1976, 0, 0.8); tone(2637, 0, 0.5); }
+            else if (kind === 'siren') { for (let i = 0; i < 6; i++) tone(i % 2 ? 980 : 720, i * 0.18, 0.18, 'square'); }
+        }
+
+        // 알림 설정 창
+        function toggleAlertPanel(show) {
+            const p = document.getElementById('alertPanel');
+            const hidden = p.classList.contains('hidden');
+            const want = (typeof show === 'boolean') ? show : hidden;
+            if (want) { renderAlertPanel(); p.classList.remove('hidden'); ensureAudio(); } else p.classList.add('hidden');
+        }
+        function renderAlertPanel() {
+            const p = document.getElementById('alertPanel');
+            const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-100';
+            p.innerHTML = `
+                <div class="flex items-center justify-between mb-2">
+                    <b class="text-sm text-slate-900 dark:text-white">🔔 우리 동네 알림 설정</b>
+                    <button onclick="toggleAlertPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button>
+                </div>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-2">
+                    <span>알림 받기</span>
+                    <input type="checkbox" ${alertCfg.enabled ? 'checked' : ''} onchange="setAlertCfg('enabled', this.checked)">
+                </label>
+                <div class="text-[0.6875rem] text-slate-500 mb-1">알림 지역: <b class="text-slate-800 dark:text-slate-100">${esc(alertRegionText())}</b></div>
+                <div class="grid grid-cols-2 gap-1 mb-2">
+                    <button onclick="setAlertRegionFromTown()" class="px-2 py-1 rounded text-[0.6875rem] border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">인증한 동네로</button>
+                    <button onclick="setAlertRegionFromFilter()" class="px-2 py-1 rounded text-[0.6875rem] border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">왼쪽 필터 지역으로</button>
+                </div>
+                <div class="text-[0.6875rem] text-slate-500 mb-1">알림 범위</div>
+                <select onchange="setAlertCfg('scope', this.value)" class="${inp} mb-2">
+                    <option value="sigungu" ${alertCfg.scope === 'sigungu' ? 'selected' : ''}>시·군·구 전체</option>
+                    <option value="dong" ${alertCfg.scope === 'dong' ? 'selected' : ''}>우리 읍·면·동만</option>
+                </select>
+                <div class="text-[0.6875rem] text-slate-500 mb-1">알림 소리</div>
+                <select onchange="setAlertCfg('sound', this.value); playAlertSound();" class="${inp} mb-2">
+                    ${Object.keys(ALERT_SOUNDS).map(k => `<option value="${k}" ${alertCfg.sound === k ? 'selected' : ''}>${ALERT_SOUNDS[k]}</option>`).join('')}
+                </select>
+                <div class="flex items-center justify-between text-[0.6875rem] text-slate-500 mb-1"><span>볼륨</span><span id="alertVolText">${alertCfg.volume}%</span></div>
+                <input type="range" min="0" max="100" step="5" value="${alertCfg.volume}" oninput="setAlertCfg('volume', Number(this.value)); document.getElementById('alertVolText').textContent = this.value + '%';" onchange="playAlertSound()" class="w-full mb-2">
+                <button onclick="testAlert()" class="w-full py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold">알림 미리 보기 (소리 테스트)</button>
+                <p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">이 화면을 열어 둔 동안에만 알림이 옵니다. 새 기사는 2분마다 확인합니다.</p>`;
+        }
+        function setAlertCfg(key, value) { alertCfg[key] = value; saveAlertCfg(); if (key === 'scope' || key === 'enabled') renderAlertPanel(); updateAlertButton(); }
+        function setAlertRegionFromTown() {
+            if (typeof myTown === 'undefined' || !myTown) {
+                document.getElementById('alertPanelMsg').textContent = '먼저 상단의 [우리동네 커뮤니티]에서 동네 인증을 해 주세요.';
+                return;
+            }
+            alertCfg.region = { sido: myTown.sido, sigungu: myTown.sigungu, dong: myTown.dong };
+            saveAlertCfg(); renderAlertPanel(); updateAlertButton();
+        }
+        function setAlertRegionFromFilter() {
+            const sido = document.getElementById('sidoSelect').value;
+            const sigungu = document.getElementById('sigunguSelect').value;
+            const dong = document.getElementById('dongSelect').value;
+            if (sido === 'all') {
+                document.getElementById('alertPanelMsg').textContent = '왼쪽 위 [전국 지역별 상세 필터]에서 시·도와 시·군·구를 먼저 골라 주세요.';
+                return;
+            }
+            alertCfg.region = { sido: sido, sigungu: (sigungu !== 'all' && sigungu !== '전체') ? sigungu : '', dong: (dong !== 'all' && dong !== '전체') ? dong : '' };
+            saveAlertCfg(); renderAlertPanel(); updateAlertButton();
+        }
+        function testAlert() {
+            showAlertToast({ head: '🔔 우리 동네 새 사건사고', badge: '알림 미리 보기', title: '이런 모양으로 알림이 표시됩니다.', foot: alertRegionText() });
+            playAlertSound();
+        }
+        function updateAlertButton() {
+            const b = document.getElementById('alertButton');
+            if (!b) return;
+            const on = alertCfg.enabled && !!alertRegion();
+            b.innerHTML = (on ? '<i class="fa-solid fa-bell text-amber-500"></i> 알림 켜짐' : '<i class="fa-regular fa-bell-slash"></i> 알림 설정');
+        }
+
         // ================= 우리동네 커뮤니티 =================
-        // 서버(Firebase)가 연결되어 있으면 같은 동네 사람들과 실시간으로 글을 주고받고,
+        // 서버(Firebase)가 연결되어 있으면 같은 동네 사람들과 실시간으로 글·사진·동영상을 주고받고,
         // 연결 전에는 '체험 모드'로 이 기기에만 저장됩니다. (맨 위 FIREBASE_CONFIG 참고)
         const SIDO_ALIASES = {
             '서울특별시': ['서울'], '부산광역시': ['부산'], '대구광역시': ['대구'], '인천광역시': ['인천'], '광주광역시': ['광주'],
@@ -1166,17 +1358,30 @@
             '전라남도': ['전남'], '경상북도': ['경북'], '경상남도': ['경남'], '제주특별자치도': ['제주도', '제주']
         };
         const TOWN_VALID_DAYS = 30;
+        const COMM_EMOJIS = ['🙂', '😀', '😎', '🐶', '🐱', '🐻', '🦊', '🐰', '🌳', '🌸', '⭐', '🏠'];
+        const COMM_BGS = [['기본', ''], ['하늘', '#e0f2fe'], ['연두', '#dcfce7'], ['노랑', '#fef9c3'], ['분홍', '#fce7f3'], ['보라', '#ede9fe'], ['밤', '#0f172a']];
+        const REPORT_KINDS = ['화재', '교통사고', '범죄 의심', '수상한 사람', '실종', '안전사고', '기타'];
+        const VIDEO_MAX_MB = 50;
+
         let myTown = null;            // { sido, sigungu, dong, verifiedAt }
-        let commUnsub = null, commMessages = [], commSos = false, commDb = null, commReady = null;
-        let commCands = [], commFound = null;
+        let commUnsub = null, commUnsubMembers = null, commMessages = [], commMembers = [];
+        let commType = 'talk';        // 'talk'(이야기) / 'report'(사건사고 제보) / 'sos'
+        let commDb = null, commReady = null, commAttach = null, commLoadedOnce = false, commHeartbeat = null;
+        let commCands = [], commFound = null, commEditEmoji = null;
 
         function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
-        function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+        function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
         const COMM_UID = (() => {
             let u = lsGet('comm_uid');
             if (!u) { u = 'u' + Math.random().toString(36).slice(2) + Date.now().toString(36); lsSet('comm_uid', u); }
             return u;
         })();
+        let commProfile = (() => {
+            const base = { nick: lsGet('comm_nick') || '', emoji: '🙂', intro: '', joinedAt: Date.now() };
+            try { return Object.assign(base, JSON.parse(lsGet('comm_profile') || '{}')); } catch (e) { return base; }
+        })();
+        let commBg = lsGet('comm_bg') || '';
+        function myNick() { return (commProfile.nick || '').trim() || '이웃'; }
 
         // 개포1동 → 개포동 (같은 이름의 1동·2동은 하나의 동네로 묶음)
         function communityDong(d) {
@@ -1209,67 +1414,173 @@
         }
 
         // ---- 저장소 (Firebase 또는 체험 모드) ----
+        const loadedScripts = {};
         function loadScript(src) {
-            return new Promise((res, rej) => {
-                const s = document.createElement('script');
-                s.src = src; s.onload = res; s.onerror = () => rej(new Error('불러오기 실패: ' + src));
-                document.head.appendChild(s);
-            });
+            if (!loadedScripts[src]) {
+                loadedScripts[src] = new Promise((res, rej) => {
+                    const s = document.createElement('script');
+                    s.src = src; s.onload = res; s.onerror = () => rej(new Error('불러오기 실패: ' + src));
+                    document.head.appendChild(s);
+                });
+            }
+            return loadedScripts[src];
         }
+        const FB_VER = 'https://www.gstatic.com/firebasejs/10.12.2/';
         function commInit() {
             if (commReady) return commReady;
             commReady = (async () => {
                 if (!FIREBASE_CONFIG) return null;
-                await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-                await loadScript('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js');
+                await loadScript(FB_VER + 'firebase-app-compat.js');
+                await loadScript(FB_VER + 'firebase-firestore-compat.js');
                 firebase.initializeApp(FIREBASE_CONFIG);
                 commDb = firebase.firestore();
                 return commDb;
             })().catch(e => { console.error(e); commDb = null; return null; });
             return commReady;
         }
+        function commDoc(key) { return commDb.collection('communities').doc(key); }
+        function commCol(key) { return commDoc(key).collection('messages'); }
         function commLocalRead(key) { try { return JSON.parse(lsGet('comm_msgs_' + key) || '[]'); } catch (e) { return []; } }
-        function commLocalWrite(key, list) { lsSet('comm_msgs_' + key, JSON.stringify(list.slice(0, 200))); }
-        function commCol(key) { return commDb.collection('communities').doc(key).collection('messages'); }
+        function commLocalWrite(key, list) {
+            // 동영상(임시 주소)은 저장하지 않고, 용량이 넘치면 사진도 빼고 저장
+            const slim = list.slice(0, 200).map(m => m.videoLocal ? Object.assign({}, m, { video: '' }) : m);
+            if (!lsSet('comm_msgs_' + key, JSON.stringify(slim))) {
+                lsSet('comm_msgs_' + key, JSON.stringify(slim.map(m => Object.assign({}, m, { img: '' }))));
+            }
+        }
 
         async function commSubscribe() {
             if (commUnsub) { commUnsub(); commUnsub = null; }
+            if (commUnsubMembers) { commUnsubMembers(); commUnsubMembers = null; }
             if (!myTown) return;
             const key = townKey(myTown);
+            commLoadedOnce = false;
             const db = await commInit();
             if (db) {
                 commUnsub = commCol(key).orderBy('ts', 'desc').limit(200).onSnapshot(snap => {
+                    if (commLoadedOnce) {
+                        snap.docChanges().forEach(ch => {       // 이웃이 새로 올린 제보·SOS는 알림으로도 표시
+                            const m = ch.doc.data();
+                            if (ch.type === 'added' && m.uid !== COMM_UID && (m.type === 'sos' || m.type === 'report')) commNotify(m);
+                        });
+                    }
+                    commLoadedOnce = true;
                     commMessages = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
                     renderCommMessages();
                 }, err => { console.error(err); commStatus('글을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.'); });
+                commUnsubMembers = commDoc(key).collection('members').orderBy('lastSeen', 'desc').limit(200).onSnapshot(snap => {
+                    commMembers = snap.docs.map(d => Object.assign({ uid: d.id }, d.data()));
+                    renderCommMembers();
+                }, err => console.error(err));
             } else {
                 commMessages = commLocalRead(key);
                 renderCommMessages();
             }
+            commTouch();
+            if (!commHeartbeat) commHeartbeat = setInterval(() => { commTouch(); renderCommMembers(); }, 60000);
         }
+
+        function commNotify(m) {
+            if (typeof alertCfg !== 'undefined' && !alertCfg.enabled) return;
+            const sos = m.type === 'sos';
+            showAlertToast({
+                danger: sos, head: sos ? '🚨 우리 동네 SOS' : '📢 우리 동네 제보',
+                badge: sos ? '' : (m.kind || ''), title: m.text || (m.img ? '(사진)' : '(동영상)'),
+                foot: (m.nick || '이웃') + ' · ' + (myTown ? myTown.dong : ''), openCommunity: true
+            });
+            playAlertSound(sos ? 'siren' : undefined);
+        }
+
+        // 접속 표시: 내 프로필과 마지막 접속 시각을 동네 명단에 기록
+        async function commTouch() {
+            if (!myTown) return;
+            const me = { uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂', intro: commProfile.intro || '', joinedAt: commProfile.joinedAt || Date.now(), lastSeen: Date.now() };
+            const db = await commInit();
+            if (db) { try { await commDoc(townKey(myTown)).collection('members').doc(COMM_UID).set(me, { merge: true }); } catch (e) { console.error(e); } }
+            else { commMembers = [me]; renderCommMembers(); }
+        }
+
+        // 사진은 줄여서 글과 함께 저장, 동영상은 Firebase Storage 에 올림
+        function compressImage(file, maxSide, maxBytes) {
+            return new Promise((res, rej) => {
+                const r = new FileReader();
+                r.onerror = rej;
+                r.onload = () => {
+                    const img = new Image();
+                    img.onerror = rej;
+                    img.onload = () => {
+                        let side = maxSide, q = 0.8, out = '';
+                        for (let i = 0; i < 7; i++) {
+                            const sc = Math.min(1, side / Math.max(img.width, img.height));
+                            const c = document.createElement('canvas');
+                            c.width = Math.max(1, Math.round(img.width * sc)); c.height = Math.max(1, Math.round(img.height * sc));
+                            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                            out = c.toDataURL('image/jpeg', q);
+                            if (out.length * 0.75 <= maxBytes) break;
+                            q = Math.max(0.4, q - 0.1); side = Math.round(side * 0.8);
+                        }
+                        res(out);
+                    };
+                    img.src = r.result;
+                };
+                r.readAsDataURL(file);
+            });
+        }
+        async function commUploadVideo(file) {
+            await loadScript(FB_VER + 'firebase-storage-compat.js');
+            const safe = (file.name || 'video').replace(/[^0-9A-Za-z._-]/g, '_').slice(-40);
+            const ref = firebase.storage().ref('communities/' + townKey(myTown) + '/' + COMM_UID + '_' + Date.now() + '_' + safe);
+            await ref.put(file);
+            return await ref.getDownloadURL();
+        }
+        async function commPickFile(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if (!f) return;
+            if (f.type.indexOf('image/') === 0) {
+                try { commAttach = { kind: 'img', dataUrl: await compressImage(f, 1280, 550 * 1024), name: f.name }; }
+                catch (e) { commStatus('사진을 읽지 못했습니다.'); return; }
+            } else if (f.type.indexOf('video/') === 0) {
+                if (f.size > VIDEO_MAX_MB * 1024 * 1024) { commStatus('동영상은 ' + VIDEO_MAX_MB + 'MB 이하만 올릴 수 있습니다.'); return; }
+                commAttach = { kind: 'video', file: f, name: f.name, preview: URL.createObjectURL(f) };
+            } else { commStatus('사진 또는 동영상 파일만 올릴 수 있습니다.'); return; }
+            renderCommComposer();
+        }
+        function commClearAttach() { commAttach = null; renderCommComposer(); }
 
         async function commPost() {
             const input = document.getElementById('commText');
-            const nickEl = document.getElementById('commNick');
             const text = (input.value || '').trim();
-            const nick = ((nickEl && nickEl.value) || '').trim().slice(0, 12) || '이웃';
             if (!myTown) return;
-            if (!text) { commStatus('내용을 입력해 주세요.'); return; }
+            if (!text && !commAttach) { commStatus('내용을 입력하거나 사진·동영상을 첨부해 주세요.'); return; }
             if (text.length > 500) { commStatus('500자 이내로 적어 주세요.'); return; }
-            lsSet('comm_nick', nick);
-            const msg = { nick: nick, text: text, type: commSos ? 'sos' : 'talk', ts: Date.now(), uid: COMM_UID, town: myTown.dong };
+            const msg = { nick: myNick(), emoji: commProfile.emoji || '🙂', text: text, type: commType, ts: Date.now(), uid: COMM_UID, town: myTown.dong };
+            if (commType === 'report') {
+                msg.kind = (document.getElementById('commKind') || {}).value || '기타';
+                msg.place = (((document.getElementById('commPlace') || {}).value) || '').trim().slice(0, 60);
+            }
             const key = townKey(myTown);
             try {
                 const db = await commInit();
+                if (commAttach && commAttach.kind === 'img') msg.img = commAttach.dataUrl;
+                if (commAttach && commAttach.kind === 'video') {
+                    if (db) {
+                        commStatus('동영상을 올리는 중입니다...');
+                        try { msg.video = await commUploadVideo(commAttach.file); }
+                        catch (e) { console.error(e); commStatus('동영상 올리기에 실패했습니다. (Firebase Storage 설정이 필요합니다)'); return; }
+                    } else { msg.video = commAttach.preview; msg.videoLocal = true; }
+                }
                 if (db) await commCol(key).add(msg);
                 else {
                     msg.id = 'l' + Date.now() + Math.random().toString(36).slice(2, 7);
-                    const list = commLocalRead(key); list.unshift(msg); commLocalWrite(key, list);
-                    commMessages = list; renderCommMessages();
+                    commMessages.unshift(msg);
+                    commLocalWrite(key, commMessages);
                 }
                 input.value = '';
-                commSos = false;
+                commAttach = null;
+                if (commType === 'sos') commType = 'talk';
                 renderCommComposer();
+                renderCommMessages(true);
                 commStatus('');
             } catch (e) { console.error(e); commStatus('등록에 실패했습니다. 잠시 후 다시 시도해 주세요.'); }
         }
@@ -1280,14 +1591,14 @@
             try {
                 const db = await commInit();
                 if (db) await commCol(key).doc(id).delete();
-                else { const list = commLocalRead(key).filter(m => m.id !== id); commLocalWrite(key, list); commMessages = list; renderCommMessages(); }
+                else { commMessages = commMessages.filter(m => m.id !== id); commLocalWrite(key, commMessages); renderCommMessages(); }
             } catch (e) { console.error(e); commStatus('삭제에 실패했습니다.'); }
         }
 
         // ---- 화면 ----
         function commStatus(msg) { const el = document.getElementById('commStatus'); if (el) el.textContent = msg || ''; }
-        function openCommunity() { document.getElementById('communityModal').classList.remove('hidden'); renderCommunity(); }
-        function closeCommunity() { document.getElementById('communityModal').classList.add('hidden'); }
+        function openCommunity() { document.getElementById('communityModal').classList.remove('hidden'); renderCommunity(); commTouch(); }
+        function closeCommunity() { document.getElementById('communityModal').classList.add('hidden'); closeProfile(); }
 
         function activeSosCount() {
             return commMessages.filter(m => m.type === 'sos' && Date.now() - m.ts < 86400000).length;
@@ -1308,7 +1619,7 @@
                 body.innerHTML = `
                     <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
                         <div class="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                            <b>동네 인증</b>을 하면 우리 동(洞) 이웃끼리 사건·사고를 공유하고, 아이를 잃어버렸을 때처럼 급한 일에는 <b class="text-red-600">SOS</b>를 보낼 수 있습니다.<br>
+                            <b>동네 인증</b>을 하면 우리 동(洞) 이웃끼리 사건·사고를 제보·공유하고, 아이를 잃어버렸을 때처럼 급한 일에는 <b class="text-red-600">SOS</b>를 보낼 수 있습니다.<br>
                             <span class="text-xs text-slate-500">예) 개포1동에 살면 ‘개포동’ 전체 이웃이 함께 보는 게시판에 들어갑니다. 위치는 동네 확인에만 쓰이고 저장되지 않습니다.</span>
                         </div>
                         <button onclick="verifyTown()" id="commVerifyBtn" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow"><i class="fa-solid fa-location-crosshairs"></i> 현재 위치로 동네 인증하기</button>
@@ -1319,61 +1630,203 @@
             }
             title.textContent = myTown.dong + ' 커뮤니티';
             body.innerHTML = `
-                <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-500 shrink-0">
+                <div class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 shrink-0">
                     <span><i class="fa-solid fa-circle-check text-emerald-500"></i> ${esc(townName(myTown))} 인증됨</span>
-                    <button onclick="resetTown()" class="text-blue-500 hover:underline shrink-0">동네 다시 인증</button>
+                    <div class="flex items-center gap-2">
+                        <span class="flex items-center gap-1" title="배경 색 고르기">배경 <span id="commBgDots" class="flex items-center gap-1"></span></span>
+                        <button onclick="showProfile('${COMM_UID}')" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">내 프로필</button>
+                        <button onclick="resetTown()" class="text-blue-500 hover:underline shrink-0">동네 다시 인증</button>
+                    </div>
                 </div>
-                ${FIREBASE_CONFIG ? '' : '<div class="px-4 py-2 text-[0.6875rem] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 shrink-0">체험 모드입니다. 아직 서버가 연결되지 않아 글이 이 기기에만 저장되고 다른 사람에게는 보이지 않습니다.</div>'}
-                <div id="commList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-2.5"></div>
-                <div id="commComposer" class="border-t border-slate-200 dark:border-slate-800 p-3 space-y-2 shrink-0"></div>`;
+                ${FIREBASE_CONFIG ? '' : '<div class="px-4 py-1.5 text-[0.6875rem] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 shrink-0">체험 모드입니다. 아직 서버가 연결되지 않아 글이 이 기기에만 저장되고 다른 사람에게는 보이지 않습니다.</div>'}
+                <div class="flex-1 min-h-0 flex">
+                    <div class="flex-1 min-w-0 flex flex-col">
+                        <div id="commPinned" class="shrink-0"></div>
+                        <div id="commList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
+                        <div id="commComposer" class="border-t border-slate-200 dark:border-slate-800 p-3 space-y-2 shrink-0 bg-white dark:bg-slate-900"></div>
+                    </div>
+                    <aside id="commMembers" class="w-44 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hidden sm:block bg-slate-50 dark:bg-slate-900/60"></aside>
+                </div>`;
+            renderCommBg();
             renderCommComposer();
-            renderCommMessages();
+            renderCommMembers();
+            renderCommMessages(true);
         }
 
+        // 배경 색
+        function renderCommBg() {
+            const dots = document.getElementById('commBgDots');
+            if (dots) dots.innerHTML = COMM_BGS.map(b =>
+                `<button onclick="setCommBg('${b[1]}')" title="${b[0]}" style="background:${b[1] || '#f8fafc'};" class="w-4 h-4 rounded-full border ${commBg === b[1] ? 'border-emerald-500 ring-2 ring-emerald-400' : 'border-slate-400'}"></button>`).join('');
+            const list = document.getElementById('commList');
+            if (list) list.style.background = commBg;
+        }
+        function setCommBg(color) { commBg = color; lsSet('comm_bg', color); renderCommBg(); }
+
+        // 글 쓰는 곳
+        function setCommType(t) { commType = t; renderCommComposer(); }
         function renderCommComposer() {
             const box = document.getElementById('commComposer');
             if (!box) return;
-            const prevText = (document.getElementById('commText') || {}).value || '';
-            const nick = (document.getElementById('commNick') || {}).value || lsGet('comm_nick') || '';
+            const val = id => (document.getElementById(id) || {}).value || '';
+            const prevText = val('commText'), prevPlace = val('commPlace'), prevKind = val('commKind');
+            const chip = (t, label, on, color) => `<button onclick="setCommType('${t}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${on ? color : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
+            const inp = 'bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-white';
+            const sos = commType === 'sos', rep = commType === 'report';
+            let attach = '';
+            if (commAttach) {
+                attach = `<div class="flex items-center gap-2 text-[0.6875rem] text-slate-600 dark:text-slate-300">
+                    ${commAttach.kind === 'img' ? `<img src="${commAttach.dataUrl}" class="h-12 rounded border border-slate-300">` : '<span class="text-lg">🎬</span>'}
+                    <span class="truncate">${esc(commAttach.name || '')}</span>
+                    <button onclick="commClearAttach()" class="text-red-500 hover:underline shrink-0">첨부 취소</button>
+                </div>`;
+            }
             box.innerHTML = `
-                ${commSos ? '<div class="text-[0.6875rem] text-red-600 dark:text-red-400 font-semibold">🚨 SOS 글은 맨 위에 24시간 동안 빨갛게 고정됩니다. 인상착의, 마지막으로 본 장소·시간, 연락 방법을 적어 주세요. 위급하면 먼저 112·119에 신고하세요.</div>' : ''}
-                <div class="flex items-center gap-2">
-                    <input id="commNick" type="text" maxlength="12" placeholder="닉네임" value="${esc(nick)}" class="w-28 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-white">
-                    <button onclick="toggleSos()" class="px-3 py-1.5 rounded-lg text-xs font-bold border ${commSos ? 'bg-red-600 text-white border-red-700' : 'bg-white dark:bg-slate-800 text-red-600 border-red-400'}">🚨 SOS ${commSos ? '켜짐' : '보내기'}</button>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    ${chip('talk', '💬 이야기', commType === 'talk', 'bg-emerald-600 text-white border-emerald-700')}
+                    ${chip('report', '📢 사건사고 제보', rep, 'bg-amber-500 text-white border-amber-600')}
+                    ${chip('sos', '🚨 SOS', sos, 'bg-red-600 text-white border-red-700')}
                     <span id="commStatus" class="text-[0.6875rem] text-amber-600 dark:text-amber-400 truncate"></span>
                 </div>
+                ${rep ? `<div class="flex items-center gap-2">
+                    <select id="commKind" class="${inp}">${REPORT_KINDS.map(k => `<option value="${k}">${k}</option>`).join('')}</select>
+                    <input id="commPlace" type="text" maxlength="60" placeholder="장소 (예: ○○아파트 정문 앞, ○○사거리)" class="flex-1 min-w-0 ${inp}">
+                </div>` : ''}
+                ${sos ? '<div class="text-[0.6875rem] text-red-600 dark:text-red-400 font-semibold">🚨 SOS 글은 맨 위에 24시간 동안 빨갛게 고정되고 이웃에게 경보음 알림이 갑니다. 인상착의, 마지막으로 본 장소·시간, 연락 방법을 적어 주세요. 위급하면 먼저 112·119에 신고하세요.</div>' : ''}
+                ${attach}
                 <div class="flex items-end gap-2">
-                    <textarea id="commText" rows="2" maxlength="500" placeholder="${commSos ? '예) 7살 남자아이, 파란 점퍼, 오후 3시쯤 ○○놀이터에서 마지막으로 봤어요' : '동네 사건·사고, 목격담 등을 이웃과 나눠 보세요'}" class="flex-1 bg-slate-100 dark:bg-slate-800 border ${commSos ? 'border-red-500' : 'border-slate-300 dark:border-slate-700'} rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
-                    <button onclick="commPost()" class="px-4 py-2 rounded-lg text-sm font-bold text-white ${commSos ? 'bg-red-600 hover:bg-red-500' : 'bg-emerald-600 hover:bg-emerald-500'}">${commSos ? 'SOS 등록' : '등록'}</button>
+                    <input id="commFile" type="file" accept="image/*,video/*" class="hidden" onchange="commPickFile(this)">
+                    <button onclick="document.getElementById('commFile').click()" title="사진·동영상 첨부" class="px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-paperclip"></i></button>
+                    <textarea id="commText" rows="2" maxlength="500" placeholder="${sos ? '예) 7살 남자아이, 파란 점퍼, 오후 3시쯤 ○○놀이터에서 마지막으로 봤어요' : (rep ? '무슨 일이 있었는지 적어 주세요 (언제, 어디서, 무엇을 봤는지)' : '이웃과 이야기를 나눠 보세요')}" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border ${sos ? 'border-red-500' : (rep ? 'border-amber-500' : 'border-slate-300 dark:border-slate-700')} rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
+                    <button onclick="commPost()" class="px-4 py-2 rounded-lg text-sm font-bold text-white whitespace-nowrap ${sos ? 'bg-red-600 hover:bg-red-500' : (rep ? 'bg-amber-500 hover:bg-amber-400' : 'bg-emerald-600 hover:bg-emerald-500')}">${sos ? 'SOS 등록' : (rep ? '제보 등록' : '등록')}</button>
                 </div>`;
             document.getElementById('commText').value = prevText;
+            if (rep) { document.getElementById('commPlace').value = prevPlace; if (prevKind) document.getElementById('commKind').value = prevKind; }
         }
-        function toggleSos() { commSos = !commSos; renderCommComposer(); }
 
-        function renderCommMessages() {
+        // 글 목록 (대화창 형태: 오래된 글이 위, 새 글이 아래)
+        function renderCommMsg(m) {
+            const mine = m.uid === COMM_UID, sos = m.type === 'sos', rep = m.type === 'report';
+            const bubble = sos ? 'bg-red-50 dark:bg-red-950/70 border-red-400 text-slate-900 dark:text-red-50'
+                : rep ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-400 text-slate-900 dark:text-amber-50'
+                : mine ? 'bg-emerald-100 dark:bg-emerald-900/80 border-emerald-300 dark:border-emerald-700 text-slate-900 dark:text-white'
+                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100';
+            let media = '';
+            if (m.img && /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(m.img)) media += `<img src="${m.img}" onclick="openMedia(this.src)" class="mt-1 rounded-lg max-h-56 max-w-full cursor-zoom-in">`;
+            const v = m.video ? (/^blob:/.test(m.video) ? m.video : safeUrl(m.video)) : '';
+            if (v) media += `<video src="${esc(v)}" controls preload="metadata" class="mt-1 rounded-lg max-h-64 max-w-full"></video>`;
+            else if (m.videoLocal) media += '<div class="mt-1 text-[0.6875rem] text-slate-400">🎬 (체험 모드에서는 동영상이 새로고침 후 남지 않습니다)</div>';
+            return `
+                <div class="flex gap-2 ${mine ? 'flex-row-reverse' : ''}">
+                    <button onclick="showProfile('${esc(m.uid)}')" title="프로필 보기" class="w-8 h-8 shrink-0 rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-base shadow-sm">${esc(m.emoji || '🙂')}</button>
+                    <div class="flex flex-col ${mine ? 'items-end' : 'items-start'}" style="max-width:78%;">
+                        <div class="text-[0.625rem] mb-0.5 px-1.5 rounded bg-white/70 dark:bg-slate-900/70 text-slate-600 dark:text-slate-300"><b>${esc(m.nick || '이웃')}</b>${mine ? ' (나)' : ''} · ${timeAgo(m.ts)}</div>
+                        <div class="rounded-2xl border px-3 py-2 text-sm shadow-sm ${bubble}">
+                            ${sos ? '<div class="text-[0.6875rem] font-extrabold text-red-600 dark:text-red-300 mb-0.5">🚨 SOS</div>' : ''}
+                            ${rep ? `<div class="text-[0.6875rem] font-extrabold text-amber-700 dark:text-amber-300 mb-0.5">📢 제보 · ${esc(m.kind || '기타')}${m.place ? ' · ' + esc(m.place) : ''}</div>` : ''}
+                            ${m.text ? `<p class="whitespace-pre-line break-words">${esc(m.text)}</p>` : ''}
+                            ${media}
+                        </div>
+                        ${mine ? `<button onclick="commDelete('${esc(m.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500 mt-0.5 px-1 rounded bg-white/70 dark:bg-slate-900/70">삭제</button>` : ''}
+                    </div>
+                </div>`;
+        }
+        function renderCommMessages(scrollBottom) {
             updateCommBadge();
             const list = document.getElementById('commList');
             if (!list) return;
             const now = Date.now();
-            const isLive = m => m.type === 'sos' && now - m.ts < 86400000;
-            const sorted = commMessages.slice().sort((a, b) => (isLive(b) - isLive(a)) || (b.ts - a.ts));
-            if (sorted.length === 0) {
-                list.innerHTML = '<div class="text-center py-16 text-xs text-slate-400">아직 글이 없습니다. 첫 글을 남겨 보세요.</div>';
-                return;
-            }
-            list.innerHTML = sorted.map(m => {
-                const live = isLive(m), sos = m.type === 'sos';
-                const mine = m.uid === COMM_UID;
-                return `
-                    <div class="rounded-xl border p-3 ${live ? 'border-red-500 bg-red-50 dark:bg-red-950/30' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'}">
-                        <div class="flex items-center justify-between gap-2 text-[0.6875rem] text-slate-500 mb-1">
-                            <span>${sos ? `<b class="${live ? 'text-red-600' : 'text-slate-400'}">🚨 SOS${live ? '' : ' (지난 글)'}</b> · ` : ''}<b class="text-slate-700 dark:text-slate-200">${esc(m.nick || '이웃')}</b>${mine ? ' (나)' : ''} · ${timeAgo(m.ts)}</span>
-                            ${mine ? `<button onclick="commDelete('${esc(m.id)}')" class="text-slate-400 hover:text-red-500 shrink-0">삭제</button>` : ''}
-                        </div>
-                        <p class="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-line break-words">${esc(m.text)}</p>
-                    </div>`;
-            }).join('');
+            const live = commMessages.filter(m => m.type === 'sos' && now - m.ts < 86400000).sort((a, b) => b.ts - a.ts);
+            const pinned = document.getElementById('commPinned');
+            if (pinned) pinned.innerHTML = live.map(m => `<div class="px-3 py-2 bg-red-600 text-white text-xs flex items-start gap-2 border-b border-red-700"><b class="shrink-0">🚨 SOS</b><span class="flex-1 min-w-0 break-words">${esc(m.nick || '이웃')}: ${esc(m.text || '(첨부 확인)')}</span><span class="shrink-0 opacity-80">${timeAgo(m.ts)}</span></div>`).join('');
+            const nearBottom = (list.scrollHeight - list.scrollTop - list.clientHeight) < 150;
+            const sorted = commMessages.slice().sort((a, b) => a.ts - b.ts);
+            list.innerHTML = sorted.length ? sorted.map(renderCommMsg).join('')
+                : '<div class="text-center py-16 text-xs text-slate-400">아직 글이 없습니다. 첫 글을 남겨 보세요.</div>';
+            if (scrollBottom || nearBottom) list.scrollTop = list.scrollHeight;
         }
+
+        // 이웃 명단 (최근 3분 안에 접속한 사람은 초록 점)
+        function renderCommMembers() {
+            const box = document.getElementById('commMembers');
+            if (!box) return;
+            const now = Date.now();
+            const list = commMembers.slice().sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+            const isOn = m => now - (m.lastSeen || 0) < 3 * 60000;
+            box.innerHTML = `<div class="px-3 py-2 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-900">이웃 ${list.length}명 <span class="text-emerald-500">· 접속 중 ${list.filter(isOn).length}</span></div>`
+                + list.map(m => `
+                    <button onclick="showProfile('${esc(m.uid)}')" class="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-200/70 dark:hover:bg-slate-800">
+                        <span class="relative w-7 h-7 shrink-0 rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-sm">${esc(m.emoji || '🙂')}<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${isOn(m) ? 'bg-emerald-500' : 'bg-slate-300'}"></span></span>
+                        <span class="truncate text-xs text-slate-800 dark:text-slate-100">${esc(m.nick || '이웃')}${m.uid === COMM_UID ? ' (나)' : ''}</span>
+                    </button>`).join('');
+        }
+
+        // 프로필 카드
+        function closeProfile() { const c = document.getElementById('commProfileCard'); if (c) c.classList.add('hidden'); }
+        function showProfile(uid) {
+            const card = document.getElementById('commProfileCard');
+            if (!card) return;
+            const mine = uid === COMM_UID;
+            let m = commMembers.find(x => x.uid === uid);
+            if (!m) { const last = commMessages.find(x => x.uid === uid); m = last ? { uid: uid, nick: last.nick, emoji: last.emoji } : { uid: uid }; }
+            if (mine) m = Object.assign({}, m, { nick: myNick(), emoji: commProfile.emoji, intro: commProfile.intro, joinedAt: commProfile.joinedAt });
+            const posts = commMessages.filter(x => x.uid === uid).length;
+            const on = m.lastSeen && Date.now() - m.lastSeen < 3 * 60000;
+            card.innerHTML = `
+                <div class="w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 text-center" onclick="event.stopPropagation()">
+                    <div class="w-16 h-16 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-3xl">${esc(m.emoji || '🙂')}</div>
+                    <div class="mt-2 text-base font-bold text-slate-900 dark:text-white">${esc(m.nick || '이웃')}${mine ? ' (나)' : ''}</div>
+                    <div class="text-[0.6875rem] text-slate-500">${myTown ? esc(myTown.dong) + ' 이웃' : ''}${on || mine ? ' · <span class="text-emerald-500">접속 중</span>' : (m.lastSeen ? ' · ' + timeAgo(m.lastSeen) + ' 접속' : '')}</div>
+                    <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words">${esc(m.intro || '아직 소개가 없습니다.')}</p>
+                    <div class="mt-2 text-[0.6875rem] text-slate-500">작성한 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}</div>
+                    <div class="mt-4 flex gap-2 justify-center">
+                        ${mine ? '<button onclick="editProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">프로필 수정</button>' : ''}
+                        <button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">닫기</button>
+                    </div>
+                </div>`;
+            card.classList.remove('hidden');
+        }
+        function editProfile(keep) {
+            const card = document.getElementById('commProfileCard');
+            const val = id => (document.getElementById(id) || {}).value;
+            const nick = keep ? val('pfNick') : commProfile.nick, intro = keep ? val('pfIntro') : commProfile.intro;
+            if (!keep) commEditEmoji = commProfile.emoji || '🙂';
+            const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
+            card.innerHTML = `
+                <div class="w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 space-y-3" onclick="event.stopPropagation()">
+                    <div class="text-sm font-bold text-slate-900 dark:text-white">내 프로필 수정</div>
+                    <div class="flex flex-wrap gap-1.5 justify-center">
+                        ${COMM_EMOJIS.map(e => `<button onclick="pickEmoji('${e}')" class="w-9 h-9 rounded-full text-xl border ${commEditEmoji === e ? 'border-emerald-500 ring-2 ring-emerald-400 bg-emerald-50 dark:bg-emerald-950' : 'border-slate-300 dark:border-slate-600'}">${e}</button>`).join('')}
+                    </div>
+                    <input id="pfNick" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" class="${inp}">
+                    <input id="pfIntro" type="text" maxlength="40" placeholder="한 줄 소개 (최대 40자)" class="${inp}">
+                    <div class="flex gap-2 justify-end">
+                        <button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">취소</button>
+                        <button onclick="saveProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">저장</button>
+                    </div>
+                </div>`;
+            document.getElementById('pfNick').value = nick || '';
+            document.getElementById('pfIntro').value = intro || '';
+            card.classList.remove('hidden');
+        }
+        function pickEmoji(e) { commEditEmoji = e; editProfile(true); }
+        function saveProfile() {
+            commProfile.nick = (document.getElementById('pfNick').value || '').trim().slice(0, 12);
+            commProfile.intro = (document.getElementById('pfIntro').value || '').trim().slice(0, 40);
+            commProfile.emoji = commEditEmoji || '🙂';
+            lsSet('comm_profile', JSON.stringify(commProfile));
+            closeProfile();
+            commTouch();
+            renderCommMembers();
+        }
+
+        // 사진 크게 보기
+        function openMedia(src) {
+            const v = document.getElementById('commMediaView');
+            document.getElementById('commMediaImg').src = src;
+            v.classList.remove('hidden');
+        }
+        function closeMedia() { document.getElementById('commMediaView').classList.add('hidden'); }
 
         // ---- 동네 인증 ----
         function nearestSigungu(lat, lng, n) {
@@ -1451,7 +1904,7 @@
                         </select>
                         <select id="commDong" class="${sel}"></select>
                     </div>
-                    <input id="commNickFirst" type="text" maxlength="12" placeholder="닉네임 (예: 두정동주민)" value="${esc(lsGet('comm_nick') || '')}" class="${sel}">
+                    <input id="commNickFirst" type="text" maxlength="12" placeholder="닉네임 (예: 두정동주민)" value="${esc(commProfile.nick || '')}" class="${sel}">
                     <button onclick="confirmTown()" class="w-full py-2.5 rounded-xl bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm font-bold">이 동네로 인증 완료</button>
                 </div>`;
             fillTownDongs();
@@ -1471,17 +1924,19 @@
             const dong = document.getElementById('commDong').value;
             if (!c || !dong) { commStatus('읍·면·동을 선택해 주세요.'); return; }
             const nick = (document.getElementById('commNickFirst').value || '').trim().slice(0, 12);
-            if (nick) lsSet('comm_nick', nick);
+            if (nick) { commProfile.nick = nick; lsSet('comm_profile', JSON.stringify(commProfile)); }
             myTown = { sido: c.sido, sigungu: c.sigungu, dong: dong, verifiedAt: Date.now() };
             lsSet('my_town', JSON.stringify(myTown));
             commMessages = [];
             renderCommunity();
             commSubscribe();
+            updateAlertButton();
         }
 
         function resetTown() {
             if (commUnsub) { commUnsub(); commUnsub = null; }
-            myTown = null; commMessages = []; commSos = false;
+            if (commUnsubMembers) { commUnsubMembers(); commUnsubMembers = null; }
+            myTown = null; commMessages = []; commMembers = []; commType = 'talk'; commAttach = null;
             lsSet('my_town', 'null');
             updateCommBadge();
             renderCommunity();
@@ -1489,7 +1944,8 @@
 
         function initCommunity() {
             myTown = loadMyTown();
-            if (myTown) commSubscribe();   // 인증된 동네가 있으면 SOS 알림을 받기 위해 바로 연결
+            if (myTown) commSubscribe();   // 인증된 동네가 있으면 제보·SOS 알림을 받기 위해 바로 연결
+            updateAlertButton();
         }
 
         function manualRefreshData() {
