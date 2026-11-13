@@ -125,6 +125,14 @@
                 </div>
             </div>
 
+            <div class="px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[11px] text-slate-500">기간</span>
+                    <div id="periodBar" class="flex items-center gap-1"></div>
+                </div>
+                <span id="listCount" class="text-[11px] text-slate-500 font-medium"></span>
+            </div>
+
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
         </section>
 
@@ -133,24 +141,13 @@
 
         <!-- 2. 중앙: 카테고리 및 원문 뷰어 패널 -->
         <section id="centerPane" style="width: 40%; min-width: 300px;" class="bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
-            <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex flex-col gap-1.5 shrink-0">
-                <div class="flex items-center space-x-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
-                    <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 transition whitespace-nowrap shadow-sm">전체</button>
-                    <button onclick="setCategoryFilter('강력범죄')" data-cat="강력범죄" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 hover:bg-rose-200 whitespace-nowrap border border-rose-300 dark:border-rose-800">살인·폭행·흉기</button>
-                    <button onclick="setCategoryFilter('성범죄·마약')" data-cat="성범죄·마약" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 hover:bg-purple-200 whitespace-nowrap border border-purple-300 dark:border-purple-800">성범죄·마약·스토킹</button>
-                    <button onclick="setCategoryFilter('사기·금융')" data-cat="사기·금융" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 hover:bg-blue-200 whitespace-nowrap border border-blue-300 dark:border-blue-800">사기·절도·해킹</button>
-                </div>
-                <div class="flex items-center space-x-1.5 overflow-x-auto pt-0.5 custom-scrollbar">
-                    <button onclick="setCategoryFilter('재난·사고')" data-cat="재난·사고" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 hover:bg-amber-200 whitespace-nowrap border border-amber-300 dark:border-amber-800">화재·붕괴·안전</button>
-                    <button onclick="setCategoryFilter('교통사고')" data-cat="교통사고" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-200 whitespace-nowrap border border-emerald-300 dark:border-emerald-800">교통사고·뺑소니</button>
-                    <button onclick="setCategoryFilter('실종·제보')" data-cat="실종·제보" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap border border-slate-300 dark:border-slate-700">실종·시민제보</button>
-                    <button onclick="setCategoryFilter('해외 분쟁')" data-cat="해외 분쟁" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 hover:bg-orange-200 whitespace-nowrap border border-orange-300 dark:border-orange-800">🌍 해외 분쟁</button>
-                    <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 hover:bg-rose-100 whitespace-nowrap border border-rose-500/50">🚨 7일 다발</button>
-                </div>
+            <div id="categoryBar" class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex flex-col gap-1.5 shrink-0">
+                <div id="groupButtons" class="flex flex-wrap items-center gap-1.5"></div>
+                <div id="subButtons" class="flex flex-wrap items-center gap-1" style="display:none"></div>
             </div>
             
             <!-- 원문 본문 뷰어 영역 (상세 content 출력) -->
-            <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-6 select-text flex flex-col space-y-4"></div>
+            <div id="detailViewContainer" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 select-text flex flex-col gap-3"></div>
         </section>
 
         <!-- 화살표 UI가 포함된 두 번째 분할선 -->
@@ -262,7 +259,33 @@
                 "용인시 수지구": ["전체", "풍덕천1동", "풍덕천2동", "신봉동", "죽전1동", "죽전2동", "동천동", "상현1동", "상현2동", "성복동"],
                 "부천시": ["전체", "원미구", "소사구", "오정구", "중동", "상동", "심곡동"],
                 "화성시": ["전체", "향남읍", "남양읍", "봉담읍", "매송면", "비봉면", "팔탄면", "장안면", "우정읍", "송산면", "서신면", "동탄1동", "동탄2동", "동탄3동", "동탄4동", "동탄5동", "동탄6동", "동탄7동", "동탄8동", "진안동", "병점1동", "병점2동", "반월동", "기배동", "화산동"],
-                "평택시": ["전체", "진위면", "서탄면", "고덕면", "오성면", "청북읍", "포승읍", "현덕면", "팽성읍", "신평동", "원평동", "통복동", "세교동", "송탄동", "지산동", "송북동", "서정동", "중앙동", "비전1동", "비전2동", "동삭동", "고덕동"]
+                "평택시": ["전체", "진위면", "서탄면", "고덕면", "오성면", "청북읍", "포승읍", "현덕면", "팽성읍", "신평동", "원평동", "통복동", "세교동", "송탄동", "지산동", "송북동", "서정동", "중앙동", "비전1동", "비전2동", "동삭동", "고덕동"],
+                "안산시 상록구": ["전체"],
+                "안산시 단원구": ["전체"],
+                "안양시 만안구": ["전체"],
+                "안양시 동안구": ["전체"],
+                "남양주시": ["전체"],
+                "의정부시": ["전체"],
+                "시흥시": ["전체"],
+                "파주시": ["전체"],
+                "김포시": ["전체"],
+                "광명시": ["전체"],
+                "광주시": ["전체"],
+                "군포시": ["전체"],
+                "하남시": ["전체"],
+                "오산시": ["전체"],
+                "이천시": ["전체"],
+                "안성시": ["전체"],
+                "의왕시": ["전체"],
+                "양주시": ["전체"],
+                "구리시": ["전체"],
+                "포천시": ["전체"],
+                "동두천시": ["전체"],
+                "과천시": ["전체"],
+                "여주시": ["전체"],
+                "양평군": ["전체"],
+                "가평군": ["전체"],
+                "연천군": ["전체"]
             },
             "인천광역시": {
                 "중구": ["전체", "신포동", "유동", "동인천동", "개항동", "영종동", "운서동", "용유동", "중산동"],
@@ -483,8 +506,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
             initResizers();
+            renderPeriodBar();
+            renderCategoryBar();
             loadIncidentsFromJSON();
-            setInterval(loadIncidentsFromJSON, 30000);
+            setInterval(() => loadIncidentsFromJSON(false), 120000);   // 2분마다 새 기사 확인
         });
 
         function initResizers() {
@@ -569,41 +594,124 @@
             onSidoChange();
         }
 
+        // ================= 카테고리(대분류 → 소분류) 설정 =================
+        // ※ scraper.py 의 GROUPS 와 이름이 같아야 합니다. 색상/문구를 바꾸고 싶으면 여기만 고치면 됩니다.
+        const CATEGORY_GROUPS = {
+            '강력범죄':   { label: '살인·폭행·흉기',     color: '#ef4444', badge: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+                           subs: ['살인·살해', '흉기·난동', '폭행·상해', '방화·납치·감금'] },
+            '성범죄·마약': { label: '성범죄·마약·스토킹', color: '#a855f7', badge: 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+                           subs: ['성범죄', '불법촬영·딥페이크', '스토킹·교제폭력', '마약'] },
+            '사기·금융':   { label: '사기·절도·해킹',     color: '#3b82f6', badge: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+                           subs: ['사기·보이스피싱', '금융·횡령·도박', '절도·강도', '해킹·개인정보'] },
+            '재난·사고':   { label: '화재·붕괴·안전',     color: '#f59e0b', badge: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+                           subs: ['화재·폭발', '붕괴·산업재해', '자연재해', '구조·안전사고'] },
+            '교통사고':   { label: '교통사고·뺑소니',     color: '#10b981', badge: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+                           subs: ['교통사고', '뺑소니', '음주·무면허'] },
+            '실종·제보':   { label: '실종·변사·제보',     color: '#64748b', badge: 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+                           subs: ['실종·수색', '변사·시신발견', '사건·수사', '시민제보'] },
+            '해외·안보':   { label: '🌍 해외·안보',       color: '#f97316', badge: 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800',
+                           subs: ['해외 분쟁', '국가 안보'] }
+        };
+        const SUB_TO_GROUP = {};
+        Object.keys(CATEGORY_GROUPS).forEach(g => CATEGORY_GROUPS[g].subs.forEach(s => { SUB_TO_GROUP[s] = g; }));
+        const LEGACY_GROUP = { '강력·치안': '강력범죄' };   // 예전 news.json 에 있던 이름
+
+        let currentSub = null;        // 선택된 소분류
+        let periodDays = 7;           // 기간 필터 (7 / 3 / 1=오늘)
+        let renderLimit = 100;        // 왼쪽 목록에 한 번에 보여줄 개수
+        let detailMode = 'original';  // 가운데 화면: 'original'(원문) / 'summary'(요약)
+        let localReports = [];        // 이 화면에서 직접 등록한 제보
+        let lastSig = '';
+
+        // ================= 공통 도우미 =================
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function safeUrl(u) {
+            try { const x = new URL(u); return (x.protocol === 'http:' || x.protocol === 'https:') ? x.href : ''; } catch (e) { return ''; }
+        }
+        function groupOf(news) {
+            if (news.group && CATEGORY_GROUPS[news.group]) return news.group;
+            const c = news.category;
+            if (CATEGORY_GROUPS[c]) return c;
+            return SUB_TO_GROUP[c] || LEGACY_GROUP[c] || '실종·제보';
+        }
+        function getCategoryBadgeClass(news) {
+            return CATEGORY_GROUPS[groupOf(news)].badge;
+        }
+        function hasCoords(n) { return Number.isFinite(n.lat) && Number.isFinite(n.lng); }
+
+        const WD_KR = ['일', '월', '화', '수', '목', '금', '토'];
+        function kstDate(ts) { return new Date((ts + 9 * 3600) * 1000); }
+        function dateKey(ts) { const d = kstDate(ts); return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1) + '-' + d.getUTCDate(); }
+        function dateLabel(ts) {
+            const d = kstDate(ts);
+            const label = (d.getUTCMonth() + 1) + '월 ' + d.getUTCDate() + '일 (' + WD_KR[d.getUTCDay()] + ')';
+            return dateKey(ts) === dateKey(Date.now() / 1000) ? '오늘 · ' + label : label;
+        }
+        function startOfTodayKST() {
+            const k = new Date(Date.now() + 9 * 3600 * 1000);
+            return Date.UTC(k.getUTCFullYear(), k.getUTCMonth(), k.getUTCDate()) / 1000 - 9 * 3600;
+        }
+        function inPeriod(news) {
+            const ts = Number(news.timestamp) || 0;
+            if (!ts) return true;
+            if (periodDays === 1) return ts >= startOfTodayKST();
+            return ts >= Date.now() / 1000 - periodDays * 86400;
+        }
+        function dongStem(d) {
+            const m = d.match(/^([가-힣]+?)(?=\d|제)/);
+            return m ? m[1] : d;
+        }
+
+        // ================= 데이터 불러오기 =================
         async function loadIncidentsFromJSON(isManualRefresh = false) {
+            let changed = false;
             try {
-                const res = await fetch('news.json?t=' + Date.now());
+                const res = await fetch('news.json?t=' + Date.now(), { cache: 'no-store' });
                 if (res.ok) {
                     const data = await res.json();
-                    if (Array.isArray(data) && data.length > 0) newsData = data;
+                    if (Array.isArray(data) && data.length > 0) {
+                        data.forEach(n => { n.timestamp = Number(n.timestamp) || 0; });
+                        data.sort((a, b) => b.timestamp - a.timestamp);
+                        const sig = data.length + ':' + data[0].id + ':' + data[data.length - 1].id;
+                        if (sig !== lastSig || isManualRefresh) {
+                            newsData = localReports.concat(data);
+                            lastSig = sig;
+                            changed = true;
+                        }
+                    }
                 }
             } catch (e) { console.log("데이터 대기 중..."); }
 
             if (newsData.length === 0) {
                 newsData = [{
-                    id: 1, category: "강력범죄", title: "[안내] 전국 실시간 관제 시스템 대기 중",
+                    id: 1, category: "사건·수사", group: "실종·제보", title: "[안내] 전국 실시간 관제 시스템 대기 중",
                     summary: "크롤러가 7일간의 전국 사건사고를 수집하는 중입니다.",
                     content: "잠시만 기다리시면 최신 속보가 업데이트됩니다.",
                     location: "서울특별시 중구", lat: 37.5636, lng: 126.9975,
-                    time: "실시간", source: "시스템", timestamp: Date.now()/1000
+                    time: "실시간", source: "시스템", timestamp: Date.now() / 1000
                 }];
+                changed = true;
             }
+            if (!changed && !isManualRefresh) return;   // 새 기사가 없으면 화면을 건드리지 않음
 
-            const filtered = getFilteredNews();
-            if ((isManualRefresh || !selectedNewsId) && filtered.length > 0) {
-                selectedNewsId = filtered[0].id;
-            }
-
+            renderCategoryBar();
             renderNewsList();
-            if (currentCategory === '범죄 다발 지역') renderCrimeHotspotsView();
-            else if (selectedNewsId) renderDetailView(selectedNewsId);
             updateMapMarkers();
-
-            if (isManualRefresh && filtered.length > 0 && map) {
-                const top = filtered[0];
-                if (top.lat && top.lng) map.flyTo([top.lat, top.lng], 13, { duration: 1.2 });
+            const filtered = getFilteredNews();
+            const stillThere = filtered.some(n => n.id === selectedNewsId);
+            if (currentCategory === '범죄 다발 지역') {
+                renderCrimeHotspotsView();
+            } else if ((isManualRefresh || !selectedNewsId || !stillThere) && filtered.length > 0) {
+                selectedNewsId = filtered[0].id;
+                renderNewsList();
+                renderDetailView(selectedNewsId);
+                if (isManualRefresh && map && hasCoords(filtered[0])) map.flyTo([filtered[0].lat, filtered[0].lng], 13, { duration: 1.2 });
             }
         }
 
+        // ================= 지도 =================
         function initMap() {
             map = L.map('map').setView([36.5000, 127.5000], 7);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
@@ -611,46 +719,42 @@
             updateMapMarkers();
         }
 
-        function updateMapMarkers(filteredList) {
+        function updateMapMarkers() {
             if (!markersLayer) return;
             markersLayer.clearLayers();
-            
+
             if (currentCategory === '범죄 다발 지역') {
                 getCrimeHotspotsData().forEach((stat, idx) => {
                     let size = Math.min(40, 16 + stat.count * 4);
                     let color = idx === 0 ? '#dc2626' : (idx === 1 ? '#ea580c' : '#f59e0b');
                     const icon = L.divIcon({
                         className: 'hotspot-icon',
-                        html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 11px; box-shadow: 0 0 15px ${color};">${stat.count}</div>`,
-                        iconSize: [size, size], iconAnchor: [size/2, size/2]
+                        html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-size: 11px; font-weight: bold; box-shadow: 0 0 12px ${color};">${stat.count}</div>`,
+                        iconSize: [size, size], iconAnchor: [size / 2, size / 2]
                     });
                     const marker = L.marker([stat.lat, stat.lng], { icon });
-                    marker.bindPopup(`<div style="font-family: sans-serif;"><b style="color:#dc2626">TOP ${idx+1} ${stat.region}</b><br>관련 건수: <b>${stat.count}건</b></div>`);
+                    marker.bindPopup(`<div style="font-family: sans-serif;"><b style="color:#dc2626">TOP ${idx + 1} ${esc(stat.region)}</b><br>관련 건수: <b>${stat.count}건</b></div>`);
                     markersLayer.addLayer(marker);
                 });
                 return;
             }
 
-            (filteredList || getFilteredNews()).slice(0, 150).forEach(news => {
-                let color = '#ef4444';
-                if (news.category === '재난·사고') color = '#f59e0b';
-                else if (news.category === '사기·금융') color = '#3b82f6';
-                else if (news.category === '성범죄·마약') color = '#a855f7';
-                else if (news.category === '교통사고') color = '#10b981';
-                else if (news.category === '해외 분쟁') color = '#f97316';
-
+            getFilteredNews().filter(hasCoords).slice(0, 800).forEach(news => {
+                const g = groupOf(news);
+                const color = CATEGORY_GROUPS[g].color;
+                const selected = news.id === selectedNewsId;
+                const size = selected ? 20 : 14;
                 const icon = L.divIcon({
                     className: 'custom-icon',
-                    html: `<div style="background-color: ${color}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color};"></div>`,
-                    iconSize: [14, 14], iconAnchor: [7, 7]
+                    html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color};"></div>`,
+                    iconSize: [size, size], iconAnchor: [size / 2, size / 2]
                 });
-
-                const marker = L.marker([news.lat, news.lng], { icon });
+                const marker = L.marker([news.lat, news.lng], { icon, zIndexOffset: selected ? 1000 : 0 });
                 marker.bindPopup(`
                     <div style="font-family: sans-serif; max-width: 220px;">
-                        <span style="font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight:bold;">${news.category}</span>
-                        <h4 style="font-size: 12px; font-weight: bold; margin: 5px 0;">${news.title}</h4>
-                        <p style="font-size: 11px; color: #475569; margin: 0;"><i class="fa-solid fa-location-dot text-red-500"></i> ${news.location}</p>
+                        <span style="font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight:bold;">${esc(news.category)}</span>
+                        <h4 style="font-size: 12px; font-weight: bold; margin: 5px 0;">${esc(news.title)}</h4>
+                        <p style="font-size: 11px; color: #475569; margin: 0;"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}</p>
                     </div>
                 `);
                 marker.on('click', () => selectNews(news.id));
@@ -658,105 +762,163 @@
             });
         }
 
-        function getCategoryBadgeClass(category) {
-            switch(category) {
-                case '강력범죄':
-                case '강력·치안':
-                    return 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800';
-                case '성범죄·마약':
-                    return 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800';
-                case '사기·금융':
-                    return 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800';
-                case '재난·사고':
-                    return 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800';
-                case '교통사고':
-                    return 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800';
-                case '실종·제보':
-                    return 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
-                case '해외 분쟁':
-                    return 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800';
-                default:
-                    return 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-slate-800 dark:text-slate-400';
+        // ================= 중앙 상단: 카테고리 버튼 =================
+        function renderCategoryBar() {
+            const base = getFilteredNews(true);
+            const gCount = {}, sCount = {};
+            base.forEach(n => {
+                const g = groupOf(n);
+                gCount[g] = (gCount[g] || 0) + 1;
+                if (g === currentCategory) sCount[n.category] = (sCount[n.category] || 0) + 1;
+            });
+            const ACTIVE = ' ring-2 ring-offset-1 ring-slate-800 dark:ring-slate-200 dark:ring-offset-slate-900 font-bold';
+
+            let html = `<button onclick="setCategoryFilter('all')" data-cat="all" class="cat-btn px-2.5 py-1 rounded-md text-[11px] border whitespace-nowrap transition ${currentCategory === 'all' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold shadow-sm' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-medium'}">전체 <span class="opacity-70 font-mono">${base.length}</span></button>`;
+            Object.keys(CATEGORY_GROUPS).forEach(g => {
+                const c = CATEGORY_GROUPS[g];
+                html += `<button onclick="setCategoryFilter('${g}')" data-cat="${g}" class="cat-btn px-2.5 py-1 rounded-md text-[11px] border whitespace-nowrap transition font-medium ${c.badge}${currentCategory === g ? ACTIVE : ''}">${c.label} <span class="opacity-70 font-mono">${gCount[g] || 0}</span></button>`;
+            });
+            html += `<button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[11px] border whitespace-nowrap transition bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 border-rose-500/50 font-bold${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 다발 지역</button>`;
+            document.getElementById('groupButtons').innerHTML = html;
+
+            let sub = '';
+            if (CATEGORY_GROUPS[currentCategory]) {
+                const c = CATEGORY_GROUPS[currentCategory];
+                sub += `<span class="text-[10px] text-slate-400 mr-0.5">세부:</span>`;
+                sub += `<button onclick="setSubFilter(null)" class="px-2 py-0.5 rounded-full text-[10px] border transition ${currentSub === null ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'}">전체 ${gCount[currentCategory] || 0}</button>`;
+                c.subs.forEach(s => {
+                    const n = sCount[s] || 0;
+                    sub += `<button onclick="setSubFilter('${s}')" class="px-2 py-0.5 rounded-full text-[10px] border transition ${currentSub === s ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'} ${n === 0 ? 'opacity-40' : ''}">${s} ${n}</button>`;
+                });
             }
+            const subBox = document.getElementById('subButtons');
+            subBox.innerHTML = sub;
+            subBox.style.display = sub ? 'flex' : 'none';
         }
+
+        function renderPeriodBar() {
+            const opts = [[7, '7일'], [3, '3일'], [1, '오늘']];
+            document.getElementById('periodBar').innerHTML = opts.map(([d, t]) =>
+                `<button onclick="setPeriod(${d})" class="px-2 py-0.5 rounded text-[11px] border transition ${periodDays === d ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700'}">${t}</button>`
+            ).join('');
+        }
+
+        function setPeriod(days) {
+            periodDays = days;
+            renderLimit = 100;
+            renderPeriodBar();
+            refreshAll();
+        }
+
+        function refreshAll() {
+            renderCategoryBar();
+            renderNewsList();
+            updateMapMarkers();
+            if (currentCategory === '범죄 다발 지역') { renderCrimeHotspotsView(); return; }
+            const f = getFilteredNews();
+            if (f.length > 0) selectNews(f[0].id, true);
+            else document.getElementById('detailViewContainer').innerHTML = '<div class="text-center py-20 text-slate-400 text-xs">조건에 맞는 기사가 없습니다.</div>';
+        }
+
+        // ================= 왼쪽: 기사 목록 =================
+        function showMoreNews() { renderLimit += 100; renderNewsList(); }
 
         function renderNewsList() {
             const container = document.getElementById('newsListContainer');
-            container.innerHTML = '';
+            const prevScroll = container.scrollTop;
             const filtered = getFilteredNews();
+            document.getElementById('listCount').textContent = '총 ' + filtered.length + '건';
+            container.innerHTML = '';
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">선택한 지역/카테고리에 해당하는 사건이 없습니다.</div>`;
+                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">선택한 지역/카테고리/기간에 해당하는 사건이 없습니다.</div>`;
                 return;
             }
 
-            filtered.slice(0, 150).forEach(news => {
+            const perDay = {};
+            filtered.forEach(n => { const k = dateKey(n.timestamp || Date.now() / 1000); perDay[k] = (perDay[k] || 0) + 1; });
+
+            let lastKey = null;
+            filtered.slice(0, renderLimit).forEach(news => {
+                const ts = news.timestamp || Date.now() / 1000;
+                const k = dateKey(ts);
+                if (k !== lastKey) {
+                    lastKey = k;
+                    const h = document.createElement('div');
+                    h.className = 'sticky top-0 z-10 -mx-3 px-3 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-y border-slate-200 dark:border-slate-700 flex justify-between';
+                    h.innerHTML = `<span>${dateLabel(ts)}</span><span class="font-mono text-slate-400">${perDay[k]}건</span>`;
+                    container.appendChild(h);
+                }
+
                 const isSelected = news.id === selectedNewsId && currentCategory !== '범죄 다발 지역';
-                const badgeClass = getCategoryBadgeClass(news.category);
-
+                const badgeClass = getCategoryBadgeClass(news);
                 const card = document.createElement('div');
-                card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-100 dark:bg-slate-800/90 border-red-500/60 shadow-md' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'}`;
+                card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-100 dark:bg-slate-800/90 border-red-500/60 shadow-md' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600'}`;
                 card.onclick = () => selectNews(news.id);
-
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-1.5 gap-1">
-                        <span class="text-[10px] px-2 py-0.5 rounded border ${badgeClass} font-bold shrink-0">${news.category}</span>
-                        <span class="text-[10px] text-slate-500 truncate">${news.time}</span>
+                        <span class="text-[10px] px-2 py-0.5 rounded border ${badgeClass} font-bold shrink-0">${esc(news.category)}</span>
+                        <span class="text-[10px] text-slate-500 truncate">${esc(news.time)}</span>
                     </div>
-                    <h3 class="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 mb-1">${news.title}</h3>
-                    <p class="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">${news.summary}</p>
-                    <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
-                        <span><i class="fa-solid fa-location-dot text-red-500"></i> ${news.location}</span>
-                        <span class="font-medium">${news.source}</span>
+                    <h3 class="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 mb-1">${esc(news.title)}</h3>
+                    <p class="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">${esc(news.summary)}</p>
+                    <div class="flex items-center justify-between gap-2 text-[10px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
+                        <span class="truncate"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}</span>
+                        <span class="font-medium shrink-0">${esc(news.source)}</span>
                     </div>
                 `;
                 container.appendChild(card);
             });
+
+            if (filtered.length > renderLimit) {
+                const more = document.createElement('button');
+                more.className = 'w-full py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700';
+                more.textContent = `더 보기 (${renderLimit} / ${filtered.length}건)`;
+                more.onclick = showMoreNews;
+                container.appendChild(more);
+            }
+            container.scrollTop = prevScroll;
         }
 
+        // ================= 다발 지역 =================
         function getCrimeHotspotsData() {
             const counts = {}, coordsMap = {};
-            newsData.filter(n => !n.location.includes('세부 위치 미상')).forEach(news => {
-                let loc = news.location;
-                if (!counts[loc]) {
-                    counts[loc] = 0;
-                    coordsMap[loc] = { lat: news.lat, lng: news.lng };
-                }
+            newsData.filter(n => inPeriod(n) && hasCoords(n) && groupOf(n) !== '해외·안보' && (n.location || '').includes(' ') && !(n.location || '').includes('세부 위치 미상')).forEach(news => {
+                const loc = news.location;
+                if (!counts[loc]) { counts[loc] = 0; coordsMap[loc] = { lat: news.lat, lng: news.lng }; }
                 counts[loc]++;
             });
 
             let sorted = Object.keys(counts).map(reg => ({
                 region: reg, count: counts[reg], lat: coordsMap[reg].lat, lng: coordsMap[reg].lng
-            })).sort((a, b) => b.count - a.count);
-
-            if (sorted.length === 0) {
-                sorted = [{ region: "서울특별시 강남구", count: 3, lat: 37.5172, lng: 127.0473 }];
-            }
+            })).sort((a, b) => b.count - a.count).slice(0, 30);
             return sorted;
         }
 
         function renderCrimeHotspotsView() {
             const container = document.getElementById('detailViewContainer');
             let listHTML = '';
+            const periodText = periodDays === 1 ? '오늘' : '최근 ' + periodDays + '일간';
             getCrimeHotspotsData().forEach((item, index) => {
                 let isSelected = selectedHotspotRegion === item.region;
                 listHTML += `
-                    <div onclick="selectHotspotRegion('${item.region}', ${item.lat}, ${item.lng})" class="bg-white dark:bg-slate-900 border ${isSelected ? 'border-red-500 bg-red-50/50' : 'border-slate-200 dark:border-slate-800'} p-4 rounded-xl flex items-center justify-between cursor-pointer hover:border-red-500 transition shadow-sm">
+                    <div onclick="selectHotspotRegion('${esc(item.region)}', ${item.lat}, ${item.lng})" class="bg-white dark:bg-slate-900 border ${isSelected ? 'border-red-500 bg-red-50/50' : 'border-slate-200 dark:border-slate-800'} p-3 rounded-xl flex items-center justify-between cursor-pointer hover:border-red-400 transition">
                         <div class="flex items-center space-x-3">
                             <span class="w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-extrabold shrink-0">${index + 1}</span>
                             <div>
-                                <h4 class="text-sm font-bold text-slate-900 dark:text-white">${item.region}</h4>
-                                <p class="text-xs text-slate-500">클릭 시 해당 동(洞)·지역 기사 리스트업</p>
+                                <h4 class="text-sm font-bold text-slate-900 dark:text-white">${esc(item.region)}</h4>
+                                <p class="text-xs text-slate-500">클릭 시 해당 지역 기사 리스트업</p>
                             </div>
                         </div>
                         <span class="text-base font-extrabold text-red-500">${item.count}건</span>
                     </div>
                 `;
             });
+            if (!listHTML) listHTML = '<div class="text-center py-10 text-xs text-slate-400">위치가 확인된 기사가 아직 없습니다.</div>';
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/25">
-                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 전국 사건사고 다발 지역</h2>
+                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 ${periodText} 전국 사건사고 다발 지역</h2>
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">지역을 누르면 왼쪽 리스트에 해당 지역의 사건들이 정렬됩니다.</p>
                     </div>
                     <div class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
@@ -771,7 +933,12 @@
             if (map) map.flyTo([lat, lng], 14, { duration: 1.2 });
         }
 
-        // 중앙 화면에 기사 원문(content)을 확실히 렌더링하도록 반영된 함수
+        // ================= 가운데: 기사 상세 (원문 직접 표시) =================
+        function setDetailMode(mode) {
+            detailMode = mode;
+            if (selectedNewsId) renderDetailView(selectedNewsId);
+        }
+
         function renderDetailView(id) {
             const news = newsData.find(n => n.id === id);
             const container = document.getElementById('detailViewContainer');
@@ -780,129 +947,143 @@
                 return;
             }
 
-            const badgeClass = getCategoryBadgeClass(news.category);
-            const mainText = news.content && news.content.trim() !== "" ? news.content : (news.summary || "본문 내용이 수집되지 않은 기사입니다.");
+            const g = groupOf(news);
+            const badgeClass = CATEGORY_GROUPS[g].badge;
+            const link = safeUrl(news.link);
+            const isGoogle = /news\.google\.com/.test(link);
+            const canEmbed = !!link && !isGoogle;
+            const mode = (detailMode === 'original' && canEmbed) ? 'original' : 'summary';
+            const embedUrl = link.replace(/^http:\/\//, 'https://');   // https 사이트 안에서는 http 페이지를 열 수 없어서 https로 시도
+            const mainText = news.content && news.content.trim() !== '' ? news.content : (news.summary || '본문 내용이 수집되지 않은 기사입니다.');
+
+            const tabCls = (on) => on
+                ? 'px-3 py-1 rounded-md bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold'
+                : 'px-3 py-1 rounded-md bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700';
+
+            let body = '';
+            if (mode === 'original') {
+                body = `
+                    <div class="text-[10px] text-slate-500 shrink-0">화면이 비어 있으면 해당 언론사가 외부 사이트 안에서 보이는 것을 막아 둔 것입니다. 이때는 오른쪽 위 <b>새 창으로 열기</b>를 눌러 주세요.</div>
+                    <iframe src="${esc(embedUrl)}" referrerpolicy="no-referrer" loading="lazy"
+                        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+                        style="flex:1 1 auto; min-height:420px; width:100%;" class="rounded-lg border border-slate-300 dark:border-slate-700 bg-white"></iframe>`;
+            } else {
+                const notice = !link ? '이 기사는 원문 주소가 없어 요약만 표시합니다.'
+                    : (isGoogle ? '구글 뉴스 중계 주소라 이 화면에서 직접 열 수 없습니다. <b>새 창으로 열기</b>를 눌러 주세요. (원문 주소는 수집 때마다 자동 변환 중입니다)' : '');
+                body = `
+                    ${notice ? `<div class="shrink-0 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">${notice}</div>` : ''}
+                    <div class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                        <p class="text-base md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line font-normal">${esc(mainText)}</p>
+                    </div>`;
+            }
 
             container.innerHTML = `
-                <div class="space-y-3 shrink-0">
-                    <div class="flex items-center justify-between text-xs text-slate-400">
-                        <span class="px-2.5 py-0.5 rounded border ${badgeClass} font-bold">${news.category || '일반'}</span>
-                        <span>${news.time || '시간 미상'} · ${news.source || '출처 미상'}</span>
+                <div class="space-y-1.5 shrink-0">
+                    <div class="flex items-center justify-between gap-2 text-xs text-slate-400">
+                        <span class="px-2.5 py-0.5 rounded border ${badgeClass} font-bold">${esc(g)} › ${esc(news.category || '일반')}</span>
+                        <span class="truncate">${esc(news.time || '시간 미상')} · ${esc(news.source || '출처 미상')}</span>
                     </div>
-                    <h2 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight">${news.title}</h2>
-                    <p class="text-xs text-red-500 font-semibold"><i class="fa-solid fa-location-dot"></i> ${news.location || '전국'}</p>
+                    <h2 class="text-base md:text-lg font-black text-slate-900 dark:text-white leading-snug">${esc(news.title)}</h2>
+                    <p class="text-xs text-red-500 font-semibold"><i class="fa-solid fa-location-dot"></i> ${esc(news.location || '전국')}</p>
                 </div>
-                <hr class="border-slate-200 dark:border-slate-800 my-2 shrink-0">
-                <div class="flex-1 overflow-y-auto custom-scrollbar pr-2">
-                    <p class="text-base md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line font-normal">${mainText}</p>
-                </div>
-                ${news.link && news.link !== '#' ? `
-                    <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-                        <span class="text-xs text-slate-500">언론사 전체 전문 확인</span>
-                        <a href="${news.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg shadow transition">
-                            <i class="fa-solid fa-arrow-up-right-from-square"></i> 언론사 원문 새 창으로 열기 &rarr;
-                        </a>
+                <div class="shrink-0 flex items-center justify-between gap-2 text-[11px]">
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="setDetailMode('original')" class="${tabCls(mode === 'original')}" ${canEmbed ? '' : 'disabled style="opacity:.4;cursor:not-allowed"'}>원문 보기</button>
+                        <button onclick="setDetailMode('summary')" class="${tabCls(mode === 'summary')}">요약 보기</button>
                     </div>
-                ` : ''}
+                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded-md shadow"><i class="fa-solid fa-arrow-up-right-from-square"></i> 새 창으로 열기</a>` : ''}
+                </div>
+                ${body}
             `;
         }
 
-        function selectNews(id) {
+        function selectNews(id, silent) {
             selectedNewsId = id;
-            if (currentCategory === '범죄 다발 지역') { currentCategory = 'all'; selectedHotspotRegion = null; }
+            if (currentCategory === '범죄 다발 지역') { currentCategory = 'all'; currentSub = null; selectedHotspotRegion = null; renderCategoryBar(); updateMapMarkers(); }
             renderNewsList();
             renderDetailView(id);
             const news = newsData.find(n => n.id === id);
-            if (news && map && news.lat && news.lng) {
-                map.flyTo([news.lat, news.lng], 14, { duration: 1.2 });
+            if (news && map && hasCoords(news)) {
+                map.flyTo([news.lat, news.lng], silent ? Math.min(map.getZoom(), 11) : 14, { duration: 1.2 });
             }
         }
 
+        // ================= 필터 =================
         function setCategoryFilter(cat) {
             currentCategory = cat;
+            currentSub = null;
             selectedHotspotRegion = null;
-            
-            document.querySelectorAll('.cat-btn').forEach(btn => {
-                const bCat = btn.getAttribute('data-cat');
-                if (bCat === cat) {
-                    btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 transition whitespace-nowrap shadow-sm';
-                } else {
-                    if (bCat === 'all') {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap';
-                    } else if (bCat === '강력범죄') {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 hover:bg-rose-200 whitespace-nowrap border border-rose-300 dark:border-rose-800';
-                    } else if (bCat === '성범죄·마약') {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 hover:bg-purple-200 whitespace-nowrap border border-purple-300 dark:border-purple-800';
-                    } else if (bCat === '사기·금융') {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 hover:bg-blue-200 whitespace-nowrap border border-blue-300 dark:border-blue-800';
-                    } else if (bCat === '재난·사고') {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 hover:bg-amber-200 whitespace-nowrap border border-amber-300 dark:border-amber-800';
-                    } else if (bCat === '교통사고') {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 hover:bg-emerald-200 whitespace-nowrap border border-emerald-300 dark:border-emerald-800';
-                    } else if (bCat === '실종·제보') {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap border border-slate-300 dark:border-slate-700';
-                    } else if (bCat === '해외 분쟁') {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 hover:bg-orange-200 whitespace-nowrap border border-orange-300 dark:border-orange-800';
-                    } else {
-                        btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-200 text-rose-600 dark:bg-slate-800 dark:text-rose-400 hover:bg-slate-300 whitespace-nowrap border border-rose-500/50';
-                    }
-                }
-            });
-
+            renderLimit = 100;
+            renderCategoryBar();
+            updateMapMarkers();
             if (cat === '범죄 다발 지역') {
+                renderNewsList();
                 renderCrimeHotspotsView();
             } else {
                 renderNewsList();
                 const f = getFilteredNews();
-                if (f.length > 0) selectNews(f[0].id);
+                if (f.length > 0) selectNews(f[0].id, true);
+                else document.getElementById('detailViewContainer').innerHTML = '<div class="text-center py-20 text-slate-400 text-xs">조건에 맞는 기사가 없습니다.</div>';
             }
         }
 
+        function setSubFilter(sub) {
+            currentSub = sub;
+            selectedHotspotRegion = null;
+            renderLimit = 100;
+            renderCategoryBar();
+            updateMapMarkers();
+            renderNewsList();
+            const f = getFilteredNews();
+            if (f.length > 0) selectNews(f[0].id, true);
+        }
+
         function filterByRegion() {
+            renderLimit = 100;
+            renderCategoryBar();
             renderNewsList();
             updateMapMarkers();
             const f = getFilteredNews();
-            if (f.length > 0) selectNews(f[0].id);
+            if (f.length > 0) selectNews(f[0].id, true);
         }
 
-        function getFilteredNews() {
+        function getFilteredNews(ignoreCategory = false) {
             const sido = document.getElementById('sidoSelect').value;
             const sigungu = document.getElementById('sigunguSelect').value;
             const dong = document.getElementById('dongSelect').value;
 
             return newsData.filter(news => {
-                if (selectedHotspotRegion) return news.location.includes(selectedHotspotRegion);
-                
-                let matchCat = false;
-                if (currentCategory === 'all') {
-                    matchCat = true;
-                } else if (currentCategory === '강력범죄') {
-                    matchCat = ['강력범죄', '강력·치안'].includes(news.category);
-                } else {
-                    matchCat = (news.category === currentCategory);
+                if (!inPeriod(news)) return false;
+                const loc = news.location || '';
+                if (selectedHotspotRegion && !ignoreCategory) return loc.includes(selectedHotspotRegion);
+
+                if (!ignoreCategory && currentCategory !== 'all' && currentCategory !== '범죄 다발 지역') {
+                    if (groupOf(news) !== currentCategory) return false;
+                    if (currentSub && news.category !== currentSub) return false;
                 }
-                
-                let matchReg = true;
+
                 if (sido !== 'all') {
-                    if (!news.location.includes(sido)) {
-                        matchReg = false;
-                    } else if (sigungu !== 'all' && sigungu !== '전체') {
-                        if (!news.location.includes(sigungu)) {
-                            matchReg = false;
-                        } else if (dong !== 'all' && dong !== '전체') {
-                            let cleanDong = dong.split('(')[0].trim();
-                            if (!news.location.includes(cleanDong)) {
-                                matchReg = false;
-                            }
+                    if (!loc.includes(sido)) return false;
+                    if (sigungu !== 'all' && sigungu !== '전체') {
+                        const city = sigungu.split(' ')[0];
+                        const okSigungu = loc.includes(sigungu) || (sigungu.includes(' ') && loc.split(' ').pop() === city);
+                        if (!okSigungu) return false;
+                        if (dong !== 'all' && dong !== '전체') {
+                            const cleanDong = dong.split('(')[0].trim();
+                            if (!(loc.includes(cleanDong) || loc.includes(dongStem(cleanDong)))) return false;
                         }
                     }
                 }
-                return matchCat && matchReg;
+                return true;
             });
         }
 
         function manualRefreshData() {
             currentCategory = 'all'; 
+            currentSub = null;
+            periodDays = 7;
+            renderLimit = 100;
+            renderPeriodBar();
             selectedHotspotRegion = null;
             document.getElementById('sidoSelect').value = 'all';
             onSidoChange();
@@ -927,26 +1108,30 @@
         function openReportModal() { document.getElementById('reportModal').classList.remove('hidden'); }
         function closeReportModal() { document.getElementById('reportModal').classList.add('hidden'); }
         function submitReport() {
-            const title = document.getElementById('reportTitle').value;
+            const title = document.getElementById('reportTitle').value.trim();
             const sido = document.getElementById('reportSido').value;
-            const loc = document.getElementById('reportLocationDetail').value;
-            const content = document.getElementById('reportContent').value;
+            const loc = document.getElementById('reportLocationDetail').value.trim();
+            const content = document.getElementById('reportContent').value.trim();
             if (!title || !loc) { alert('제목과 위치를 입력해주세요.'); return; }
-            
+
             const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const centers = { '서울특별시': [37.5665, 126.9780], '경기도': [37.4138, 127.5183], '충청남도': [36.5184, 126.8000], '부산광역시': [35.1796, 129.0756] };
+            const c = centers[sido] || [36.35, 127.38];
             const newR = {
-                id: Date.now(), category: '실종·제보', title: `[시민제보] ${title}`,
+                id: Date.now(), category: '시민제보', group: '실종·제보', title: `[시민제보] ${title}`,
                 summary: content || title, content: content || '제보 내용',
-                location: `${sido} ${loc}`, lat: 36.8151 + (Math.random()-0.5)*0.01, lng: 127.1139 + (Math.random()-0.5)*0.01,
-                time: `${now.getFullYear()}.${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')} (금) ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`,
-                source: '시민 직접 제보', timestamp: now.getTime()/1000
+                location: `${sido} ${loc}`, lat: c[0] + (Math.random() - 0.5) * 0.05, lng: c[1] + (Math.random() - 0.5) * 0.05,
+                time: `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} (${WD_KR[now.getDay()]}요일) ${pad(now.getHours())}:${pad(now.getMinutes())}`,
+                source: '시민 직접 제보', timestamp: now.getTime() / 1000, link: ''
             };
+            localReports.unshift(newR);
             newsData.unshift(newR);
             closeReportModal();
+            renderCategoryBar();
             selectNews(newR.id);
-            renderNewsList();
             updateMapMarkers();
-            alert('제보가 등록되었습니다!');
+            alert('제보가 등록되었습니다! (이 화면에서만 보이며, 새로고침하면 사라집니다)');
         }
     </script>
 </body>
