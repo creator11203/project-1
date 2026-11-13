@@ -374,7 +374,9 @@
 
         function initMap() {
             map = L.map('map').setView([37.5665, 126.9780], 11);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{z}.png', {
+            
+            // 🛠️ 지도 타일 URL 수정 완료 ({z}/{x}/{y}.png 형태로 정확히 교체)
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors & CARTO',
                 maxZoom: 19
             }).addTo(map);
