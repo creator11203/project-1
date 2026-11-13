@@ -136,13 +136,10 @@ RSS_FEEDS = [
 ]
 
 TELEGRAM_CHANNELS = [
-    {"url": "https://t.me/s/FastStockNews", "source": "FastStockNews"},
-    {"url": "https://t.me/s/cahier_de_market", "source": "cahier_de_market"}
+    {"url": "https://t.me/s/cahier_de_market", "source": "Telegram 채널"}
 ]
 
-# 세부 동(洞) 및 시·군·구 좌표 매핑 대폭 확대
 KR_CITY_COORDS = {
-    # 서울 주요 구/동
     "강남구": {"lat": 37.5172, "lng": 127.0473, "label": "서울특별시 강남구"},
     "역삼동": {"lat": 37.5006, "lng": 127.0364, "label": "서울특별시 강남구 역삼동"},
     "대치동": {"lat": 37.4946, "lng": 127.0632, "label": "서울특별시 강남구 대치동"},
@@ -150,43 +147,23 @@ KR_CITY_COORDS = {
     "서초구": {"lat": 37.4836, "lng": 127.0327, "label": "서울특별시 서초구"},
     "송파구": {"lat": 37.5145, "lng": 127.1059, "label": "서울특별시 송파구"},
     "마포구": {"lat": 37.5663, "lng": 126.9016, "label": "서울특별시 마포구"},
-    "홍대": {"lat": 37.5563, "lng": 126.9236, "label": "서울특별시 마포구 서교동"},
     "종로구": {"lat": 37.5730, "lng": 126.9794, "label": "서울특별시 종로구"},
     "중구": {"lat": 37.5636, "lng": 126.9975, "label": "서울특별시 중구"},
     "영등포구": {"lat": 37.5264, "lng": 126.8962, "label": "서울특별시 영등포구"},
-    "여의도": {"lat": 37.5219, "lng": 126.9245, "label": "서울특별시 영등포구 여의도동"},
     "관악구": {"lat": 37.4784, "lng": 126.9515, "label": "서울특별시 관악구"},
-    "신림동": {"lat": 37.4842, "lng": 126.9297, "label": "서울특별시 관악구 신림동"},
-    "구로구": {"lat": 37.4954, "lng": 126.8874, "label": "서울특별시 구로구"},
-    "송파": {"lat": 37.5145, "lng": 127.1059, "label": "서울특별시 송파구"},
-    
-    # 경기/인천 주요 지역
     "수원": {"lat": 37.2636, "lng": 127.0286, "label": "경기도 수원시"},
     "성남": {"lat": 37.4200, "lng": 127.1267, "label": "경기도 성남시"},
-    "분당": {"lat": 37.3827, "lng": 127.1189, "label": "경기도 성남시 분당구"},
     "고양": {"lat": 37.6584, "lng": 126.8320, "label": "경기도 고양시"},
     "용인": {"lat": 37.2411, "lng": 127.1776, "label": "경기도 용인시"},
     "부천": {"lat": 37.5034, "lng": 126.7660, "label": "경기도 부천시"},
-    "안산": {"lat": 37.3219, "lng": 126.8309, "label": "경기도 안산시"},
-    "안양": {"lat": 37.3943, "lng": 126.9568, "label": "경기도 안양시"},
-    "화성": {"lat": 37.1996, "lng": 126.8312, "label": "경기도 화성시"},
-    "평택": {"lat": 36.9921, "lng": 127.1129, "label": "경기도 평택시"},
     "인천": {"lat": 37.4563, "lng": 126.7052, "label": "인천광역시"},
-    
-    # 충청권 (천안, 아산 등)
     "천안": {"lat": 36.8151, "lng": 127.1139, "label": "충청남도 천안시"},
     "두정동": {"lat": 36.8312, "lng": 127.1352, "label": "충청남도 천안시 서북구 두정동"},
     "불당동": {"lat": 36.8118, "lng": 127.1102, "label": "충청남도 천안시 서북구 불당동"},
-    "성성동": {"lat": 36.8501, "lng": 127.1351, "label": "충청남도 천안시 서북구 성성동"},
     "아산": {"lat": 36.7898, "lng": 127.0018, "label": "충청남도 아산시"},
-    "배방": {"lat": 36.7845, "lng": 127.0310, "label": "충청남도 아산시 배방읍"},
     "대전": {"lat": 36.3504, "lng": 127.3845, "label": "대전광역시"},
     "세종": {"lat": 36.4800, "lng": 127.2890, "label": "세종특별자치시"},
-    "청주": {"lat": 36.6424, "lng": 127.4890, "label": "충청북도 청주시"},
-    
-    # 기타 광역시 및 지방
     "부산": {"lat": 35.1796, "lng": 129.0756, "label": "부산광역시"},
-    "해운대": {"lat": 35.1631, "lng": 129.1636, "label": "부산광역시 해운대구"},
     "대구": {"lat": 35.8714, "lng": 128.6014, "label": "대구광역시"},
     "광주": {"lat": 35.1595, "lng": 126.8526, "label": "광주광역시"},
     "울산": {"lat": 35.5384, "lng": 129.3114, "label": "울산광역시"},
@@ -198,12 +175,7 @@ KR_PROVINCE_COORDS = {
     "경기": {"lat": 37.4138, "lng": 127.5183, "label": "경기도"},
     "인천": {"lat": 37.4563, "lng": 126.7052, "label": "인천광역시"},
     "강원": {"lat": 37.8228, "lng": 128.1555, "label": "강원특별자치도"},
-    "충북": {"lat": 36.6357, "lng": 127.4917, "label": "충청북도"},
     "충남": {"lat": 36.5184, "lng": 126.8000, "label": "충청남도"},
-    "전북": {"lat": 35.7175, "lng": 127.1530, "label": "전북특별자치도"},
-    "전남": {"lat": 34.8679, "lng": 126.9910, "label": "전라남도"},
-    "경북": {"lat": 36.4919, "lng": 128.8889, "label": "경상북도"},
-    "경남": {"lat": 35.4606, "lng": 128.2132, "label": "경상남도"},
     "부산": {"lat": 35.1796, "lng": 129.0756, "label": "부산광역시"}
 }
 
@@ -215,9 +187,7 @@ GLOBAL_COORDS = {
 }
 
 WORLD_COUNTRIES = ["미국", "중국", "일본", "러시아", "우크라이나", "이란", "이스라엘", "북한"]
-
 CONFLICT_KEYWORDS = ['공습', '미사일', '폭격', '전쟁', '테러', '무력 충돌', '군사 작전']
-
 WEEKDAYS_KR = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
 
 def format_datetime_with_weekday(dt):
@@ -226,59 +196,56 @@ def format_datetime_with_weekday(dt):
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    # 제외 대상 (스포츠, 연예, 증시 등)
-    exclude_keywords = [
+    # 💡 1단계: 주식, 증시, 기업인(젠슨황 등), 연예, 가십(불륜 등) 무조건 제외하는 강력 필터링
+    strict_exclude_keywords = [
         '비트코인', '이더리움', '코인', '가상화폐', '암호화폐', '주가', '증시', '코스피', '코스닥', 
-        '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '바둑', '체스', '이세돌', '신진서', 
-        '우승', '준우승', '리그', '토너먼트', '경기력', '감독', '선수', '연예', '아이돌', '배우', '영화', '드라마'
+        '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '젠슨 황', '엔비디아', '테슬라', 
+        '애플', '마이크로소프트', '실적', '배당', '펀드', '주식', '투자', '시황', '목표주가', '반등',
+        '불륜', '스캔들', '이혼', '결혼', '열애', '연예', '아이돌', '배우', '영화', '드라마', '앨범', 
+        '바둑', '체스', '우승', '리그', '토너먼트', '경기력', '선수', '감독', '골프'
     ]
-    if any(kw in text for kw in exclude_keywords):
+    if any(kw in text for kw in strict_exclude_keywords):
         return None 
 
-    # 1. 해외 분쟁·테러
+    # 2단계: 해외 분쟁·테러
     if any(c.lower() in text for c in WORLD_COUNTRIES) and any(t in text for t in CONFLICT_KEYWORDS):
         return "해외 분쟁·테러"
 
-    # 2. 국가 안보
+    # 3단계: 국가 안보
     if any(kw in text for kw in ['계엄', '군 병력', '북한 도발', '미사일 발사', '영공 침범', '국방 비상']):
         return "국가 안보"
 
-    # 3. 강력·치안 (요청하신 온갖 범죄 및 일상 사건 키워드 대거 포함)
+    # 4단계: 강력·치안 (범죄 및 안전 관련 키워드)
     crime_keywords = [
         '스토킹', '마약', '해킹', '개인정보 유출', '몰카', '소형카메라', '화장실 몰카', '흉기 난동', 
         '방화', '묻지마 폭행', '난투극', '조폭', '조직폭력배', '원한 범죄', '집단 폭행', '폭행', 
-        '집단 성폭행', '성폭행', '성추행', '성범죄', '그루밍', '그루밍 범죄', '자살', '동반 자살', 
-        '실종', '아동 실종', '성인 실종', '납치', '절도', '강도', '특수 절도', '상해', '사기죄', 
-        '금품 갈취', '갈취', '살인', '마약류', '필로폰', '대마초', '공갈', '협박', '특수상해', '특수폭행'
+        '집단 성폭행', '성폭행', '성추행', '성범죄', '그루밍', '자살', '동반 자살', '실종', 
+        '납치', '절도', '강도', '특수 절도', '상해', '사기죄', '금품 갈취', '살인', '마약류', 
+        '필로폰', '대마초', '공갈', '협박', '특수상해', '특수폭행', '경찰 출동', '구속영장', '입건'
     ]
     if any(kw in text for kw in crime_keywords):
         return "강력·치안"
 
-    # 4. 재난·안전 및 사고 (교통사고, 붕괴 등 요청 키워드 포함)
+    # 5단계: 재난·안전 및 사고
     safety_keywords = [
-        '교통사고', '뺑소니', '건물 붕괴', '다리 붕괴', '지반 붕괴', '시설물', '고속도로 사고', 
+        '교통사고', '뺑소니', '건물 붕괴', '다리 붕괴', '지반 붕괴', '고속도로 사고', 
         '우회전 사고', '자전거 충돌', '보행자 사고', '화재', '폭발', '지진', '홍수', '산사태', 
         '침수', '정전', '가스 유출', '구조 작전', '교통 통제', '차량 충돌'
     ]
     if any(kw in text for kw in safety_keywords):
         return "재난·안전"
 
-    # 5. 사이버·금융 사고
+    # 6단계: 사이버·금융 사고 (보이스피싱, 해킹 등 실제 사고만 해당)
     if any(kw in text for kw in ['랜섬웨어', '전산 장애', '서버 다운', '금융 사고', '보안 취약점', '보이스피싱', '스미싱']):
         return "사이버·금융"
-
-    # 기본 포괄 분류 (일상의 사소한 사건사고도 누락되지 않도록 캐치)
-    if any(kw in text for kw in ['사건', '사고', '경찰', '소방', '출동', '조사', '입건', '구속', '수사', '피해', '부상', '사망']):
-        return "강력·치안"
 
     return None
 
 def extract_location(title, content):
-    cleaned_title = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스\vert{}뉴스1\vert{}뉴시스)[\)\]]?', '', title)
-    cleaned_content = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스\vert{}뉴스1\vert{}뉴시스)[\)\]]?', '', content)
+    cleaned_title = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스|뉴스1|뉴시스)[\)\]]?', '', title)
+    cleaned_content = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스|뉴스1|뉴시스)[\)\]]?', '', content)
     search_text = cleaned_title + " " + cleaned_content
 
-    # 세부 동(洞) 또는 구(區) 단위 먼저 탐색 (정밀 위치 매핑)
     for city, info in KR_CITY_COORDS.items():
         if city in search_text:
             return info["label"], info["lat"], info["lng"]
@@ -302,15 +269,18 @@ def scrape_telegram_channel(channel_info):
         with urllib.request.urlopen(req, timeout=5) as response:
             html = response.read().decode('utf-8')
             message_blocks = re.findall(r'<div class="tgme_widget_message_text[^>]*>(.*?)</div>', html, re.DOTALL)
-            for raw_msg in message_blocks[:25]:
+            for raw_msg in message_blocks[:30]:
                 clean_text = remove_html_tags(raw_msg).strip()
                 if not clean_text:
                     continue
                 translated_text = translate_to_korean(clean_text)
                 title = translated_text.split('\n')[0][:60]
+                
+                # 엄격한 필터링 적용
                 category = categorize_incident(title, translated_text)
                 if not category:
                     continue
+                
                 location_str, lat, lng = extract_location(title, translated_text)
                 now_dt = datetime.now(kst)
                 items.append({
@@ -322,7 +292,7 @@ def scrape_telegram_channel(channel_info):
                     "lng": lng,
                     "category": category,
                     "time": format_datetime_with_weekday(now_dt),
-                    "source": "Telegram 실시간",
+                    "source": "Telegram",
                     "link": url,
                     "timestamp": now_dt.timestamp()
                 })
@@ -378,7 +348,7 @@ def scrape_news():
     return collected_items
 
 if __name__ == "__main__":
-    print("=== 확장된 사건사고 필터 관제 크롤러 실행 ===")
+    print("=== 엄격한 키워드 필터링 관제 크롤러 실행 ===")
     init_db()
     try:
         data = scrape_news()
