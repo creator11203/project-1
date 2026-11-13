@@ -253,7 +253,7 @@ def scrape_telegram_channel(channel_info):
                     "time": date_str,
                     "source": real_source_name,
                     "link": target_link,
-                    "timestamp": now_dt.timestamp()  # 정렬을 위한 타임스탬프
+                    "timestamp": now_dt.timestamp()
                 })
     except Exception as e:
         print(f"Error scraping telegram {url}: {e}")
@@ -306,7 +306,7 @@ def scrape_news():
                 "time": date_str,
                 "source": feed_info["source"],
                 "link": link,
-                "timestamp": pub_dt.timestamp()  # 실제 기사 발행 시각 타임스탬프
+                "timestamp": pub_dt.timestamp()
             })
             item_id += 1
 
@@ -319,13 +319,19 @@ def scrape_news():
             collected_items.append(item)
             item_id += 1
 
-    # 중요도 순서가 아닌, 최신 올라온 시간순(timestamp 내림차순)으로 전체 정렬
     collected_items.sort(key=lambda x: x["timestamp"], reverse=True)
-
     return collected_items
 
 if __name__ == "__main__":
-    data = scrape_news()
-    with open("news.json", "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped, filtered, and sorted {len(data)} items by time into news.json")
+    print("=== 실시간 뉴스 관제 크롤러가 시작되었습니다 (3분 간격 자동 실행) ===")
+    while True:
+        try:
+            data = scrape_news()
+            with open("news.json", "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=4)
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 수집 완료: 총 {len(data)}건의 기사가 news.json에 갱신되었습니다.")
+        except Exception as e:
+            print(f"실행 중 오류 발생: {e}")
+        
+        # 3분(180초) 대기 후 반복 실행
+        time.sleep(180)
