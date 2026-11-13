@@ -1,0 +1,30 @@
+name: Auto Update Incidents and News
+
+on:
+  schedule:
+    - cron: '0 * * * *' # 매 1시간마다 자동 실행
+  workflow_dispatch: # 수동 즉시 실행 지원
+
+jobs:
+  update-news:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Run Scraper Script
+        run: python scraper.py
+
+      - name: Commit and push if changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-update latest domestic & global incidents [skip ci]"
+          branch: main
