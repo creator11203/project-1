@@ -216,7 +216,7 @@
         let newsData = [];
         let currentCategory = 'all';
         let currentRegion = 'all';
-        let selectedHotspotRegion = null; // 범죄 다발 지역에서 선택된 특정 지역 필터용
+        let selectedHotspotRegion = null;
         let selectedNewsId = null;
         let map, markersLayer;
         let currentFontSizeLevel = 1;
@@ -317,7 +317,6 @@
             }
             updateMapMarkers();
 
-            // 새로고침 시 지도도 제일 상단 기사 위치로 이동
             if (isManualRefresh && filtered.length > 0 && map) {
                 const topNews = filtered[0];
                 if (topNews.lat && topNews.lng) {
@@ -410,7 +409,6 @@
             filtered.slice(0, 100).forEach(news => {
                 const isSelected = news.id === selectedNewsId && currentCategory !== '범죄 다발 지역';
                 
-                // 카테고리별 색상 뱃지 지정 (요구사항 5번)
                 let badgeClass = 'bg-red-500/20 text-red-500 dark:text-red-400 border-red-500/30';
                 if (news.category === '해외 분쟁·테러') badgeClass = 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30';
                 else if (news.category === '국가 안보') badgeClass = 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30';
@@ -460,13 +458,12 @@
                 regionCounts[locKey]++;
             });
 
-            // 요구사항 4번: ㄱㄴㄷ 순 정렬 (가나다 오름차순 또는 건수순 원하시면 변경 가능, 여기서는 ㄱㄴㄷ 지역명 순 정렬 후 건수 반영)
             let sortedRegions = Object.keys(regionCounts).map(reg => ({
                 region: reg,
                 count: regionCounts[reg],
                 lat: regionCoordsMap[reg].lat,
                 lng: regionCoordsMap[reg].lng
-            })).sort((a, b) => a.region.localeCompare(b.region, 'ko')); // ㄱㄴㄷ 순 정렬
+            })).sort((a, b) => a.region.localeCompare(b.region, 'ko'));
 
             if (sortedRegions.length === 0) {
                 sortedRegions = [
@@ -522,11 +519,10 @@
             `;
         }
 
-        // 요구사항 1번 & 4번: 범죄 다발 지역 클릭 시 왼쪽에 해당 기사 리스트업 및 지도 이동
         function selectHotspotRegion(regionName, lat, lng) {
             selectedHotspotRegion = regionName;
             renderCrimeHotspotsView();
-            renderNewsList(); // 왼쪽 리스트를 해당 지역 기사들로 필터링하여 갱신
+            renderNewsList();
             if (map) {
                 map.flyTo([lat, lng], 12, { duration: 1.2 });
             }
@@ -550,7 +546,7 @@
             else if (news.category === '사이버·금융') headerStyle = 'border-l-4 border-blue-500 bg-blue-500/10';
             else if (news.category === '재난·안전') headerStyle = 'border-l-4 border-amber-500 bg-amber-500/10';
 
-            // 요구사항 3번: 불필요한 UI(매핑 위치 박스 등)를 완전히 제거하고 바로 원문이 표시되도록 수정
+            // '수집된 요약 및 본문 내용' 타이틀과 불필요한 UI 상자 제거 후 원문 본문이 바로 출력되도록 수정
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-4 rounded-xl ${headerStyle} shrink-0">
@@ -561,22 +557,16 @@
                         <h2 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white leading-snug">${news.title}</h2>
                     </div>
 
-                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-xs md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed space-y-3 shrink-0 shadow-sm">
-                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 mb-2">
-                            <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-file-lines"></i> 수집된 요약 및 본문 내용</span>
-                            ${news.link ? `
-                                <a href="${news.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg shadow transition">
-                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> 언론사 원문 새 창으로 열기 &rarr;
-                                </a>
-                            ` : ''}
-                        </div>
-                        <p class="whitespace-pre-line">${news.content || news.summary}</p>
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 text-xs md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed space-y-4 shadow-sm">
+                        <p class="whitespace-pre-line text-slate-900 dark:text-slate-100 font-normal leading-relaxed">${news.content || news.summary}</p>
                     </div>
 
                     ${news.link ? `
-                        <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-4 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center justify-between">
-                            <span><i class="fa-solid fa-circle-info text-blue-500 mr-1.5"></i> 대형 포털(구글뉴스·연합뉴스 등)은 보안 정책상 미리보기 화면을 차단하므로 위 버튼을 눌러 원문을 확인하세요.</span>
-                            <a href="${news.link}" target="_blank" class="underline font-semibold shrink-0 ml-2">원문 이동</a>
+                        <div class="pt-2 flex items-center justify-between">
+                            <span class="text-[11px] text-slate-500"><i class="fa-solid fa-circle-info mr-1"></i> 언론사 보안 정책에 따라 전체 전문은 아래 원문 버튼을 통해 확인하실 수 있습니다.</span>
+                            <a href="${news.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg shadow transition shrink-0">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> 언론사 원문 새 창으로 열기 &rarr;
+                            </a>
                         </div>
                     ` : ''}
                 </div>
@@ -602,7 +592,7 @@
 
         function setCategoryFilter(category) {
             currentCategory = category;
-            selectedHotspotRegion = null; // 카테고리 전환 시 지역 선택 필터 초기화
+            selectedHotspotRegion = null;
             
             document.querySelectorAll('.cat-btn').forEach(btn => {
                 const btnCat = btn.getAttribute('data-cat');
