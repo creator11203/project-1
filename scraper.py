@@ -68,7 +68,6 @@ def extract_domain_source(url):
     except Exception:
         return "외부 원문 기사"
 
-# 국내 사건·사고 및 속보를 잘 수집할 수 있도록 구글 뉴스 검색 RSS 및 연합뉴스 RSS 조합
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"},
@@ -109,13 +108,62 @@ GLOBAL_COORDS = {
     "이란": {"lat": 35.6892, "lng": 51.3890, "label": "이란 테헤란"},
     "이스라엘": {"lat": 31.7683, "lng": 35.2137, "label": "이스라엘 예루살렘"},
     "중동": {"lat": 24.7136, "lng": 46.6753, "label": "중동 지역"},
-    "미국": {"lat": 38.8951, "lng": -77.0364, "label": "미국 워싱턴D.C."}
+    "미국": {"lat": 38.8951, "lng": -77.0364, "label": "미국 워싱턴D.C."},
+    "중국": {"lat": 39.9042, "lng": 116.4074, "label": "중국 베이징"},
+    "대만": {"lat": 25.0330, "lng": 121.5654, "label": "대만 타이베이"},
+    "일본": {"lat": 35.6762, "lng": 139.6503, "label": "일본 도쿄"}
 }
+
+WORLD_COUNTRIES = [
+    "미국", "중국", "일본", "러시아", "우크라이나", "영국", "프랑스", "독일", "이탈리아", "캐나다",
+    "호주", "인도", "대만", "이란", "이스라엘", "북한", "시리아", "이라크", "아프가니스탄", "파키스탄",
+    "사우디", "예멘", "리비아", "수단", "소말리아", "레바논", "팔레스타인", "터키", "튀르키예", "폴란드",
+    "필리핀", "베트남", "인도네시아", "태국", "미얀마", "브라질", "멕시코", "스페인", "스위스",
+    "아르헨티나", "이집트", "남아공", "나이지리아", "베네수엘라", "쿠바", "벨라루스", "스웨덴", "노르웨이"
+]
+
+CONFLICT_KEYWORDS = [
+    '공습', '미사일', '폭격', '전쟁', '테러', '무력 충돌', '군사 작전', '드론 공격', '충돌', 
+    '포격', '격전', '교전', '침공', '점령', '군사 행동', '비상사태', '계엄', '테러 조직', '무장 세력',
+    '폭발', '사망', '부상', '함정', '전투기', '핵무기', '나토', 'NATO', '군사 위기',
+    'strike', 'missile', 'war', 'attack', 'conflict', 'explosion', 'combat', 'invasion', 
+    'bombing', 'airstrike', 'shelling', 'troops', 'military', 'casualty', 'casualties', 
+    'hostage', 'terrorist', 'terrorism', 'assassination', 'clash', 'artillery', 'defense'
+]
+
+def calculate_priority_score(title, content, category):
+    text = (title + " " + content).lower()
+    score = 10  # 기본 점수
+
+    # 1. 카테고리별 가중치 (해외 분쟁·테러 및 국가 안보 최우선)
+    if category == "해외 분쟁·테러":
+        score += 50
+    elif category == "국가 안보":
+        score += 40
+    elif category == "강력·치안":
+        score += 30
+    elif category == "재난·안전":
+        score += 25
+
+    # 2. 긴급 군사 충돌 키워드 가산점 (공습, 미사일, 전쟁, 핵 등)
+    critical_terms = ['공습', '미사일', '폭격', '전쟁', '핵무기', 'strike', 'missile', 'war', 'invasion']
+    for term in critical_terms:
+        if term in text:
+            score += 20
+            break
+
+    # 3. 주요 국제 분쟁 국가 언급 가산점
+    major_hotspots = ['우크라이나', '러시아', '이란', '이스라엘', '중동', '대만', '북한']
+    for spot in major_hotspots:
+        if spot in text:
+            score += 15
+            break
+
+    return score
 
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    # 금융 및 자산 관련 노이즈 철저 차단
     financial_exclude_keywords = [
         '비트코인', '이더리움', '코인', '가상화폐', '암호화폐', '주가', '증시', '코스피', '코스닥', 
         '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '외국인 순매수', '주가 하락', 
@@ -124,16 +172,19 @@ def categorize_incident(title, content):
     if any(kw in text for kw in financial_exclude_keywords):
         return None 
 
-    emergency_override = ['공습', '미사일', '폭격', '전쟁', '테러', '충돌', '비상계엄', '북한 도발']
-    has_emergency = any(em in text for em in emergency_override)
+    has_country = any(country.lower() in text for country in WORLD_COUNTRIES)
+    has_conflict_term = any(term in text for term in CONFLICT_KEYWORDS)
 
-    if any(kw in text for kw in ['우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동', '공습', '미사일', '폭격', '전쟁', '테러', '충돌', 'strike', 'war', 'attack']):
+    if has_country and has_conflict_term:
         return "해외 분쟁·테러"
 
-    if any(kw in text for kw in ['계엄', '군 병력', '북한', '미사일 발사', '영공', '국방']):
+    global_force_terms = ['우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동', '공습', '미사일', '폭격', '전쟁', '테러']
+    if any(term in text for term in global_force_terms) and has_conflict_term:
+        return "해외 분쟁·테러"
+
+    if any(kw in text for kw in ['계엄', '군 병력', '북한 도발', '미사일 발사', '영공 침범', '국방 비상']):
         return "국가 안보"
 
-    # 국내 강력 범죄 및 치안 관련 키워드 대폭 확장 (성폭행, 성범죄, 살인 등 포함)
     if any(kw in text for kw in ['성폭행', '성추행', '성범죄', '살인', '강도', '인질', '폭행', '흉기', '마약', '긴급 체포', '수배', '경찰 출동', '구속영장', '입건', '송치', '피의자']):
         return "강력·치안"
 
@@ -143,15 +194,16 @@ def categorize_incident(title, content):
     if any(kw in text for kw in ['화재', '폭발', '건물 붕괴', '교량 붕괴', '지진', '홍수', '산사태', '침수', '구조 작전', '교통 통제', '가스 유출', '정전 사고']):
         return "재난·안전"
 
-    if has_emergency:
-        return "해외 분쟁·테러"
-
     return None
 
 def extract_location(text):
     for keyword, info in GLOBAL_COORDS.items():
         if keyword in text:
             return info["label"], info["lat"], info["lng"]
+
+    for country in WORLD_COUNTRIES:
+        if country in text:
+            return f"해외 분쟁지역 ({country})", 35.0, 40.0
 
     for sido, s_data in REGION_COORDS.items():
         if sido in text:
@@ -163,7 +215,6 @@ def extract_location(text):
                     return f"{sido} {sigungu} 전체", g_data["lat"], g_data["lng"]
             return f"{sido} 중심부", s_data["lat"], s_data["lng"]
     
-    # 국내 지역명이 명시되지 않은 일반 사건 기사는 서울 중심부 기본값 부여
     return "서울특별시 중구", 37.5636, 126.9975
 
 def scrape_telegram_channel(channel_info):
@@ -210,6 +261,7 @@ def scrape_telegram_channel(channel_info):
 
                 location_str, lat, lng = extract_location(translated_text)
                 real_source_name = extract_domain_source(target_link)
+                priority = calculate_priority_score(title, translated_text, category)
 
                 items.append({
                     "title": title,
@@ -221,7 +273,8 @@ def scrape_telegram_channel(channel_info):
                     "category": category,
                     "time": "최근 5일 이내",
                     "source": real_source_name,
-                    "link": target_link
+                    "link": target_link,
+                    "priority": priority
                 })
     except Exception as e:
         print(f"Error scraping telegram {url}: {e}")
@@ -258,6 +311,7 @@ def scrape_news():
             
             lat += (random.random() - 0.5) * 0.01
             lng += (random.random() - 0.5) * 0.01
+            priority = calculate_priority_score(title, summary, category)
 
             collected_items.append({
                 "id": item_id,
@@ -270,7 +324,8 @@ def scrape_news():
                 "lng": round(lng, 4),
                 "time": "최근 5일 이내",
                 "source": feed_info["source"],
-                "link": link
+                "link": link,
+                "priority": priority
             })
             item_id += 1
 
@@ -283,10 +338,13 @@ def scrape_news():
             collected_items.append(item)
             item_id += 1
 
+    # 중요도 점수(priority)가 높은 순서대로 전체 정렬
+    collected_items.sort(key=lambda x: x["priority"], reverse=True)
+
     return collected_items
 
 if __name__ == "__main__":
     data = scrape_news()
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped, filtered, and cleaned {len(data)} items into news.json")
+    print(f"Successfully scraped, filtered, and prioritized {len(data)} items into news.json")
