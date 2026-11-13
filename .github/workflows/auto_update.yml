@@ -2,15 +2,15 @@ name: Auto Update Incidents and News
 
 on:
   schedule:
-    - cron: '0 * * * *' # 매 1시간마다 자동 실행
-  workflow_dispatch: # 수동 즉시 실행 지원
+    - cron: '* * * * *'
+  workflow_dispatch:
 
 jobs:
   update-news:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
+      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
