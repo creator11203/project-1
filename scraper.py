@@ -4,13 +4,13 @@ import pytz
 import json
 import random
 
-# RSS 피드 소스 리스트
+# 국내외 주요 RSS 피드 소스 리스트
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"}
 ]
 
-# 3단계 지역 매핑 데이터
+# 3단계 국내 지역 매핑 데이터
 REGION_COORDS = {
     "서울특별시": {
         "lat": 37.5665, "lng": 126.9780, 
@@ -33,53 +33,76 @@ REGION_COORDS = {
     }
 }
 
+# 해외 주요 분쟁 지역 및 도시 좌표 매핑
+GLOBAL_COORDS = {
+    "우크라이나": {"lat": 50.4501, "lng": 30.5234, "label": "우크라이나 키이우"},
+    "러시아": {"lat": 55.7558, "lng": 37.6173, "label": "러시아 모스크바"},
+    "이란": {"lat": 35.6892, "lng": 51.3890, "label": "이란 테헤란"},
+    "이스라엘": {"lat": 31.7683, "lng": 35.2137, "label": "이스라엘 예루살렘"},
+    "중동": {"lat": 24.7136, "lng": 46.6753, "label": "중동 지역"},
+    "미국": {"lat": 38.8951, "lng": -77.0364, "label": "미국 워싱턴D.C."}
+}
+
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    # 0. 엄격한 제외 대상 (정치 공방, 경제 주가 변동, 기업 인사, 재판/수사/정치적 발언 등은 절대 안전/안보로 분류 불가)
+    # 제외 대상 (경제, 주가, 연예, 사후 정치 공방 등)
     exclude_keywords = [
         '엔비디아', '코스피', '외국인', '매도', '하락', '상승', '주가', '증시', '최고경영자', '사임', '합병', '투자',
         '특검', '국정조사', '재판', '공판', '선고', '항소', '상고', '여야', '정치권', '규탄', '공방', 
         '토론', '사과', '반성', '회고', '기자회견', '입장문', '설명회', '무소속', '의원', '내홍', '지도부'
     ]
     if any(kw in text for kw in exclude_keywords):
-        return None # 안전/안보/사건사고와 무관한 일반 경제/정치 기사는 완전히 제외
+        return None 
 
-    # 1. 국가 안보 (실시간 군사적 위기, 도발, 비상조치 직접 발생)
-    security_incidents = ['계엄 선포', '비상계엄', '군 병력', '도발', '미사일 발사', '영공 침범', '테러 위협', '국방 비상']
+    # 1. 해외 분쟁·테러 (우크라이나, 러시아, 이란, 전쟁, 공습, 미사일 공격, 테러 등)
+    global_conflict_keywords = [
+        '우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동 전쟁', 
+        '공습', '미사일 공격', '폭격', '전쟁', '테러', '무력 충돌', '군사 작전', '드론 공격'
+    ]
+    if any(kw in text for kw in global_conflict_keywords):
+        return "해외 분쟁·테러"
+
+    # 2. 국가 안보 (국내 군사적 위기, 북한 도발 등)
+    security_incidents = ['계엄 선포', '비상계엄', '군 병력', '북한 도발', '미사일 발사', '영공 침범', '국방 비상']
     if any(kw in text for kw in security_incidents):
         return "국가 안보"
 
-    # 2. 강력·치안 (실시간 범죄, 112 출동, 사건 발생, 검거)
+    # 3. 강력·치안
     crime_keywords = ['살인', '강도', '인질', '폭행', '흉기 난동', '마약', '긴급 체포', '수배', '112 출동', '경찰 출동', '구속영장', '투신']
     if any(kw in text for kw in crime_keywords):
         return "강력·치안"
 
-    # 3. 사이버·금융 (해킹, 대규모 시스템 장애, 랜섬웨어 등 실제 보안 사고)
+    # 4. 사이버·금융
     cyber_keywords = ['해킹', '랜섬웨어', '개인정보 유출', '전산 장애', '서버 다운', '금융 사고', '보안 취약점', '스캠 피해']
     if any(kw in text for kw in cyber_keywords):
         return "사이버·금융"
 
-    # 4. 재난·안전 (실제 화재, 폭발, 지진, 붕괴, 119 구조, 대형 교통사고 등)
+    # 5. 재난·안전
     disaster_keywords = ['화재', '폭발', '붕괴', '지진', '홍수', '산사태', '침수', '119 출동', '구조', '교통 통제', '가스 유출', '정전 사고', '전복']
     if any(kw in text for kw in disaster_keywords):
         return "재난·안전"
 
-    # 위 어떤 안전/사건사고 카테고리에도 명확히 부합하지 않으면 수집 대상에서 제외
     return None
 
 def extract_location(text):
+    # 1. 해외 분쟁 지역 키워드 매칭 우선 검사
+    for keyword, info in GLOBAL_COORDS.items():
+        if keyword in text:
+            return info["label"], info["lat"], info["lng"]
+
+    # 2. 국내 지역 매칭 검사
     for sido, s_data in REGION_COORDS.items():
         if sido in text:
             for sigungu, g_data in s_data["sigungu"].items():
                 if sigungu in text:
                     for dong, d_coords in g_data["dong"].items():
                         if dong in text:
-                            return sido, sigungu, dong, d_coords["lat"], d_coords["lng"]
-                    return sido, sigungu, "전체 읍·면·동", g_data["lat"], g_data["lng"]
-            return sido, "중구", "전체 읍·면·동", s_data["lat"], s_data["lng"]
+                            return f"{sido} {sigungu} {dong}", d_coords["lat"], d_coords["lng"]
+                    return f"{sido} {sigungu} 전체", g_data["lat"], g_data["lng"]
+            return f"{sido} 중심부", s_data["lat"], s_data["lng"]
     
-    return None, None, None, None, None
+    return None, None, None
 
 def scrape_news():
     kst = pytz.timezone('Asia/Seoul')
@@ -90,22 +113,20 @@ def scrape_news():
 
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
-        for entry in parsed.entries[:20]:
+        for entry in parsed.entries[:25]:
             title = entry.get("title", "")
             summary = entry.get("summary", title)
             link = entry.get("link", "")
             
-            # 카테고리 판별 (기준에 맞지 않으면 버림)
+            full_text = title + " " + summary
+            
             category = categorize_incident(title, summary)
             if not category:
                 continue
                 
-            # 지역 정보 추출
-            sido, sigungu, dong, lat, lng = extract_location(title + " " + summary)
-            
-            # 기사 내에 명확한 국내 지역(시도) 이름이 없으면 엉뚱한 곳에 찍히지 않도록 수집에서 제외
-            if not sido:
-                continue
+            location_str, lat, lng = extract_location(full_text)
+            if not location_str:
+                continue  # 지역 정보가 명확히 매칭되지 않으면 제외
             
             lat += (random.random() - 0.5) * 0.01
             lng += (random.random() - 0.5) * 0.01
@@ -116,10 +137,7 @@ def scrape_news():
                 "title": title,
                 "summary": summary[:120] + "...",
                 "content": summary,
-                "sido": sido,
-                "sigungu": sigungu,
-                "dong": dong,
-                "location": f"{sido} {sigungu} {dong}",
+                "location": location_str,
                 "lat": round(lat, 4),
                 "lng": round(lng, 4),
                 "time": "방금 전",
