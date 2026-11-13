@@ -22,22 +22,24 @@ class HTMLFilter(HTMLParser):
         return ''.join(self.text)
 
 def remove_html_tags(html_content):
+    if not html_content:
+        return ""
     f = HTMLFilter()
     f.feed(html_content)
-    return f.get_data()
+    return re.sub(r'\s+', ' ', f.get_data()).strip()
 
 def translate_to_korean(text):
     if not text:
         return ""
     try:
-        encoded_text = urllib.parse.quote(text[:500])
+        encoded_text = urllib.parse.quote(text[:800])
         url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ko&dt=t&q={encoded_text}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=3) as response:
             res_data = json.loads(response.read().decode('utf-8'))
             translated = "".join([item[0] for item in res_data[0] if item[0]])
             return translated
-    except Exception as e:
+    except Exception:
         return text
 
 def extract_domain_source(url):
@@ -71,7 +73,7 @@ def extract_domain_source(url):
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"},
-    {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+%EC%82%AC%EA%B1%B4+%ED%8F%AD%ED%96%89+%EA%B2%BD%EC%B0%c2&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (사건·사고)"}
+    {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+%EC%82%AC%EA%B1%B4+%ED%8F%AD%ED%96%89+%EA%B2%BD%EC%B0%B0&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (사건·사고)"}
 ]
 
 TELEGRAM_CHANNELS = [
@@ -80,26 +82,90 @@ TELEGRAM_CHANNELS = [
     {"url": "https://t.me/s/cahier_de_market", "source": "cahier_de_market"}
 ]
 
-REGION_COORDS = {
-    "서울특별시": {
-        "lat": 37.5665, "lng": 126.9780, 
-        "sigungu": {
-            "강남구": {"lat": 37.5172, "lng": 127.0473, "dong": {"역삼동": {"lat": 37.5006, "lng": 127.0364}, "청담동": {"lat": 37.5260, "lng": 127.0449}}}, 
-            "중구": {"lat": 37.5636, "lng": 126.9975, "dong": {"명동": {"lat": 37.5636, "lng": 126.9858}}}
-        }
-    },
-    "부산광역시": {
-        "lat": 35.1796, "lng": 129.0756, 
-        "sigungu": {
-            "해운대구": {"lat": 35.1631, "lng": 129.1636, "dong": {"우동": {"lat": 35.1587, "lng": 129.1398}}}
-        }
-    },
-    "경기도": {
-        "lat": 37.4138, "lng": 127.5183, 
-        "sigungu": {
-            "수원시": {"lat": 37.2636, "lng": 127.0286, "dong": {"권선구": {"lat": 37.2575, "lng": 126.9721}}}
-        }
-    }
+# 전국 주요 시·군·구 정밀 좌표 매핑 (세부 도시 우선 매칭용)
+KR_CITY_COORDS = {
+    # 충청권
+    "천안": {"lat": 36.8151, "lng": 127.1139, "label": "충청남도 천안시"},
+    "아산": {"lat": 36.7898, "lng": 127.0018, "label": "충청남도 아산시"},
+    "서산": {"lat": 36.7845, "lng": 126.4503, "label": "충청남도 서산시"},
+    "당진": {"lat": 36.8898, "lng": 126.6459, "label": "충청남도 당진시"},
+    "공주": {"lat": 36.4465, "lng": 127.1189, "label": "충청남도 공주시"},
+    "보령": {"lat": 36.3335, "lng": 126.6129, "label": "충청남도 보령시"},
+    "논산": {"lat": 36.1872, "lng": 127.0987, "label": "충청남도 논산시"},
+    "홍성": {"lat": 36.6013, "lng": 126.6608, "label": "충청남도 홍성군"},
+    "청주": {"lat": 36.6424, "lng": 127.4890, "label": "충청북도 청주시"},
+    "충주": {"lat": 36.9910, "lng": 127.9259, "label": "충청북도 충주시"},
+    "제천": {"lat": 37.1326, "lng": 128.1910, "label": "충청북도 제천시"},
+    "대전": {"lat": 36.3504, "lng": 127.3845, "label": "대전광역시"},
+    "세종": {"lat": 36.4800, "lng": 127.2890, "label": "세종특별자치시"},
+    # 수도권
+    "수원": {"lat": 37.2636, "lng": 127.0286, "label": "경기도 수원시"},
+    "성남": {"lat": 37.4200, "lng": 127.1267, "label": "경기도 성남시"},
+    "분당": {"lat": 37.3827, "lng": 127.1189, "label": "경기도 성남시 분당구"},
+    "용인": {"lat": 37.2411, "lng": 127.1776, "label": "경기도 용인시"},
+    "고양": {"lat": 37.6584, "lng": 126.8320, "label": "경기도 고양시"},
+    "일산": {"lat": 37.6584, "lng": 126.7700, "label": "경기도 고양시 일산"},
+    "화성": {"lat": 37.1996, "lng": 126.8312, "label": "경기도 화성시"},
+    "부천": {"lat": 37.5034, "lng": 126.7660, "label": "경기도 부천시"},
+    "남양주": {"lat": 37.6360, "lng": 127.2165, "label": "경기도 남양주시"},
+    "안산": {"lat": 37.3219, "lng": 126.8309, "label": "경기도 안산시"},
+    "안양": {"lat": 37.3943, "lng": 126.9568, "label": "경기도 안양시"},
+    "평택": {"lat": 36.9921, "lng": 127.1129, "label": "경기도 평택시"},
+    "시흥": {"lat": 37.3800, "lng": 126.8029, "label": "경기도 시흥시"},
+    "파주": {"lat": 37.7599, "lng": 126.7802, "label": "경기도 파주시"},
+    "의정부": {"lat": 37.7381, "lng": 127.0337, "label": "경기도 의정부시"},
+    "김포": {"lat": 37.6152, "lng": 126.7156, "label": "경기도 김포시"},
+    "광주": {"lat": 35.1595, "lng": 126.8526, "label": "광주광역시"},
+    "인천": {"lat": 37.4563, "lng": 126.7052, "label": "인천광역시"},
+    "강남": {"lat": 37.5172, "lng": 127.0473, "label": "서울특별시 강남구"},
+    "송파": {"lat": 37.5145, "lng": 127.1059, "label": "서울특별시 송파구"},
+    "강서": {"lat": 37.5509, "lng": 126.8495, "label": "서울특별시 강서구"},
+    "영등포": {"lat": 37.5264, "lng": 126.8962, "label": "서울특별시 영등포구"},
+    "마포": {"lat": 37.5663, "lng": 126.9016, "label": "서울특별시 마포구"},
+    "종로": {"lat": 37.5730, "lng": 126.9794, "label": "서울특별시 종로구"},
+    # 강원권
+    "춘천": {"lat": 37.8813, "lng": 127.7298, "label": "강원특별자치도 춘천시"},
+    "원주": {"lat": 37.3422, "lng": 127.9202, "label": "강원특별자치도 원주시"},
+    "강릉": {"lat": 37.7519, "lng": 128.8761, "label": "강원특별자치도 강릉시"},
+    "속초": {"lat": 38.2070, "lng": 128.5918, "label": "강원특별자치도 속초시"},
+    # 영남권
+    "부산": {"lat": 35.1796, "lng": 129.0756, "label": "부산광역시"},
+    "해운대": {"lat": 35.1631, "lng": 129.1636, "label": "부산광역시 해운대구"},
+    "대구": {"lat": 35.8714, "lng": 128.6014, "label": "대구광역시"},
+    "울산": {"lat": 35.5384, "lng": 129.3114, "label": "울산광역시"},
+    "창원": {"lat": 35.2280, "lng": 128.6811, "label": "경상남도 창원시"},
+    "김해": {"lat": 35.2285, "lng": 128.8894, "label": "경상남도 김해시"},
+    "진주": {"lat": 35.1800, "lng": 128.1076, "label": "경상남도 진주시"},
+    "거제": {"lat": 34.8806, "lng": 128.6211, "label": "경상남도 거제시"},
+    "양산": {"lat": 35.3350, "lng": 129.0372, "label": "경상남도 양산시"},
+    "포항": {"lat": 36.0190, "lng": 129.3435, "label": "경상북도 포항시"},
+    "구미": {"lat": 36.1195, "lng": 128.3446, "label": "경상북도 구미시"},
+    "경주": {"lat": 35.8562, "lng": 129.2247, "label": "경상북도 경주시"},
+    "안동": {"lat": 36.5684, "lng": 128.7294, "label": "경상북도 안동시"},
+    # 호남·제주권
+    "전주": {"lat": 35.8242, "lng": 127.1480, "label": "전북특별자치도 전주시"},
+    "익산": {"lat": 35.9483, "lng": 126.9576, "label": "전북특별자치도 익산시"},
+    "군산": {"lat": 35.9677, "lng": 126.7366, "label": "전북특별자치도 군산시"},
+    "여수": {"lat": 34.7604, "lng": 127.6622, "label": "전라남도 여수시"},
+    "순천": {"lat": 34.9506, "lng": 127.4872, "label": "전라남도 순천시"},
+    "목포": {"lat": 34.8118, "lng": 126.3922, "label": "전라남도 목포시"},
+    "제주": {"lat": 33.4996, "lng": 126.5312, "label": "제주특별자치도"},
+    "서귀포": {"lat": 33.2541, "lng": 126.5601, "label": "제주특별자치도 서귀포시"}
+}
+
+# 광역 시·도 단위 백업 좌표 (세부 도시명이 없을 때 매칭)
+KR_PROVINCE_COORDS = {
+    "서울": {"lat": 37.5665, "lng": 126.9780, "label": "서울특별시"},
+    "경기": {"lat": 37.4138, "lng": 127.5183, "label": "경기도"},
+    "강원": {"lat": 37.8228, "lng": 128.1555, "label": "강원특별자치도"},
+    "충북": {"lat": 36.6357, "lng": 127.4917, "label": "충청북도"},
+    "충청북": {"lat": 36.6357, "lng": 127.4917, "label": "충청북도"},
+    "충남": {"lat": 36.5184, "lng": 126.8000, "label": "충청남도"},
+    "충청남": {"lat": 36.5184, "lng": 126.8000, "label": "충청남도"},
+    "전북": {"lat": 35.7175, "lng": 127.1530, "label": "전북특별자치도"},
+    "전남": {"lat": 34.8679, "lng": 126.9910, "label": "전라남도"},
+    "경북": {"lat": 36.4919, "lng": 128.8889, "label": "경상북도"},
+    "경남": {"lat": 35.4606, "lng": 128.2132, "label": "경상남도"}
 }
 
 GLOBAL_COORDS = {
@@ -107,11 +173,13 @@ GLOBAL_COORDS = {
     "러시아": {"lat": 55.7558, "lng": 37.6173, "label": "러시아 모스크바"},
     "이란": {"lat": 35.6892, "lng": 51.3890, "label": "이란 테헤란"},
     "이스라엘": {"lat": 31.7683, "lng": 35.2137, "label": "이스라엘 예루살렘"},
+    "가자": {"lat": 31.5017, "lng": 34.4668, "label": "팔레스타인 가자지구"},
     "중동": {"lat": 24.7136, "lng": 46.6753, "label": "중동 지역"},
     "미국": {"lat": 38.8951, "lng": -77.0364, "label": "미국 워싱턴D.C."},
     "중국": {"lat": 39.9042, "lng": 116.4074, "label": "중국 베이징"},
     "대만": {"lat": 25.0330, "lng": 121.5654, "label": "대만 타이베이"},
-    "일본": {"lat": 35.6762, "lng": 139.6503, "label": "일본 도쿄"}
+    "일본": {"lat": 35.6762, "lng": 139.6503, "label": "일본 도쿄"},
+    "북한": {"lat": 39.0392, "lng": 125.7625, "label": "북한 평양"}
 }
 
 WORLD_COUNTRIES = [
@@ -133,9 +201,9 @@ CONFLICT_KEYWORDS = [
 
 WEEKDAYS_KR = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
 
-def format_date_with_weekday(dt):
+def format_datetime_with_weekday(dt):
     weekday_str = WEEKDAYS_KR[dt.weekday()]
-    return f"{dt.strftime('%Y.%m.%d')} ({weekday_str})"
+    return f"{dt.strftime('%Y.%m.%d')} ({weekday_str}) {dt.strftime('%H:%M')}"
 
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
@@ -172,26 +240,51 @@ def categorize_incident(title, content):
 
     return None
 
-def extract_location(text):
-    for keyword, info in GLOBAL_COORDS.items():
-        if keyword in text:
-            return info["label"], info["lat"], info["lng"]
+def extract_location(title, content):
+    """
+    기사 제목을 최우선으로 검사하고, 없으면 본문을 검사하여
+    가장 먼저 언급되는 핵심 지역 좌표를 정확히 반환합니다.
+    (언론사 소재지인 '서울=연합뉴스' 바이라인 오인식 방지)
+    """
+    # 바이라인 노이즈 제거 ("(서울=연합뉴스)", "서울=뉴스1" 등)
+    cleaned_title = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스\vert{}뉴스1\vert{}뉴시스\vert{}파이낸셜뉴스\vert{}이데일리)[\)\]]?', '', title)
+    cleaned_content = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스\vert{}뉴스1\vert{}뉴시스\vert{}파이낸셜뉴스\vert{}이데일리)[\)\]]?', '', content)
 
-    for country in WORLD_COUNTRIES:
-        if country in text:
-            return f"해외 분쟁지역 ({country})", 35.0, 40.0
+    for search_text in [cleaned_title, cleaned_content]:
+        # 1. 국내 세부 시·군·구 가장 먼저 등장하는 위치 찾기
+        earliest_pos = len(search_text) + 1
+        matched_info = None
 
-    for sido, s_data in REGION_COORDS.items():
-        if sido in text:
-            for sigungu, g_data in s_data["sigungu"].items():
-                if sigungu in text:
-                    for dong, d_coords in g_data["dong"].items():
-                        if dong in text:
-                            return f"{sido} {sigungu} {dong}", d_coords["lat"], d_coords["lng"]
-                    return f"{sido} {sigungu} 전체", g_data["lat"], g_data["lng"]
-            return f"{sido} 중심부", s_data["lat"], s_data["lng"]
-    
-    return "서울특별시 중구", 37.5636, 126.9975
+        for city, info in KR_CITY_COORDS.items():
+            pos = search_text.find(city)
+            if pos != -1 and pos < earliest_pos:
+                earliest_pos = pos
+                matched_info = (info["label"], info["lat"], info["lng"])
+        
+        if matched_info:
+            return matched_info
+
+        # 2. 국내 광역 시·도 검색
+        for prov, info in KR_PROVINCE_COORDS.items():
+            pos = search_text.find(prov)
+            if pos != -1 and pos < earliest_pos:
+                earliest_pos = pos
+                matched_info = (info["label"], info["lat"], info["lng"])
+
+        if matched_info:
+            return matched_info
+
+        # 3. 해외 주요 국가/지역 검색
+        for keyword, info in GLOBAL_COORDS.items():
+            if keyword in search_text:
+                return info["label"], info["lat"], info["lng"]
+
+        for country in WORLD_COUNTRIES:
+            if country in search_text:
+                return f"해외 분쟁지역 ({country})", 35.0, 40.0
+
+    # 지명이 전혀 명시되지 않은 기사는 서울로 오표기하지 않고 대한민국 중심 좌표 반환
+    return "대한민국 (세부 위치 미상)", 36.3504, 127.3845
 
 def scrape_telegram_channel(channel_info):
     items = []
@@ -229,18 +322,18 @@ def scrape_telegram_channel(channel_info):
                     continue
 
                 translated_text = translate_to_korean(clean_text)
-                title = translated_text.split('\n')[0][:50]
-                summary = translated_text[:120] + "..."
+                title = translated_text.split('\n')[0][:60]
+                summary = translated_text[:130] + ("..." if len(translated_text) > 130 else "")
                 
                 category = categorize_incident(title, translated_text)
                 if not category:
                     continue
 
-                location_str, lat, lng = extract_location(translated_text)
+                location_str, lat, lng = extract_location(title, translated_text)
                 real_source_name = extract_domain_source(target_link)
                 
                 now_dt = datetime.now(kst)
-                date_str = format_date_with_weekday(now_dt)
+                datetime_str = format_datetime_with_weekday(now_dt)
 
                 items.append({
                     "title": title,
@@ -250,7 +343,7 @@ def scrape_telegram_channel(channel_info):
                     "lat": lat,
                     "lng": lng,
                     "category": category,
-                    "time": date_str,
+                    "time": datetime_str,
                     "source": real_source_name,
                     "link": target_link,
                     "timestamp": now_dt.timestamp()
@@ -271,8 +364,9 @@ def scrape_news():
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
         for entry in parsed.entries[:60]:
-            title = entry.get("title", "")
-            summary = entry.get("summary", title)
+            title = remove_html_tags(entry.get("title", ""))
+            raw_summary = entry.get("summary", title)
+            clean_content = remove_html_tags(raw_summary)
             link = entry.get("link", "")
             
             pub_dt = now
@@ -282,28 +376,27 @@ def scrape_news():
                 if pub_dt < five_days_ago:
                     continue
             
-            date_str = format_date_with_weekday(pub_dt)
+            datetime_str = format_datetime_with_weekday(pub_dt)
             
-            full_text = title + " " + summary
-            category = categorize_incident(title, summary)
+            category = categorize_incident(title, clean_content)
             if not category:
                 continue
                 
-            location_str, lat, lng = extract_location(full_text)
+            location_str, lat, lng = extract_location(title, clean_content)
             
-            lat += (random.random() - 0.5) * 0.01
-            lng += (random.random() - 0.5) * 0.01
+            lat += (random.random() - 0.5) * 0.008
+            lng += (random.random() - 0.5) * 0.008
 
             collected_items.append({
                 "id": item_id,
                 "category": category,
                 "title": title,
-                "summary": summary[:120] + "...",
-                "content": summary,
+                "summary": clean_content[:130] + ("..." if len(clean_content) > 130 else ""),
+                "content": clean_content,
                 "location": location_str,
                 "lat": round(lat, 4),
                 "lng": round(lng, 4),
-                "time": date_str,
+                "time": datetime_str,
                 "source": feed_info["source"],
                 "link": link,
                 "timestamp": pub_dt.timestamp()
@@ -314,8 +407,8 @@ def scrape_news():
         tg_items = scrape_telegram_channel(channel)
         for item in tg_items:
             item["id"] = item_id
-            item["lat"] = round(item["lat"] + (random.random() - 0.5) * 0.01, 4)
-            item["lng"] = round(item["lng"] + (random.random() - 0.5) * 0.01, 4)
+            item["lat"] = round(item["lat"] + (random.random() - 0.5) * 0.008, 4)
+            item["lng"] = round(item["lng"] + (random.random() - 0.5) * 0.008, 4)
             collected_items.append(item)
             item_id += 1
 
@@ -333,5 +426,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"실행 중 오류 발생: {e}")
         
-        # 3분(180초) 대기 후 반복 실행
         time.sleep(180)
