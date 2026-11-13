@@ -90,26 +90,54 @@ def remove_html_tags(html_content):
     f.feed(html_content)
     return re.sub(r'\s+', ' ', f.get_data()).strip()
 
-def translate_to_korean(text):
-    if not text:
-        return ""
-    try:
-        encoded_text = urllib.parse.quote(text[:800])
-        url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ko&dt=t&q={encoded_text}"
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=3) as response:
-            res_data = json.loads(response.read().decode('utf-8'))
-            translated = "".join([item[0] for item in res_data[0] if item[0]])
-            return translated
-    except Exception:
-        return text
+def parse_date_string(date_str):
+    if not date_str:
+        return datetime.now().timestamp()
+    
+    clean_str = re.sub(r'\s+', ' ', date_str.strip())
+    kst = pytz.timezone('Asia/Seoul')
+    
+    # 1. "2026.11.13.오후 10:32" 또는 "2026.11.13. 오후 7:50" 형태 처리
+    match_am_pm = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})\.?[^\d]*(오전|오후)\s*(\d{1,2}):(\d{2})', clean_str)
+    if match_am_pm:
+        year, month, day, meridian, hour, minute = match_am_pm.groups()
+        hour = int(hour)
+        if meridian == '오후' and hour < 12:
+            hour += 12
+        elif meridian == '오전' and hour == 12:
+            hour = 0
+        try:
+            dt = kst.localize(datetime(int(year), int(month), int(day), hour, int(minute)))
+            return dt.timestamp()
+        except ValueError:
+            pass
 
-# 💡 실시간 안전·사건사고 수집을 위한 구글 뉴스 정밀 검색 RSS 대거 포진
+    # 2. "2026.11.13.16:05" 또는 "2026-11-13 21:25" 등 24시간제 형태 처리
+    match_24 = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})\D+(\d{1,2}):(\d{2})', clean_str)
+    if match_24:
+        year, month, day, hour, minute = match_24.groups()
+        try:
+            dt = kst.localize(datetime(int(year), int(month), int(day), int(hour), int(minute)))
+            return dt.timestamp()
+        except ValueError:
+            pass
+
+    # 3. 날짜만 있는 경우 ("2026.11.13" 등)
+    match_date_only = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})', clean_str)
+    if match_date_only:
+        year, month, day = match_date_only.groups()
+        try:
+            dt = kst.localize(datetime(int(year), int(month), int(day)))
+            return dt.timestamp()
+        except ValueError:
+            pass
+
+    return datetime.now(kst).timestamp()
+
 RSS_FEEDS = [
     {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+OR+%EC%82%AC%EA%B1%B4+OR+%ED%8F%AD%ED%96%89+OR+%EA%B2%BD%EC%B0%B0+OR+%EA%B5%AC%EC%86%8D+OR+%EC%82%AC%EA%B8%B0+OR+%ED%99%94%EC%9E%AC&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (종합 사건사고)"},
     {"url": "https://news.google.com/rss/search?q=%EC%82%B4%EC%9D%B8+OR+%EB%A7%88%EC%95%BD+OR+%EC%8A%A4%ED%86%A0%ED%82%B9+OR+%ED%9D%B9%EA%B8%B0+OR+%EC%84%B1%EB%B2%94%EC%A3%84+OR+%EC%9C%A0%EC%B6%9C+OR+%ED%95%B4%ED%82%B9&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (강력범죄·마약·사이버)"},
-    {"url": "https://news.google.com/rss/search?q=%교통사고+OR+뺑소니+OR+붕괴+OR+산사태+OR+침수+OR+정전+OR+가스유출+OR+지진&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"},
-    {"url": "https://news.google.com/rss/search?q=%EC%B2%9C%EC%95%88+OR+%EC%84%9C%EC%9A%B8+OR+%EA%B0%95%EB%82%A8+OR+%EB%A7%88%ED%8F%AC+OR+%EC%88%98%EC%9B%90+OR+%EB%B6%80%EC%82%B0+%EC%82%AC%EA%B3%A0+%EC%82%AC%EA%B1%B4&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (지역별 밀착)"},
+    {"url": "https://news.google.com/rss/search?q=%EC%95%88%EC%A0%84+OR+%EC%82%AC%EA%B3%A0+OR+%EA%B5%90%ED%86%B5%EC%82%AC%EA%B3%A0+OR+%EB%B6%95%EA%B4%B4+OR+%EC%82%B0%EC%82%AC%ED%83%9C+OR+%EC%B9%A8%EC%88%98+OR+%EC%A0%95%EC%A0%84&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"},
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSS", "source": "SBS"},
     {"url": "https://news.kbs.co.kr/rss/rss.do", "source": "KBS"}
@@ -121,9 +149,6 @@ TELEGRAM_CHANNELS = [
 
 KR_CITY_COORDS = {
     "강남구": {"lat": 37.5172, "lng": 127.0473, "label": "서울특별시 강남구"},
-    "역삼동": {"lat": 37.5006, "lng": 127.0364, "label": "서울특별시 강남구 역삼동"},
-    "대치동": {"lat": 37.4946, "lng": 127.0632, "label": "서울특별시 강남구 대치동"},
-    "신사동": {"lat": 37.5210, "lng": 127.0229, "label": "서울특별시 강남구 신사동"},
     "서초구": {"lat": 37.4836, "lng": 127.0327, "label": "서울특별시 서초구"},
     "송파구": {"lat": 37.5145, "lng": 127.1059, "label": "서울특별시 송파구"},
     "마포구": {"lat": 37.5663, "lng": 126.9016, "label": "서울특별시 마포구"},
@@ -159,15 +184,6 @@ KR_PROVINCE_COORDS = {
     "부산": {"lat": 35.1796, "lng": 129.0756, "label": "부산광역시"}
 }
 
-GLOBAL_COORDS = {
-    "우크라이나": {"lat": 50.4501, "lng": 30.5234, "label": "우크라이나 키이우"},
-    "러시아": {"lat": 55.7558, "lng": 37.6173, "label": "러시아 모스크바"},
-    "이란": {"lat": 35.6892, "lng": 51.3890, "label": "이란 테헤란"},
-    "이스라엘": {"lat": 31.7683, "lng": 35.2137, "label": "이스라엘 예루살렘"}
-}
-
-WORLD_COUNTRIES = ["미국", "중국", "일본", "러시아", "우크라이나", "이란", "이스라엘", "북한"]
-CONFLICT_KEYWORDS = ['공습', '미사일', '폭격', '전쟁', '테러', '무력 충돌', '군사 작전']
 WEEKDAYS_KR = ["월요일", "화요일", "수요일", "목요일", "금요일", "토요일", "일요일"]
 
 def format_datetime_with_weekday(dt):
@@ -176,7 +192,6 @@ def format_datetime_with_weekday(dt):
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    # 금융·주식·연예·가십 노이즈 철저 차단
     strict_exclude_keywords = [
         '비트코인', '이더리움', '코인', '가상화폐', '암호화폐', '주가', '증시', '코스피', '코스닥', 
         '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '젠슨 황', '엔비디아', '테슬라', 
@@ -187,118 +202,58 @@ def categorize_incident(title, content):
     if any(kw in text for kw in strict_exclude_keywords):
         return None 
 
-    # 해외 분쟁·테러
-    if any(c.lower() in text for c in WORLD_COUNTRIES) and any(t in text for t in CONFLICT_KEYWORDS):
-        return "해외 분쟁"
-
-    # 국가 안보
-    if any(kw in text for kw in ['계엄', '군 병력', '북한 도발', '미사일 발사', '영공 침범', '국방 비상']):
-        return "국가 안보"
-
-    # 세분화 카테고리 매칭 1: 살인·폭행·흉기 (강력범죄)
-    if any(kw in text for kw in ['살인', '흉기', '난동', '묻지마', '조폭', '조직폭력배', '원한', '폭행', '상해', '특수상해', '특수폭행']):
+    if any(kw in text for kw in ['살인', '흉기', '난동', '묻지마', '조폭', '조직폭력배', '폭행', '상해', '특수상해', '특수폭행']):
         return "강력범죄"
 
-    # 세분화 카테고리 매칭 2: 성범죄·마약·스토킹
-    if any(kw in text for kw in ['성범죄', '성폭행', '성추행', '몰카', '마약', '필로폰', '대마초', '스토킹', '그루밍']):
+    if any(kw in text for kw in ['성범죄', '성폭행', '성추행', '몰카', '마약', '필로폰', '대마초', '스토킹']):
         return "성범죄·마약"
 
-    # 세분화 카테고리 매칭 3: 사기·절도·해킹
     if any(kw in text for kw in ['사기', '절도', '강도', '해킹', '개인정보', '보이스피싱', '스미싱', '갈취', '공갈', '협박']):
         return "사기·금융"
 
-    # 세분화 카테고리 매칭 4: 화재·붕괴·안전 (재난·사고)
     if any(kw in text for kw in ['화재', '폭발', '붕괴', '산사태', '홍수', '침수', '정전', '가스', '지진', '구조']):
         return "재난·사고"
 
-    # 세분화 카테고리 매칭 5: 교통사고·뺑소니
     if any(kw in text for kw in ['교통사고', '뺑소니', '충돌', '추돌', '차량']):
         return "교통사고"
 
-    # 기타 사건사고 기본 포용 (사고, 사건, 경찰, 구속, 실종 등 안전 관련 단어가 있으면 무조건 수집)
-    if any(kw in text for kw in ['사고', '사건', '경찰', '구속', '입건', '실종', '수사', '출동', '피해']):
+    if any(kw in text for kw in ['사고', '사건', '경찰', '구속', '입건', '실종', '수사', '출동', '피해', '안전']):
         return "실종·제보"
 
-    return None
+    return "실종·제보" # 안전·사고 관련 기사가 누락되지 않도록 기본 포용
 
 def extract_location(title, content):
-    cleaned_title = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스|뉴스1|뉴시스)[\)\]]?', '', title)
-    cleaned_content = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스|뉴스1|뉴시스)[\)\]]?', '', content)
-    search_text = cleaned_title + " " + cleaned_content
-
+    search_text = title + " " + content
     for city, info in KR_CITY_COORDS.items():
         if city in search_text:
             return info["label"], info["lat"], info["lng"]
-
     for prov, info in KR_PROVINCE_COORDS.items():
         if prov in search_text:
             return info["label"], info["lat"], info["lng"]
-
-    for keyword, info in GLOBAL_COORDS.items():
-        if keyword in search_text:
-            return info["label"], info["lat"], info["lng"]
-
     return "대한민국 (세부 위치 미상)", 36.3504, 127.3845
-
-def scrape_telegram_channel(channel_info):
-    items = []
-    url = channel_info["url"]
-    kst = pytz.timezone('Asia/Seoul')
-    try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req, timeout=5) as response:
-            html = response.read().decode('utf-8')
-            message_blocks = re.findall(r'<div class="tgme_widget_message_text[^>]*>(.*?)</div>', html, re.DOTALL)
-            for raw_msg in message_blocks[:30]:
-                clean_text = remove_html_tags(raw_msg).strip()
-                if not clean_text:
-                    continue
-                translated_text = translate_to_korean(clean_text)
-                title = translated_text.split('\n')[0][:60]
-                
-                category = categorize_incident(title, translated_text)
-                if not category:
-                    continue
-                
-                location_str, lat, lng = extract_location(title, translated_text)
-                now_dt = datetime.now(kst)
-                items.append({
-                    "title": title,
-                    "summary": translated_text[:130],
-                    "content": translated_text,
-                    "location": location_str,
-                    "lat": lat,
-                    "lng": lng,
-                    "category": category,
-                    "time": format_datetime_with_weekday(now_dt),
-                    "source": "Telegram",
-                    "link": url,
-                    "timestamp": now_dt.timestamp()
-                })
-    except Exception as e:
-        print(f"Telegram error: {e}")
-    return items
 
 def scrape_news():
     kst = pytz.timezone('Asia/Seoul')
     now = datetime.now(kst)
-    seven_days_ago = now - timedelta(days=7)
+    seven_days_ago_ts = (now - timedelta(days=7)).timestamp()
     collected_items = []
 
     for feed_info in RSS_FEEDS:
         try:
             parsed = feedparser.parse(feed_info["url"])
-            for entry in parsed.entries[:80]:
+            for entry in parsed.entries[:100]:
                 title = remove_html_tags(entry.get("title", ""))
                 clean_content = remove_html_tags(entry.get("summary", title))
                 link = entry.get("link", "")
                 
-                pub_dt = now
-                published_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
-                if published_parsed:
-                    pub_dt = datetime.fromtimestamp(time.mktime(published_parsed), kst)
-                    if pub_dt < seven_days_ago:
-                        continue
+                # 날짜 문자열 추출 및 다중 포맷 통합 파싱 적용
+                date_str = entry.get("published", "") or entry.get("updated", "")
+                pub_timestamp = parse_date_string(date_str)
+                
+                if pub_timestamp < seven_days_ago_ts:
+                    continue
+                
+                pub_dt = datetime.fromtimestamp(pub_timestamp, kst)
                 
                 category = categorize_incident(title, clean_content)
                 if not category:
@@ -319,13 +274,10 @@ def scrape_news():
                     "time": format_datetime_with_weekday(pub_dt),
                     "source": feed_info["source"],
                     "link": link,
-                    "timestamp": pub_dt.timestamp()
+                    "timestamp": pub_timestamp
                 })
         except Exception as e:
             print(f"RSS 수집 오류 ({feed_info['source']}): {e}")
-
-    for channel in TELEGRAM_CHANNELS:
-        collected_items.extend(scrape_telegram_channel(channel))
 
     return collected_items
 
