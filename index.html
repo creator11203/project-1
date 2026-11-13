@@ -23,7 +23,24 @@
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
         @keyframes radar-sweep { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-radar-sweep { animation: radar-sweep 3s linear infinite; }
-        .resizer { width: 6px; cursor: col-resize; transition: background-color 0.2s; flex-shrink: 0; position: relative; z-index: 20; }
+        
+        /* 구분선(Resizer) 및 화살표 UI 가이드 */
+        .resizer { width: 6px; cursor: col-resize; transition: background-color 0.2s; flex-shrink: 0; position: relative; z-index: 20; background-color: #cbd5e1; }
+        .dark .resizer { background-color: #1e293b; }
+        .resizer:hover { background-color: #ef4444; }
+        .resizer::after {
+            content: "⇄";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #94a3b8;
+            font-size: 10px;
+            pointer-events: none;
+            background: rgba(0,0,0,0.1);
+            padding: 4px 1px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body id="appBody" class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-screen flex flex-col overflow-hidden select-none transition-colors duration-200" style="font-size: 16px;">
@@ -66,7 +83,7 @@
     <!-- 메인 3분할 레이아웃 -->
     <main id="splitContainer" class="flex-1 flex flex-col lg:flex-row overflow-hidden w-full">
         
-        <!-- 1. 왼쪽: 전국 모든 시·구·동 완벽 포함 필터 및 뉴스 피드 -->
+        <!-- 1. 왼쪽: 필터 및 뉴스 피드 -->
         <section id="leftPane" style="width: 28%; min-width: 250px;" class="bg-white dark:bg-slate-900/90 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
             <div class="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2">
                 <div class="flex items-center justify-between text-xs text-slate-500">
@@ -76,7 +93,6 @@
                     <button onclick="resetRegionFilter()" class="text-[11px] text-blue-500 hover:underline">초기화</button>
                 </div>
 
-                <!-- 시 / 구 / 동 1줄 압축 -->
                 <div class="grid grid-cols-3 gap-1.5">
                     <select id="sidoSelect" onchange="onSidoChange()" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-1.5 py-1 text-[11px] text-slate-800 dark:text-slate-200 focus:outline-none focus:border-red-500">
                         <option value="all">시·도(전국)</option>
@@ -112,7 +128,8 @@
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
         </section>
 
-        <div id="resizer1" class="resizer hidden lg:block bg-slate-200 dark:bg-slate-800 hover:bg-red-500"></div>
+        <!-- 화살표 UI가 포함된 첫 번째 분할선 -->
+        <div id="resizer1" class="resizer hidden lg:block"></div>
 
         <!-- 2. 중앙: 카테고리 및 원문 뷰어 패널 -->
         <section id="centerPane" style="width: 40%; min-width: 300px;" class="bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
@@ -132,11 +149,12 @@
                 </div>
             </div>
             
-            <!-- 원문 본문 뷰어 영역 -->
+            <!-- 원문 본문 뷰어 영역 (상세 content 출력) -->
             <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-6 select-text flex flex-col space-y-4"></div>
         </section>
 
-        <div id="resizer2" class="resizer hidden lg:block bg-slate-200 dark:bg-slate-800 hover:bg-red-500"></div>
+        <!-- 화살표 UI가 포함된 두 번째 분할선 -->
+        <div id="resizer2" class="resizer hidden lg:block"></div>
 
         <!-- 3. 오른쪽: 지도 패널 -->
         <section id="rightPane" style="flex: 1; min-width: 240px;" class="bg-white dark:bg-slate-900 flex flex-col h-full relative overflow-hidden">
@@ -753,6 +771,7 @@
             if (map) map.flyTo([lat, lng], 14, { duration: 1.2 });
         }
 
+        // 중앙 화면에 기사 원문(content)을 확실히 렌더링하도록 반영된 함수
         function renderDetailView(id) {
             const news = newsData.find(n => n.id === id);
             const container = document.getElementById('detailViewContainer');
