@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,11 +20,16 @@ jobs:
         with:
           python-version: '3.10'
 
+      # ⭐ 이 부분을 추가해야 합니다! (feedparser, pytz 설치)
+      - name: Install dependencies
+        run: |
+          pip install feedparser pytz
+
       - name: Run Scraper Script
         run: python scraper.py
 
       - name: Commit and push if changed
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzvu/git-auto-commit-action@v5
         with:
           commit_message: "Auto-update latest domestic & global incidents [skip ci]"
           branch: main
