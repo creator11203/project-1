@@ -68,9 +68,11 @@ def extract_domain_source(url):
     except Exception:
         return "외부 원문 기사"
 
+# 국내 사건·사고 및 속보를 잘 수집할 수 있도록 구글 뉴스 검색 RSS 및 연합뉴스 RSS 조합
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
-    {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"}
+    {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"},
+    {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+%EC%82%AC%EA%B1%B4+%ED%8F%AD%ED%96%89+%EA%B2%BD%EC%B0%c2&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (사건·사고)"}
 ]
 
 TELEGRAM_CHANNELS = [
@@ -113,7 +115,7 @@ GLOBAL_COORDS = {
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    # 비트코인, 주가, 경제 하락 등 금융 자산 관련 내용은 무조건 필터링 제외
+    # 금융 및 자산 관련 노이즈 철저 차단
     financial_exclude_keywords = [
         '비트코인', '이더리움', '코인', '가상화폐', '암호화폐', '주가', '증시', '코스피', '코스닥', 
         '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '외국인 순매수', '주가 하락', 
@@ -131,13 +133,13 @@ def categorize_incident(title, content):
     if any(kw in text for kw in ['계엄', '군 병력', '북한', '미사일 발사', '영공', '국방']):
         return "국가 안보"
 
-    if any(kw in text for kw in ['살인', '강도', '인질', '폭행', '흉기', '마약', '긴급 체포', '수배', '경찰 출동', '구속영장']):
+    # 국내 강력 범죄 및 치안 관련 키워드 대폭 확장 (성폭행, 성범죄, 살인 등 포함)
+    if any(kw in text for kw in ['성폭행', '성추행', '성범죄', '살인', '강도', '인질', '폭행', '흉기', '마약', '긴급 체포', '수배', '경찰 출동', '구속영장', '입건', '송치', '피의자']):
         return "강력·치안"
 
-    if any(kw in text for kw in ['해킹', '랜섬웨어', '개인정보 유출', '전산 장애', '서버 다운', '금융 사고']):
+    if any(kw in text for kw in ['해킹', '랜섬웨어', '개인정보 유출', '전산 장애', '서버 다운', '금융 사고', '보안 취약점']):
         return "사이버·금융"
 
-    # 물리적 재난 사고 키워드 (가격 붕괴 등 비경제적 실제 재난만 허용)
     if any(kw in text for kw in ['화재', '폭발', '건물 붕괴', '교량 붕괴', '지진', '홍수', '산사태', '침수', '구조 작전', '교통 통제', '가스 유출', '정전 사고']):
         return "재난·안전"
 
@@ -161,7 +163,8 @@ def extract_location(text):
                     return f"{sido} {sigungu} 전체", g_data["lat"], g_data["lng"]
             return f"{sido} 중심부", s_data["lat"], s_data["lng"]
     
-    return None, None, None
+    # 국내 지역명이 명시되지 않은 일반 사건 기사는 서울 중심부 기본값 부여
+    return "서울특별시 중구", 37.5636, 126.9975
 
 def scrape_telegram_channel(channel_info):
     items = []
@@ -206,9 +209,6 @@ def scrape_telegram_channel(channel_info):
                     continue
 
                 location_str, lat, lng = extract_location(translated_text)
-                if not location_str:
-                    location_str, lat, lng = "미국 워싱턴D.C.", 38.8951, -77.0364
-
                 real_source_name = extract_domain_source(target_link)
 
                 items.append({
@@ -238,7 +238,7 @@ def scrape_news():
 
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
-        for entry in parsed.entries[:50]:
+        for entry in parsed.entries[:60]:
             title = entry.get("title", "")
             summary = entry.get("summary", title)
             link = entry.get("link", "")
@@ -255,8 +255,6 @@ def scrape_news():
                 continue
                 
             location_str, lat, lng = extract_location(full_text)
-            if not location_str:
-                continue
             
             lat += (random.random() - 0.5) * 0.01
             lng += (random.random() - 0.5) * 0.01
