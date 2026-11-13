@@ -44,6 +44,12 @@
         /* 창 크기를 끌어서 조절하는 동안 기사 원문(iframe)이 마우스를 가로채지 않도록 */
         .resizing iframe { pointer-events: none; }
         .resizing { user-select: none; }
+        /* '실시간 업데이트 중' 뒤의 움직이는 점 3개 */
+        .live-dots { display: inline-flex; gap: 2px; align-items: flex-end; height: 10px; }
+        .live-dots i { width: 3px; height: 3px; border-radius: 50%; background: #10b981; animation: live-bounce 1.2s infinite ease-in-out; }
+        .live-dots i:nth-child(2) { animation-delay: .2s; }
+        .live-dots i:nth-child(3) { animation-delay: .4s; }
+        @keyframes live-bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .35; } 40% { transform: translateY(-5px); opacity: 1; } }
     </style>
 </head>
 <body id="appBody" class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-screen flex flex-col overflow-hidden select-none transition-colors duration-200">
@@ -78,7 +84,7 @@
                 <i class="fa-solid fa-people-group"></i> 우리동네 커뮤니티
                 <span id="commBadge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full animate-pulse">SOS</span>
             </button>
-            <button onclick="openReportModal()" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs md:text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-red-600/20 transition flex items-center gap-2">
+            <button onclick="openCommunity('report')" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs md:text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-red-600/20 transition flex items-center gap-2">
                 <i class="fa-solid fa-bullhorn"></i> 실시간 제보하기
             </button>
             <button onclick="manualRefreshData()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs md:text-sm font-medium px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-2">
@@ -97,7 +103,10 @@
                     <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 전국 지역별 상세 필터
                     </span>
-                    <button onclick="resetRegionFilter()" class="text-[0.6875rem] text-blue-500 hover:underline">초기화</button>
+                    <span class="live-badge flex items-center gap-1.5 text-[0.6875rem] font-bold text-emerald-500" title="2분마다 새 기사를 자동으로 확인합니다">
+                        <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>
+                        <span>실시간 업데이트 중</span><span class="live-dots"><i></i><i></i><i></i></span>
+                    </span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-1.5">
@@ -176,47 +185,6 @@
             <div id="alertToasts" class="absolute bottom-7 right-3 flex flex-col gap-2 items-end" style="z-index: 1100;"></div>
         </section>
     </main>
-
-    <!-- 실시간 제보 모달 -->
-    <div id="reportModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
-                <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                    <i class="fa-solid fa-bullhorn text-red-500"></i> 현장 실시간 제보 등록
-                </h3>
-                <button onclick="closeReportModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <div class="p-6 overflow-y-auto custom-scrollbar space-y-4">
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">제보 제목</label>
-                    <input type="text" id="reportTitle" placeholder="예: 두정동 골목길 가로등 고장 및 소란" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-red-500">
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">시·도</label>
-                        <select id="reportSido" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white">
-                            <option value="서울특별시">서울특별시</option>
-                            <option value="경기도">경기도</option>
-                            <option value="충청남도">충청남도</option>
-                            <option value="부산광역시">부산광역시</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">상세 동(洞) 위치</label>
-                        <input type="text" id="reportLocationDetail" placeholder="예: 천안시 서북구 두정동" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">상세 코멘트</label>
-                    <textarea id="reportContent" rows="3" placeholder="현장 상황을 작성해주세요..." class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-3 text-xs text-slate-900 dark:text-white"></textarea>
-                </div>
-            </div>
-            <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end space-x-2">
-                <button onclick="closeReportModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 rounded-lg">취소</button>
-                <button onclick="submitReport()" class="px-5 py-2 bg-red-600 hover:bg-red-500 text-xs font-semibold text-white rounded-lg">제보 등록하기</button>
-            </div>
-        </div>
-    </div>
 
     <!-- 우리동네 커뮤니티 창 -->
     <div id="communityModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -545,7 +513,7 @@
             initMap();
             initResizers();
             renderCategoryBar();
-            loadIncidentsFromJSON();
+            loadIncidentsFromJSON().then(initAlerts);
             setInterval(() => loadIncidentsFromJSON(false), 120000);   // 2분마다 새 기사 확인
             initCommunity();
 
@@ -660,7 +628,7 @@
             '실종·제보':   { label: '실종·변사·제보',     color: '#64748b', badge: 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
                            subs: ['실종·수색', '변사·시신발견', '시민제보'] },
             '해외·안보':   { label: '🌍 해외·안보',       color: '#f97316', badge: 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800',
-                           subs: ['해외 분쟁', '국가 안보'] }
+                           subs: ['전쟁·교전', '공습·타격', '해상·격침', '테러·피격', '국가 안보', '해외 분쟁'] }
         };
         const SUB_TO_GROUP = {};
         Object.keys(CATEGORY_GROUPS).forEach(g => CATEGORY_GROUPS[g].subs.forEach(s => { SUB_TO_GROUP[s] = g; }));
@@ -1170,11 +1138,14 @@
         // 새 기사가 들어왔을 때 '알림 지역'에 해당하면 지도 오른쪽 아래에 알림 창을 띄우고 소리를 냅니다.
         const ALERT_SOUNDS = { dingdong: '띵동', bell: '종소리', siren: '경보음', none: '소리 없음' };
         let alertCfg = (() => {
-            const base = { enabled: true, sound: 'dingdong', volume: 70, scope: 'sigungu', region: null };
+            const base = { enabled: true, sound: 'dingdong', volume: 70, scope: 'sigungu', region: null, useLocation: false, radiusKm: 5 };
             try { return Object.assign(base, JSON.parse(localStorage.getItem('alert_cfg') || '{}')); } catch (e) { return base; }
         })();
         let alertSeenIds = null;      // 이미 본 기사 번호 (처음 불러올 때는 알림을 띄우지 않음)
         let alertAudioCtx = null;
+        let alertHere = null;         // 현재 위치 { lat, lng, sido, sigungu, ts }
+        let alertHereMsg = '';
+        let alertHereTimer = null, alertSummaryArea = '';
 
         function saveAlertCfg() { try { localStorage.setItem('alert_cfg', JSON.stringify(alertCfg)); } catch (e) {} }
         function alertRegion() {
@@ -1203,18 +1174,87 @@
         }
 
         // 새로 들어온 기사 확인 (loadIncidentsFromJSON 에서 호출)
+        // ---- 현재 위치 기반 알림 ----
+        function distKm(lat1, lng1, lat2, lng2) {
+            const dy = (lat1 - lat2) * 111, dx = (lng1 - lng2) * 88;
+            return Math.sqrt(dx * dx + dy * dy);
+        }
+        function hereText() {
+            if (!alertHere) return '';
+            return [alertHere.sido, alertHere.sigungu].filter(Boolean).join(' ');
+        }
+        function matchHere(news) {
+            if (!alertCfg.useLocation || !alertHere) return false;
+            if (groupOf(news) === '해외·안보') return false;
+            const loc = news.location || '';
+            if (alertHere.sigungu && loc.includes(alertHere.sido)) {
+                const city = alertHere.sigungu.split(' ')[0];
+                if (loc.includes(alertHere.sigungu) || (alertHere.sigungu.includes(' ') && loc.split(' ').pop() === city)) return true;
+            }
+            // 시·군·구 이름이 달라도 반경 안이면 알림 (시·도만 알려진 기사는 위치가 부정확하므로 제외)
+            return hasCoords(news) && loc.includes(' ') && distKm(news.lat, news.lng, alertHere.lat, alertHere.lng) <= alertCfg.radiusKm;
+        }
+        // 현재 위치 다시 확인 (5분마다 + 설정을 켤 때)
+        function refreshHere(after) {
+            if (!alertCfg.useLocation) return;
+            if (!navigator.geolocation) { alertHereMsg = '이 기기(브라우저)는 위치 확인을 지원하지 않습니다.'; return; }
+            navigator.geolocation.getCurrentPosition(pos => {
+                const lat = pos.coords.latitude, lng = pos.coords.longitude;
+                const near = nearestSigungu(lat, lng, 1)[0];
+                if (!near || near.dist > 60) { alertHere = null; alertHereMsg = '대한민국 밖에서는 현재 위치 알림을 쓸 수 없습니다.'; }
+                else { alertHere = { lat: lat, lng: lng, sido: near.sido, sigungu: near.sigungu, ts: Date.now() }; alertHereMsg = ''; }
+                updateAlertButton();
+                const p = document.getElementById('alertPanel');
+                if (p && !p.classList.contains('hidden')) renderAlertPanel();
+                if (typeof after === 'function') after();
+            }, err => {
+                alertHereMsg = (err && err.code === 1) ? '위치 권한이 거부되었습니다. 주소창의 자물쇠 아이콘에서 위치를 허용해 주세요.' : '현재 위치를 확인하지 못했습니다.';
+                const p = document.getElementById('alertPanel');
+                if (p && !p.classList.contains('hidden')) renderAlertPanel();
+            }, { enableHighAccuracy: false, timeout: 12000, maximumAge: 240000 });
+        }
+        // 지역이 바뀌었을 때(또는 처음) 최근 6시간 사건을 한 번 알려줌
+        function showHereSummary() {
+            if (!alertCfg.enabled || !alertCfg.useLocation || !alertHere) return;
+            const area = hereText();
+            if (area === alertSummaryArea) return;
+            alertSummaryArea = area;
+            const since = Date.now() / 1000 - 6 * 3600;
+            const recent = newsData.filter(n => n.timestamp >= since && matchHere(n));
+            if (recent.length === 0) return;
+            showAlertToast({
+                head: '📍 현재 계신 지역에서 사건사고가 발생했어요', badge: area + ' · 최근 6시간 ' + recent.length + '건',
+                title: recent[0].title, foot: (recent[0].location || '') + ' · ' + (recent[0].source || ''), newsId: recent[0].id, here: true
+            });
+            playAlertSound();
+        }
+        function startHereWatch() {
+            if (alertHereTimer) { clearInterval(alertHereTimer); alertHereTimer = null; }
+            if (!alertCfg.useLocation) { alertHere = null; alertSummaryArea = ''; return; }
+            refreshHere(showHereSummary);
+            alertHereTimer = setInterval(() => refreshHere(showHereSummary), 5 * 60000);
+        }
+        function initAlerts() { updateAlertButton(); startHereWatch(); }
+
+        // 새로 들어온 기사 확인 (loadIncidentsFromJSON 에서 호출)
         function checkNewIncidents(list) {
             if (alertSeenIds === null) { alertSeenIds = new Set(list.map(n => n.id)); return; }
             const fresh = list.filter(n => !alertSeenIds.has(n.id));
             fresh.forEach(n => alertSeenIds.add(n.id));
             if (!alertCfg.enabled) return;
-            const mine = fresh.filter(matchAlertRegion);
-            if (mine.length === 0) return;
+            const here = fresh.filter(matchHere);
+            const mine = fresh.filter(n => !here.includes(n) && matchAlertRegion(n));
+            if (here.length === 0 && mine.length === 0) return;
+            here.slice(0, 3).forEach(n => showAlertToast({
+                head: '📍 현재 계신 지역에서 사건사고가 발생했어요', badge: n.category, title: n.title,
+                foot: (n.location || '') + ' · ' + (n.source || ''), newsId: n.id, here: true
+            }));
             mine.slice(0, 3).forEach(n => showAlertToast({
                 head: '🔔 우리 동네 새 사건사고', badge: n.category, title: n.title,
                 foot: (n.location || '') + ' · ' + (n.source || ''), newsId: n.id
             }));
-            if (mine.length > 3) showAlertToast({ head: '🔔 우리 동네 새 사건사고', title: '외 ' + (mine.length - 3) + '건이 더 있습니다.', foot: alertRegionText() });
+            const extra = Math.max(0, here.length - 3) + Math.max(0, mine.length - 3);
+            if (extra > 0) showAlertToast({ head: '🔔 새 사건사고', title: '외 ' + extra + '건이 더 있습니다.', foot: hereText() || alertRegionText() });
             playAlertSound();
         }
 
@@ -1223,10 +1263,10 @@
             const box = document.getElementById('alertToasts');
             if (!box) return;
             const el = document.createElement('div');
-            el.className = 'w-72 max-w-[80vw] rounded-xl border-2 ' + (o.danger ? 'border-red-600' : 'border-amber-500') + ' bg-white dark:bg-slate-900 shadow-2xl p-3 text-left cursor-pointer';
+            el.className = 'w-72 max-w-[80vw] rounded-xl border-2 ' + (o.danger ? 'border-red-600' : (o.here ? 'border-blue-500' : 'border-amber-500')) + ' bg-white dark:bg-slate-900 shadow-2xl p-3 text-left cursor-pointer';
             el.innerHTML = `
                 <div class="flex items-center justify-between gap-2 mb-1">
-                    <span class="text-[0.6875rem] font-extrabold ${o.danger ? 'text-red-600' : 'text-amber-600'}">${esc(o.head || '알림')}</span>
+                    <span class="text-[0.6875rem] font-extrabold ${o.danger ? 'text-red-600' : (o.here ? 'text-blue-600' : 'text-amber-600')}">${esc(o.head || '알림')}</span>
                     <button class="alert-x text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm leading-none px-1" title="닫기">✕</button>
                 </div>
                 ${o.badge ? `<span class="inline-block text-[0.625rem] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold mb-1">${esc(o.badge)}</span>` : ''}
@@ -1308,6 +1348,18 @@
                     <option value="sigungu" ${alertCfg.scope === 'sigungu' ? 'selected' : ''}>시·군·구 전체</option>
                     <option value="dong" ${alertCfg.scope === 'dong' ? 'selected' : ''}>우리 읍·면·동만</option>
                 </select>
+                <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
+                    <span>📍 현재 위치 기반 알림</span>
+                    <input type="checkbox" ${alertCfg.useLocation ? 'checked' : ''} onchange="setAlertCfg('useLocation', this.checked); startHereWatch();">
+                </label>
+                ${alertCfg.useLocation ? `
+                <div class="text-[0.6875rem] text-slate-500 mb-1">현재 위치: <b class="text-slate-800 dark:text-slate-100">${esc(hereText() || '확인 중...')}</b> <button onclick="refreshHere(showHereSummary)" class="text-blue-500 hover:underline">다시 확인</button></div>
+                ${alertHereMsg ? `<div class="text-[0.625rem] text-red-500 mb-1">${esc(alertHereMsg)}</div>` : ''}
+                <select onchange="setAlertCfg('radiusKm', Number(this.value))" class="${inp} mb-2">
+                    ${[3, 5, 10, 20].map(k => `<option value="${k}" ${alertCfg.radiusKm === k ? 'selected' : ''}>내 위치에서 ${k}km 이내</option>`).join('')}
+                </select>` : '<div class="text-[0.625rem] text-slate-400 mb-2">켜 두면 지금 있는 곳 주변에서 사건이 나면 알려 줍니다. 위치는 이 기기 안에서만 쓰이고 저장·전송되지 않습니다.</div>'}
+                <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
                 <div class="text-[0.6875rem] text-slate-500 mb-1">알림 소리</div>
                 <select onchange="setAlertCfg('sound', this.value); playAlertSound();" class="${inp} mb-2">
                     ${Object.keys(ALERT_SOUNDS).map(k => `<option value="${k}" ${alertCfg.sound === k ? 'selected' : ''}>${ALERT_SOUNDS[k]}</option>`).join('')}
@@ -1317,7 +1369,7 @@
                 <button onclick="testAlert()" class="w-full py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold">알림 미리 보기 (소리 테스트)</button>
                 <p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">이 화면을 열어 둔 동안에만 알림이 옵니다. 새 기사는 2분마다 확인합니다.</p>`;
         }
-        function setAlertCfg(key, value) { alertCfg[key] = value; saveAlertCfg(); if (key === 'scope' || key === 'enabled') renderAlertPanel(); updateAlertButton(); }
+        function setAlertCfg(key, value) { alertCfg[key] = value; saveAlertCfg(); if (key === 'scope' || key === 'enabled' || key === 'useLocation') renderAlertPanel(); updateAlertButton(); }
         function setAlertRegionFromTown() {
             if (typeof myTown === 'undefined' || !myTown) {
                 document.getElementById('alertPanelMsg').textContent = '먼저 상단의 [우리동네 커뮤니티]에서 동네 인증을 해 주세요.';
@@ -1344,7 +1396,7 @@
         function updateAlertButton() {
             const b = document.getElementById('alertButton');
             if (!b) return;
-            const on = alertCfg.enabled && !!alertRegion();
+            const on = alertCfg.enabled && (!!alertRegion() || alertCfg.useLocation);
             b.innerHTML = (on ? '<i class="fa-solid fa-bell text-amber-500"></i> 알림 켜짐' : '<i class="fa-regular fa-bell-slash"></i> 알림 설정');
         }
 
@@ -1597,7 +1649,12 @@
 
         // ---- 화면 ----
         function commStatus(msg) { const el = document.getElementById('commStatus'); if (el) el.textContent = msg || ''; }
-        function openCommunity() { document.getElementById('communityModal').classList.remove('hidden'); renderCommunity(); commTouch(); }
+        function openCommunity(type) {
+            if (type) { commTab = 'talk'; commType = type; marketOpen = null; marketForm = false; }   // 예: openCommunity('report') → 제보 쓰기
+            document.getElementById('communityModal').classList.remove('hidden');
+            renderCommunity();
+            commTouch();
+        }
         function closeCommunity() { document.getElementById('communityModal').classList.add('hidden'); closeProfile(); }
 
         function activeSosCount() {
@@ -1639,14 +1696,20 @@
                     </div>
                 </div>
                 ${FIREBASE_CONFIG ? '' : '<div class="px-4 py-1.5 text-[0.6875rem] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 shrink-0">체험 모드입니다. 아직 서버가 연결되지 않아 글이 이 기기에만 저장되고 다른 사람에게는 보이지 않습니다.</div>'}
+                <div class="px-3 pt-2 flex items-end gap-1 border-b border-slate-200 dark:border-slate-800 shrink-0">
+                    <button onclick="setCommTab('talk')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 ${commTab === 'talk' ? 'bg-white dark:bg-slate-900 text-red-600 border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">🚨 사건사고·이야기</button>
+                    <button onclick="setCommTab('market')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 ${commTab === 'market' ? 'bg-white dark:bg-slate-900 text-emerald-600 border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">🛒 장터</button>
+                </div>
                 <div class="flex-1 min-h-0 flex">
-                    <div class="flex-1 min-w-0 flex flex-col">
-                        <div id="commPinned" class="shrink-0"></div>
-                        <div id="commList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
-                        <div id="commComposer" class="border-t border-slate-200 dark:border-slate-800 p-3 space-y-2 shrink-0 bg-white dark:bg-slate-900"></div>
-                    </div>
+                    <div id="commMain" class="flex-1 min-w-0 flex flex-col"></div>
                     <aside id="commMembers" class="w-44 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hidden sm:block bg-slate-50 dark:bg-slate-900/60"></aside>
                 </div>`;
+            renderCommMembers();
+            if (commTab === 'market') { renderCommBg(); renderMarket(); return; }
+            document.getElementById('commMain').innerHTML = `
+                <div id="commPinned" class="shrink-0"></div>
+                <div id="commList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
+                <div id="commComposer" class="border-t border-slate-200 dark:border-slate-800 p-3 space-y-2 shrink-0 bg-white dark:bg-slate-900"></div>`;
             renderCommBg();
             renderCommComposer();
             renderCommMembers();
@@ -1828,6 +1891,217 @@
         }
         function closeMedia() { document.getElementById('commMediaView').classList.add('hidden'); }
 
+        // ---- 장터 (물건 사고팔기·교환·나눔) ----
+        const MARKET_KINDS = ['판매', '교환', '나눔', '구함'];
+        const IMG_DATA_RE = /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+\/=]+$/;
+        let commTab = 'talk';         // 'talk'(사건사고·이야기) / 'market'(장터)
+        let marketItems = [], marketUnsub = null, marketOpen = null, marketChat = [], marketChatUnsub = null;
+        let marketForm = false, marketAttach = null, marketFilter = '전체';
+
+        function marketCol() { return commDoc(townKey(myTown)).collection('market'); }
+        function marketLocalKey() { return 'comm_market_' + townKey(myTown); }
+        function marketLocalSave() {
+            const list = marketItems.slice(0, 100);
+            if (!lsSet(marketLocalKey(), JSON.stringify(list))) lsSet(marketLocalKey(), JSON.stringify(list.map(i => Object.assign({}, i, { img: '' }))));
+        }
+        async function subscribeMarket() {
+            if (marketUnsub) { marketUnsub(); marketUnsub = null; }
+            if (!myTown) return;
+            const db = await commInit();
+            if (db) {
+                marketUnsub = marketCol().orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
+                    marketItems = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                    if (commTab === 'market') renderMarket();
+                }, err => console.error(err));
+            } else {
+                try { marketItems = JSON.parse(lsGet(marketLocalKey()) || '[]'); } catch (e) { marketItems = []; }
+                if (commTab === 'market') renderMarket();
+            }
+        }
+        function stopMarketChat() { if (marketChatUnsub) { marketChatUnsub(); marketChatUnsub = null; } }
+        function setCommTab(tab) {
+            commTab = tab; marketOpen = null; marketForm = false; stopMarketChat();
+            renderCommunity();
+            if (tab === 'market') subscribeMarket();
+        }
+        function setMarketFilter(f) { marketFilter = f; renderMarket(); }
+        function openMarketForm(show) { marketForm = show; marketAttach = null; renderMarket(); }
+        function marketStatus(m) { const el = document.getElementById('mkStatus'); if (el) el.textContent = m || ''; }
+
+        async function marketPickFile(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if (!f || f.type.indexOf('image/') !== 0) { marketStatus('사진 파일만 올릴 수 있습니다.'); return; }
+            try { marketAttach = await compressImage(f, 1024, 350 * 1024); } catch (e) { marketStatus('사진을 읽지 못했습니다.'); return; }
+            const p = document.getElementById('mkPreview');
+            if (p) p.innerHTML = `<img src="${marketAttach}" class="h-20 rounded border border-slate-300">`;
+        }
+
+        async function marketPost() {
+            const v = id => ((document.getElementById(id) || {}).value || '').trim();
+            const title = v('mkTitle');
+            if (!title) { marketStatus('물건 이름을 적어 주세요.'); return; }
+            const item = {
+                kind: v('mkKind') || '판매', title: title.slice(0, 40), price: v('mkPrice').slice(0, 20), desc: v('mkDesc').slice(0, 500),
+                contact: v('mkContact').slice(0, 60), img: marketAttach || '', status: 'open',
+                nick: myNick(), emoji: commProfile.emoji || '🙂', uid: COMM_UID, ts: Date.now()
+            };
+            try {
+                const db = await commInit();
+                if (db) await marketCol().add(item);
+                else { item.id = 'm' + Date.now() + Math.random().toString(36).slice(2, 7); item.chat = []; marketItems.unshift(item); marketLocalSave(); }
+                marketForm = false; marketAttach = null;
+                renderMarket();
+            } catch (e) { console.error(e); marketStatus('등록에 실패했습니다. 잠시 후 다시 시도해 주세요.'); }
+        }
+        async function marketSetStatus(id, status) {
+            try {
+                const db = await commInit();
+                if (db) await marketCol().doc(id).update({ status: status });
+                else { const it = marketItems.find(x => x.id === id); if (it) { it.status = status; marketLocalSave(); renderMarket(); } }
+            } catch (e) { console.error(e); }
+        }
+        async function marketDelete(id) {
+            if (!confirm('이 물건 글을 삭제할까요?')) return;
+            try {
+                const db = await commInit();
+                if (db) await marketCol().doc(id).delete();
+                else { marketItems = marketItems.filter(x => x.id !== id); marketLocalSave(); }
+                closeMarketItem();
+            } catch (e) { console.error(e); }
+        }
+        async function openMarketItem(id) {
+            marketOpen = id; marketChat = []; stopMarketChat();
+            const db = await commInit();
+            if (db) {
+                marketChatUnsub = marketCol().doc(id).collection('chat').orderBy('ts', 'asc').limit(200).onSnapshot(snap => {
+                    marketChat = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                    renderMarketChat();
+                }, err => console.error(err));
+            } else { const it = marketItems.find(x => x.id === id); marketChat = (it && it.chat) || []; }
+            renderMarket();
+        }
+        function closeMarketItem() { marketOpen = null; stopMarketChat(); renderMarket(); }
+        async function marketChatSend() {
+            const input = document.getElementById('mkChatText');
+            const text = ((input && input.value) || '').trim();
+            if (!text || !marketOpen) return;
+            const msg = { nick: myNick(), emoji: commProfile.emoji || '🙂', text: text.slice(0, 300), uid: COMM_UID, ts: Date.now() };
+            try {
+                const db = await commInit();
+                if (db) await marketCol().doc(marketOpen).collection('chat').add(msg);
+                else {
+                    const it = marketItems.find(x => x.id === marketOpen);
+                    if (it) { it.chat = it.chat || []; it.chat.push(msg); marketChat = it.chat; marketLocalSave(); renderMarketChat(); }
+                }
+                input.value = '';
+            } catch (e) { console.error(e); }
+        }
+        function renderMarketChat() {
+            const box = document.getElementById('mkChat');
+            if (!box) return;
+            const it = marketItems.find(x => x.id === marketOpen);
+            box.innerHTML = marketChat.length ? marketChat.map(m => {
+                const mine = m.uid === COMM_UID, seller = it && m.uid === it.uid;
+                return `
+                    <div class="flex gap-2 ${mine ? 'flex-row-reverse' : ''}">
+                        <button onclick="showProfile('${esc(m.uid)}')" class="w-7 h-7 shrink-0 rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-sm">${esc(m.emoji || '🙂')}</button>
+                        <div class="flex flex-col ${mine ? 'items-end' : 'items-start'}" style="max-width:78%;">
+                            <div class="text-[0.625rem] text-slate-500 mb-0.5"><b>${esc(m.nick || '이웃')}</b>${seller ? ' · <span class="text-emerald-600 font-bold">글쓴이</span>' : ''} · ${timeAgo(m.ts)}</div>
+                            <div class="rounded-2xl border px-3 py-1.5 text-sm ${mine ? 'bg-emerald-100 dark:bg-emerald-900/80 border-emerald-300 dark:border-emerald-700 text-slate-900 dark:text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}"><span class="whitespace-pre-line break-words">${esc(m.text)}</span></div>
+                        </div>
+                    </div>`;
+            }).join('') : '<div class="text-center py-6 text-xs text-slate-400">아직 문의가 없습니다. 궁금한 점을 남겨 보세요.</div>';
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderMarket() {
+            const main = document.getElementById('commMain');
+            if (!main) return;
+            const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
+            const kindColor = { '판매': 'bg-blue-600', '교환': 'bg-purple-600', '나눔': 'bg-emerald-600', '구함': 'bg-amber-500' };
+            const badge = k => `<span class="text-[0.625rem] font-bold text-white px-1.5 py-0.5 rounded ${kindColor[k] || 'bg-slate-500'}">${esc(k || '판매')}</span>`;
+
+            // 1) 물건 올리기
+            if (marketForm) {
+                main.innerHTML = `
+                    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                        <div class="flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white">🛒 물건 올리기</b><button onclick="openMarketForm(false)" class="text-xs text-blue-500 hover:underline">← 목록으로</button></div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <select id="mkKind" class="${inp}">${MARKET_KINDS.map(k => `<option value="${k}">${k}</option>`).join('')}</select>
+                            <input id="mkPrice" type="text" maxlength="20" placeholder="가격 (예: 15,000원)" class="col-span-2 ${inp}">
+                        </div>
+                        <input id="mkTitle" type="text" maxlength="40" placeholder="물건 이름 (예: 유아용 자전거)" class="${inp}">
+                        <textarea id="mkDesc" rows="4" maxlength="500" placeholder="상태, 사용 기간, 거래 희망 장소 등을 적어 주세요" class="${inp}"></textarea>
+                        <input id="mkContact" type="text" maxlength="60" placeholder="연락 방법 (선택 · 예: 오픈채팅 주소) — 비워 두면 아래 문의 채팅으로만 연락" class="${inp}">
+                        <div class="flex items-center gap-3">
+                            <input id="mkFile" type="file" accept="image/*" class="hidden" onchange="marketPickFile(this)">
+                            <button onclick="document.getElementById('mkFile').click()" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-camera"></i> 사진 첨부</button>
+                            <span id="mkPreview"></span>
+                        </div>
+                        <p id="mkStatus" class="text-xs text-amber-600 dark:text-amber-400"></p>
+                        <button onclick="marketPost()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">등록하기</button>
+                        <p class="text-[0.6875rem] text-slate-400">거래는 사람이 많은 곳에서 직접 만나서 하고, 먼저 돈을 보내 달라는 요구는 조심하세요.</p>
+                    </div>`;
+                return;
+            }
+
+            // 2) 물건 상세 + 문의 채팅
+            const it = marketOpen ? marketItems.find(x => x.id === marketOpen) : null;
+            if (it) {
+                const mine = it.uid === COMM_UID, done = it.status === 'done';
+                main.innerHTML = `
+                    <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                        <button onclick="closeMarketItem()" class="text-xs text-blue-500 hover:underline">← 장터 목록</button>
+                        ${mine ? `<span class="flex items-center gap-2 text-xs">
+                            <button onclick="marketSetStatus('${esc(it.id)}', '${done ? 'open' : 'done'}')" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">${done ? '다시 거래중으로' : '거래완료 표시'}</button>
+                            <button onclick="marketDelete('${esc(it.id)}')" class="text-red-500 hover:underline">삭제</button></span>` : ''}
+                    </div>
+                    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                        ${it.img && IMG_DATA_RE.test(it.img) ? `<img src="${it.img}" onclick="openMedia(this.src)" class="max-h-64 rounded-xl mx-auto cursor-zoom-in">` : ''}
+                        <div>
+                            <div class="flex items-center gap-2">${badge(it.kind)}${done ? '<span class="text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-slate-400 text-white">거래완료</span>' : ''}</div>
+                            <h3 class="mt-1 text-base font-bold text-slate-900 dark:text-white break-words">${esc(it.title)}</h3>
+                            <div class="text-sm font-extrabold text-emerald-600">${esc(it.price || (it.kind === '나눔' ? '무료 나눔' : '가격 문의'))}</div>
+                            <div class="mt-1 text-[0.6875rem] text-slate-500"><button onclick="showProfile('${esc(it.uid)}')" class="hover:underline">${esc(it.emoji || '🙂')} ${esc(it.nick || '이웃')}</button> · ${timeAgo(it.ts)}</div>
+                        </div>
+                        ${it.desc ? `<p class="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-line break-words">${esc(it.desc)}</p>` : ''}
+                        ${it.contact ? `<div class="text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2">연락 방법: <b class="select-all">${esc(it.contact)}</b></div>` : ''}
+                        <div class="pt-2 border-t border-slate-200 dark:border-slate-800">
+                            <div class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">💬 문의 채팅 <span class="font-normal text-slate-400">(같은 동네 이웃에게 공개됩니다)</span></div>
+                            <div id="mkChat" class="space-y-2"></div>
+                        </div>
+                    </div>
+                    <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
+                        <textarea id="mkChatText" rows="1" maxlength="300" placeholder="${mine ? '문의에 답해 주세요' : '글쓴이에게 물어보세요 (예: 아직 있나요?)'}" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
+                        <button onclick="marketChatSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 whitespace-nowrap">보내기</button>
+                    </div>`;
+                renderMarketChat();
+                return;
+            }
+
+            // 3) 목록
+            const list = marketItems.filter(x => marketFilter === '전체' || x.kind === marketFilter);
+            const chip = f => `<button onclick="setMarketFilter('${f}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${marketFilter === f ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${f}</button>`;
+            main.innerHTML = `
+                <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                    <div class="flex flex-wrap items-center gap-1.5">${['전체'].concat(MARKET_KINDS).map(chip).join('')}</div>
+                    <button onclick="openMarketForm(true)" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"><i class="fa-solid fa-plus"></i> 물건 올리기</button>
+                </div>
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
+                    ${list.length ? `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">` + list.map(x => `
+                        <button onclick="openMarketItem('${esc(x.id)}')" class="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:border-emerald-500 transition ${x.status === 'done' ? 'opacity-50' : ''}">
+                            <div class="h-28 bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">${x.img && IMG_DATA_RE.test(x.img) ? `<img src="${x.img}" class="w-full h-full object-cover">` : '<span class="text-3xl">📦</span>'}</div>
+                            <div class="p-2">
+                                <div class="flex items-center gap-1">${badge(x.kind)}${x.status === 'done' ? '<span class="text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-slate-400 text-white">완료</span>' : ''}</div>
+                                <div class="mt-1 text-xs font-bold text-slate-900 dark:text-white truncate">${esc(x.title)}</div>
+                                <div class="text-xs font-extrabold text-emerald-600 truncate">${esc(x.price || (x.kind === '나눔' ? '무료 나눔' : '가격 문의'))}</div>
+                                <div class="text-[0.625rem] text-slate-500 truncate">${esc(x.nick || '이웃')} · ${timeAgo(x.ts)}</div>
+                            </div>
+                        </button>`).join('') + `</div>` : '<div class="text-center py-16 text-xs text-slate-400">아직 올라온 물건이 없습니다. 첫 물건을 올려 보세요.</div>'}
+                </div>`;
+        }
+
         // ---- 동네 인증 ----
         function nearestSigungu(lat, lng, n) {
             const arr = [];
@@ -1936,6 +2210,8 @@
         function resetTown() {
             if (commUnsub) { commUnsub(); commUnsub = null; }
             if (commUnsubMembers) { commUnsubMembers(); commUnsubMembers = null; }
+            if (marketUnsub) { marketUnsub(); marketUnsub = null; }
+            stopMarketChat(); marketItems = []; marketOpen = null;
             myTown = null; commMessages = []; commMembers = []; commType = 'talk'; commAttach = null;
             lsSet('my_town', 'null');
             updateCommBadge();
