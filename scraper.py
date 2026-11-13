@@ -82,9 +82,7 @@ TELEGRAM_CHANNELS = [
     {"url": "https://t.me/s/cahier_de_market", "source": "cahier_de_market"}
 ]
 
-# 전국 주요 시·군·구 정밀 좌표 매핑 (세부 도시 우선 매칭용)
 KR_CITY_COORDS = {
-    # 충청권
     "천안": {"lat": 36.8151, "lng": 127.1139, "label": "충청남도 천안시"},
     "아산": {"lat": 36.7898, "lng": 127.0018, "label": "충청남도 아산시"},
     "서산": {"lat": 36.7845, "lng": 126.4503, "label": "충청남도 서산시"},
@@ -98,7 +96,6 @@ KR_CITY_COORDS = {
     "제천": {"lat": 37.1326, "lng": 128.1910, "label": "충청북도 제천시"},
     "대전": {"lat": 36.3504, "lng": 127.3845, "label": "대전광역시"},
     "세종": {"lat": 36.4800, "lng": 127.2890, "label": "세종특별자치시"},
-    # 수도권
     "수원": {"lat": 37.2636, "lng": 127.0286, "label": "경기도 수원시"},
     "성남": {"lat": 37.4200, "lng": 127.1267, "label": "경기도 성남시"},
     "분당": {"lat": 37.3827, "lng": 127.1189, "label": "경기도 성남시 분당구"},
@@ -123,12 +120,10 @@ KR_CITY_COORDS = {
     "영등포": {"lat": 37.5264, "lng": 126.8962, "label": "서울특별시 영등포구"},
     "마포": {"lat": 37.5663, "lng": 126.9016, "label": "서울특별시 마포구"},
     "종로": {"lat": 37.5730, "lng": 126.9794, "label": "서울특별시 종로구"},
-    # 강원권
     "춘천": {"lat": 37.8813, "lng": 127.7298, "label": "강원특별자치도 춘천시"},
     "원주": {"lat": 37.3422, "lng": 127.9202, "label": "강원특별자치도 원주시"},
     "강릉": {"lat": 37.7519, "lng": 128.8761, "label": "강원특별자치도 강릉시"},
     "속초": {"lat": 38.2070, "lng": 128.5918, "label": "강원특별자치도 속초시"},
-    # 영남권
     "부산": {"lat": 35.1796, "lng": 129.0756, "label": "부산광역시"},
     "해운대": {"lat": 35.1631, "lng": 129.1636, "label": "부산광역시 해운대구"},
     "대구": {"lat": 35.8714, "lng": 128.6014, "label": "대구광역시"},
@@ -142,7 +137,6 @@ KR_CITY_COORDS = {
     "구미": {"lat": 36.1195, "lng": 128.3446, "label": "경상북도 구미시"},
     "경주": {"lat": 35.8562, "lng": 129.2247, "label": "경상북도 경주시"},
     "안동": {"lat": 36.5684, "lng": 128.7294, "label": "경상북도 안동시"},
-    # 호남·제주권
     "전주": {"lat": 35.8242, "lng": 127.1480, "label": "전북특별자치도 전주시"},
     "익산": {"lat": 35.9483, "lng": 126.9576, "label": "전북특별자치도 익산시"},
     "군산": {"lat": 35.9677, "lng": 126.7366, "label": "전북특별자치도 군산시"},
@@ -153,15 +147,12 @@ KR_CITY_COORDS = {
     "서귀포": {"lat": 33.2541, "lng": 126.5601, "label": "제주특별자치도 서귀포시"}
 }
 
-# 광역 시·도 단위 백업 좌표 (세부 도시명이 없을 때 매칭)
 KR_PROVINCE_COORDS = {
     "서울": {"lat": 37.5665, "lng": 126.9780, "label": "서울특별시"},
     "경기": {"lat": 37.4138, "lng": 127.5183, "label": "경기도"},
     "강원": {"lat": 37.8228, "lng": 128.1555, "label": "강원특별자치도"},
     "충북": {"lat": 36.6357, "lng": 127.4917, "label": "충청북도"},
-    "충청북": {"lat": 36.6357, "lng": 127.4917, "label": "충청북도"},
     "충남": {"lat": 36.5184, "lng": 126.8000, "label": "충청남도"},
-    "충청남": {"lat": 36.5184, "lng": 126.8000, "label": "충청남도"},
     "전북": {"lat": 35.7175, "lng": 127.1530, "label": "전북특별자치도"},
     "전남": {"lat": 34.8679, "lng": 126.9910, "label": "전라남도"},
     "경북": {"lat": 36.4919, "lng": 128.8889, "label": "경상북도"},
@@ -241,17 +232,10 @@ def categorize_incident(title, content):
     return None
 
 def extract_location(title, content):
-    """
-    기사 제목을 최우선으로 검사하고, 없으면 본문을 검사하여
-    가장 먼저 언급되는 핵심 지역 좌표를 정확히 반환합니다.
-    (언론사 소재지인 '서울=연합뉴스' 바이라인 오인식 방지)
-    """
-    # 바이라인 노이즈 제거 ("(서울=연합뉴스)", "서울=뉴스1" 등)
     cleaned_title = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스\vert{}뉴스1\vert{}뉴시스\vert{}파이낸셜뉴스\vert{}이데일리)[\)\]]?', '', title)
     cleaned_content = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스\vert{}뉴스1\vert{}뉴시스\vert{}파이낸셜뉴스\vert{}이데일리)[\)\]]?', '', content)
 
     for search_text in [cleaned_title, cleaned_content]:
-        # 1. 국내 세부 시·군·구 가장 먼저 등장하는 위치 찾기
         earliest_pos = len(search_text) + 1
         matched_info = None
 
@@ -264,7 +248,6 @@ def extract_location(title, content):
         if matched_info:
             return matched_info
 
-        # 2. 국내 광역 시·도 검색
         for prov, info in KR_PROVINCE_COORDS.items():
             pos = search_text.find(prov)
             if pos != -1 and pos < earliest_pos:
@@ -274,7 +257,6 @@ def extract_location(title, content):
         if matched_info:
             return matched_info
 
-        # 3. 해외 주요 국가/지역 검색
         for keyword, info in GLOBAL_COORDS.items():
             if keyword in search_text:
                 return info["label"], info["lat"], info["lng"]
@@ -283,7 +265,6 @@ def extract_location(title, content):
             if country in search_text:
                 return f"해외 분쟁지역 ({country})", 35.0, 40.0
 
-    # 지명이 전혀 명시되지 않은 기사는 서울로 오표기하지 않고 대한민국 중심 좌표 반환
     return "대한민국 (세부 위치 미상)", 36.3504, 127.3845
 
 def scrape_telegram_channel(channel_info):
@@ -356,14 +337,15 @@ def scrape_telegram_channel(channel_info):
 def scrape_news():
     kst = pytz.timezone('Asia/Seoul')
     now = datetime.now(kst)
-    five_days_ago = now - timedelta(days=5)
+    # 최근 7일간의 기사 수집 (11월 6일 포함)
+    seven_days_ago = now - timedelta(days=7)
     collected_items = []
     
     item_id = int(now.timestamp())
 
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
-        for entry in parsed.entries[:60]:
+        for entry in parsed.entries[:100]:
             title = remove_html_tags(entry.get("title", ""))
             raw_summary = entry.get("summary", title)
             clean_content = remove_html_tags(raw_summary)
@@ -373,7 +355,7 @@ def scrape_news():
             published_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
             if published_parsed:
                 pub_dt = datetime.fromtimestamp(time.mktime(published_parsed), kst)
-                if pub_dt < five_days_ago:
+                if pub_dt < seven_days_ago:
                     continue
             
             datetime_str = format_datetime_with_weekday(pub_dt)
@@ -416,7 +398,7 @@ def scrape_news():
     return collected_items
 
 if __name__ == "__main__":
-    print("=== 실시간 뉴스 관제 크롤러가 시작되었습니다 (3분 간격 자동 실행) ===")
+    print("=== 실시간 뉴스 관제 크롤러가 시작되었습니다 (최근 7일 수집 / 3분 간격 자동 실행) ===")
     while True:
         try:
             data = scrape_news()
