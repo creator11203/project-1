@@ -9,7 +9,6 @@ import urllib.parse
 import re
 from html.parser import HTMLParser
 
-# HTML 태그 제거용 유틸리티
 class HTMLFilter(HTMLParser):
     def __init__(self):
         super().__init__()
@@ -27,12 +26,10 @@ def remove_html_tags(html_content):
     f.feed(html_content)
     return f.get_data()
 
-# 구글 번역 무료 API를 활용한 자동 한글 번역 함수
 def translate_to_korean(text):
     if not text:
         return ""
     try:
-        # 한글이 이미 포함되어 있거나 너무 짧으면 패스
         encoded_text = urllib.parse.quote(text[:500])
         url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=ko&dt=t&q={encoded_text}"
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -41,41 +38,21 @@ def translate_to_korean(text):
             translated = "".join([item[0] for item in res_data[0] if item[0]])
             return translated
     except Exception as e:
-        return text  # 번역 실패 시 원문 반환
+        return text
 
-# 기본 RSS 피드 소스 리스트
+# 기본 뉴스 및 속보 소스
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"}
 ]
 
-# 연동할 텔레그램 공개 채널 목록
+# 텔레그램 공개 채널
 TELEGRAM_CHANNELS = [
     {"url": "https://t.me/s/FastStockNews", "source": "FastStockNews (텔레그램)"},
     {"url": "https://t.me/s/FastStockNewsUSA", "source": "FastStockNewsUSA (텔레그램)"},
     {"url": "https://t.me/s/cahier_de_market", "source": "cahier_de_market (텔레그램)"}
 ]
 
-# 요청하신 15개의 X(트위터) 프로필 리스트 (RSSHub 연동)
-X_PROFILES = [
-    {"id": "financialjuice", "source": "FinancialJuice (X)"},
-    {"id": "jukan05", "source": "Jukan (X)"},
-    {"id": "LiveSquawk", "source": "LiveSquawk (X)"},
-    {"id": "WatcherGuru", "source": "WatcherGuru (X)"},
-    {"id": "FirstSquawk", "source": "FirstSquawk (X)"},
-    {"id": "Kalshi", "source": "Kalshi (X)"},
-    {"id": "Alisvolatprop12", "source": "Alisvolatprop12 (X)"},
-    {"id": "mindmoon_108", "source": "심월 (X)"},
-    {"id": "_junhoyeo", "source": "Junho Yeo (X)"},
-    {"id": "RyanGreenblatt", "source": "Ryan Greenblatt (X)"},
-    {"id": "laylaperfume", "source": "Humble (X)"},
-    {"id": "aleabitoreddit", "source": "Serenity (X)"},
-    {"id": "gCaptain", "source": "gCaptain (X)"},
-    {"id": "tradewindsnews", "source": "TradeWinds (X)"},
-    {"id": "Splash_247", "source": "Splash (X)"}
-]
-
-# 3단계 국내 지역 매핑 데이터
 REGION_COORDS = {
     "서울특별시": {
         "lat": 37.5665, "lng": 126.9780, 
@@ -98,7 +75,6 @@ REGION_COORDS = {
     }
 }
 
-# 해외 주요 분쟁 지역 및 도시 좌표 매핑
 GLOBAL_COORDS = {
     "우크라이나": {"lat": 50.4501, "lng": 30.5234, "label": "우크라이나 키이우"},
     "러시아": {"lat": 55.7558, "lng": 37.6173, "label": "러시아 모스크바"},
@@ -111,37 +87,37 @@ GLOBAL_COORDS = {
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    exclude_keywords = [
-        '코스피', '외국인', '매도', '하락', '상승', '주가', '증시', '최고경영자', '사임', '합병', '투자',
-        '특검', '국정조사', '재판', '공판', '선고', '항소', '상고', '여야', '정치권', '규탄', '공방', 
-        '토론', '사과', '반성', '회고', '기자회견', '입장문', '설명회', '무소속', '의원', '내홍', '지도부'
-    ]
-    if any(kw in text for kw in exclude_keywords):
-        return None 
+    # 경제/정치 노이즈 엄격 제외 (단, 안보/분쟁 관련 긴급 키워드가 포함된 경우는 예외 처리)
+    emergency_override = ['공습', '미사일', '폭격', '전쟁', '테러', '충돌', '비상계엄', '북한 도발']
+    has_emergency = any(em in text for em in emergency_override)
 
-    global_conflict_keywords = [
-        '우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동 전쟁', 
-        '공습', '미사일 공격', '폭격', '전쟁', '테러', '무력 충돌', '군사 작전', '드론 공격',
-        'strike', 'missile', 'war', 'attack', 'conflict', 'explosion'
-    ]
-    if any(kw in text for kw in global_conflict_keywords):
+    if not has_emergency:
+        exclude_keywords = [
+            '코스피', '외국인 순매수', '주가 하락', '증시 전망', '최고경영자', '사임', '합병 승인',
+            '특검', '국정조사', '재판', '공판', '선고', '항소', '상고', '여야 공방', '정치권 규탄'
+        ]
+        if any(kw in text for kw in exclude_keywords):
+            return None 
+
+    # 카테고리 매핑 규칙
+    if any(kw in text for kw in ['우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동', '공습', '미사일', '폭격', '전쟁', '테러', '충돌', 'strike', 'war', 'attack']):
         return "해외 분쟁·테러"
 
-    security_incidents = ['계엄 선포', '비상계엄', '군 병력', '북한 도발', '미사일 발사', '영공 침범', '국방 비상']
-    if any(kw in text for kw in security_incidents):
+    if any(kw in text for kw in ['계엄', '군 병력', '북한', '미사일 발사', '영공', '국방']):
         return "국가 안보"
 
-    crime_keywords = ['살인', '강도', '인질', '폭행', '흉기 난동', '마약', '긴급 체포', '수배', '112 출동', '경찰 출동', '구속영장', '투신']
-    if any(kw in text for kw in crime_keywords):
+    if any(kw in text for kw in ['살인', '강도', '인질', '폭행', '흉기', '마약', '긴급 체포', '수배', '경찰 출동', '구속영장']):
         return "강력·치안"
 
-    cyber_keywords = ['해킹', '랜섬웨어', '개인정보 유출', '전산 장애', '서버 다운', '금융 사고', '보안 취약점', '스캠 피해']
-    if any(kw in text for kw in cyber_keywords):
+    if any(kw in text for kw in ['해킹', '랜섬웨어', '개인정보 유출', '전산 장애', '서버 다운', '금융 사고']):
         return "사이버·금융"
 
-    disaster_keywords = ['화재', '폭발', '붕괴', '지진', '홍수', '산사태', '침수', '119 출동', '구조', '교통 통제', '가스 유출', '정전 사고', '전복']
-    if any(kw in text for kw in disaster_keywords):
+    if any(kw in text for kw in ['화재', '폭발', '붕괴', '지진', '홍수', '산사태', '침수', '구조', '통제', '가스 유출', '정전']):
         return "재난·안전"
+
+    # 속보 채널 특성상 긴급 성격의 소식은 기본적으로 '해외 분쟁·테러' 또는 '재난·안전'으로 유연하게 수용
+    if has_emergency:
+        return "해외 분쟁·테러"
 
     return None
 
@@ -177,7 +153,7 @@ def scrape_telegram_channel(channel_info):
             message_blocks = re.findall(r'<div class="tgme_widget_message_text[^>]*>(.*?)</div>', html, re.DOTALL)
             link_blocks = re.findall(r'<a href="(https?://[^"]+)"[^>]*>.*?</a>', html, re.DOTALL)
             
-            for i, raw_msg in enumerate(message_blocks[:15]):
+            for i, raw_msg in enumerate(message_blocks[:20]):
                 clean_text = remove_html_tags(raw_msg).strip()
                 if not clean_text:
                     continue
@@ -197,17 +173,13 @@ def scrape_telegram_channel(channel_info):
                 if not target_link:
                     target_link = url
 
-                # 한글 번역 적용
                 translated_text = translate_to_korean(clean_text)
                 title = translated_text.split('\n')[0][:50]
                 summary = translated_text[:120] + "..."
                 
                 category = categorize_incident(title, translated_text)
                 if not category:
-                    if any(w in translated_text.lower() for w in ['우크라이나', '러시아', '이란', '미국', '전쟁', '공습', '충돌']):
-                        category = "해외 분쟁·테러"
-                    else:
-                        continue
+                    continue
 
                 location_str, lat, lng = extract_location(translated_text)
                 if not location_str:
@@ -230,55 +202,6 @@ def scrape_telegram_channel(channel_info):
         
     return items
 
-def scrape_x_profile(profile_info):
-    items = []
-    username = profile_info["id"]
-    source_name = profile_info["source"]
-    rss_url = f"https://rsshub.app/twitter/user/{username}"
-
-    try:
-        parsed = feedparser.parse(rss_url)
-        for entry in parsed.entries[:10]:
-            title = entry.get("title", "")
-            summary = entry.get("summary", title)
-            link = entry.get("link", f"https://x.com/{username}")
-            
-            clean_content = remove_html_tags(summary).strip()
-            full_text = title + " " + clean_content
-
-            # 한글 번역 적용
-            translated_title = translate_to_korean(title if title else clean_content[:50])
-            translated_content = translate_to_korean(clean_content)
-            summary_text = translated_content[:120] + "..."
-
-            category = categorize_incident(translated_title, translated_content)
-            if not category:
-                if any(w in translated_content.lower() for w in ['우크라이나', '러시아', '이란', '이스라엘', '전쟁', '공습', '미사일', '충돌', '폭격']):
-                    category = "해외 분쟁·테러"
-                else:
-                    continue
-
-            location_str, lat, lng = extract_location(translated_content)
-            if not location_str:
-                location_str, lat, lng = "미국 워싱턴D.C.", 38.8951, -77.0364
-
-            items.append({
-                "category": category,
-                "title": translated_title,
-                "summary": summary_text,
-                "content": translated_content,
-                "location": location_str,
-                "lat": lat,
-                "lng": lng,
-                "time": "최근 5일 이내",
-                "source": source_name,
-                "link": link
-            })
-    except Exception as e:
-        print(f"Error scraping X profile @{username}: {e}")
-
-    return items
-
 def scrape_news():
     kst = pytz.timezone('Asia/Seoul')
     now = datetime.now(kst)
@@ -287,10 +210,10 @@ def scrape_news():
     
     item_id = int(now.timestamp())
 
-    # 1. RSS 뉴스 수집
+    # 1. RSS 뉴스 수집 (최신 5일 이내 엄격 적용)
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
-        for entry in parsed.entries[:30]:
+        for entry in parsed.entries[:50]:
             title = entry.get("title", "")
             summary = entry.get("summary", title)
             link = entry.get("link", "")
@@ -328,20 +251,10 @@ def scrape_news():
             })
             item_id += 1
 
-    # 2. 텔레그램 채널 수집
+    # 2. 텔레그램 속보 채널 수집
     for channel in TELEGRAM_CHANNELS:
         tg_items = scrape_telegram_channel(channel)
         for item in tg_items:
-            item["id"] = item_id
-            item["lat"] = round(item["lat"] + (random.random() - 0.5) * 0.01, 4)
-            item["lng"] = round(item["lng"] + (random.random() - 0.5) * 0.01, 4)
-            collected_items.append(item)
-            item_id += 1
-
-    # 3. X(트위터) 15개 프로필 수집 및 한글 번역 적용
-    for profile in X_PROFILES:
-        x_items = scrape_x_profile(profile)
-        for item in x_items:
             item["id"] = item_id
             item["lat"] = round(item["lat"] + (random.random() - 0.5) * 0.01, 4)
             item["lng"] = round(item["lng"] + (random.random() - 0.5) * 0.01, 4)
@@ -354,4 +267,4 @@ if __name__ == "__main__":
     data = scrape_news()
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped, translated, and filtered {len(data)} items into news.json")
+    print(f"Successfully scraped and filtered {len(data)} valid items into news.json")
