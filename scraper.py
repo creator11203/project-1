@@ -4,11 +4,39 @@ import time
 import pytz
 import json
 import random
+import urllib.request
+import re
+from html.parser import HTMLParser
+
+# HTML 태그 제거용 유틸리티
+class HTMLFilter(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.reset()
+        self.text = []
+
+    def handle_data(self, d):
+        self.text.append(d)
+
+    def get_data(self):
+        return ''.join(self.text)
+
+def remove_html_tags(html_content):
+    f = HTMLFilter()
+    f.feed(html_content)
+    return f.get_data()
 
 # RSS 피드 소스 리스트
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"}
+]
+
+# 연동할 텔레그램 공개 채널 목록 (t.me/s/ 형태의 웹 미리보기 페이지 활용)
+TELEGRAM_CHANNELS = [
+    {"url": "https://t.me/s/FastStockNews", "source": "FastStockNews (텔레그램)"},
+    {"url": "https://t.me/s/FastStockNewsUSA", "source": "FastStockNewsUSA (텔레그램)"},
+    {"url": "https://t.me/s/cahier_de_market", "source": "cahier_de_market (텔레그램)"}
 ]
 
 # 3단계 국내 지역 매핑 데이터
@@ -48,7 +76,7 @@ def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
     exclude_keywords = [
-        '엔비디아', '코스피', '외국인', '매도', '하락', '상승', '주가', '증시', '최고경영자', '사임', '합병', '투자',
+        '코스피', '외국인', '매도', '하락', '상승', '주가', '증시', '최고경영자', '사임', '합병', '투자',
         '특검', '국정조사', '재판', '공판', '선고', '항소', '상고', '여야', '정치권', '규탄', '공방', 
         '토론', '사과', '반성', '회고', '기자회견', '입장문', '설명회', '무소속', '의원', '내홍', '지도부'
     ]
@@ -97,30 +125,103 @@ def extract_location(text):
     
     return None, None, None
 
+def scrape_telegram_channel(channel_info):
+    items = []
+    url = channel_info["url"]
+    source_name = channel_info["source"]
+    
+    try:
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        )
+        with urllib.request.urlopen(req, timeout=5) as response:
+            html = response.read().decode('utf-8')
+            
+            # 텔레그램 웹 미리보기 페이지에서 메시지 박스 추출
+            message_blocks = re.findall(r'<div class="tgme_widget_message_text[^>]*>(.*?)</div>', html, re.DOTALL)
+            link_blocks = re.findall(r'<a href="(https?://[^"]+)"[^>]*>.*?</a>', html, re.DOTALL)
+            
+            for i, raw_msg in enumerate(message_blocks[:15]):
+                clean_text = remove_html_tags(raw_msg).strip()
+                if not clean_text:
+                    continue
+                
+                # 메시지 본문 안에 포함된 외부 링크 추출 시도
+                urls_in_msg = re.findall(r'(https?://[^\s]+)', clean_text)
+                target_link = ""
+                for u in urls_in_msg:
+                    # 텔레그램 자체 링크나 단축 링크가 아닌 실제 원문 링크 우선 선택
+                    if "t.me" not in u:
+                        target_link = u
+                        break
+                
+                # 본문에 링크가 없으면 채널 포스트에 포함된 외부 링크 매칭 시도
+                if not target_link and i < len(link_blocks):
+                    candidate = link_blocks[i]
+                    if "t.me" not in candidate:
+                        target_link = candidate
+                
+                # 만약 원문 링크를 못 찾았으면 기본 채널 링크 사용
+                if not target_link:
+                    target_link = url
+
+                title = clean_text.split('\n')[0][:50]
+                summary = clean_text[:120] + "..."
+                
+                category = categorize_incident(title, clean_text)
+                if not category:
+                    # 카테고리가 안 잡히면 기본적으로 분쟁/안전 관련일 때 '해외 분쟁·테러' 또는 기본 분류 부여
+                    if any(w in clean_text.lower() for w in ['우크라이나', '러시아', '이란', '미국', '전쟁', '공습', '충돌']):
+                        category = "해외 분쟁·테러"
+                    else:
+                        continue
+
+                location_str, lat, lng = extract_location(clean_text)
+                if not location_str:
+                    # 위치가 명시되지 않은 글로벌 채널 기사는 미국/중동 기본값 또는 우크라이나 매칭
+                    location_str, lat, lng = "미국 워싱턴D.C.", 38.8951, -77.0364
+
+                items.append({
+                    "title": title,
+                    "summary": summary,
+                    "content": clean_text,
+                    "location": location_str,
+                    "lat": lat,
+                    "lng": lng,
+                    "category": category,
+                    "time": "최근 5일 이내",
+                    "source": source_name,
+                    "link": target_link  # 원문 기사/웹사이트 링크로 대체됨
+                })
+    except Exception as e:
+        print(f"Error scraping telegram {url}: {e}")
+        
+    return items
+
 def scrape_news():
     kst = pytz.timezone('Asia/Seoul')
     now = datetime.now(kst)
-    five_days_ago = now - timedelta(days=5)  # 5일 전 시점 계산
+    five_days_ago = now - timedelta(days=5)
     collected_items = []
     
     item_id = int(now.timestamp())
 
+    # 1. 기존 RSS 뉴스 수집
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
-        for entry in parsed.entries[:40]:  # 탐색 범위를 40개로 상향
+        for entry in parsed.entries[:40]:
             title = entry.get("title", "")
             summary = entry.get("summary", title)
             link = entry.get("link", "")
             
-            # 5일 이내 기사인지 날짜 검증
             published_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
             if published_parsed:
                 pub_dt = datetime.fromtimestamp(time.mktime(published_parsed), kst)
                 if pub_dt < five_days_ago:
-                    continue  # 5일이 지난 기사는 수집 대상에서 제외
+                    continue
             
             full_text = title + " " + summary
-            
             category = categorize_incident(title, summary)
             if not category:
                 continue
@@ -132,7 +233,7 @@ def scrape_news():
             lat += (random.random() - 0.5) * 0.01
             lng += (random.random() - 0.5) * 0.01
 
-            item = {
+            collected_items.append({
                 "id": item_id,
                 "category": category,
                 "title": title,
@@ -144,7 +245,16 @@ def scrape_news():
                 "time": "최근 5일 이내",
                 "source": feed_info["source"],
                 "link": link
-            }
+            })
+            item_id += 1
+
+    # 2. 텔레그램 공개 채널 수집 및 원문 링크 매핑
+    for channel in TELEGRAM_CHANNELS:
+        tg_items = scrape_telegram_channel(channel)
+        for item in tg_items:
+            item["id"] = item_id
+            item["lat"] = round(item["lat"] + (random.random() - 0.5) * 0.01, 4)
+            item["lng"] = round(item["lng"] + (random.random() - 0.5) * 0.01, 4)
             collected_items.append(item)
             item_id += 1
 
@@ -154,4 +264,4 @@ if __name__ == "__main__":
     data = scrape_news()
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped and filtered {len(data)} items within 5 days into news.json")
+    print(f"Successfully scraped and filtered {len(data)} items (including Telegram) into news.json")
