@@ -152,12 +152,15 @@
     <script>
         let newsData = [];
         let currentCategory = 'all';
-        let selectedNewsId = 1;
+        let selectedNewsId = null;
         let map, markersLayer;
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
             loadIncidentsFromJSON();
+
+            // 30초마다 자동으로 news.json을 다시 불러와 화면 실시간 갱신
+            setInterval(loadIncidentsFromJSON, 30000);
         });
 
         async function loadIncidentsFromJSON() {
@@ -170,7 +173,7 @@
                     }
                 }
             } catch (error) {
-                console.log("news.json 로드 실패, 기본 데이터 유지");
+                console.log("news.json 로드 대기 중...");
             }
 
             if (newsData.length === 0) {
@@ -178,24 +181,24 @@
                     {
                         id: 1,
                         category: "해외 분쟁·테러",
-                        title: "[안내] 글로벌 관제 시스템 대기 중",
-                        summary: "우크라이나, 러시아, 중동 등 해외 분쟁 및 테러 관련 외신 속보가 실시간 수집됩니다.",
-                        content: "파이썬 크롤러를 통해 글로벌 분쟁 및 국내 사건·사고 데이터가 수집됩니다.",
+                        title: "[안내] 실시간 관제 시스템 대기 중",
+                        summary: "크롤러가 백그라운드에서 뉴스를 수집하는 중입니다.",
+                        content: "잠시만 기다리시면 최신 속보가 자동으로 업데이트됩니다.",
                         location: "우크라이나 키이우",
                         lat: 50.4501,
                         lng: 30.5234,
-                        time: "2026.11.13 (금요일)",
+                        time: "실시간",
                         source: "시스템 안내"
                     }
                 ];
             }
 
-            if (selectedNewsId && !newsData.some(n => n.id === selectedNewsId)) {
+            if (!selectedNewsId && newsData.length > 0) {
                 selectedNewsId = newsData[0].id;
             }
 
             renderNewsList();
-            renderDetailView(selectedNewsId);
+            if (selectedNewsId) renderDetailView(selectedNewsId);
             updateMapMarkers();
         }
 
@@ -388,7 +391,7 @@
                 lng: 126.9780 + (Math.random() - 0.5) * 0.05,
                 time: dateStr,
                 source: '시민 직접 제보',
-                priority: 100
+                timestamp: now.getTime() / 1000
             };
 
             newsData.unshift(newReport);
