@@ -46,7 +46,6 @@
         </div>
         
         <div class="flex items-center space-x-3">
-            <!-- 글자 크기 조절 -->
             <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-0.5">
                 <button onclick="adjustFontSize(-1)" class="px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A-</button>
                 <span id="fontSizeIndicator" class="px-2 text-xs font-mono text-slate-500 dark:text-slate-400">100%</span>
@@ -67,72 +66,73 @@
     <!-- 메인 3분할 레이아웃 -->
     <main id="splitContainer" class="flex-1 flex flex-col lg:flex-row overflow-hidden w-full">
         
-        <!-- 1. 왼쪽: 뉴스 피드 및 지역 선택 패널 -->
+        <!-- 1. 왼쪽: 초기의 깔끔한 [시 / 구 / 동] 3버튼·셀렉트 UI 복원 -->
         <section id="leftPane" style="width: 28%; min-width: 250px;" class="bg-white dark:bg-slate-900/90 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
-            <div class="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2">
+            <div class="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2.5">
                 <div class="flex items-center justify-between text-xs text-slate-500">
                     <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                        <i class="fa-solid fa-location-dot text-red-500"></i> 지역별 상세 필터 (전국)
+                        <i class="fa-solid fa-location-dot text-red-500"></i> 지역별 상세 필터 (시 / 구 / 동)
                     </span>
+                    <button onclick="resetRegionFilter()" class="text-[11px] text-blue-500 hover:underline">초기화</button>
                 </div>
+
+                <!-- 시 (시·도) 선택 -->
                 <div>
-                    <select id="regionSelect" onchange="filterByRegion()" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-red-500 font-medium">
-                        <option value="all">🌍 전체 지역 (전국 통합 보기)</option>
-                        <optgroup label="서울특별시 (구·동)">
-                            <option value="서울">서울특별시 전체</option>
-                            <option value="강남구">강남구 (역삼·대치·신사 등)</option>
-                            <option value="서초구">서초구</option>
-                            <option value="송파구">송파구</option>
-                            <option value="마포구">마포구 (홍대 등)</option>
-                            <option value="종로구">종로구</option>
-                            <option value="중구">중구</option>
-                            <option value="영등포구">영등포구 (여의도 등)</option>
-                            <option value="관악구">관악구 (신림 등)</option>
-                        </optgroup>
-                        <optgroup label="경기도 및 인천">
-                            <option value="경기">경기도 전체</option>
-                            <option value="수원">수원시</option>
-                            <option value="성남">성남시 (분당 등)</option>
-                            <option value="고양">고양시</option>
-                            <option value="용인">용인시</option>
-                            <option value="부천">부천시</option>
-                            <option value="화성">화성시</option>
-                            <option value="인천">인천광역시</option>
-                        </optgroup>
-                        <optgroup label="충청권 (천안·아산 등)">
-                            <option value="천안">천안시 (두정·불당·성성 등)</option>
-                            <option value="아산">아산시 (배방 등)</option>
-                            <option value="대전">대전광역시</option>
-                            <option value="세종">세종특별자치시</option>
-                            <option value="청주">청주시</option>
-                        </optgroup>
-                        <optgroup label="부산 및 영남·호남권">
-                            <option value="부산">부산광역시 (해운대 등)</option>
-                            <option value="대구">대구광역시</option>
-                            <option value="광주">광주광역시</option>
-                            <option value="울산">울산광역시</option>
-                            <option value="제주">제주특별자치도</option>
-                        </optgroup>
+                    <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1 font-bold">📍 시 (시·도)</label>
+                    <select id="sidoSelect" onchange="onSidoChange()" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-red-500 font-medium">
+                        <option value="all">전체 시·도 (전국)</option>
+                        <option value="서울특별시">서울특별시</option>
+                        <option value="경기도">경기도</option>
+                        <option value="충청남도">충청남도</option>
+                        <option value="인천광역시">인천광역시</option>
+                        <option value="대전광역시">대전광역시</option>
+                        <option value="부산광역시">부산광역시</option>
+                        <option value="세종특별자치시">세종특별자치시</option>
+                        <option value="제주특별자치도">제주특별자치도</option>
+                    </select>
+                </div>
+
+                <!-- 구 (시·군·구) 선택 -->
+                <div>
+                    <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1 font-bold">🏢 구 (시·군·구)</label>
+                    <select id="sigunguSelect" onchange="onSigunguChange()" disabled class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-red-500 font-medium disabled:opacity-50">
+                        <option value="all">전체 구 (시·군·구)</option>
+                    </select>
+                </div>
+
+                <!-- 동 (읍·면·동) 선택 -->
+                <div>
+                    <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1 font-bold">🏠 동 (읍·면·동)</label>
+                    <select id="dongSelect" onchange="filterByRegion()" disabled class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-red-500 font-medium disabled:opacity-50">
+                        <option value="all">전체 동 (읍·면·동)</option>
                     </select>
                 </div>
             </div>
+
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
         </section>
 
         <div id="resizer1" class="resizer hidden lg:block bg-slate-200 dark:bg-slate-800 hover:bg-red-500"></div>
 
-        <!-- 2. 중앙: 기사 상세 원문 뷰어 패널 (UI 군더더기 완전 제거, 원문만 즉시 표시) -->
+        <!-- 2. 중앙: 세분화된 카테고리 (두 줄 정렬) 및 원문 뷰어 패널 -->
         <section id="centerPane" style="width: 40%; min-width: 300px;" class="bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
-            <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto shrink-0">
-                <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap">전체</button>
-                <button onclick="setCategoryFilter('강력·치안')" data-cat="강력·치안" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">강력·치안</button>
-                <button onclick="setCategoryFilter('재난·안전')" data-cat="재난·안전" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">재난·안전</button>
-                <button onclick="setCategoryFilter('사이버·금융')" data-cat="사이버·금융" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">사이버·금융</button>
-                <button onclick="setCategoryFilter('실시간 제보')" data-cat="실시간 제보" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">실시간 제보</button>
-                <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-200 text-rose-600 dark:bg-slate-800 dark:text-rose-400 hover:bg-slate-300 whitespace-nowrap border border-rose-500/50">🚨 7일 다발 지역</button>
+            <!-- 💡 사건 유형별로 더 세분화되어 두 줄로 배치된 카테고리 바 -->
+            <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex flex-col gap-1.5 shrink-0">
+                <div class="flex items-center space-x-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
+                    <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-bold bg-red-600 text-white transition whitespace-nowrap shadow-sm">전체</button>
+                    <button onclick="setCategoryFilter('강력범죄')" data-cat="강력범죄" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">살인·폭행·흉기</button>
+                    <button onclick="setCategoryFilter('성범죄·마약')" data-cat="성범죄·마약" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">성범죄·마약·스토킹</button>
+                    <button onclick="setCategoryFilter('사기·금융')" data-cat="사기·금융" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">사기·절도·해킹</button>
+                </div>
+                <div class="flex items-center space-x-1.5 overflow-x-auto pt-0.5 custom-scrollbar">
+                    <button onclick="setCategoryFilter('재난·사고')" data-cat="재난·사고" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">화재·붕괴·안전</button>
+                    <button onclick="setCategoryFilter('교통사고')" data-cat="교통사고" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">교통사고·뺑소니</button>
+                    <button onclick="setCategoryFilter('실종·제보')" data-cat="실종·제보" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap">실종·시민제보</button>
+                    <button onclick="setCategoryFilter('해외 분쟁')" data-cat="해외 분쟁" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-orange-600 dark:bg-slate-800 dark:text-orange-400 hover:bg-slate-300 whitespace-nowrap">🌍 해외 분쟁</button>
+                    <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-200 text-rose-600 dark:bg-slate-800 dark:text-rose-400 hover:bg-slate-300 whitespace-nowrap border border-rose-500/50">🚨 7일 다발</button>
+                </div>
             </div>
             
-            <!-- 원문 본문이 바로 출력되는 순수 영역 -->
             <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-6 select-text flex flex-col space-y-4"></div>
         </section>
 
@@ -195,11 +195,58 @@
     <script>
         let newsData = [];
         let currentCategory = 'all';
-        let currentRegion = 'all';
         let selectedHotspotRegion = null;
         let selectedNewsId = null;
         let map, markersLayer;
-        let currentFontSizePx = 16; // 기본 16px (100%)
+        let currentFontSizePx = 16;
+
+        const regionHierarchy = {
+            "서울특별시": {
+                "강남구": ["전체", "역삼동", "대치동", "신사동", "청담동", "삼성동"],
+                "서초구": ["전체", "서초동", "반포동", "방배동", "양재동"],
+                "송파구": ["전체", "잠실동", "신천동", "방이동", "문정동"],
+                "마포구": ["전체", "서교동(홍대)", "합정동", "망원동", "공덕동"],
+                "종로구": ["전체", "종로동", "평창동", "사직동"],
+                "중구": ["전체", "명동", "을지로동", "충무로"],
+                "영등포구": ["전체", "여의도동", "영등포동", "문래동"],
+                "관악구": ["전체", "신림동", "봉천동", "남현동"]
+            },
+            "경기도": {
+                "수원시": ["전체", "장안구", "권선구", "팔달구", "영통구"],
+                "성남시": ["전체", "수정구", "중원구", "분당구"],
+                "고양시": ["전체", "덕양구", "일산동구", "일산서구"],
+                "용인시": ["전체", "처인구", "기흥구", "수지구"],
+                "부천시": ["전체", "원미구", "소사구", "오정구"],
+                "화성시": ["전체", "동탄동", "병점동", "남양읍"],
+                "평택시": ["전체", "팽성읍", "송탄동", "고덕면"]
+            },
+            "충청남도": {
+                "천안시": ["전체", "두정동", "불당동", "성성동", "신부동", "성정동", "백석동"],
+                "아산시": ["전체", "배방읍", "탕정면", "온양동", "음봉면"]
+            },
+            "인천광역시": {
+                "중구": ["전체", "중산동", "운서동", "신포동"],
+                "남동구": ["전체", "구월동", "간석동", "논현동"],
+                "연수구": ["전체", "송도동", "청학동", "연수동"]
+            },
+            "대전광역시": {
+                "서구": ["전체", "둔산동", "갈마동", "월평동", "관저동"],
+                "유성구": ["전체", "봉명동", "구성동(카이스트)", "전민동", "노은동"],
+                "중구": ["전체", "대흥동", "은행동", "선화동"]
+            },
+            "부산광역시": {
+                "해운대구": ["전체", "우동", "중동", "좌동", "재송동"],
+                "부산진구": ["전체", "서면", "부전동", "개금동"],
+                "중구": ["전체", "남포동", "광복동"]
+            },
+            "세종특별자치시": {
+                "세종시": ["전체", "보람동", "나성동", "조치원읍", "도담동"]
+            },
+            "제주특별자치도": {
+                "제주시": ["전체", "연동", "노형동", "이도동"],
+                "서귀포시": ["전체", "중문동", "대정읍", "남원읍"]
+            }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
@@ -237,6 +284,59 @@
             document.addEventListener('mouseup', () => { isResizing1 = false; isResizing2 = false; });
         }
 
+        function onSidoChange() {
+            const sido = document.getElementById('sidoSelect').value;
+            const sigunguSelect = document.getElementById('sigunguSelect');
+            const dongSelect = document.getElementById('dongSelect');
+
+            sigunguSelect.innerHTML = '<option value="all">전체 구 (시·군·구)</option>';
+            dongSelect.innerHTML = '<option value="all">전체 동 (읍·면·동)</option>';
+            dongSelect.disabled = true;
+
+            if (sido === 'all') {
+                sigunguSelect.disabled = true;
+            } else {
+                sigunguSelect.disabled = false;
+                const sigungus = regionHierarchy[sido] ? Object.keys(regionHierarchy[sido]) : [];
+                sigungus.forEach(sg => {
+                    const opt = document.createElement('option');
+                    opt.value = sg;
+                    opt.textContent = sg;
+                    sigunguSelect.appendChild(opt);
+                });
+            }
+            filterByRegion();
+        }
+
+        function onSigunguChange() {
+            const sido = document.getElementById('sidoSelect').value;
+            const sigungu = document.getElementById('sigunguSelect').value;
+            const dongSelect = document.getElementById('dongSelect');
+
+            dongSelect.innerHTML = '<option value="all">전체 동 (읍·면·동)</option>';
+
+            if (sigungu === 'all') {
+                dongSelect.disabled = true;
+            } else {
+                dongSelect.disabled = false;
+                const dongs = (regionHierarchy[sido] && regionHierarchy[sido][sigungu]) ? regionHierarchy[sido][sigungu] : [];
+                dongs.forEach(d => {
+                    if (d !== '전체') {
+                        const opt = document.createElement('option');
+                        opt.value = d;
+                        opt.textContent = d;
+                        dongSelect.appendChild(opt);
+                    }
+                });
+            }
+            filterByRegion();
+        }
+
+        function resetRegionFilter() {
+            document.getElementById('sidoSelect').value = 'all';
+            onSidoChange();
+        }
+
         async function loadIncidentsFromJSON(isManualRefresh = false) {
             try {
                 const res = await fetch('news.json?t=' + Date.now());
@@ -248,7 +348,7 @@
 
             if (newsData.length === 0) {
                 newsData = [{
-                    id: 1, category: "강력·치안", title: "[안내] 실시간 관제 시스템 대기 중",
+                    id: 1, category: "강력범죄", title: "[안내] 실시간 관제 시스템 대기 중",
                     summary: "크롤러가 7일간의 전국 사건사고를 수집하는 중입니다.",
                     content: "잠시만 기다리시면 최신 속보가 업데이트됩니다.",
                     location: "서울특별시 중구", lat: 37.5636, lng: 126.9975,
@@ -301,9 +401,10 @@
 
             (filteredList || getFilteredNews()).slice(0, 150).forEach(news => {
                 let color = '#ef4444';
-                if (news.category === '재난·안전') color = '#f59e0b';
-                else if (news.category === '사이버·금융') color = '#3b82f6';
-                else if (news.category === '국가 안보') color = '#6366f1';
+                if (news.category === '재난·사고') color = '#f59e0b';
+                else if (news.category === '사귀·금융') color = '#3b82f6';
+                else if (news.category === '교통사고') color = '#8b5cf6';
+                else if (news.category === '해외 분쟁') color = '#f97316';
 
                 const icon = L.divIcon({
                     className: 'custom-icon',
@@ -330,16 +431,18 @@
             const filtered = getFilteredNews();
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">선택한 조건에 해당하는 사건사고가 없습니다.</div>`;
+                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">선택한 지역/카테고리에 해당하는 사건이 없습니다.</div>`;
                 return;
             }
 
             filtered.slice(0, 150).forEach(news => {
                 const isSelected = news.id === selectedNewsId && currentCategory !== '범죄 다발 지역';
                 let badgeClass = 'bg-rose-500/20 text-rose-600 border-rose-500/30';
-                if (news.category === '재난·안전') badgeClass = 'bg-amber-500/20 text-amber-600 border-amber-500/30';
-                else if (news.category === '사이버·금융') badgeClass = 'bg-blue-500/20 text-blue-600 border-blue-500/30';
-                else if (news.category === '실시간 제보') badgeClass = 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30';
+                if (news.category === '재난·사고') badgeClass = 'bg-amber-500/20 text-amber-600 border-amber-500/30';
+                else if (news.category === '사기·금융') badgeClass = 'bg-blue-500/20 text-blue-600 border-blue-500/30';
+                else if (news.category === '교통사고') badgeClass = 'bg-purple-500/20 text-purple-600 border-purple-500/30';
+                else if (news.category === '실종·제보') badgeClass = 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30';
+                else if (news.category === '해외 분쟁') badgeClass = 'bg-orange-500/20 text-orange-600 border-orange-500/30';
 
                 const card = document.createElement('div');
                 card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-100 dark:bg-slate-800/90 border-red-500/60 shadow-md' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50'}`;
@@ -403,7 +506,7 @@
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/25">
-                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 사건사고 다발 지역 (동·구 단위)</h2>
+                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 사건사고 다발 지역</h2>
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">지역을 누르면 왼쪽 리스트에 해당 동의 사건들이 정렬됩니다.</p>
                     </div>
                     <div class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
@@ -418,7 +521,6 @@
             if (map) map.flyTo([lat, lng], 14, { duration: 1.2 });
         }
 
-        // 💡 UI 상자 없이 순수 원문 본문만 화면에 가득 차도록 표시되는 뷰어 함수
         function renderDetailView(id) {
             const news = newsData.find(n => n.id === id);
             const container = document.getElementById('detailViewContainer');
@@ -462,12 +564,21 @@
         function setCategoryFilter(cat) {
             currentCategory = cat;
             selectedHotspotRegion = null;
+            
+            // 버튼 활성화 디자인 토글
+            document.querySelectorAll('.cat-btn').forEach(btn => {
+                if (btn.getAttribute('data-cat') === cat) {
+                    btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-bold bg-red-600 text-white transition whitespace-nowrap shadow-sm';
+                } else {
+                    btn.className = 'cat-btn px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 whitespace-nowrap';
+                }
+            });
+
             if (cat === '범죄 다발 지역') renderCrimeHotspotsView();
             else { renderNewsList(); const f = getFilteredNews(); if (f.length > 0) selectNews(f[0].id); }
         }
 
         function filterByRegion() {
-            currentRegion = document.getElementById('regionSelect').value;
             renderNewsList();
             updateMapMarkers();
             const f = getFilteredNews();
@@ -475,32 +586,55 @@
         }
 
         function getFilteredNews() {
+            const sido = document.getElementById('sidoSelect').value;
+            const sigungu = document.getElementById('sigunguSelect').value;
+            const dong = document.getElementById('dongSelect').value;
+
             return newsData.filter(news => {
                 if (selectedHotspotRegion) return news.location.includes(selectedHotspotRegion);
-                const matchCat = (currentCategory === 'all' || news.category === currentCategory);
+                
+                let matchCat = false;
+                if (currentCategory === 'all') {
+                    matchCat = true;
+                } else if (currentCategory === '강력범죄') {
+                    matchCat = ['강력범죄', '강력·치안'].includes(news.category);
+                } else {
+                    matchCat = (news.category === currentCategory);
+                }
+                
                 let matchReg = true;
-                if (currentRegion !== 'all') {
-                    matchReg = news.location.includes(currentRegion);
+                if (sido !== 'all') {
+                    if (!news.location.includes(sido)) {
+                        matchReg = false;
+                    } else if (sigungu !== 'all' && sigungu !== '전체') {
+                        if (!news.location.includes(sigungu)) {
+                            matchReg = false;
+                        } else if (dong !== 'all' && dong !== '전체') {
+                            let cleanDong = dong.split('(')[0].trim();
+                            if (!news.location.includes(cleanDong)) {
+                                matchReg = false;
+                            }
+                        }
+                    }
                 }
                 return matchCat && matchReg;
             });
         }
 
         function manualRefreshData() {
-            currentCategory = 'all'; currentRegion = 'all'; selectedHotspotRegion = null;
-            document.getElementById('regionSelect').value = 'all';
+            currentCategory = 'all'; 
+            selectedHotspotRegion = null;
+            document.getElementById('sidoSelect').value = 'all';
+            onSidoChange();
             loadIncidentsFromJSON(true);
         }
 
-        // 💡 글자 크기 조절 기능 정상화 함수
         function adjustFontSize(direction) {
-            currentFontSizePx += direction * 2; // 한 번 누를 때마다 2px씩 증가/감소
-            if (currentFontSizePx < 12) currentFontSizePx = 12; // 최소 12px
-            if (currentFontSizePx > 24) currentFontSizePx = 24; // 최대 24px
+            currentFontSizePx += direction * 2;
+            if (currentFontSizePx < 12) currentFontSizePx = 12;
+            if (currentFontSizePx > 24) currentFontSizePx = 24;
 
             document.getElementById('appBody').style.fontSize = currentFontSizePx + 'px';
-            
-            // 퍼센트 표시 업데이트 (16px 기준 100%)
             const percent = Math.round((currentFontSizePx / 16) * 100);
             document.getElementById('fontSizeIndicator').textContent = percent + '%';
         }
