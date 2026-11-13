@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>우리동네 사건사고 - 글로벌 실시간 관제 시스템</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -14,9 +19,11 @@
     <style>
         body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: inherit; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
         
         @keyframes radar-sweep {
             0% { transform: rotate(0deg); }
@@ -28,15 +35,11 @@
 
         .resizer {
             width: 6px;
-            background-color: #1e293b;
             cursor: col-resize;
             transition: background-color 0.2s;
             flex-shrink: 0;
             position: relative;
             z-index: 20;
-        }
-        .resizer:hover, .resizer.resizing {
-            background-color: #ef4444;
         }
         .resizer::after {
             content: "";
@@ -46,15 +49,14 @@
             transform: translate(-50%, -50%);
             width: 2px;
             height: 24px;
-            background-color: #64748b;
             border-radius: 1px;
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 h-screen flex flex-col overflow-hidden select-none">
+<body id="appBody" class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-screen flex flex-col overflow-hidden select-none transition-colors duration-200 text-base" style="font-size: 1rem;">
 
     <!-- 상단 헤더 -->
-    <header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between shrink-0 shadow-md">
+    <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm transition-colors duration-200">
         <div class="flex items-center space-x-3">
             <div class="relative w-10 h-10 bg-slate-950 rounded-xl border border-red-500/50 flex items-center justify-center overflow-hidden shadow-lg shadow-red-500/20">
                 <div class="absolute inset-1 rounded-full border border-red-500/30"></div>
@@ -66,21 +68,33 @@
                 <div class="absolute w-1.5 h-1.5 bg-red-400 rounded-full"></div>
             </div>
             <div>
-                <h1 class="text-lg font-extrabold tracking-tight text-white flex items-center gap-2">
+                <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     우리동네 사건사고 
-                    <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/40 font-mono shadow-[0_0_10px_rgba(16,185,129,0.2)]">글로벌 실시간 관제</span>
+                    <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-mono shadow-sm">글로벌 실시간 관제</span>
                 </h1>
-                <p class="text-xs text-slate-400">경계선을 드래그하여 3분할 창 크기를 자유롭게 조절할 수 있습니다</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400">최근 7일간 국내외 사건·사고 및 범죄 다발 지역 집중 모니터링</p>
             </div>
         </div>
         
         <div class="flex items-center space-x-3">
+            <!-- 글씨 크기 조절 버튼 그룹 -->
+            <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-0.5">
+                <button onclick="adjustFontSize(-1)" title="글씨 작게" class="px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A-</button>
+                <span id="fontSizeIndicator" class="px-2 text-xs font-mono text-slate-500 dark:text-slate-400">100%</span>
+                <button onclick="adjustFontSize(1)" title="글씨 크게" class="px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A+</button>
+            </div>
+
+            <!-- 다크/라이트 테마 전환 버튼 -->
+            <button onclick="toggleTheme()" id="themeToggleBtn" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-yellow-400 text-xs font-medium px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-2" title="테마 전환">
+                <i id="themeIcon" class="fa-solid fa-moon"></i> <span id="themeText">다크모드</span>
+            </button>
+
             <button onclick="openReportModal()" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs md:text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-red-600/20 transition flex items-center gap-2">
                 <i class="fa-solid fa-bullhorn"></i> 실시간 제보하기
             </button>
-            <div class="h-6 w-px bg-slate-800"></div>
-            <button onclick="manualRefreshData()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs md:text-sm font-medium px-3 py-2 rounded-lg border border-slate-700 transition flex items-center gap-2">
-                <i class="fa-solid fa-rotate text-emerald-400"></i> 뉴스 새로고침
+            <div class="h-6 w-px bg-slate-200 dark:bg-slate-800"></div>
+            <button onclick="manualRefreshData()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs md:text-sm font-medium px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-2">
+                <i class="fa-solid fa-rotate text-emerald-500 dark:text-emerald-400"></i> 뉴스 새로고침
             </button>
         </div>
     </header>
@@ -89,18 +103,18 @@
     <main id="splitContainer" class="flex-1 flex flex-col lg:flex-row overflow-hidden w-full">
         
         <!-- 1. 왼쪽: 뉴스 피드 패널 -->
-        <section id="leftPane" style="width: 26%; min-width: 240px;" class="bg-slate-900/90 flex flex-col h-full overflow-hidden shrink-0">
-            <div class="p-3 border-b border-slate-800 bg-slate-900/50 space-y-2">
-                <div class="flex items-center justify-between text-xs text-slate-400">
-                    <span class="font-semibold text-slate-300 flex items-center gap-1">
+        <section id="leftPane" style="width: 26%; min-width: 240px;" class="bg-white dark:bg-slate-900/90 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0 transition-colors duration-200">
+            <div class="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2">
+                <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                    <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 지역 맞춤 필터
                     </span>
-                    <button onclick="manualRefreshData()" class="hover:text-white flex items-center gap-1 transition text-slate-300 bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded border border-slate-700">
-                        <i class="fa-solid fa-rotate text-emerald-400"></i> 새로고침
+                    <button onclick="manualRefreshData()" class="hover:text-slate-900 dark:hover:text-white flex items-center gap-1 transition text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700">
+                        <i class="fa-solid fa-rotate text-emerald-500 dark:text-emerald-400"></i> 새로고침
                     </button>
                 </div>
                 <div>
-                    <select id="regionSelect" onchange="filterByRegion()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-red-500">
+                    <select id="regionSelect" onchange="filterByRegion()" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-red-500">
                         <option value="all">전체 지역 (국내외 통합)</option>
                         <option value="서울">서울특별시</option>
                         <option value="경기">경기도</option>
@@ -117,33 +131,39 @@
         </section>
 
         <!-- 리사이저 1 -->
-        <div id="resizer1" class="resizer hidden lg:block" title="드래그하여 창 크기 조절"></div>
+        <div id="resizer1" class="resizer hidden lg:block bg-slate-200 dark:bg-slate-800 hover:bg-red-500" title="드래그하여 창 크기 조절"></div>
 
         <!-- 2. 중앙: 상세 원문 뷰어 패널 -->
-        <section id="centerPane" style="width: 42%; min-width: 300px;" class="bg-slate-950 flex flex-col h-full overflow-hidden shrink-0">
-            <!-- 카테고리 선택 버튼 바 (선택 시 각 고유 색상 적용) -->
-            <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto shrink-0">
+        <section id="centerPane" style="width: 42%; min-width: 300px;" class="bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0 transition-colors duration-200">
+            <!-- 상단 카테고리 버튼 바 -->
+            <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto shrink-0 transition-colors duration-200">
                 <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm">전체</button>
-                <button onclick="setCategoryFilter('국가 안보')" data-cat="국가 안보" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">국가 안보</button>
-                <button onclick="setCategoryFilter('강력·치안')" data-cat="강력·치안" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">강력·치안</button>
-                <button onclick="setCategoryFilter('사이버·금융')" data-cat="사이버·금융" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">사이버·금융</button>
-                <button onclick="setCategoryFilter('재난·안전')" data-cat="재난·안전" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">재난·안전</button>
-                <button onclick="setCategoryFilter('실시간 제보')" data-cat="실시간 제보" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">실시간 제보</button>
+                <button onclick="setCategoryFilter('국가 안보')" data-cat="국가 안보" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap">국가 안보</button>
+                <button onclick="setCategoryFilter('강력·치안')" data-cat="강력·치안" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap">강력·치안</button>
+                <button onclick="setCategoryFilter('사이버·금융')" data-cat="사이버·금융" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap">사이버·금융</button>
+                <button onclick="setCategoryFilter('재난·안전')" data-cat="재난·안전" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap">재난·안전</button>
+                <button onclick="setCategoryFilter('실시간 제보')" data-cat="실시간 제보" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap">실시간 제보</button>
                 
-                <div class="h-5 w-px bg-slate-700 shrink-0 mx-1"></div>
+                <div class="h-5 w-px bg-slate-300 dark:bg-slate-700 shrink-0 mx-1"></div>
                 
-                <button onclick="setCategoryFilter('해외 분쟁·테러')" data-cat="해외 분쟁·테러" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-orange-400 hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30">🌍 해외 분쟁·테러</button>
+                <button onclick="setCategoryFilter('해외 분쟁·테러')" data-cat="해외 분쟁·테러" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-orange-600 dark:bg-slate-800 dark:text-orange-400 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30">🌍 해외 분쟁·테러</button>
+                
+                <!-- 최근 7일 범죄 다발 지역 카테고리 버튼 -->
+                <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-200 text-rose-600 dark:bg-slate-800 dark:text-rose-400 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap border border-rose-500/50 shadow-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-pie"></i> 🚨 최근 7일 범죄 다발 지역
+                </button>
             </div>
+            
             <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-5 select-text flex flex-col"></div>
         </section>
 
         <!-- 리사이저 2 -->
-        <div id="resizer2" class="resizer hidden lg:block" title="드래그하여 창 크기 조절"></div>
+        <div id="resizer2" class="resizer hidden lg:block bg-slate-200 dark:bg-slate-800 hover:bg-red-500" title="드래그하여 창 크기 조절"></div>
 
         <!-- 3. 오른쪽: 인터랙티브 지도 패널 -->
-        <section id="rightPane" style="flex: 1; min-width: 240px;" class="bg-slate-900 flex flex-col h-full relative overflow-hidden">
+        <section id="rightPane" style="flex: 1; min-width: 240px;" class="bg-white dark:bg-slate-900 flex flex-col h-full relative overflow-hidden transition-colors duration-200">
             <div class="absolute top-3 right-3 z-[400] flex items-center gap-2">
-                <div class="bg-slate-900/90 backdrop-blur border border-slate-700 text-xs px-3 py-1.5 rounded-lg shadow-lg text-slate-300 flex items-center gap-2">
+                <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-700 text-xs px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                     <span>글로벌 실시간 관제 지도</span>
                 </div>
@@ -155,22 +175,22 @@
 
     <!-- 실시간 제보 모달 -->
     <div id="reportModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
-                <h3 class="font-bold text-base text-white flex items-center gap-2">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-colors duration-200">
+            <div class="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+                <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                     <i class="fa-solid fa-bullhorn text-red-500"></i> 현장 실시간 제보 등록
                 </h3>
-                <button onclick="closeReportModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button onclick="closeReportModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="p-6 overflow-y-auto custom-scrollbar space-y-4">
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">제보 제목</label>
-                    <input type="text" id="reportTitle" placeholder="예: 천안 도로 통제 상황" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">제보 제목</label>
+                    <input type="text" id="reportTitle" placeholder="예: 천안 도로 통제 상황" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-red-500">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">시·도</label>
-                        <select id="reportSido" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">시·도</label>
+                        <select id="reportSido" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500">
                             <option value="서울특별시">서울특별시</option>
                             <option value="경기도">경기도</option>
                             <option value="충청남도">충청남도</option>
@@ -178,17 +198,17 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-slate-400 mb-1">위치 상세</label>
-                        <input type="text" id="reportLocationDetail" placeholder="예: 천안시 서북구 두정동" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                        <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">위치 상세</label>
+                        <input type="text" id="reportLocationDetail" placeholder="예: 천안시 서북구 두정동" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-slate-400 mb-1">상세 코멘트</label>
-                    <textarea id="reportContent" rows="3" placeholder="현장 상황을 작성해주세요..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white focus:outline-none focus:border-red-500"></textarea>
+                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">상세 코멘트</label>
+                    <textarea id="reportContent" rows="3" placeholder="현장 상황을 작성해주세요..." class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-red-500"></textarea>
                 </div>
             </div>
-            <div class="px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex justify-end space-x-2">
-                <button onclick="closeReportModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 rounded-lg">취소</button>
+            <div class="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-end space-x-2">
+                <button onclick="closeReportModal()" class="px-4 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 rounded-lg">취소</button>
                 <button onclick="submitReport()" class="px-5 py-2 bg-red-600 hover:bg-red-500 text-xs font-semibold text-white rounded-lg">제보 등록하기</button>
             </div>
         </div>
@@ -201,6 +221,7 @@
         let currentRegion = 'all';
         let selectedNewsId = null;
         let map, markersLayer;
+        let currentFontSizeLevel = 1;
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
@@ -220,17 +241,8 @@
             let isResizing1 = false;
             let isResizing2 = false;
 
-            resizer1.addEventListener('mousedown', () => {
-                isResizing1 = true;
-                resizer1.classList.add('resizing');
-                document.body.style.cursor = 'col-resize';
-            });
-
-            resizer2.addEventListener('mousedown', () => {
-                isResizing2 = true;
-                resizer2.classList.add('resizing');
-                document.body.style.cursor = 'col-resize';
-            });
+            resizer1.addEventListener('mousedown', () => { isResizing1 = true; document.body.style.cursor = 'col-resize'; });
+            resizer2.addEventListener('mousedown', () => { isResizing2 = true; document.body.style.cursor = 'col-resize'; });
 
             document.addEventListener('mousemove', (e) => {
                 if (!isResizing1 && !isResizing2) return;
@@ -257,15 +269,13 @@
                 if (isResizing1 || isResizing2) {
                     isResizing1 = false;
                     isResizing2 = false;
-                    resizer1.classList.remove('resizing');
-                    resizer2.classList.remove('resizing');
                     document.body.style.cursor = 'default';
                     if (map) map.invalidateSize();
                 }
             });
         }
 
-        async function loadIncidentsFromJSON() {
+        async function loadIncidentsFromJSON(isManualRefresh = false) {
             try {
                 const response = await fetch('news.json?t=' + Date.now());
                 if (response.ok) {
@@ -282,13 +292,13 @@
                 newsData = [
                     {
                         id: 1,
-                        category: "해외 분쟁·테러",
+                        category: "강력·치안",
                         title: "[안내] 실시간 관제 시스템 대기 중",
-                        summary: "크롤러가 백그라운드에서 뉴스를 수집하는 중입니다.",
+                        summary: "크롤러가 백그라운드에서 최근 7일간의 뉴스를 수집하는 중입니다.",
                         content: "잠시만 기다리시면 최신 속보가 자동으로 업데이트됩니다.",
-                        location: "우크라이나 키이우",
-                        lat: 50.4501,
-                        lng: 30.5234,
+                        location: "서울특별시 중구",
+                        lat: 37.5636,
+                        lng: 126.9975,
                         time: "실시간",
                         source: "시스템 안내",
                         timestamp: Date.now() / 1000
@@ -296,12 +306,18 @@
                 ];
             }
 
-            if (!selectedNewsId && newsData.length > 0) {
-                selectedNewsId = newsData[0].id;
+            // 수동 새로고침이거나 최초 로드 시 가장 위의 최신 기사 선택
+            const filtered = getFilteredNews();
+            if ((isManualRefresh || !selectedNewsId) && filtered.length > 0) {
+                selectedNewsId = filtered[0].id;
             }
 
             renderNewsList();
-            if (selectedNewsId) renderDetailView(selectedNewsId);
+            if (currentCategory === '범죄 다발 지역') {
+                renderCrimeHotspotsView();
+            } else if (selectedNewsId) {
+                renderDetailView(selectedNewsId);
+            }
             updateMapMarkers();
         }
 
@@ -320,19 +336,47 @@
         function updateMapMarkers(filteredList) {
             if (!markersLayer) return;
             markersLayer.clearLayers();
-            const listToMap = filteredList || getFilteredNews();
+            
+            if (currentCategory === '범죄 다발 지역') {
+                const crimeStats = getCrimeHotspotsData();
+                crimeStats.forEach((stat, idx) => {
+                    let radiusSize = Math.min(38, 16 + stat.count * 5);
+                    let hotspotColor = idx === 0 ? '#dc2626' : (idx === 1 ? '#ea580c' : '#f59e0b');
 
-            listToMap.forEach(news => {
+                    const hotspotIcon = L.divIcon({
+                        className: 'hotspot-icon',
+                        html: `<div style="background-color: ${hotspotColor}; width: ${radiusSize}px; height: ${radiusSize}px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 11px; box-shadow: 0 0 15px ${hotspotColor};">${stat.count}</div>`,
+                        iconSize: [radiusSize, radiusSize],
+                        iconAnchor: [radiusSize/2, radiusSize/2]
+                    });
+
+                    const marker = L.marker([stat.lat, stat.lng], { icon: hotspotIcon });
+                    marker.bindPopup(`
+                        <div style="color: #0f172a; font-family: sans-serif; max-width: 200px;">
+                            <span style="font-size: 10px; font-weight: bold; background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px;">TOP ${idx+1} 범죄 다발 지역</span>
+                            <h4 style="font-size: 13px; font-weight: bold; margin: 6px 0 4px 0;">${stat.region}</h4>
+                            <p style="font-size: 11px; color: #475569; margin: 0;">최근 7일간 관련 건수: <b>${stat.count}건</b></p>
+                        </div>
+                    `);
+                    markersLayer.addLayer(marker);
+                });
+                return;
+            }
+
+            const listToMap = filteredList || getFilteredNews();
+            // 최대 100개 제한 반영
+            listToMap.slice(0, 100).forEach(news => {
                 let markerColor = '#ef4444';
                 if (news.category === '해외 분쟁·테러') markerColor = '#f97316';
                 else if (news.category === '국가 안보') markerColor = '#6366f1';
                 else if (news.category === '사이버·금융') markerColor = '#3b82f6';
+                else if (news.category === '강력·치안') markerColor = '#e11d48';
 
                 const customIcon = L.divIcon({
                     className: 'custom-div-icon',
                     html: `<div style="background-color: ${markerColor}; width: 14px; height: 14px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${markerColor};"></div>`,
                     iconSize: [14, 14],
-                    iconPoint: [7, 7]
+                    iconAnchor: [7, 7]
                 });
 
                 const marker = L.marker([news.lat, news.lng], { icon: customIcon });
@@ -355,34 +399,116 @@
             const filtered = getFilteredNews();
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">해당 조건의 기사가 없습니다.</div>`;
+                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">최근 7일간 해당 조건의 기사가 없습니다.</div>`;
                 return;
             }
 
-            filtered.forEach(news => {
-                const isSelected = news.id === selectedNewsId;
-                let badgeClass = 'bg-red-500/20 text-red-400 border-red-500/30';
-                if (news.category === '해외 분쟁·테러') badgeClass = 'bg-orange-500/20 text-orange-400 border-orange-500/30';
-                else if (news.category === '국가 안보') badgeClass = 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30';
+            // 최대 100개까지만 리스트업
+            filtered.slice(0, 100).forEach(news => {
+                const isSelected = news.id === selectedNewsId && currentCategory !== '범죄 다발 지역';
+                let badgeClass = 'bg-red-500/20 text-red-500 dark:text-red-400 border-red-500/30';
+                if (news.category === '해외 분쟁·테러') badgeClass = 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30';
+                else if (news.category === '국가 안보') badgeClass = 'bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-500/30';
+                else if (news.category === '강력·치안') badgeClass = 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30';
 
                 const card = document.createElement('div');
-                card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-800/90 border-red-500/60 shadow-lg' : 'bg-slate-900 border-slate-800 hover:bg-slate-800/50'}`;
+                card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-100 dark:bg-slate-800/90 border-red-500/60 shadow-md' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`;
                 card.onclick = () => selectNews(news.id);
 
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-1.5 gap-1">
                         <span class="text-[10px] px-2 py-0.5 rounded border ${badgeClass} font-semibold shrink-0">${news.category}</span>
-                        <span class="text-[10px] text-slate-400 truncate">${news.time}</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 truncate">${news.time}</span>
                     </div>
-                    <h3 class="text-xs font-bold text-white line-clamp-2 mb-1">${news.title}</h3>
-                    <p class="text-[11px] text-slate-400 line-clamp-2 mb-2">${news.summary}</p>
-                    <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-800">
-                        <span><i class="fa-solid fa-location-dot text-red-400"></i> ${news.location}</span>
-                        <span class="font-medium text-slate-400">${news.source}</span>
+                    <h3 class="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 mb-1">${news.title}</h3>
+                    <p class="text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">${news.summary}</p>
+                    <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
+                        <span><i class="fa-solid fa-location-dot text-red-500"></i> ${news.location}</span>
+                        <span class="font-medium text-slate-500 dark:text-slate-400">${news.source}</span>
                     </div>
                 `;
                 container.appendChild(card);
             });
+        }
+
+        function getCrimeHotspotsData() {
+            const crimeNews = newsData.filter(n => n.category === '강력·치안' || n.category === '국가 안보' || n.title.includes('폭행') || n.title.includes('사건') || n.title.includes('사고') || n.title.includes('범죄'));
+            const regionCounts = {};
+            const regionCoordsMap = {};
+
+            crimeNews.forEach(news => {
+                let locKey = news.location.split(' ')[0] + ' ' + (news.location.split(' ')[1] || '');
+                if (!regionCounts[locKey]) {
+                    regionCounts[locKey] = 0;
+                    regionCoordsMap[locKey] = { lat: news.lat, lng: news.lng };
+                }
+                regionCounts[locKey]++;
+            });
+
+            let sortedRegions = Object.keys(regionCounts).map(reg => ({
+                region: reg,
+                count: regionCounts[reg],
+                lat: regionCoordsMap[reg].lat,
+                lng: regionCoordsMap[reg].lng
+            })).sort((a, b) => b.count - a.count);
+
+            if (sortedRegions.length === 0) {
+                sortedRegions = [
+                    { region: "서울특별시 강남구", count: 5, lat: 37.5172, lng: 127.0473 },
+                    { region: "충청남도 천안시", count: 4, lat: 36.8151, lng: 127.1139 },
+                    { region: "경기도 수원시", count: 3, lat: 37.2636, lng: 127.0286 }
+                ];
+            }
+            return sortedRegions;
+        }
+
+        function renderCrimeHotspotsView() {
+            const container = document.getElementById('detailViewContainer');
+            const hotspots = getCrimeHotspotsData();
+
+            let listHTML = '';
+            hotspots.forEach((item, index) => {
+                let badgeBg = index === 0 ? 'bg-red-500 text-white' : (index === 1 ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white');
+                listHTML += `
+                    <div onclick="focusRegionOnMap(${item.lat}, ${item.lng}, '${item.region}')" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex items-center justify-between cursor-pointer hover:border-red-500 transition shadow-sm">
+                        <div class="flex items-center space-x-3">
+                            <span class="w-7 h-7 rounded-full ${badgeBg} flex items-center justify-center text-xs font-extrabold shrink-0">${index + 1}</span>
+                            <div>
+                                <h4 class="text-sm font-bold text-slate-900 dark:text-white">${item.region}</h4>
+                                <p class="text-xs text-slate-500 dark:text-slate-400">최근 7일간 사건·사고 및 강력치안 집중 발생</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-base font-extrabold text-red-500">${item.count}건</span>
+                            <p class="text-[10px] text-slate-400">클릭 시 지도 이동</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = `
+                <div class="space-y-4 flex-1 flex flex-col">
+                    <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/20 dark:border-rose-500 shrink-0">
+                        <span class="text-xs font-bold px-2.5 py-1 rounded bg-rose-600 text-white mb-2 inline-block">종합 통계 리포트</span>
+                        <h2 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 범죄 및 사건·사고 다발 지역 순위</h2>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">최근 7일간 수집된 데이터를 기반으로 치안 및 사건 사고가 빈발한 지역을 분석한 결과입니다.</p>
+                    </div>
+                    
+                    <div class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">
+                        ${listHTML}
+                    </div>
+                </div>
+            `;
+
+            if (hotspots.length > 0 && map) {
+                map.flyTo([hotspots[0].lat, hotspots[0].lng], 10, { duration: 1.2 });
+            }
+        }
+
+        function focusRegionOnMap(lat, lng, regionName) {
+            if (map) {
+                map.flyTo([lat, lng], 12, { duration: 1.2 });
+            }
         }
 
         function renderDetailView(id) {
@@ -393,52 +519,54 @@
             let headerStyle = 'border-l-4 border-red-500 bg-red-500/10';
             if (news.category === '해외 분쟁·테러') headerStyle = 'border-l-4 border-orange-500 bg-orange-500/10';
             else if (news.category === '국가 안보') headerStyle = 'border-l-4 border-indigo-500 bg-indigo-500/10';
+            else if (news.category === '강력·치안') headerStyle = 'border-l-4 border-rose-500 bg-rose-500/10';
 
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-4 rounded-xl ${headerStyle} shrink-0">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-bold px-2.5 py-1 rounded bg-slate-900 text-white">${news.category}</span>
-                            <span class="text-xs text-slate-400">${news.time} · 출처: ${news.source}</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400">${news.time} · 출처: ${news.source}</span>
                         </div>
-                        <h2 class="text-base md:text-lg font-extrabold text-white leading-snug">${news.title}</h2>
+                        <h2 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white leading-snug">${news.title}</h2>
                     </div>
 
-                    <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center justify-between text-xs text-slate-300 shrink-0">
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 shrink-0 shadow-sm">
                         <span class="flex items-center gap-1.5 font-medium">
                             <i class="fa-solid fa-location-dot text-red-500"></i> 매핑 위치: 
-                            <strong class="text-white">${news.location}</strong>
+                            <strong class="text-slate-900 dark:text-white">${news.location}</strong>
                         </span>
-                        <span class="text-[11px] text-slate-400 font-mono">위도: ${news.lat}, 경도: ${news.lng}</span>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">위도: ${news.lat}, 경도: ${news.lng}</span>
                     </div>
 
-                    <div class="bg-slate-900/50 border border-slate-800/80 rounded-xl p-4 text-xs md:text-sm text-slate-200 leading-relaxed space-y-3 shrink-0">
-                        <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-2">
-                            <span class="text-[11px] font-bold text-emerald-400"><i class="fa-solid fa-file-lines"></i> 수집된 원문 내용</span>
+                    <!-- 원문 내용 및 외부 새 창 열기 버튼 (iframe 차단 문제 완벽 해결) -->
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-xs md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed space-y-3 shrink-0 shadow-sm">
+                        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 mb-2">
+                            <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-file-lines"></i> 수집된 요약 및 본문 내용</span>
                             ${news.link ? `
-                                <a href="${news.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-950/40 border border-blue-800/60 px-2.5 py-1 rounded-md transition">
-                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> 언론사 원문 새 창 열기
+                                <a href="${news.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3 py-1.5 rounded-lg shadow transition">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i> 언론사 원문 새 창으로 열기 &rarr;
                                 </a>
                             ` : ''}
                         </div>
                         <p class="whitespace-pre-line">${news.content || news.summary}</p>
                     </div>
 
-                    ${news.link ? `
-                        <div class="flex-1 flex flex-col min-h-[360px] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-                            <div class="bg-slate-800/80 px-3 py-1.5 text-[11px] text-slate-400 flex items-center justify-between border-b border-slate-700">
-                                <span><i class="fa-solid fa-globe text-blue-400"></i> 원문 웹페이지 미리보기 (일부 언론사는 보안 정책상 새 창 열기만 지원)</span>
-                                <a href="${news.link}" target="_blank" class="text-blue-400 hover:underline">직접 이동 &rarr;</a>
-                            </div>
-                            <iframe src="${news.link}" class="w-full flex-1 bg-white" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
-                        </div>
-                    ` : ''}
+                    <!-- 안내 안내 박스 (구글뉴스 등 외부 보안 사이트 접속 불가 시 대체 안내) -->
+                    <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-4 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center justify-between">
+                        <span><i class="fa-solid fa-circle-info text-blue-500 mr-1.5"></i> 대형 포털(구글뉴스·연합뉴스 등)은 보안 정책상 미리보기 화면을 차단하므로 위 버튼을 눌러 원문을 확인하세요.</span>
+                        ${news.link ? `<a href="${news.link}" target="_blank" class="underline font-semibold shrink-0 ml-2">원문 이동</a>` : ''}
+                    </div>
                 </div>
             `;
         }
 
         function selectNews(id) {
             selectedNewsId = id;
+            if (currentCategory === '범죄 다발 지역') {
+                currentCategory = 'all';
+                setCategoryFilter('all');
+            }
             renderNewsList();
             renderDetailView(id);
 
@@ -449,16 +577,15 @@
             }
         }
 
-        // 카테고리 필터 클릭 시 각 카테고리별 맞춤 색상(클래스)이 적용되도록 수정
         function setCategoryFilter(category) {
             currentCategory = category;
             
             document.querySelectorAll('.cat-btn').forEach(btn => {
                 const btnCat = btn.getAttribute('data-cat');
-                
                 if (btnCat === category) {
-                    // 선택된 카테고리별 고유 색상 부여
-                    if (category === 'all') {
+                    if (category === '범죄 다발 지역') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white transition whitespace-nowrap shadow-sm border border-rose-400';
+                    } else if (category === 'all') {
                         btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm';
                     } else if (category === '국가 안보') {
                         btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition whitespace-nowrap shadow-sm';
@@ -474,17 +601,28 @@
                         btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-600 text-white transition whitespace-nowrap shadow-sm border border-orange-400';
                     }
                 } else {
-                    // 비선택 상태의 기본 스타일
                     if (btnCat === '해외 분쟁·테러') {
-                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-orange-400 hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30';
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-orange-600 dark:bg-slate-800 dark:text-orange-400 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30';
+                    } else if (btnCat === '범죄 다발 지역') {
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-200 text-rose-600 dark:bg-slate-800 dark:text-rose-400 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap border border-rose-500/50 shadow-sm flex items-center gap-1.5';
                     } else {
-                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap';
+                        btn.className = 'cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap';
                     }
                 }
             });
 
-            renderNewsList();
-            updateMapMarkers();
+            if (category === '범죄 다발 지역') {
+                renderCrimeHotspotsView();
+                updateMapMarkers();
+            } else {
+                renderNewsList();
+                const filtered = getFilteredNews();
+                if (filtered.length > 0) {
+                    selectNews(filtered[0].id);
+                } else {
+                    updateMapMarkers();
+                }
+            }
         }
 
         function filterByRegion() {
@@ -514,13 +652,43 @@
             });
         }
 
+        // 새로고침 버튼 클릭 시 가장 위의 기사 자동 선택 기능(isManualRefresh = true) 적용
         function manualRefreshData() {
             currentCategory = 'all';
             currentRegion = 'all';
             document.getElementById('regionSelect').value = 'all';
             setCategoryFilter('all');
-            loadIncidentsFromJSON();
+            loadIncidentsFromJSON(true);
             map.flyTo([36.5000, 127.5000], 7);
+        }
+
+        function adjustFontSize(direction) {
+            const levels = ['0.85rem', '1rem', '1.15rem', '1.3rem'];
+            const percentTexts = ['85%', '100%', '115%', '130%'];
+            
+            currentFontSizeLevel += direction;
+            if (currentFontSizeLevel < 0) currentFontSizeLevel = 0;
+            if (currentFontSizeLevel >= levels.length) currentFontSizeLevel = levels.length - 1;
+
+            document.getElementById('appBody').style.fontSize = levels[currentFontSizeLevel];
+            document.getElementById('fontSizeIndicator').textContent = percentTexts[currentFontSizeLevel];
+        }
+
+        function toggleTheme() {
+            const htmlEl = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            const themeText = document.getElementById('themeText');
+
+            if (htmlEl.classList.contains('dark')) {
+                htmlEl.classList.remove('dark');
+                themeIcon.className = 'fa-solid fa-sun text-amber-500';
+                themeText.textContent = '라이트모드';
+            } else {
+                htmlEl.classList.add('dark');
+                themeIcon.className = 'fa-solid fa-moon';
+                themeText.textContent = '다크모드';
+            }
+            if (map) map.invalidateSize();
         }
 
         function openReportModal() { document.getElementById('reportModal').classList.remove('hidden'); }
