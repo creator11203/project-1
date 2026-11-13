@@ -137,33 +137,6 @@ def format_date_with_weekday(dt):
     weekday_str = WEEKDAYS_KR[dt.weekday()]
     return f"{dt.strftime('%Y.%m.%d')} ({weekday_str})"
 
-def calculate_priority_score(title, content, category):
-    text = (title + " " + content).lower()
-    score = 10
-
-    if category == "해외 분쟁·테러":
-        score += 50
-    elif category == "국가 안보":
-        score += 40
-    elif category == "강력·치안":
-        score += 30
-    elif category == "재난·안전":
-        score += 25
-
-    critical_terms = ['공습', '미사일', '폭격', '전쟁', '핵무기', 'strike', 'missile', 'war', 'invasion']
-    for term in critical_terms:
-        if term in text:
-            score += 20
-            break
-
-    major_hotspots = ['우크라이나', '러시아', '이란', '이스라엘', '중동', '대만', '북한']
-    for spot in major_hotspots:
-        if spot in text:
-            score += 15
-            break
-
-    return score
-
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
@@ -265,9 +238,9 @@ def scrape_telegram_channel(channel_info):
 
                 location_str, lat, lng = extract_location(translated_text)
                 real_source_name = extract_domain_source(target_link)
-                priority = calculate_priority_score(title, translated_text, category)
                 
-                date_str = format_date_with_weekday(datetime.now(kst))
+                now_dt = datetime.now(kst)
+                date_str = format_date_with_weekday(now_dt)
 
                 items.append({
                     "title": title,
@@ -280,7 +253,7 @@ def scrape_telegram_channel(channel_info):
                     "time": date_str,
                     "source": real_source_name,
                     "link": target_link,
-                    "priority": priority
+                    "timestamp": now_dt.timestamp()  # 정렬을 위한 타임스탬프
                 })
     except Exception as e:
         print(f"Error scraping telegram {url}: {e}")
@@ -320,7 +293,6 @@ def scrape_news():
             
             lat += (random.random() - 0.5) * 0.01
             lng += (random.random() - 0.5) * 0.01
-            priority = calculate_priority_score(title, summary, category)
 
             collected_items.append({
                 "id": item_id,
@@ -334,7 +306,7 @@ def scrape_news():
                 "time": date_str,
                 "source": feed_info["source"],
                 "link": link,
-                "priority": priority
+                "timestamp": pub_dt.timestamp()  # 실제 기사 발행 시각 타임스탬프
             })
             item_id += 1
 
@@ -347,7 +319,8 @@ def scrape_news():
             collected_items.append(item)
             item_id += 1
 
-    collected_items.sort(key=lambda x: x["priority"], reverse=True)
+    # 중요도 순서가 아닌, 최신 올라온 시간순(timestamp 내림차순)으로 전체 정렬
+    collected_items.sort(key=lambda x: x["timestamp"], reverse=True)
 
     return collected_items
 
@@ -355,4 +328,4 @@ if __name__ == "__main__":
     data = scrape_news()
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped, filtered, and prioritized {len(data)} items into news.json")
+    print(f"Successfully scraped, filtered, and sorted {len(data)} items by time into news.json")
