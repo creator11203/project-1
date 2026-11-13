@@ -40,7 +40,6 @@ def translate_to_korean(text):
     except Exception as e:
         return text
 
-# URL에서 도메인 이름만 추출하여 원문 출처명으로 변환하는 함수
 def extract_domain_source(url):
     if not url or "t.me" in url:
         return ""
@@ -49,10 +48,11 @@ def extract_domain_source(url):
         netloc = parsed_url.netloc.lower()
         netloc = re.sub(r'^www\.', '', netloc)
         
-        # 주요 도메인 매핑
         domain_mapping = {
             'yna.co.kr': '연합뉴스',
             'news.google.com': 'Google News',
+            'hankyung.com': '한국경제',
+            'edaily.co.kr': '이데일리',
             'reuters.com': 'Reuters',
             'bloomberg.com': 'Bloomberg',
             'ft.com': 'Financial Times',
@@ -113,16 +113,17 @@ GLOBAL_COORDS = {
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
+    # 비트코인, 주가, 경제 하락 등 금융 자산 관련 내용은 무조건 필터링 제외
+    financial_exclude_keywords = [
+        '비트코인', '이더리움', '코인', '가상화폐', '암호화폐', '주가', '증시', '코스피', '코스닥', 
+        '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '외국인 순매수', '주가 하락', 
+        '증시 전망', '최고경영자', '사임', '합병 승인', '특검', '국정조사', '재판', '공판', '선고', '항소', '상고'
+    ]
+    if any(kw in text for kw in financial_exclude_keywords):
+        return None 
+
     emergency_override = ['공습', '미사일', '폭격', '전쟁', '테러', '충돌', '비상계엄', '북한 도발']
     has_emergency = any(em in text for em in emergency_override)
-
-    if not has_emergency:
-        exclude_keywords = [
-            '코스피', '외국인 순매수', '주가 하락', '증시 전망', '최고경영자', '사임', '합병 승인',
-            '특검', '국정조사', '재판', '공판', '선고', '항소', '상고', '여야 공방', '정치권 규탄'
-        ]
-        if any(kw in text for kw in exclude_keywords):
-            return None 
 
     if any(kw in text for kw in ['우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동', '공습', '미사일', '폭격', '전쟁', '테러', '충돌', 'strike', 'war', 'attack']):
         return "해외 분쟁·테러"
@@ -136,7 +137,8 @@ def categorize_incident(title, content):
     if any(kw in text for kw in ['해킹', '랜섬웨어', '개인정보 유출', '전산 장애', '서버 다운', '금융 사고']):
         return "사이버·금융"
 
-    if any(kw in text for kw in ['화재', '폭발', '붕괴', '지진', '홍수', '산사태', '침수', '구조', '통제', '가스 유출', '정전']):
+    # 물리적 재난 사고 키워드 (가격 붕괴 등 비경제적 실제 재난만 허용)
+    if any(kw in text for kw in ['화재', '폭발', '건물 붕괴', '교량 붕괴', '지진', '홍수', '산사태', '침수', '구조 작전', '교통 통제', '가스 유출', '정전 사고']):
         return "재난·안전"
 
     if has_emergency:
@@ -180,7 +182,6 @@ def scrape_telegram_channel(channel_info):
                 if not clean_text:
                     continue
                 
-                # 운영자 사견 필터링: 외부 원문 링크(URL)가 메시지 본문이나 링크 블록에 반드시 포함되어 있어야 함
                 urls_in_msg = re.findall(r'(https?://[^\s]+)', clean_text)
                 target_link = ""
                 for u in urls_in_msg:
@@ -193,7 +194,6 @@ def scrape_telegram_channel(channel_info):
                     if "t.me" not in candidate:
                         target_link = candidate
                 
-                # 외부 원문 기사 링크가 없는 경우(운영자 단순 개인 사견 및 잡담)는 과감히 제외
                 if not target_link:
                     continue
 
@@ -209,7 +209,6 @@ def scrape_telegram_channel(channel_info):
                 if not location_str:
                     location_str, lat, lng = "미국 워싱턴D.C.", 38.8951, -77.0364
 
-                # 출처는 절대 텔레그램으로 표기하지 않고, 원문 기사 사이트 도메인명으로 설정
                 real_source_name = extract_domain_source(target_link)
 
                 items.append({
@@ -237,7 +236,6 @@ def scrape_news():
     
     item_id = int(now.timestamp())
 
-    # 1. RSS 뉴스 수집
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
         for entry in parsed.entries[:50]:
@@ -278,7 +276,6 @@ def scrape_news():
             })
             item_id += 1
 
-    # 2. 텔레그램 속보 채널 수집 (원문 링크가 있는 기사형 포스트만 필터링됨)
     for channel in TELEGRAM_CHANNELS:
         tg_items = scrape_telegram_channel(channel)
         for item in tg_items:
