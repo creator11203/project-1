@@ -95,10 +95,6 @@
         <!-- 오른쪽: 인터랙티브 지도 (4칸) -->
         <section class="lg:col-span-4 bg-slate-900 flex flex-col h-full relative overflow-hidden">
             <div class="absolute top-3 right-3 z-[400] flex items-center gap-2">
-                <div class="bg-slate-900/90 backdrop-blur border border-slate-700 p-1 rounded-lg shadow-lg flex items-center gap-1">
-                    <button onclick="setMapTheme('dark')" id="themeDarkBtn" class="px-2 py-1 rounded text-[11px] font-semibold bg-red-600 text-white transition">다크 테마</button>
-                    <button onclick="setMapTheme('light')" id="themeLightBtn" class="px-2 py-1 rounded text-[11px] font-medium text-slate-300 hover:text-white transition">라이트 테마</button>
-                </div>
                 <div class="bg-slate-900/90 backdrop-blur border border-slate-700 text-xs px-3 py-1.5 rounded-lg shadow-lg text-slate-300 flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
                     <span>글로벌 관제 지도</span>
@@ -109,12 +105,52 @@
 
     </main>
 
+    <!-- 실시간 제보 모달 -->
+    <div id="reportModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+                <h3 class="font-bold text-base text-white flex items-center gap-2">
+                    <i class="fa-solid fa-bullhorn text-red-500"></i> 현장 실시간 제보 등록
+                </h3>
+                <button onclick="closeReportModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto custom-scrollbar space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">제보 제목</label>
+                    <input type="text" id="reportTitle" placeholder="예: 도로 통제 상황" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">시·도</label>
+                        <select id="reportSido" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                            <option value="서울특별시">서울특별시</option>
+                            <option value="부산광역시">부산광역시</option>
+                            <option value="경기도">경기도</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">위치 상세</label>
+                        <input type="text" id="reportLocationDetail" placeholder="예: 강남구 역삼동" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">상세 코멘트</label>
+                    <textarea id="reportContent" rows="3" placeholder="현장 상황을 작성해주세요..." class="w-full bg-slate-800 border border-slate-700 rounded-lg p-3 text-xs text-white focus:outline-none focus:border-red-500"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-slate-800 bg-slate-900/50 flex justify-end space-x-2">
+                <button onclick="closeReportModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 rounded-lg">취소</button>
+                <button onclick="submitReport()" class="px-5 py-2 bg-red-600 hover:bg-red-500 text-xs font-semibold text-white rounded-lg">제보 등록하기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 스크립트 로직 -->
     <script>
         let newsData = [];
         let currentCategory = 'all';
         let selectedNewsId = 1;
-        let map, markersLayer, currentTileLayer;
+        let map, markersLayer;
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
@@ -161,27 +197,16 @@
         }
 
         function initMap() {
-            map = L.map('map').setView([30.0000, 15.0000], 3); // 세계 지도가 잘 보이도록 초기 줌 조정
-            setMapTheme('dark');
+            // 밝은 테마 지도(OpenStreetMap 표준 타일) 고정 적용
+            map = L.map('map').setView([30.0000, 15.0000], 3);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
             markersLayer = L.layerGroup().addTo(map);
             updateMapMarkers();
-        }
-
-        function setMapTheme(theme) {
-            if (currentTileLayer) map.removeLayer(currentTileLayer);
-            const darkBtn = document.getElementById('themeDarkBtn');
-            const lightBtn = document.getElementById('themeLightBtn');
-
-            if (theme === 'dark') {
-                currentTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 });
-                darkBtn.className = "px-2 py-1 rounded text-[11px] font-semibold bg-red-600 text-white transition";
-                lightBtn.className = "px-2 py-1 rounded text-[11px] font-medium text-slate-300 hover:text-white transition";
-            } else {
-                currentTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 });
-                lightBtn.className = "px-2 py-1 rounded text-[11px] font-semibold bg-red-600 text-white transition";
-                darkBtn.className = "px-2 py-1 rounded text-[11px] font-medium text-slate-300 hover:text-white transition";
-            }
-            currentTileLayer.addTo(map);
         }
 
         function updateMapMarkers(filteredList) {
@@ -191,7 +216,7 @@
 
             listToMap.forEach(news => {
                 let markerColor = '#ef4444'; // 기본 빨강
-                if (news.category === '해외 분쟁·테러') markerColor = '#f97316'; // 주황/오렌지 (해외 분쟁)
+                if (news.category === '해외 분쟁·테러') markerColor = '#f97316'; // 주황
                 else if (news.category === '국가 안보') markerColor = '#6366f1'; // 인디고
                 else if (news.category === '사이버·금융') markerColor = '#3b82f6'; // 파랑
 
@@ -266,7 +291,7 @@
                     <div class="p-4 rounded-xl ${headerStyle}">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-bold px-2.5 py-1 rounded bg-slate-900 text-white">${news.category}</span>
-                            <span class="text-xs text-slate-450">${news.time} · 출처: ${news.source}</span>
+                            <span class="text-xs text-slate-400">${news.time} · 출처: ${news.source}</span>
                         </div>
                         <h2 class="text-base md:text-lg font-extrabold text-white leading-snug">${news.title}</h2>
                     </div>
@@ -301,7 +326,6 @@
 
             const news = newsData.find(n => n.id === id);
             if (news && map && news.lat && news.lng) {
-                // 해외 지역은 넓게(줌 5), 국내 세부 지역은 가깝게(줌 12) 자동 줌인
                 const zoomLevel = news.category === '해외 분쟁·테러' ? 5 : 12;
                 map.flyTo([news.lat, news.lng], zoomLevel, { duration: 1.2 });
             }
@@ -328,6 +352,40 @@
             currentCategory = 'all';
             setCategoryFilter('all');
             map.flyTo([30.0000, 15.0000], 3);
+        }
+
+        function openReportModal() { document.getElementById('reportModal').classList.remove('hidden'); }
+        function closeReportModal() { document.getElementById('reportModal').classList.add('hidden'); }
+        function submitReport() {
+            const title = document.getElementById('reportTitle').value;
+            const sido = document.getElementById('reportSido').value;
+            const locationDetail = document.getElementById('reportLocationDetail').value;
+            const content = document.getElementById('reportContent').value;
+
+            if (!title || !locationDetail) {
+                alert('제목과 위치를 입력해주세요.');
+                return;
+            }
+
+            const newReport = {
+                id: Date.now(),
+                category: '실시간 제보',
+                title: `[시민제보] ${title}`,
+                summary: content || title,
+                content: content || '시민이 직접 등록한 실시간 제보입니다.',
+                location: `${sido} ${locationDetail}`,
+                lat: 37.5665 + (Math.random() - 0.5) * 0.05,
+                lng: 126.9780 + (Math.random() - 0.5) * 0.05,
+                time: '방금 전',
+                source: '시민 직접 제보'
+            };
+
+            newsData.unshift(newReport);
+            closeReportModal();
+            selectNews(newReport.id);
+            renderNewsList();
+            updateMapMarkers();
+            alert('제보가 등록되었습니다!');
         }
     </script>
 </body>
