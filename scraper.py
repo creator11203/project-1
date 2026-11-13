@@ -132,89 +132,15 @@ def parse_date_string(date_str):
     return datetime.now(kst).timestamp()
 
 RSS_FEEDS = [
-    # 구글 뉴스 검색 피드 (종합 및 주요 키워드)
     {"url": "https://news.google.com/rss/search?q=%EC%82%AC%EA%B3%A0+OR+%EC%82%AC%EA%B1%B4+OR+%ED%8F%AD%ED%96%89+OR+%EA%B2%BD%EC%B0%B0+OR+%EA%B5%AC%EC%86%8D+OR+%EC%82%AC%EC%88%98+OR+%ED%99%94%EC%9E%AC&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (종합 사건사고)"},
     {"url": "https://news.google.com/rss/search?q=%EC%82%B4%EC%9D%B8+OR+%EB%A7%88%EC%95%BD+OR+%EC%8A%A4%ED%86%A0%ED%82%B9+OR+%ED%9D%B9%EA%B8%B0+OR+%EC%84%B1%EB%B2%94%EC%A3%84+OR+%EC%9C%A0%EC%B6%9C+OR+%ED%95%B4%ED%82%B9&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (강력범죄·마약·사이버)"},
-    {"url": "https://news.google.com/rss/search?q=%EC%95%88%EC%A0%84+OR+%EC%82%AC%EA%B3%A0+OR+%EA%B5%90%ED%86%B5%EC%82%AC%EA%B3%A0+OR+%EB%B6%95%EA%B4%B4+OR+%EC%82%AC%EC%82%AC%ED%83%9C+OR+%EC%B9%A8%EC%88%98+OR+%EC%A0%95%EC%A0%84&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"},
-    
-    # 종합일간지 및 경제지
-    {"url": "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml", "source": "조선일보"},
-    {"url": "https://rss.joins.com/joins_news_list.xml", "source": "중앙일보"},
-    {"url": "https://rss.donga.com/total.xml", "source": "동아일보"},
-    {"url": "https://www.hankookilbo.com/rss", "source": "한국일보"},
-    {"url": "https://www.khan.co.kr/rss/rssdata/khan_all_gisa.xml", "source": "경향신문"},
-    {"url": "https://www.hani.co.kr/rss/", "source": "한겨레"},
-    {"url": "https://www.seoul.co.kr/rss/rss.xml", "source": "서울신문"},
-    {"url": "https://rss.kmib.co.kr/item/kmibXmlFile.xml", "source": "국민일보"},
-    {"url": "https://www.segye.com/rss/allArticle.xml", "source": "세계일보"},
-    {"url": "https://www.munhwa.com/news/rss.xml", "source": "문화일보"},
-    {"url": "https://www.mk.co.kr/rss/30000001/", "source": "매일경제"},
-    {"url": "https://www.hankyung.com/feed/all-news", "source": "한국경제"},
-    {"url": "https://www.sedaily.com/RSS/RssList", "source": "서울경제"},
-    {"url": "https://www.fnnews.com/rss/fn_realnews.xml", "source": "파이낸셜뉴스"},
-    {"url": "https://rss.mt.co.kr/mt_news.xml", "source": "머니투데이"},
-    {"url": "https://www.edaily.co.kr/rss/edaily_news.xml", "source": "이데일리"},
-    {"url": "https://biz.heraldcorp.com/common/rss_xml.php", "source": "헤럴드경제"},
-    {"url": "https://www.koreaherald.com/common/rss_xml.php", "source": "코리아헤럴드"},
-    {"url": "https://koreajoongangdaily.joins.com/rss", "source": "코리아중앙데일리"},
-    {"url": "https://www.asiae.co.kr/rss/", "source": "아시아경제"},
-    {"url": "https://biz.chosun.com/arc/outboundfeeds/rss/?outputType=xml", "source": "조선비즈"},
-    {"url": "https://www.joseilbo.com/rss/allArticle.xml", "source": "조세일보"},
-    {"url": "https://img.bizwatch.co.kr/rss/rss.xml", "source": "비즈워치"},
-
-    # 방송사 및 통신사
+    {"url": "https://news.google.com/rss/search?q=%EC%95%88%EC%A0%84+OR+%EC%82%AC%EA%B3%A0+OR+%EA%B5%0부...교통사고+OR+%EB%B6%95%EA%B4%B4+OR+%EC%82%AC%EC%82%AC%ED%83%9C+OR+%EC%B9%A8%EC%88%98+OR+%EC%A0%95%EC%A0%84&hl=ko&gl=KR&ceid=KR:ko", "source": "구글 뉴스 (재난·사고·교통)"},
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
-    {"url": "https://www.newsis.com/RSS/sokbo.xml", "source": "뉴시스"},
-    {"url": "https://www.news1.kr/rss/all", "source": "뉴스1"},
-    {"url": "https://news.kbs.co.kr/rss/rss.do", "source": "KBS"},
-    {"url": "https://imnews.imbc.com/rss/news/news_00.xml", "source": "MBC"},
     {"url": "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSS", "source": "SBS"},
-    {"url": "https://www.ytn.co.kr/rss/rss.xml", "source": "YTN"},
-    {"url": "https://www.yonhapnewstv.co.kr/browse/feed/", "source": "연합뉴스TV"},
-    {"url": "https://www.mbn.co.kr/rss/", "source": "MBN"},
-    {"url": "https://news.tvchosun.com/svc/common/rss/rss.xml", "source": "TV조선"},
-    {"url": "https://rss.ichannela.com/rss/news_all.xml", "source": "채널A"},
-    {"url": "https://biz.sbs.co.kr/rss/sbsbiz_rss.xml", "source": "SBS Biz"},
-    {"url": "https://www.wowtv.co.kr/rss/rss", "source": "한국경제TV"},
+    {"url": "https://news.kbs.co.kr/rss/rss.do", "source": "KBS"},
+    {"url": "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml", "source": "조선일보"},
     {"url": "https://fs.jtbc.co.kr/RSS/newsflash.xml", "source": "JTBC"},
-
-    # 전문지, 인터넷신문 및 지역·시사 매체
-    {"url": "https://www.nocutnews.co.kr/rss/NocutNewsAll.xml", "source": "노컷뉴스"},
-    {"url": "https://rss.ohmynews.com/rss/ohmynews.xml", "source": "오마이뉴스"},
-    {"url": "https://www.pressian.com/rss/allArticle.xml", "source": "프레시안"},
-    {"url": "https://www.dailian.co.kr/rss/all", "source": "데일리안"},
-    {"url": "https://www.inews24.com/rss/inews24_all.xml", "source": "아이뉴스24"},
-    {"url": "https://rss.etnews.com/Section99.xml", "source": "전자신문"},
-    {"url": "https://feeds.feedburner.com/zdnetkorea", "source": "지디넷코리아"},
-    {"url": "https://www.dt.co.kr/rss/dt_rss.xml", "source": "디지털타임스"},
-    {"url": "https://www.ddaily.co.kr/rss/rss.xml", "source": "디지털데일리"},
-    {"url": "https://www.bloter.net/rss/allArticle.xml", "source": "블로터"},
-    {"url": "https://www.mediatoday.co.kr/rss/allArticle.xml", "source": "미디어오늘"},
-    {"url": "https://news.tf.co.kr/rss/news_rss.xml", "source": "더팩트"},
-    {"url": "https://newstapa.org/rss", "source": "뉴스타파"},
-    {"url": "https://www.womennews.co.kr/rss/allArticle.xml", "source": "여성신문"},
-    {"url": "https://www.ildaro.com/rss/allArticle.xml", "source": "일다"},
-    {"url": "https://kormedi.com/feed/", "source": "코메디닷컴"},
-    {"url": "https://health.chosun.com/site/data/rss/rss.xml", "source": "헬스조선"},
-    {"url": "https://m.dongascience.com/rss/rss.xml", "source": "동아사이언스"},
-    {"url": "https://www.nongmin.com/rss/allArticle.xml", "source": "농민신문"},
-    {"url": "https://www.busan.com/rss/allArticle.xml", "source": "부산일보"},
-    {"url": "https://www.kookje.co.kr/rss/", "source": "국제신문"},
-    {"url": "https://www.kyeonggi.com/rss/allArticle.xml", "source": "경기일보"},
-    {"url": "https://www.kwnews.co.kr/rss/allArticle.xml", "source": "강원일보"},
-    {"url": "https://www.kado.net/rss/allArticle.xml", "source": "강원도민일보"},
-    {"url": "https://www.daejonilbo.com/rss/allArticle.xml", "source": "대전일보"},
-    {"url": "https://www.imaeil.com/rss/allArticle.xml", "source": "매일신문"},
-    {"url": "https://www.sisain.co.kr/rss/allArticle.xml", "source": "시사IN"},
-    {"url": "https://www.sisajournal.com/rss/allArticle.xml", "source": "시사저널"},
-    {"url": "https://weekly.chosun.com/rss/", "source": "주간조선"},
-    {"url": "https://weekly.donga.com/rss/", "source": "주간동아"},
-    {"url": "https://shindonga.donga.com/rss/", "source": "신동아"},
-    {"url": "https://magazine.hankyung.com/rss/", "source": "한경비즈니스"},
-    {"url": "https://weekly.khan.co.kr/rss/rssdata/weekly_all.xml", "source": "주간경향"},
-    {"url": "https://h21.hani.co.kr/rss/", "source": "한겨레21"},
-    {"url": "https://www.mkinvest.com/rss/", "source": "매경이코노미"},
-    {"url": "https://san.chosun.com/rss/", "source": "월간산"}
+    {"url": "https://imnews.imbc.com/rss/news/news_00.xml", "source": "MBC"}
 ]
 
 KR_CITY_COORDS = {
@@ -262,12 +188,15 @@ def format_datetime_with_weekday(dt):
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
+    # 투자, 연예 및 범죄 예방·캠페인·홍보성 기사 배제 키워드
     strict_exclude_keywords = [
         '비트코인', '이더리움', '코인', '가상화폐', '암호화폐', '주가', '증시', '코스피', '코스닥', 
         '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '젠슨 황', '엔비디아', '테슬라', 
         '애플', '마이크로소프트', '실적', '배당', '펀드', '주식', '투자', '시황', '목표주가', '반등',
         '불륜', '스캔들', '이혼', '결혼', '열애', '연예', '아이돌', '배우', '영화', '드라마', '앨범', 
-        '바둑', '체스', '우승', '리그', '토너먼트', '경기력', '선수', '감독', '골프'
+        '바둑', '체스', '우승', '리그', '토너먼트', '경기력', '선수', '감독', '골프',
+        # 예방 및 캠페인성 키워드 차단
+        '예방', '캠페인', '근절', '홍보', '대책회의', '교육', '설명회', '서포터즈', '공모전', '주의당부'
     ]
     if any(kw in text for kw in strict_exclude_keywords):
         return None 
@@ -311,7 +240,8 @@ def scrape_news():
     for feed_info in RSS_FEEDS:
         try:
             parsed = feedparser.parse(feed_info["url"])
-            for entry in parsed.entries[:100]:
+            # 각 피드당 수집 한도를 300개로 확대
+            for entry in parsed.entries[:300]:
                 title = remove_html_tags(entry.get("title", ""))
                 clean_content = remove_html_tags(entry.get("summary", title))
                 link = entry.get("link", "")
