@@ -3,11 +3,76 @@ from datetime import datetime, timedelta
 import time
 import pytz
 import json
+import sqlite3
 import random
 import urllib.request
 import urllib.parse
 import re
 from html.parser import HTMLParser
+
+DB_NAME = "news.db"
+
+def init_db():
+    """SQLite 데이터베이스 및 테이블 초기화"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS news (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT UNIQUE,
+            summary TEXT,
+            content TEXT,
+            category TEXT,
+            location TEXT,
+            lat REAL,
+            lng REAL,
+            time TEXT,
+            source TEXT,
+            link TEXT,
+            timestamp REAL
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def save_to_db(items):
+    """수집된 기사를 SQLite DB에 안전하게 저장 (중복 방지)"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    for item in items:
+        try:
+            cursor.execute('''
+                INSERT OR IGNORE INTO news (title, summary, content, category, location, lat, lng, time, source, link, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                item['title'], item['summary'], item['content'], item['category'],
+                item['location'], item['lat'], item['lng'], item['time'],
+                item['source'], item['link'], item['timestamp']
+            ))
+        except Exception as e:
+            print(f"DB 저장 오류: {e}")
+    conn.commit()
+    conn.close()
+
+def export_db_to_json():
+    """프론트엔드 호환을 위해 DB에서 최근 7일 데이터를 읽어 기존처럼 news.json으로 내보내기 (과도한 부하 차단)"""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # 최근 7일 이상 지난 오래된 데이터 자동 삭제 (용량 관리)
+    cutoff_timestamp = (datetime.now(pytz.timezone('Asia/Seoul')) - timedelta(days=7)).timestamp()
+    cursor.execute('DELETE FROM news WHERE timestamp < ?', (cutoff_timestamp,))
+    conn.commit()
+
+    cursor.execute('SELECT * FROM news ORDER BY timestamp DESC LIMIT 300')
+    rows = cursor.fetchall()
+    
+    news_list = [dict(row) for row in rows]
+    conn.close()
+
+    with open("news.json", "w", encoding="utf-8") as f:
+        json.dump(news_list, f, ensure_ascii=False, indent=4)
 
 class HTMLFilter(HTMLParser):
     def __init__(self):
@@ -232,8 +297,8 @@ def categorize_incident(title, content):
     return None
 
 def extract_location(title, content):
-    cleaned_title = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스\vert{}뉴스1\vert{}뉴시스\vert{}파이낸셜뉴스\vert{}이데일리)[\)\]]?', '', title)
-    cleaned_content = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스\vert{}뉴스1\vert{}뉴시스\vert{}파이낸셜뉴스\vert{}이데일리)[\)\]]?', '', content)
+    cleaned_title = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스|뉴스1|뉴시스|파이낸셜뉴스|이데일리)[\)\]]?', '', title)
+    cleaned_content = re.sub(r'[\(\[]?[가-힣]+=(연합뉴스|뉴스1|뉴시스|파이낸셜뉴스|이데일리)[\)\]]?', '', content)
 
     for search_text in [cleaned_title, cleaned_content]:
         earliest_pos = len(search_text) + 1
@@ -337,11 +402,8 @@ def scrape_telegram_channel(channel_info):
 def scrape_news():
     kst = pytz.timezone('Asia/Seoul')
     now = datetime.now(kst)
-    # 최근 7일간의 기사 수집 (11월 6일 포함)
     seven_days_ago = now - timedelta(days=7)
     collected_items = []
-    
-    item_id = int(now.timestamp())
 
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
@@ -370,7 +432,6 @@ def scrape_news():
             lng += (random.random() - 0.5) * 0.008
 
             collected_items.append({
-                "id": item_id,
                 "category": category,
                 "title": title,
                 "summary": clean_content[:130] + ("..." if len(clean_content) > 130 else ""),
@@ -383,28 +444,25 @@ def scrape_news():
                 "link": link,
                 "timestamp": pub_dt.timestamp()
             })
-            item_id += 1
 
     for channel in TELEGRAM_CHANNELS:
         tg_items = scrape_telegram_channel(channel)
         for item in tg_items:
-            item["id"] = item_id
             item["lat"] = round(item["lat"] + (random.random() - 0.5) * 0.008, 4)
             item["lng"] = round(item["lng"] + (random.random() - 0.5) * 0.008, 4)
             collected_items.append(item)
-            item_id += 1
 
-    collected_items.sort(key=lambda x: x["timestamp"], reverse=True)
     return collected_items
 
 if __name__ == "__main__":
-    print("=== 실시간 뉴스 관제 크롤러가 시작되었습니다 (최근 7일 수집 / 3분 간격 자동 실행) ===")
+    print("=== SQLite 기반 실시간 뉴스 관제 크롤러가 시작되었습니다 ===")
+    init_db()
     while True:
         try:
             data = scrape_news()
-            with open("news.json", "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 수집 완료: 총 {len(data)}건의 기사가 news.json에 갱신되었습니다.")
+            save_to_db(data)           # 1. 안전하게 SQLite DB에 저장
+            export_db_to_json()        # 2. 프론트엔드 연동용 JSON 내보내기
+            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 수집 및 DB 갱신 완료 (총 데이터 관리 중)")
         except Exception as e:
             print(f"실행 중 오류 발생: {e}")
         
