@@ -1,137 +1,116 @@
 import feedparser
-import json
 from datetime import datetime
 import pytz
-import re
+import json
+import random
 
-# RSS 피드 리스트 (연합뉴스, YTN, 기상청/재난 속보 등)
+# RSS 피드 소스 리스트
 RSS_FEEDS = [
-    "https://www.yonhapnewstv.co.kr/browse/feed/",  # 연합뉴스TV 속보
-    "https://www.ytn.co.kr/ln/rss.xml",             # YTN 뉴스
+    {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
+    {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"}
 ]
 
-# 카테고리별 판별 키워드 매핑
-CATEGORY_KEYWORDS = {
-    "국가 안보": [
-        "북한", "미사일", "핵", "ICBM", "방사포", "드론", "무인기", "군사분계선", "NLL", "DMZ", 
-        "합참", "국방부", "한미연합훈련", "을지자유방패", "공군", "해군", "육군", "특전사", "방위비", 
-        "주한미군", "대공", "테러", "방첩", "국가정보원", "안보위기", "사이버전", "정찰위성"
-    ],
-    "강력·치안": [
-        "살인", "강도", "강간", "성폭행", "성추행", "납치", "감금", "폭행", "상해", "흉기", 
-        "칼부림", "살인미수", "특수상해", "인질", "마약", "필로폰", "대마초", "조직폭력배", 
-        "조폭", "도박장", "사기", "보이스피싱", "횡령", "배임", "방화", "절도", "경찰청", 
-        "경찰서", "지구대", "파출소", "112", "긴급출동", "구속영장", "압수수색", "현행범", "피의자"
-    ],
-    "사이버·금융": [
-        "랜섬웨어", "해킹", "개인정보 유출", "다크웹", "스미싱", "파밍", "디도스", "DDoS", 
-        "악성코드", "정보통신망", "서버 다운", "시스템 마비", "주가조작", "불법공매도", 
-        "코인 사기", "가상자산", "유사투자자문", "금융사기", "불법대부업", "PF 부실", "자금세탁"
-    ],
-    "재난·안전": [
-        "지진", "여진", "태풍", "호우", "홍수", "폭우", "산사태", "산불", "폭설", "한파", 
-        "폭염", "가뭄", "해일", "풍랑", "낙뢰", "화재", "폭발", "가스누출", "붕괴", "침수", 
-        "탈선", "전복", "추돌", "충돌", "대형사고", "화학물질 누출", "정전", "단수", "싱크홀", 
-        "소방서", "119", "행정안전부", "중대본", "경보", "주의보", "특보", "대피령", "재난문자"
-    ]
+# 3단계 지역 매핑 데이터 (예시 좌표 포함)
+REGION_COORDS = {
+    "서울특별시": {"lat": 37.5665, "lng": 126.9780, "sigungu": {"강남구": {"lat": 37.5172, "lng": 127.0473, "dong": {"역삼동": {"lat": 37.5006, "lng": 127.0364}, "청담동": {"lat": 37.5260, "lng": 127.0449}}}, "중구": {"lat": 37.5636, "lng": 126.9975, "dong": {"명동": {"lat": 37.5636, "lng": 126.9858}}}}}},
+    "부산광역시": {"lat": 35.1796, "lng": 129.0756, "sigungu": {"해운대구": {"lat": 35.1631, "lng": 129.1636, "dong": {"우동": {"lat": 35.1587, "lng": 129.1398}}}}}},
+    "경기도": {"lat": 37.4138, "lng": 127.5183, "sigungu": {"수원시": {"lat": 37.2636, "lng": 127.0286, "dong": {"권선구": {"lat": 37.2575, "lng": 126.9721}}}}}}
 }
 
-# 전국 17개 시·도 및 주요 섬 지역(울릉도, 독도, 제주 등) 키워드 매핑
-REGION_KEYWORDS = {
-    "서울특별시": ["서울", "중구", "강남구", "송파구", "마포구", "영등포구", "역삼", "명동", "여의도"],
-    "부산광역시": ["부산", "해운대", "서면", "남포동", "영도"],
-    "대구광역시": ["대구", "동성로", "수성구", "달서구"],
-    "인천광역시": ["인천", "송도", "영종", "강화", "옹진"],
-    "광주광역시": ["광주", "상무", "충장로"],
-    "대전광역시": ["대전", "둔산", "유성"],
-    "울산광역시": ["울산", "삼산", "울주"],
-    "세종특별자치시": ["세종", "조치원"],
-    "경기도": ["경기", "수원", "성남", "고양", "용인", "화성", "동탄", "부천", "안산"],
-    "강원특별자치도": ["강원", "춘천", "원주", "강릉", "속초", "동해"],
-    "충청북도": ["충북", "청주", "충주", "제천"],
-    "충청남도": ["충남", "천안", "아산", "서산", "당진"],
-    "전북특별자치도": ["전북", "전주", "군산", "익산"],
-    "전라남도": ["전남", "목포", "여수", "순천", "광양"],
-    "경상북도": ["경북", "포항", "경주", "구미", "안동", "울릉", "독도"],
-    "경상남도": ["경남", "창원", "김해", "진주", "거제", "통영"],
-    "제주특별자치도": ["제주", "서귀포", "우도", "마라도", "제주공항"]
-}
-
-def detect_category(text):
-    for cat, keywords in CATEGORY_KEYWORDS.items():
-        for kw in keywords:
-            if kw in text:
-                return cat
-    return "재난·안전"  # 기본 분류
-
-def detect_location(text):
-    for sido, keywords in REGION_KEYWORDS.items():
-        for kw in keywords:
-            if kw in text:
-                # 시군구 추정 (간이 매핑)
-                sigungu = "종합"
-                if sido == "제주특별자치도":
-                    sigungu = "서귀포시" if "서귀포" in text else "제주시"
-                elif sido == "경상북도" and ("울릉" in text or "독도" in text):
-                    sigungu = "울릉군"
-                elif sido == "서울특별시":
-                    if "강남" in text: sigungu = "강남구"
-                    elif "중구" in text: sigungu = "중구"
-                    elif "영등포" in text: sigungu = "영등포구"
-                    else: sigungu = "중구"
-                return sido, sigungu, "전체 읍·면·동"
+def categorize_incident(title, content):
+    text = (title + " " + content).lower()
     
-    # 기본값 (키워드 매칭 안 될 경우 서울 중구)
-    return "서울특별시", "중구", "소공동"
+    # 공통 제외 키워드 (후속 정치 공방, 단순 칼럼, 재판/수사 장기화, 과거 회고 등)
+    aftermath_keywords = [
+        '특검', '국정조사', '재판', '공판', '선고', '항소', '상고', '여야', '정치권', 
+        '규탄', '공방', '토론', '사과', '반성', '회고', '기자회견', '입장문', '설명회'
+    ]
+    is_aftermath = any(kw in text for kw in aftermath_keywords)
 
-def fetch_news():
-    collected_news = []
+    # 1. 국가 안보 (실시간 군사적 위기, 도발, 비상조치 직접 발생)
+    security_incidents = ['계엄 선포', '비상계엄', '군 병력', '도발', '미사일 발사', '영공 침범', '테러 위협', '국방 비상']
+    if any(kw in text for kw in security_incidents) and not is_aftermath:
+        return "국가 안보"
+
+    # 2. 강력·치안 (실시간 범죄, 112 출동, 사건 발생, 검거)
+    crime_keywords = ['살인', '강도', '인질', '폭행', '흉기 난동', '마약', '긴급 체포', '수배', '112 출동', '경찰 출동', '구속영장']
+    if any(kw in text for kw in crime_keywords) and not (is_aftermath and '선고' in text):
+        return "강력·치안"
+
+    # 3. 사이버·금융 (해킹, 대규모 시스템 장애, 금융시장 급락·보안 사고)
+    cyber_finance_keywords = ['해킹', '랜섬웨어', '개인정보 유출', '전산 장애', '서버 다운', '주가 급락', '금융 사고', '보안 취약점', '스캠']
+    if any(kw in text for kw in cyber_finance_keywords):
+        return "사이버·금융"
+
+    # 4. 재난·안전 (화재, 사고, 자연재해, 119 출동, 통제)
+    disaster_keywords = ['화재', '폭발', '붕괴', '지진', '홍수', '산사태', '침수', '119 출동', '구조', '교통 통제', '가스 유출', '정전']
+    if any(kw in text for kw in disaster_keywords):
+        return "재난·안전"
+
+    # 기본값 (명확한 실시간 사건사고가 아닌 경우 일반 시사로 분류되거나 제외)
+    return None
+
+def extract_location(text):
+    for sido, s_data in REGION_COORDS.items():
+        if sido in text:
+            for sigungu, g_data in s_data["sigungu"].items():
+                if sigungu in text:
+                    for dong, d_coords in g_data["dong"].items():
+                        if dong in text:
+                            return sido, sigungu, dong, d_coords["lat"], d_coords["lng"]
+                    return sido, sigungu, "전체 읍·면·동", g_data["lat"], g_data["lng"]
+            return sido, "중구", "전체 읍·면·동", s_data["lat"], s_data["lng"]
+    
+    # 기본값 (서울 중심부)
+    return "서울특별시", "강남구", "역삼동", 37.5006, 127.0364
+
+def scrape_news():
     kst = pytz.timezone('Asia/Seoul')
-    current_time_str = datetime.now(kst).strftime("%H:%M 전파")
+    now = datetime.now(kst)
+    collected_items = []
+    
+    item_id = int(now.timestamp())
 
-    item_id = 1
-    for url in RSS_FEEDS:
-        try:
-            feed = feedparser.parse(url)
-            for entry in feed.entries[:15]: # 피드당 최근 15개
-                title = entry.get('title', '')
-                summary = entry.get('summary', entry.get('description', ''))
-                link = entry.get('link', '')
-                source = feed.feed.get('title', '대한민국 실시간 뉴스')
-
-                combined_text = title + " " + summary
+    for feed_info in RSS_FEEDS:
+        parsed = feedparser.parse(feed_info["url"])
+        for entry in parsed.entries[:15]:
+            title = entry.get("title", "")
+            summary = entry.get("summary", title)
+            link = entry.get("link", "")
+            
+            category = categorize_incident(title, summary)
+            if not category:
+                continue # 실시간 사건사고/안보/재난 성격이 아니면 수집 대상에서 제외
                 
-                category = detect_category(combined_text)
-                sido, sigungu, dong = detect_location(combined_text)
+            sido, sigungu, dong, lat, lng = extract_location(title + " " + summary)
+            
+            # 약간의 위치 분산 (동일 좌표 겹침 방지)
+            lat += (random.random() - 0.5) * 0.01
+            lng += (random.random() - 0.5) * 0.01
 
-                news_item = {
-                    "id": item_id,
-                    "category": category,
-                    "title": title,
-                    "summary": summary[:150] + "..." if len(summary) > 150 else summary,
-                    "content": summary,
-                    "sido": sido,
-                    "sigungu": sigungu,
-                    "dong": dong,
-                    "location": f"{sido} {sigungu} {dong}",
-                    "lat": 37.5665 + (item_id % 5) * 0.02, # 시각화용 임시 좌표 분산
-                    "lng": 126.9780 + (item_id % 5) * 0.02,
-                    "time": current_time_str,
-                    "source": source,
-                    "link": link,
-                    "type": "news"
-                }
-                collected_news.append(news_item)
-                item_id += 1
-        except Exception as e:
-            print(f"Error fetching RSS {url}: {e}")
+            item = {
+                "id": item_id,
+                "category": category,
+                "title": title,
+                "summary": summary[:120] + "...",
+                "content": summary,
+                "sido": sido,
+                "sigungu": sigungu,
+                "dong": dong,
+                "location": f"{sido} {sigungu} {dong}",
+                "lat": round(lat, 4),
+                "lng": round(lng, 4),
+                "time": "방금 전",
+                "source": feed_info["source"],
+                "link": link
+            }
+            collected_items.append(item)
+            item_id += 1
 
-    return collected_news
+    return collected_items
 
 if __name__ == "__main__":
-    news_list = fetch_news()
-    
-    # 결과 파일 저장
+    data = scrape_news()
     with open("news.json", "w", encoding="utf-8") as f:
-        json.dump(news_list, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped {len(news_list)} items into news.json")
+        json.dump(data, f, ensure_ascii=False, indent=4)
+    print(f"Successfully scraped and filtered {len(data)} items into news.json")
