@@ -60,7 +60,6 @@ def export_db_to_json():
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # 최근 7일 이상 지난 오래된 데이터 자동 삭제 (용량 관리)
     kst = pytz.timezone('Asia/Seoul')
     cutoff_timestamp = (datetime.now(kst) - timedelta(days=7)).timestamp()
     cursor.execute('DELETE FROM news WHERE timestamp < ?', (cutoff_timestamp,))
@@ -265,12 +264,15 @@ def format_datetime_with_weekday(dt):
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    financial_exclude_keywords = [
+    exclude_keywords = [
         '비트코인', '이더리움', '코인', '가상화폐', '암호화폐', '주가', '증시', '코스피', '코스닥', 
         '나스닥', '환율', '금리', '시세', '상장', '매수', '매도', '외국인 순매수', '주가 하락', 
-        '증시 전망', '최고경영자', '사임', '합병 승인', '특검', '국정조사', '재판', '공판', '선고', '항소', '상고'
+        '증시 전망', '최고경영자', '사임', '합병 승인', '특검', '국정조사', '재판', '공판', '선고', '항소', '상고',
+        '바둑', '체스', '이세돌', '신진서', '박정환', '알파고', '프로기사', '기전', '대국', '우승', '준우승', 
+        '리그', '토너먼트', '경기력', '감독', '선수', '득점', '골퍼', '야구', '축구', '농구', '배구', '올림픽', '아시안게임',
+        '연예', '아이돌', '배우', '영화', '드라마', '앨범', '컴백', '결혼', '이혼', '열애'
     ]
-    if any(kw in text for kw in financial_exclude_keywords):
+    if any(kw in text for kw in exclude_keywords):
         return None 
 
     has_country = any(country.lower() in text for country in WORLD_COUNTRIES)
