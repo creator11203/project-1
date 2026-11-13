@@ -12,9 +12,25 @@ RSS_FEEDS = [
 
 # 3단계 지역 매핑 데이터 (예시 좌표 포함)
 REGION_COORDS = {
-    "서울특별시": {"lat": 37.5665, "lng": 126.9780, "sigungu": {"강남구": {"lat": 37.5172, "lng": 127.0473, "dong": {"역삼동": {"lat": 37.5006, "lng": 127.0364}, "청담동": {"lat": 37.5260, "lng": 127.0449}}}, "중구": {"lat": 37.5636, "lng": 126.9975, "dong": {"명동": {"lat": 37.5636, "lng": 126.9858}}}}}},
-    "부산광역시": {"lat": 35.1796, "lng": 129.0756, "sigungu": {"해운대구": {"lat": 35.1631, "lng": 129.1636, "dong": {"우동": {"lat": 35.1587, "lng": 129.1398}}}}}},
-    "경기도": {"lat": 37.4138, "lng": 127.5183, "sigungu": {"수원시": {"lat": 37.2636, "lng": 127.0286, "dong": {"권선구": {"lat": 37.2575, "lng": 126.9721}}}}}}
+    "서울특별시": {
+        "lat": 37.5665, "lng": 126.9780, 
+        "sigungu": {
+            "강남구": {"lat": 37.5172, "lng": 127.0473, "dong": {"역삼동": {"lat": 37.5006, "lng": 127.0364}, "청담동": {"lat": 37.5260, "lng": 127.0449}}}, 
+            "중구": {"lat": 37.5636, "lng": 126.9975, "dong": {"명동": {"lat": 37.5636, "lng": 126.9858}}}
+        }
+    },
+    "부산광역시": {
+        "lat": 35.1796, "lng": 129.0756, 
+        "sigungu": {
+            "해운대구": {"lat": 35.1631, "lng": 129.1636, "dong": {"우동": {"lat": 35.1587, "lng": 129.1398}}}
+        }
+    },
+    "경기도": {
+        "lat": 37.4138, "lng": 127.5183, 
+        "sigungu": {
+            "수원시": {"lat": 37.2636, "lng": 127.0286, "dong": {"권선구": {"lat": 37.2575, "lng": 126.9721}}}
+        }
+    }
 }
 
 def categorize_incident(title, content):
@@ -47,7 +63,6 @@ def categorize_incident(title, content):
     if any(kw in text for kw in disaster_keywords):
         return "재난·안전"
 
-    # 기본값 (명확한 실시간 사건사고가 아닌 경우 일반 시사로 분류되거나 제외)
     return None
 
 def extract_location(text):
@@ -61,7 +76,6 @@ def extract_location(text):
                     return sido, sigungu, "전체 읍·면·동", g_data["lat"], g_data["lng"]
             return sido, "중구", "전체 읍·면·동", s_data["lat"], s_data["lng"]
     
-    # 기본값 (서울 중심부)
     return "서울특별시", "강남구", "역삼동", 37.5006, 127.0364
 
 def scrape_news():
@@ -80,11 +94,10 @@ def scrape_news():
             
             category = categorize_incident(title, summary)
             if not category:
-                continue # 실시간 사건사고/안보/재난 성격이 아니면 수집 대상에서 제외
+                continue
                 
             sido, sigungu, dong, lat, lng = extract_location(title + " " + summary)
             
-            # 약간의 위치 분산 (동일 좌표 겹침 방지)
             lat += (random.random() - 0.5) * 0.01
             lng += (random.random() - 0.5) * 0.01
 
