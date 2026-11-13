@@ -148,7 +148,6 @@
                 
                 <button onclick="setCategoryFilter('해외 분쟁·테러')" data-cat="해외 분쟁·테러" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-200 text-orange-600 dark:bg-slate-800 dark:text-orange-400 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30">🌍 해외 분쟁·테러</button>
                 
-                <!-- 최근 7일 범죄 다발 지역 카테고리 버튼 -->
                 <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-200 text-rose-600 dark:bg-slate-800 dark:text-rose-400 hover:bg-slate-300 dark:hover:bg-slate-700 transition whitespace-nowrap border border-rose-500/50 shadow-sm flex items-center gap-1.5">
                     <i class="fa-solid fa-chart-pie"></i> 🚨 최근 7일 범죄 다발 지역
                 </button>
@@ -306,7 +305,6 @@
                 ];
             }
 
-            // 수동 새로고침이거나 최초 로드 시 가장 위의 최신 기사 선택
             const filtered = getFilteredNews();
             if ((isManualRefresh || !selectedNewsId) && filtered.length > 0) {
                 selectedNewsId = filtered[0].id;
@@ -364,7 +362,6 @@
             }
 
             const listToMap = filteredList || getFilteredNews();
-            // 최대 100개 제한 반영
             listToMap.slice(0, 100).forEach(news => {
                 let markerColor = '#ef4444';
                 if (news.category === '해외 분쟁·테러') markerColor = '#f97316';
@@ -403,7 +400,6 @@
                 return;
             }
 
-            // 최대 100개까지만 리스트업
             filtered.slice(0, 100).forEach(news => {
                 const isSelected = news.id === selectedNewsId && currentCategory !== '범죄 다발 지역';
                 let badgeClass = 'bg-red-500/20 text-red-500 dark:text-red-400 border-red-500/30';
@@ -521,6 +517,7 @@
             else if (news.category === '국가 안보') headerStyle = 'border-l-4 border-indigo-500 bg-indigo-500/10';
             else if (news.category === '강력·치안') headerStyle = 'border-l-4 border-rose-500 bg-rose-500/10';
 
+            // 매핑 위치/위경도 박스를 완전히 제거하고 원문 내용이 바로 나타나도록 수정됨
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-4 rounded-xl ${headerStyle} shrink-0">
@@ -531,15 +528,6 @@
                         <h2 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white leading-snug">${news.title}</h2>
                     </div>
 
-                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center justify-between text-xs text-slate-700 dark:text-slate-300 shrink-0 shadow-sm">
-                        <span class="flex items-center gap-1.5 font-medium">
-                            <i class="fa-solid fa-location-dot text-red-500"></i> 매핑 위치: 
-                            <strong class="text-slate-900 dark:text-white">${news.location}</strong>
-                        </span>
-                        <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">위도: ${news.lat}, 경도: ${news.lng}</span>
-                    </div>
-
-                    <!-- 원문 내용 및 외부 새 창 열기 버튼 (iframe 차단 문제 완벽 해결) -->
                     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 text-xs md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed space-y-3 shrink-0 shadow-sm">
                         <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2 mb-2">
                             <span class="text-[11px] font-bold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-file-lines"></i> 수집된 요약 및 본문 내용</span>
@@ -552,11 +540,12 @@
                         <p class="whitespace-pre-line">${news.content || news.summary}</p>
                     </div>
 
-                    <!-- 안내 안내 박스 (구글뉴스 등 외부 보안 사이트 접속 불가 시 대체 안내) -->
-                    <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-4 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center justify-between">
-                        <span><i class="fa-solid fa-circle-info text-blue-500 mr-1.5"></i> 대형 포털(구글뉴스·연합뉴스 등)은 보안 정책상 미리보기 화면을 차단하므로 위 버튼을 눌러 원문을 확인하세요.</span>
-                        ${news.link ? `<a href="${news.link}" target="_blank" class="underline font-semibold shrink-0 ml-2">원문 이동</a>` : ''}
-                    </div>
+                    ${news.link ? `
+                        <div class="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 p-4 rounded-xl text-xs text-blue-800 dark:text-blue-300 flex items-center justify-between">
+                            <span><i class="fa-solid fa-circle-info text-blue-500 mr-1.5"></i> 대형 포털(구글뉴스·연합뉴스 등)은 보안 정책상 미리보기 화면을 차단하므로 위 버튼을 눌러 원문을 확인하세요.</span>
+                            <a href="${news.link}" target="_blank" class="underline font-semibold shrink-0 ml-2">원문 이동</a>
+                        </div>
+                    ` : ''}
                 </div>
             `;
         }
@@ -652,7 +641,6 @@
             });
         }
 
-        // 새로고침 버튼 클릭 시 가장 위의 기사 자동 선택 기능(isManualRefresh = true) 적용
         function manualRefreshData() {
             currentCategory = 'all';
             currentRegion = 'all';
