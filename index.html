@@ -184,7 +184,7 @@
                         location: "우크라이나 키이우",
                         lat: 50.4501,
                         lng: 30.5234,
-                        time: "방금 전",
+                        time: "2026.11.13 (금요일)",
                         source: "시스템 안내"
                     }
                 ];
@@ -373,6 +373,10 @@
                 return;
             }
 
+            const now = new Date();
+            const days = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+            const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')} (${days[now.getDay()]})`;
+
             const newReport = {
                 id: Date.now(),
                 category: '실시간 제보',
@@ -382,8 +386,9 @@
                 location: `${sido} ${locationDetail}`,
                 lat: 37.5665 + (Math.random() - 0.5) * 0.05,
                 lng: 126.9780 + (Math.random() - 0.5) * 0.05,
-                time: '방금 전',
-                source: '시민 직접 제보'
+                time: dateStr,
+                source: '시민 직접 제보',
+                priority: 100
             };
 
             newsData.unshift(newReport);
