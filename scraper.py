@@ -40,17 +40,43 @@ def translate_to_korean(text):
     except Exception as e:
         return text
 
-# 기본 뉴스 및 속보 소스
+# URL에서 도메인 이름만 추출하여 원문 출처명으로 변환하는 함수
+def extract_domain_source(url):
+    if not url or "t.me" in url:
+        return ""
+    try:
+        parsed_url = urllib.parse.urlparse(url)
+        netloc = parsed_url.netloc.lower()
+        netloc = re.sub(r'^www\.', '', netloc)
+        
+        # 주요 도메인 매핑
+        domain_mapping = {
+            'yna.co.kr': '연합뉴스',
+            'news.google.com': 'Google News',
+            'reuters.com': 'Reuters',
+            'bloomberg.com': 'Bloomberg',
+            'ft.com': 'Financial Times',
+            'wsj.com': 'Wall Street Journal',
+            'apnews.com': 'AP News',
+            'bbc.com': 'BBC',
+            'cnn.com': 'CNN'
+        }
+        for d, name in domain_mapping.items():
+            if d in netloc:
+                return name
+        return netloc
+    except Exception:
+        return "외부 원문 기사"
+
 RSS_FEEDS = [
     {"url": "https://www.yna.co.kr/rss/news.xml", "source": "연합뉴스"},
     {"url": "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko", "source": "Google News"}
 ]
 
-# 텔레그램 공개 채널
 TELEGRAM_CHANNELS = [
-    {"url": "https://t.me/s/FastStockNews", "source": "FastStockNews (텔레그램)"},
-    {"url": "https://t.me/s/FastStockNewsUSA", "source": "FastStockNewsUSA (텔레그램)"},
-    {"url": "https://t.me/s/cahier_de_market", "source": "cahier_de_market (텔레그램)"}
+    {"url": "https://t.me/s/FastStockNews", "source": "FastStockNews"},
+    {"url": "https://t.me/s/FastStockNewsUSA", "source": "FastStockNewsUSA"},
+    {"url": "https://t.me/s/cahier_de_market", "source": "cahier_de_market"}
 ]
 
 REGION_COORDS = {
@@ -87,7 +113,6 @@ GLOBAL_COORDS = {
 def categorize_incident(title, content):
     text = (title + " " + content).lower()
     
-    # 경제/정치 노이즈 엄격 제외 (단, 안보/분쟁 관련 긴급 키워드가 포함된 경우는 예외 처리)
     emergency_override = ['공습', '미사일', '폭격', '전쟁', '테러', '충돌', '비상계엄', '북한 도발']
     has_emergency = any(em in text for em in emergency_override)
 
@@ -99,7 +124,6 @@ def categorize_incident(title, content):
         if any(kw in text for kw in exclude_keywords):
             return None 
 
-    # 카테고리 매핑 규칙
     if any(kw in text for kw in ['우크라이나', '러시아', '이란', '이스라엘', '하마스', '헤즈볼라', '중동', '공습', '미사일', '폭격', '전쟁', '테러', '충돌', 'strike', 'war', 'attack']):
         return "해외 분쟁·테러"
 
@@ -115,7 +139,6 @@ def categorize_incident(title, content):
     if any(kw in text for kw in ['화재', '폭발', '붕괴', '지진', '홍수', '산사태', '침수', '구조', '통제', '가스 유출', '정전']):
         return "재난·안전"
 
-    # 속보 채널 특성상 긴급 성격의 소식은 기본적으로 '해외 분쟁·테러' 또는 '재난·안전'으로 유연하게 수용
     if has_emergency:
         return "해외 분쟁·테러"
 
@@ -141,7 +164,6 @@ def extract_location(text):
 def scrape_telegram_channel(channel_info):
     items = []
     url = channel_info["url"]
-    source_name = channel_info["source"]
     
     try:
         req = urllib.request.Request(
@@ -153,15 +175,16 @@ def scrape_telegram_channel(channel_info):
             message_blocks = re.findall(r'<div class="tgme_widget_message_text[^>]*>(.*?)</div>', html, re.DOTALL)
             link_blocks = re.findall(r'<a href="(https?://[^"]+)"[^>]*>.*?</a>', html, re.DOTALL)
             
-            for i, raw_msg in enumerate(message_blocks[:20]):
+            for i, raw_msg in enumerate(message_blocks[:25]):
                 clean_text = remove_html_tags(raw_msg).strip()
                 if not clean_text:
                     continue
                 
+                # 운영자 사견 필터링: 외부 원문 링크(URL)가 메시지 본문이나 링크 블록에 반드시 포함되어 있어야 함
                 urls_in_msg = re.findall(r'(https?://[^\s]+)', clean_text)
                 target_link = ""
                 for u in urls_in_msg:
-                    if "t.me" not in u:
+                    if "t.me" not in u and "twitter.com" not in u and "x.com" not in u:
                         target_link = u
                         break
                 
@@ -170,8 +193,9 @@ def scrape_telegram_channel(channel_info):
                     if "t.me" not in candidate:
                         target_link = candidate
                 
+                # 외부 원문 기사 링크가 없는 경우(운영자 단순 개인 사견 및 잡담)는 과감히 제외
                 if not target_link:
-                    target_link = url
+                    continue
 
                 translated_text = translate_to_korean(clean_text)
                 title = translated_text.split('\n')[0][:50]
@@ -185,6 +209,9 @@ def scrape_telegram_channel(channel_info):
                 if not location_str:
                     location_str, lat, lng = "미국 워싱턴D.C.", 38.8951, -77.0364
 
+                # 출처는 절대 텔레그램으로 표기하지 않고, 원문 기사 사이트 도메인명으로 설정
+                real_source_name = extract_domain_source(target_link)
+
                 items.append({
                     "title": title,
                     "summary": summary,
@@ -194,7 +221,7 @@ def scrape_telegram_channel(channel_info):
                     "lng": lng,
                     "category": category,
                     "time": "최근 5일 이내",
-                    "source": source_name,
+                    "source": real_source_name,
                     "link": target_link
                 })
     except Exception as e:
@@ -210,7 +237,7 @@ def scrape_news():
     
     item_id = int(now.timestamp())
 
-    # 1. RSS 뉴스 수집 (최신 5일 이내 엄격 적용)
+    # 1. RSS 뉴스 수집
     for feed_info in RSS_FEEDS:
         parsed = feedparser.parse(feed_info["url"])
         for entry in parsed.entries[:50]:
@@ -251,7 +278,7 @@ def scrape_news():
             })
             item_id += 1
 
-    # 2. 텔레그램 속보 채널 수집
+    # 2. 텔레그램 속보 채널 수집 (원문 링크가 있는 기사형 포스트만 필터링됨)
     for channel in TELEGRAM_CHANNELS:
         tg_items = scrape_telegram_channel(channel)
         for item in tg_items:
@@ -267,4 +294,4 @@ if __name__ == "__main__":
     data = scrape_news()
     with open("news.json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
-    print(f"Successfully scraped and filtered {len(data)} valid items into news.json")
+    print(f"Successfully scraped, filtered, and cleaned {len(data)} items into news.json")
