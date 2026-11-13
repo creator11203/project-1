@@ -55,13 +55,14 @@ def save_to_db(items):
     conn.close()
 
 def export_db_to_json():
-    """프론트엔드 호환을 위해 DB에서 최근 7일 데이터를 읽어 기존처럼 news.json으로 내보내기 (과도한 부하 차단)"""
+    """프론트엔드 연동을 위해 DB에서 최근 7일 데이터를 읽어 news.json으로 내보내기"""
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     # 최근 7일 이상 지난 오래된 데이터 자동 삭제 (용량 관리)
-    cutoff_timestamp = (datetime.now(pytz.timezone('Asia/Seoul')) - timedelta(days=7)).timestamp()
+    kst = pytz.timezone('Asia/Seoul')
+    cutoff_timestamp = (datetime.now(kst) - timedelta(days=7)).timestamp()
     cursor.execute('DELETE FROM news WHERE timestamp < ?', (cutoff_timestamp,))
     conn.commit()
 
@@ -457,13 +458,10 @@ def scrape_news():
 if __name__ == "__main__":
     print("=== SQLite 기반 실시간 뉴스 관제 크롤러가 시작되었습니다 ===")
     init_db()
-    while True:
-        try:
-            data = scrape_news()
-            save_to_db(data)           # 1. 안전하게 SQLite DB에 저장
-            export_db_to_json()        # 2. 프론트엔드 연동용 JSON 내보내기
-            print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 수집 및 DB 갱신 완료 (총 데이터 관리 중)")
-        except Exception as e:
-            print(f"실행 중 오류 발생: {e}")
-        
-        time.sleep(180)
+    try:
+        data = scrape_news()
+        save_to_db(data)
+        export_db_to_json()
+        print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 수집 및 DB 갱신 완료")
+    except Exception as e:
+        print(f"실행 중 오류 발생: {e}")
