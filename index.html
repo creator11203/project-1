@@ -26,7 +26,7 @@
         .resizer { width: 6px; cursor: col-resize; transition: background-color 0.2s; flex-shrink: 0; position: relative; z-index: 20; }
     </style>
 </head>
-<body id="appBody" class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-screen flex flex-col overflow-hidden select-none transition-colors duration-200 text-base" style="font-size: 1rem;">
+<body id="appBody" class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-screen flex flex-col overflow-hidden select-none transition-colors duration-200" style="font-size: 16px;">
 
     <!-- 상단 헤더 -->
     <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
@@ -46,6 +46,7 @@
         </div>
         
         <div class="flex items-center space-x-3">
+            <!-- 글자 크기 조절 -->
             <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-0.5">
                 <button onclick="adjustFontSize(-1)" class="px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A-</button>
                 <span id="fontSizeIndicator" class="px-2 text-xs font-mono text-slate-500 dark:text-slate-400">100%</span>
@@ -74,7 +75,6 @@
                         <i class="fa-solid fa-location-dot text-red-500"></i> 지역별 상세 필터 (전국)
                     </span>
                 </div>
-                <!-- 요청사항 3번: 모든 지역 세부 선택 셀렉트박스 부활 -->
                 <div>
                     <select id="regionSelect" onchange="filterByRegion()" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-red-500 font-medium">
                         <option value="all">🌍 전체 지역 (전국 통합 보기)</option>
@@ -121,7 +121,7 @@
 
         <div id="resizer1" class="resizer hidden lg:block bg-slate-200 dark:bg-slate-800 hover:bg-red-500"></div>
 
-        <!-- 2. 중앙: 기사 상세 원문 뷰어 패널 -->
+        <!-- 2. 중앙: 기사 상세 원문 뷰어 패널 (UI 군더더기 완전 제거, 원문만 즉시 표시) -->
         <section id="centerPane" style="width: 40%; min-width: 300px;" class="bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
             <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto shrink-0">
                 <button onclick="setCategoryFilter('all')" data-cat="all" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap">전체</button>
@@ -132,7 +132,8 @@
                 <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-200 text-rose-600 dark:bg-slate-800 dark:text-rose-400 hover:bg-slate-300 whitespace-nowrap border border-rose-500/50">🚨 7일 다발 지역</button>
             </div>
             
-            <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-5 select-text flex flex-col"></div>
+            <!-- 원문 본문이 바로 출력되는 순수 영역 -->
+            <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-6 select-text flex flex-col space-y-4"></div>
         </section>
 
         <div id="resizer2" class="resizer hidden lg:block bg-slate-200 dark:bg-slate-800 hover:bg-red-500"></div>
@@ -198,7 +199,7 @@
         let selectedHotspotRegion = null;
         let selectedNewsId = null;
         let map, markersLayer;
-        let currentFontSizeLevel = 1;
+        let currentFontSizePx = 16; // 기본 16px (100%)
 
         document.addEventListener('DOMContentLoaded', () => {
             initMap();
@@ -417,35 +418,33 @@
             if (map) map.flyTo([lat, lng], 14, { duration: 1.2 });
         }
 
+        // 💡 UI 상자 없이 순수 원문 본문만 화면에 가득 차도록 표시되는 뷰어 함수
         function renderDetailView(id) {
             const news = newsData.find(n => n.id === id);
             const container = document.getElementById('detailViewContainer');
             if (!news) return;
 
             container.innerHTML = `
-                <div class="space-y-4 flex-1 flex flex-col">
-                    <div class="p-4 rounded-xl border-l-4 border-red-500 bg-red-500/10 shrink-0">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-bold px-2.5 py-1 rounded bg-slate-900 text-white">${news.category}</span>
-                            <span class="text-xs text-slate-500">${news.time} · 출처: ${news.source}</span>
-                        </div>
-                        <h2 class="text-base md:text-lg font-extrabold text-slate-900 dark:text-white leading-snug">${news.title}</h2>
-                        <p class="text-xs text-red-500 font-semibold mt-1"><i class="fa-solid fa-location-dot"></i> 발생 위치: ${news.location}</p>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between text-xs text-slate-400">
+                        <span class="px-2 py-0.5 rounded bg-red-500/20 text-red-500 font-bold">${news.category}</span>
+                        <span>${news.time} · ${news.source}</span>
                     </div>
-
-                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 text-xs md:text-sm text-slate-800 dark:text-slate-200 leading-relaxed shadow-sm">
-                        <p class="whitespace-pre-line">${news.content || news.summary}</p>
-                    </div>
-
-                    ${news.link ? `
-                        <div class="pt-2 flex items-center justify-between">
-                            <span class="text-[11px] text-slate-500">언론사 보안 정책에 따라 전체 전문은 아래 원문 버튼을 이용하세요.</span>
-                            <a href="${news.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg shadow transition shrink-0">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i> 언론사 원문 새 창으로 열기 &rarr;
-                            </a>
-                        </div>
-                    ` : ''}
+                    <h2 class="text-xl md:text-2xl font-black text-slate-900 dark:text-white leading-tight">${news.title}</h2>
+                    <p class="text-xs text-red-500 font-semibold"><i class="fa-solid fa-location-dot"></i> ${news.location}</p>
                 </div>
+                <hr class="border-slate-200 dark:border-slate-800 my-2">
+                <div class="flex-1 overflow-y-auto custom-scrollbar pr-2">
+                    <p class="text-base md:text-lg text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line font-normal">${news.content || news.summary}</p>
+                </div>
+                ${news.link ? `
+                    <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                        <span class="text-xs text-slate-500">언론사 전체 전문 확인</span>
+                        <a href="${news.link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg shadow transition">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> 언론사 원문 새 창으로 열기 &rarr;
+                        </a>
+                    </div>
+                ` : ''}
             `;
         }
 
@@ -467,7 +466,6 @@
             else { renderNewsList(); const f = getFilteredNews(); if (f.length > 0) selectNews(f[0].id); }
         }
 
-        // 요청사항 3번: 지역 선택 셀렉트박스 연동 함수
         function filterByRegion() {
             currentRegion = document.getElementById('regionSelect').value;
             renderNewsList();
@@ -494,11 +492,17 @@
             loadIncidentsFromJSON(true);
         }
 
-        function adjustFontSize(dir) {
-            const levels = ['0.85rem', '1rem', '1.15rem', '1.3rem'];
-            currentFontSizeLevel = Math.max(0, Math.min(levels.length - 1, currentFontSizeLevel + dir));
-            document.getElementById('appBody').style.fontSize = levels[currentFontSizeLevel];
-            document.getElementById('fontSizeIndicator').textContent = ['85%', '100%', '115%', '130%'][currentFontSizeLevel];
+        // 💡 글자 크기 조절 기능 정상화 함수
+        function adjustFontSize(direction) {
+            currentFontSizePx += direction * 2; // 한 번 누를 때마다 2px씩 증가/감소
+            if (currentFontSizePx < 12) currentFontSizePx = 12; // 최소 12px
+            if (currentFontSizePx > 24) currentFontSizePx = 24; // 최대 24px
+
+            document.getElementById('appBody').style.fontSize = currentFontSizePx + 'px';
+            
+            // 퍼센트 표시 업데이트 (16px 기준 100%)
+            const percent = Math.round((currentFontSizePx / 16) * 100);
+            document.getElementById('fontSizeIndicator').textContent = percent + '%';
         }
 
         function toggleTheme() {
