@@ -1,0 +1,99 @@
+import json
+import os
+from datetime import datetime
+import urllib.request
+import xml.etree.ElementTree as ET
+
+# 파일 경로 정의
+JSON_FILE = 'news.json'
+
+# 수집할 국내외 소스 리스트
+SOURCES = [
+    {
+        "name": "행정안전부 국민재난안전포털 (RSS/XML)",
+        "type": "rss",
+        "url": "https://www.safekorea.go.kr/idsiSFM/neo/open/disaster_rss.xml",
+        "category": "재난·안전"
+    },
+    {
+        "name": "BBC World News (Global Security/Breaking)",
+        "type": "rss",
+        "url": "http://feeds.bbci.co.uk/news/world/rss.xml",
+        "category": "국제·안보"
+    },
+    {
+        "name": "Reuters Breaking News",
+        "type": "rss",
+        "url": "https://www.reutersagency.com/feed/?best-topics=political-general&post_type=best",
+        "category": "글로벌 속보"
+    }
+]
+
+def fetch_rss_feed(source):
+    items = []
+    try:
+        req = urllib.request.Request(
+            source['url'], 
+            headers={'User-Agent': 'Mozilla/5.0'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            xml_data = response.read()
+            root = ET.fromstring(xml_data)
+            
+            for item in root.findall('.//item')[:5]:
+                title = item.find('title').text if item.find('title') is not None else "제목 없음"
+                desc = item.find('description').text if item.find('description') is not None else "내용 없음"
+                link = item.find('link').text if item.find('link') is not None else "#"
+                
+                if "BBC" in source['name'] or "Reuters" in source['name']:
+                    title = f"[외신속보] {title}"
+
+                items.append({
+                    "id": int(datetime.now().timestamp() * 1000) + len(items),
+                    "category": source['category'],
+                    "title": title,
+                    "summary": desc[:150] + "...",
+                    "content": desc,
+                    "sido": "전국",
+                    "sigungu": "종합",
+                    "dong": "실시간관제",
+                    "lat": 37.5665,
+                    "lng": 126.9780,
+                    "time": "방금 전",
+                    "source": source['name'],
+                    "link": link,
+                    "type": "news"
+                })
+    except Exception as e:
+        print(f"Error fetching {source['name']}: {e}")
+        
+    return items
+
+def update_incident_data():
+    if os.path.exists(JSON_FILE):
+        with open(JSON_FILE, 'r', encoding='utf-8') as f:
+            try:
+                current_data = json.load(f)
+            except json.JSONDecodeError:
+                current_data = []
+    else:
+        current_data = []
+
+    new_items = []
+    for source in SOURCES:
+        fetched = fetch_rss_feed(source)
+        new_items.extend(fetched)
+
+    for item in reversed(new_items):
+        if not any(existing.get('title') == item['title'] for existing in current_data):
+            current_data.insert(0, item)
+
+    current_data = current_data[:100]
+
+    with open(JSON_FILE, 'w', encoding='utf-8') as f:
+        json.dump(current_data, f, ensure_ascii=False, indent=4)
+    
+    print(f"Successfully updated {JSON_FILE} with {len(new_items)} fetched items.")
+
+if __name__ == "__main__":
+    update_incident_data()
