@@ -168,8 +168,22 @@
                         <label class="block text-xs font-medium text-slate-400 mb-1">시·도</label>
                         <select id="reportSido" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500">
                             <option value="서울특별시">서울특별시</option>
-                            <option value="경기도">경기도</option>
+                            <option value="부산광역시">부산광역시</option>
+                            <option value="대구광역시">대구광역시</option>
                             <option value="인천광역시">인천광역시</option>
+                            <option value="광주광역시">광주광역시</option>
+                            <option value="대전광역시">대전광역시</option>
+                            <option value="울산광역시">울산광역시</option>
+                            <option value="세종특별자치시">세종특별자치시</option>
+                            <option value="경기도">경기도</option>
+                            <option value="강원특별자치도">강원특별자치도</option>
+                            <option value="충청북도">충청북도</option>
+                            <option value="충청남도">충청남도</option>
+                            <option value="전북특별자치도">전북특별자치도</option>
+                            <option value="전라남도">전라남도</option>
+                            <option value="경상북도">경상북도</option>
+                            <option value="경상남도">경상남도</option>
+                            <option value="제주특별자치도">제주특별자치도</option>
                         </select>
                     </div>
                     <div>
@@ -225,88 +239,87 @@
     <!-- 스크립트 로직 -->
     <script>
         const regionData = {
-    "서울특별시": {
-        "중구": ["전체 읍·면·동", "명동", "을지로동", "신당동", "회현동", "소공동", "광희동"],
-        "강남구": ["전체 읍·면·동", "역삼동", "청담동", "삼성동", "대치동", "개포동", "도곡동"],
-        "송파구": ["전체 읍·면·동", "잠실동", "가락동", "문정동", "방이동", "석촌동"],
-        "마포구": ["전체 읍·면·동", "합정동", "서교동", "상암동", "망원동", "공덕동"],
-        "영등포구": ["전체 읍·면·동", "여의도동", "영등포동", "문래동", "당산동"]
-    },
-    "부산광역시": {
-        "중구": ["전체 읍·면·동", "남포동", "중앙동", "보수동", "동광동"],
-        "해운대구": ["전체 읍·면·동", "우동", "중동", "좌동", "재송동", "반여동"],
-        "부산진구": ["전체 읍·면·동", "서면", "부전동", "전포동", "가야동"],
-        "영도구": ["전체 읍·면·동", "대교동", "동삼동", "봉래동"]
-    },
-    "대구광역시": {
-        "중구": ["전체 읍·면·동", "동성로", "삼덕동", "남산동", "대신동"],
-        "수성구": ["전체 읍·면·동", "범어동", "만촌동", "수성동", "지산동"],
-        "달서구": ["전체 읍·면·동", "상인동", "진천동", "월성동", "이곡동"]
-    },
-    "인천광역시": {
-        "중구": ["전체 읍·면·동", "신포동", "연안동", "영종동", "운서동", "용유동"],
-        "연수구": ["전체 읍·면·동", "송도동", "연수동", "동춘동"],
-        "강화군": ["전체 읍·면·동", "강화읍", "선원면", "길상면", "화도면"]
-    },
-    "광주광역시": {
-        "서구": ["전체 읍·면·동", "상무동", "치평동", "금호동", "광천동"],
-        "북구": ["전체 읍·면·동", "용봉동", "운암동", "매곡동", "문흥동"]
-    },
-    "대전광역시": {
-        "서구": ["전체 읍·면·동", "둔산동", "월평동", "갈마동", "관저동"],
-        "유성구": ["전체 읍·면·동", "봉명동", "어은동", "노은동", "전민동"]
-    },
-    "울산광역시": {
-        "남구": ["전체 읍·면·동", "삼산동", "신정동", "달동", "야음동"],
-        "울주군": ["전체 읍·면·동", "온산읍", "언양읍", "범서읍", "서생면"]
-    },
-    "세종특별자치시": {
-        "세종시": ["전체 읍·면·동", "조치원읍", "반곡동", "소담동", "보람동", "대평동", "나성동", "도담동"]
-    },
-    "경기도": {
-        "수원시": ["전체 읍·면·동", "장안구", "권선구", "팔달구", "영통구"],
-        "성남시": ["전체 읍·면·동", "수정구", "중원구", "분당구"],
-        "고양시": ["전체 읍·면·동", "덕양구", "일산동구", "일산서구"],
-        "용인시": ["전체 읍·면·동", "처인구", "기흥구", "수지구"],
-        "화성시": ["전체 읍·면·동", "병점동", "동탄동", "향남읍", "남양읍"]
-    },
-    "강원특별자치도": {
-        "춘천시": ["전체 읍·면·동", "효자동", "후평동", "석사동", "온의동"],
-        "원주시": ["전체 읍·면·동", "단계동", "단구동", "무실동", "반곡관설동"],
-        "강릉시": ["전체 읍·면·동", "교동", "포남동", "옥천동", "경포동"]
-    },
-    "충청북도": {
-        "청주시": ["전체 읍·면·동", "상당구", "서원구", "흥덕구", "청원구"],
-        "충주시": ["전체 읍·면·동", "칠금동", "교현동", "연수동"]
-    },
-    "충청남도": {
-        "천안시": ["전체 읍·면·동", "동남구", "서북구"],
-        "아산시": ["전체 읍·면·동", "온양동", "배방읍", "탕정면"]
-    },
-    "전북특별자치도": {
-        "전주시": ["전체 읍·면·동", "완산구", "덕진구"],
-        "군산시": ["전체 읍·면·동", "수송동", "나운동", "조촌동"]
-    },
-    "전라남도": {
-        "목포시": ["전체 읍·면·동", "하당동", "상동", "용당동"],
-        "여수시": ["전체 읍·면·동", "여서동", "문수동", "웅천동", "돌산읍"]
-    },
-    "경상북도": {
-        "포항시": ["전체 읍·면·동", "남구", "북구", "오천읍", "대송면"],
-        "경주시": ["전체 읍·면·동", "황성동", "동천동", "불국동"],
-        "울릉군": ["전체 읍·면·동", "울릉읍(도동/사동/저동)", "서면", "북면", "독도리"]
-    },
-    "경상남도": {
-        "창원시": ["전체 읍·면·동", "의창구", "성산구", "마산회원구", "마산합포구", "진해구"],
-        "김해시": ["전체 읍·면·동", "내외동", "북부동", "장유동"]
-    },
-    "제주특별자치도": {
-        "제주시": ["전체 읍·면·동", "이도동", "제주공항", "노형동", "연동", "애월읍", "조천읍", "한림읍", "구좌읍", "우도면"],
-        "서귀포시": ["전체 읍·면·동", "중문동", "동홍동", "서홍동", "성산읍", "표선면", "남원읍", "대정읍", "안덕면", "마라도"]
-    }
-};
+            "서울특별시": {
+                "중구": ["전체 읍·면·동", "명동", "을지로동", "신당동", "회현동", "소공동", "광희동"],
+                "강남구": ["전체 읍·면·동", "역삼동", "청담동", "삼성동", "대치동", "개포동", "도곡동"],
+                "송파구": ["전체 읍·면·동", "잠실동", "가락동", "문정동", "방이동", "석촌동"],
+                "마포구": ["전체 읍·면·동", "합정동", "서교동", "상암동", "망원동", "공덕동"],
+                "영등포구": ["전체 읍·면·동", "여의도동", "영등포동", "문래동", "당산동"]
+            },
+            "부산광역시": {
+                "중구": ["전체 읍·면·동", "남포동", "중앙동", "보수동", "동광동"],
+                "해운대구": ["전체 읍·면·동", "우동", "중동", "좌동", "재송동", "반여동"],
+                "부산진구": ["전체 읍·면·동", "서면", "부전동", "전포동", "가야동"],
+                "영도구": ["전체 읍·면·동", "대교동", "동삼동", "봉래동"]
+            },
+            "대구광역시": {
+                "중구": ["전체 읍·면·동", "동성로", "삼덕동", "남산동", "대신동"],
+                "수성구": ["전체 읍·면·동", "범어동", "만촌동", "수성동", "지산동"],
+                "달서구": ["전체 읍·면·동", "상인동", "진천동", "월성동", "이곡동"]
+            },
+            "인천광역시": {
+                "중구": ["전체 읍·면·동", "신포동", "연안동", "영종동", "운서동", "용유동"],
+                "연수구": ["전체 읍·면·동", "송도동", "연수동", "동춘동"],
+                "강화군": ["전체 읍·면·동", "강화읍", "선원면", "길상면", "화도면"]
+            },
+            "광주광역시": {
+                "서구": ["전체 읍·면·동", "상무동", "치평동", "금호동", "광천동"],
+                "북구": ["전체 읍·면·동", "용봉동", "운암동", "매곡동", "문흥동"]
+            },
+            "대전광역시": {
+                "서구": ["전체 읍·면·동", "둔산동", "월평동", "갈마동", "관저동"],
+                "유성구": ["전체 읍·면·동", "봉명동", "어은동", "노은동", "전민동"]
+            },
+            "울산광역시": {
+                "남구": ["전체 읍·면·동", "삼산동", "신정동", "달동", "야음동"],
+                "울주군": ["전체 읍·면·동", "온산읍", "언양읍", "범서읍", "서생면"]
+            },
+            "세종특별자치시": {
+                "세종시": ["전체 읍·면·동", "조치원읍", "반곡동", "소담동", "보람동", "대평동", "나성동", "도담동"]
+            },
+            "경기도": {
+                "수원시": ["전체 읍·면·동", "장안구", "권선구", "팔달구", "영통구"],
+                "성남시": ["전체 읍·면·동", "수정구", "중원구", "분당구"],
+                "고양시": ["전체 읍·면·동", "덕양구", "일산동구", "일산서구"],
+                "용인시": ["전체 읍·면·동", "처인구", "기흥구", "수지구"],
+                "화성시": ["전체 읍·면·동", "병점동", "동탄동", "향남읍", "남양읍"]
+            },
+            "강원특별자치도": {
+                "춘천시": ["전체 읍·면·동", "효자동", "후평동", "석사동", "온의동"],
+                "원주시": ["전체 읍·면·동", "단계동", "단구동", "무실동", "반곡관설동"],
+                "강릉시": ["전체 읍·면·동", "교동", "포남동", "옥천동", "경포동"]
+            },
+            "충청북도": {
+                "청주시": ["전체 읍·면·동", "상당구", "서원구", "흥덕구", "청원구"],
+                "충주시": ["전체 읍·면·동", "칠금동", "교현동", "연수동"]
+            },
+            "충청남도": {
+                "천안시": ["전체 읍·면·동", "동남구", "서북구"],
+                "아산시": ["전체 읍·면·동", "온양동", "배방읍", "탕정면"]
+            },
+            "전북특별자치도": {
+                "전주시": ["전체 읍·면·동", "완산구", "덕진구"],
+                "군산시": ["전체 읍·면·동", "수송동", "나운동", "조촌동"]
+            },
+            "전라남도": {
+                "목포시": ["전체 읍·면·동", "하당동", "상동", "용당동"],
+                "여수시": ["전체 읍·면·동", "여서동", "문수동", "웅천동", "돌산읍"]
+            },
+            "경상북도": {
+                "포항시": ["전체 읍·면·동", "남구", "북구", "오천읍", "대송면"],
+                "경주시": ["전체 읍·면·동", "황성동", "동천동", "불국동"],
+                "울릉군": ["전체 읍·면·동", "울릉읍(도동/사동/저동)", "서면", "북면", "독도리"]
+            },
+            "경상남도": {
+                "창원시": ["전체 읍·면·동", "의창구", "성산구", "마산회원구", "마산합포구", "진해구"],
+                "김해시": ["전체 읍·면·동", "내외동", "북부동", "장유동"]
+            },
+            "제주특별자치도": {
+                "제주시": ["전체 읍·면·동", "이도동", "제주공항", "노형동", "연동", "애월읍", "조천읍", "한림읍", "구좌읍", "우도면"],
+                "서귀포시": ["전체 읍·면·동", "중문동", "동홍동", "서홍동", "성산읍", "표선면", "남원읍", "대정읍", "안덕면", "마라도"]
+            }
+        };
 
-        // 외부 JSON 파일에서 실시간 데이터를 로드하도록 변경
         let newsData = [];
         let currentCategory = 'all';
         let selectedNewsId = 1;
@@ -317,7 +330,6 @@
             loadIncidentsFromJSON();
         });
 
-        // news.json 데이터를 불러오는 함수
         async function loadIncidentsFromJSON() {
             try {
                 const response = await fetch('news.json?t=' + Date.now());
@@ -331,7 +343,6 @@
                 console.log("news.json을 불러오지 못했거나 파일이 없습니다. 기본 데이터를 유지합니다.");
             }
 
-            // 데이터가 비어있을 경우를 대비한 기본 폴백 데이터 (초기 구동용)
             if (newsData.length === 0) {
                 newsData = [
                     {
@@ -390,12 +401,15 @@
                     iconPoint: [7, 7]
                 });
 
-                const marker = L.marker([news.lat, news.lng], { icon: customIcon });
+                const lat = news.lat || 37.5665;
+                const lng = news.lng || 126.9780;
+
+                const marker = L.marker([lat, lng], { icon: customIcon });
                 marker.bindPopup(`
                     <div style="color: #0f172a; font-family: sans-serif; max-width: 200px;">
                         <span style="font-size: 10px; font-weight: bold; background: #e2e8f0; padding: 2px 6px; border-radius: 4px;">${news.category}</span>
                         <h4 style="font-size: 13px; font-weight: bold; margin: 6px 0 4px 0;">${news.title}</h4>
-                        <p style="font-size: 11px; color: #475569; margin: 0;">${news.sido} ${news.sigungu} ${news.dong}</p>
+                        <p style="font-size: 11px; color: #475569; margin: 0;">${news.location || `${news.sido || ''} ${news.sigungu || ''} ${news.dong || ''}`}</p>
                     </div>
                 `);
 
@@ -428,12 +442,12 @@
                 card.innerHTML = `
                     <div class="flex items-center justify-between mb-1.5">
                         <span class="text-[10px] px-2 py-0.5 rounded border ${badgeClass} font-semibold">${news.category}</span>
-                        <span class="text-[10px] text-slate-400">${news.time}</span>
+                        <span class="text-[10px] text-slate-400">${news.time || news.published || '방금 전'}</span>
                     </div>
                     <h3 class="text-xs font-bold text-white line-clamp-2 mb-1">${news.title}</h3>
                     <p class="text-[11px] text-slate-400 line-clamp-2 mb-2">${news.summary}</p>
                     <div class="flex items-center justify-between text-[10px] text-slate-500 pt-1 border-t border-slate-800">
-                        <span><i class="fa-solid fa-location-dot text-red-500"></i> ${news.sido} ${news.sigungu} ${news.dong}</span>
+                        <span><i class="fa-solid fa-location-dot text-red-500"></i> ${news.location || `${news.sido || ''} ${news.sigungu || ''} ${news.dong || ''}`}</span>
                         <span class="font-medium text-slate-400">${news.source}</span>
                     </div>
                 `;
@@ -460,7 +474,7 @@
                     <div class="p-4 rounded-xl ${headerStyle}">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs font-bold px-2.5 py-1 rounded bg-slate-900 text-white">${news.category}</span>
-                            <span class="text-xs text-slate-400">${news.time} · 출처: ${news.source}</span>
+                            <span class="text-xs text-slate-400">${news.time || news.published || '방금 전'} · 출처: ${news.source}</span>
                         </div>
                         <h2 class="text-base md:text-lg font-extrabold text-white leading-snug">${news.title}</h2>
                     </div>
@@ -468,9 +482,9 @@
                     <div class="bg-slate-900/80 border border-slate-800 p-3 rounded-xl flex items-center justify-between text-xs text-slate-300">
                         <span class="flex items-center gap-1.5 font-medium">
                             <i class="fa-solid fa-map-pin text-red-500"></i> 발생 위치: 
-                            <strong class="text-white">${news.sido} ${news.sigungu} ${news.dong}</strong>
+                            <strong class="text-white">${news.location || `${news.sido || ''} ${news.sigungu || ''} ${news.dong || ''}`}</strong>
                         </span>
-                        <span class="text-[11px] text-slate-400 font-mono">위도: ${news.lat}, 경도: ${news.lng}</span>
+                        <span class="text-[11px] text-slate-400 font-mono">위도: ${news.lat || 37.5665}, 경도: ${news.lng || 126.9780}</span>
                     </div>
 
                     ${news.category === '국가 안보' ? `
@@ -501,7 +515,7 @@
                     ${mediaHtml}
 
                     <div class="text-xs md:text-sm text-slate-300 leading-relaxed space-y-3 pt-2">
-                        <p>${news.content}</p>
+                        <p>${news.content || news.summary}</p>
                     </div>
                 </div>
             `;
@@ -513,7 +527,7 @@
             renderDetailView(id);
 
             const news = newsData.find(n => n.id === id);
-            if (news && map) {
+            if (news && map && news.lat && news.lng) {
                 map.flyTo([news.lat, news.lng], 15, { duration: 1.2 });
             }
         }
@@ -597,11 +611,23 @@
             const dong = document.getElementById('filterDong').value;
 
             return newsData.filter(news => {
-                const matchCategory = currentCategory === 'all' || news.category === currentCategory;
-                const matchSido = !sido || news.sido === sido;
-                const matchSigungu = !sigungu || news.sigungu === sigungu;
-                const matchDong = !dong || news.dong === dong;
-                return matchCategory && matchSido && matchSigungu && matchDong;
+                const matchCategory = (currentCategory === 'all' || news.category === currentCategory);
+                let matchLocation = true;
+
+                if (sido) {
+                    const locStr = news.location || `${news.sido || ''} ${news.sigungu || ''} ${news.dong || ''}`;
+                    if (sigungu && sigungu !== "전체 읍·면·동") {
+                        if (dong && dong !== "전체 읍·면·동") {
+                            matchLocation = locStr.includes(sido) && locStr.includes(sigungu) && locStr.includes(dong);
+                        } else {
+                            matchLocation = locStr.includes(sido) && locStr.includes(sigungu);
+                        }
+                    } else {
+                        matchLocation = locStr.includes(sido);
+                    }
+                }
+
+                return matchCategory && matchLocation;
             });
         }
 
@@ -644,6 +670,7 @@
                 sido: sido,
                 sigungu: locationDetail.split(' ')[0] || '강남구',
                 dong: locationDetail.split(' ')[1] || '역삼동',
+                location: `${sido} ${locationDetail}`,
                 lat: 37.5000 + (Math.random() - 0.5) * 0.05,
                 lng: 127.0300 + (Math.random() - 0.5) * 0.05,
                 time: '방금 전',
