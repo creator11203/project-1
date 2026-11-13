@@ -79,21 +79,17 @@
 
         <!-- 중앙: 상세 뷰어 (5칸) -->
         <section class="lg:col-span-5 bg-slate-950 flex flex-col h-full overflow-hidden border-r border-slate-800">
-            <!-- 카테고리 탭 바 (국내 우선 배치 + 구분선 + 해외 뒤쪽 배치) -->
             <div class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center space-x-2 overflow-x-auto shrink-0">
                 <button onclick="setCategoryFilter('all')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600 text-white transition whitespace-nowrap shadow-sm">전체</button>
                 
-                <!-- 국내 카테고리 그룹 -->
                 <button onclick="setCategoryFilter('국가 안보')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">국가 안보</button>
                 <button onclick="setCategoryFilter('강력·치안')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">강력·치안</button>
                 <button onclick="setCategoryFilter('사이버·금융')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">사이버·금융</button>
                 <button onclick="setCategoryFilter('재난·안전')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">재난·안전</button>
                 <button onclick="setCategoryFilter('실시간 제보')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 hover:bg-slate-700 transition whitespace-nowrap">실시간 제보</button>
                 
-                <!-- 구분선 -->
                 <div class="h-5 w-px bg-slate-700 shrink-0 mx-1"></div>
                 
-                <!-- 해외 카테고리 그룹 -->
                 <button onclick="setCategoryFilter('해외 분쟁·테러')" class="cat-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-orange-400 hover:bg-slate-700 transition whitespace-nowrap border border-orange-500/30">🌍 해외 분쟁·테러</button>
             </div>
             <div id="detailViewContainer" class="flex-1 overflow-y-auto custom-scrollbar p-6"></div>
@@ -104,7 +100,7 @@
             <div class="absolute top-3 right-3 z-[400] flex items-center gap-2">
                 <div class="bg-slate-900/90 backdrop-blur border border-slate-700 text-xs px-3 py-1.5 rounded-lg shadow-lg text-slate-300 flex items-center gap-2">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span>글로벌 한글 관제 지도</span>
+                    <span>글로벌 실시간 관제 지도</span>
                 </div>
             </div>
             <div id="map" class="flex-1 w-full h-full z-10"></div>
@@ -204,11 +200,10 @@
         }
 
         function initMap() {
-            // 한글 지명 표기가 지원되는 전 세계 표준 오픈 타일 적용 (CartoDB 기반 한국어/표준 표기 렌더링)
             map = L.map('map').setView([30.0000, 15.0000], 3);
             
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; OpenStreetMap contributors & CARTO',
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors',
                 maxZoom: 19
             }).addTo(map);
 
@@ -222,10 +217,10 @@
             const listToMap = filteredList || newsData;
 
             listToMap.forEach(news => {
-                let markerColor = '#ef4444'; // 기본 빨강
-                if (news.category === '해외 분쟁·테러') markerColor = '#f97316'; // 주황
-                else if (news.category === '국가 안보') markerColor = '#6366f1'; // 인디고
-                else if (news.category === '사이버·금융') markerColor = '#3b82f6'; // 파랑
+                let markerColor = '#ef4444';
+                if (news.category === '해외 분쟁·테러') markerColor = '#f97316';
+                else if (news.category === '국가 안보') markerColor = '#6366f1';
+                else if (news.category === '사이버·금융') markerColor = '#3b82f6';
 
                 const customIcon = L.divIcon({
                     className: 'custom-div-icon',
