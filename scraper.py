@@ -283,7 +283,7 @@ REVIEW_RE = re.compile(r"신간|서평|출간|저자|지음|옮김|북콘서트|
 # 광고·홍보 (제목+요약)
 AD_RE = re.compile(r"협찬|보도자료|이벤트\s*(진행|실시)|할인\s*행사|프로모션|신제품|출시|분양|모델하우스|사전\s*예약|특가|구매\s*혜택|무료\s*체험|상담\s*문의|문의\s*[:☎]|☎|홈페이지\s*참조|제공\s*=|\(광고\)|sponsored", re.I)
 # 스포츠
-SPORTS_RE = re.compile(r"동점골|결승골|선제골|역전골|멀티골|쐐기골|해트트릭|홈런|안타|타점|삼진|득점|실점|무승부|승부차기|\[?(전반|후반)\s*\d+분?\]?|전반전|후반전|연장전|\d+\s*-\s*\d+\s*(승|패|무|\[|$)|와\s*\d+-\d+|평가전|A매치|대표팀|월드컵|올림픽|아시안컵|챔피언스리그|K리그|KBO|EPL|MLB|NBA|프로야구|프로축구|프로농구|프로배구|감독|선수|이적|우승|준우승|결승|4강|8강|16강|라운드|타석|이닝|세트\s*스코어")
+SPORTS_RE = re.compile(r"동점골|결승골|선제골|역전골|멀티골|쐐기골|해트트릭|홈런|안타|타점|삼진|득점|실점|무승부|승부차기|\[?(전반|후반)\s*\d+분?\]?|전반전|후반전|연장전|\d+\s*-\s*\d+\s*(승|패|무|\[|$)|와\s*\d+-\d+|평가전|A매치|대표팀|국대|국가대표|월드컵|올림픽|아시안컵|아시안게임|챔피언스리그|K리그|KBO|EPL|MLB|NBA|APBC|WBC|프리미어12|AFC|FIFA|UFC|프로야구|프로축구|프로농구|프로배구|야구(?!방망이|배트)|축구|농구|배구|골프|테니스|감독|선수|이적|우승|준우승|결승|4강|8강|16강|라운드|타석|이닝|세트\s*스코어|마운드|타자|투수|포수|타선|불펜|등판|선발\s*(투수|출전|등판)|도쿄돔|구장|시범경기|개막전|플레이오프|한국시리즈|포스트시즌|득점왕|MVP|골키퍼|공격수|수비수|미드필더|스트라이커|슈팅|어시스트|타율|방어율|세이브|완봉|노히트|후계자|\[(스포츠|야구|축구|농구|배구|골프)[^\]]*\]")
 # 따옴표 안의 비유 표현: 동점골 '폭발', 주가 '추락' 등
 QUOTED_METAPHOR_RE = re.compile(r"['‘’“”\"]\s*(폭발|붕괴|추락|충돌|화재|침몰|전복|난동|폭행|살인|테러|사망)\s*['‘’“”\"]")
 # 실제로 일어난 일임을 보여주는 낱말 (이 낱말이 있으면 아래 정책·발언 필터를 통과)
@@ -375,7 +375,7 @@ def classify(title, content):
     if ENT_SPORT_RE.search(t) and group in ("재난·사고", "실종·제보"):
         return None
     # 스포츠 기사: 골 '폭발', 순위 '추락' 같은 표현 때문에 잘못 잡히는 것 방지
-    if SPORTS_RE.search(t) and (sub in AMBIGUOUS_SUBS or broad or group in ("재난·사고", "실종·제보")) and not FACT2_RE.search(t):
+    if SPORTS_RE.search(t) and not FACT2_RE.search(t):
         return None
     if QUOTED_METAPHOR_RE.search(t) and sub in AMBIGUOUS_SUBS and not FACT2_RE.search(t):
         return None
@@ -1058,6 +1058,114 @@ def resolve_google_link(link):
 
 
 # ───────────────────────────────────────────────────────────────
+# 4-2. 같은 사건을 다룬 기사 묶기
+#   한 사건을 여러 언론사가 보도하면 기사 수만큼 건수가 늘어나므로,
+#   같은 사건으로 보이는 기사에 같은 사건번호(event)를 붙입니다. 화면에서는 1건으로 세고 관련 기사를 함께 보여 줍니다.
+# ───────────────────────────────────────────────────────────────
+_EVENT_STOP = set("경찰 검찰 혐의 구속 구속영장 영장 청구 신청 입건 체포 검거 송치 기소 수사 조사 남성 여성 종합 속보 단독 사건 사고 발생 "
+                  "피해 피해자 피의자 관련 오늘 어제 결국 당시 현장 확인 추정 가운데 이후 위해 대해 징역 선고 재판 법원".split())
+_EVENT_STRONG = {"살인·살해", "방화·납치·감금"}       # 같은 지역·같은 종류면 거의 같은 사건인 분류
+
+
+# 사건 종류를 나타내는 흔한 낱말: 이것만 같다고 같은 사건은 아니므로 비슷함 계산에서 뺌
+_EVENT_TYPE_RX = re.compile(r"개인정보|정보\s*유출|유출|해킹|화재|폭행|사기|보이스피싱|전세사기|투자사기|마약|음주운전|교통사고|절도|강도|성폭행|성추행|실종|추락|붕괴|폭발|공습|미사일|드론|공격|스토킹|협박|횡령|배임|침수|정전|산불|뺑소니|무면허|불법|의혹")
+
+
+def _ev_tokens(title):
+    title = _EVENT_TYPE_RX.sub(" ", title)
+    return {w for w in re.findall(r"[가-힣A-Za-z0-9]{2,}", title) if w not in _EVENT_STOP and not w.isdigit()}
+
+
+def _ev_bigrams(title):
+    s = re.sub(r"[^가-힣0-9A-Za-z]", "", _EVENT_TYPE_RX.sub(" ", title))
+    return {s[i:i + 2] for i in range(len(s) - 1)}
+
+
+def _ev_sim(a, b):
+    j = len(a["_bg"] & b["_bg"]) / max(1, len(a["_bg"] | b["_bg"]))
+    shared = len(a["_tk"] & b["_tk"])
+    overlap = shared / max(1, min(len(a["_tk"]), len(b["_tk"])))
+    return j, shared, overlap
+
+
+def assign_events(items):
+    n = len(items)
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(x, y):
+        rx, ry = find(x), find(y)
+        if rx != ry:
+            parent[ry] = rx
+
+    for it in items:
+        it["_tk"] = _ev_tokens(it["title"])
+        it["_bg"] = _ev_bigrams(it["title"])
+        loc = it.get("location") or ""
+        it["_loc"] = loc if (it.get("lat") is not None and " " in loc and not loc.startswith("해외")) else ""
+
+    by_sub = {}
+    for i, it in enumerate(items):
+        by_sub.setdefault(it["category"], []).append(i)
+
+    for sub, idxs in by_sub.items():
+        # 1) 위치가 같은 기사끼리 / 위치를 모르는 기사끼리
+        for a_pos in range(len(idxs)):
+            a = items[idxs[a_pos]]
+            for b_pos in range(a_pos + 1, len(idxs)):
+                b = items[idxs[b_pos]]
+                gap = abs(a["timestamp"] - b["timestamp"])
+                if a["_loc"] != b["_loc"]:
+                    continue
+                j, shared, overlap = _ev_sim(a, b)
+                if a["_loc"]:
+                    same = gap <= 96 * 3600 and (j >= 0.2 or (shared >= 2 and j >= 0.12) or (sub in _EVENT_STRONG and gap <= 96 * 3600))
+                else:
+                    same = gap <= 48 * 3600 and (j >= 0.33 or (shared >= 3 and overlap >= 0.5))
+                if same:
+                    union(idxs[a_pos], idxs[b_pos])
+        # 2) 위치를 모르는 기사가 위치를 아는 기사와 내용이 비슷하면 같은 사건으로 묶고 위치도 물려받음
+        located = [i for i in idxs if items[i]["_loc"]]
+        for i in idxs:
+            a = items[i]
+            if a["_loc"] or a["group"] == "해외·안보":
+                continue
+            best = None
+            for k in located:
+                b = items[k]
+                if abs(a["timestamp"] - b["timestamp"]) > 72 * 3600:
+                    continue
+                j, shared, overlap = _ev_sim(a, b)
+                if j >= 0.3 or (shared >= 3 and overlap >= 0.5):
+                    if best is None or j > best[0]:
+                        best = (j, k)
+            if best:
+                b = items[best[1]]
+                union(best[1], i)
+                dy, dx = _jitter(a["title"], 0.008)
+                a["location"], a["lat"], a["lng"] = b["location"], round(b["lat"] + dy, 4), round(b["lng"] + dx, 4)
+
+    groups = {}
+    for i in range(n):
+        groups.setdefault(find(i), []).append(i)
+    for members in groups.values():
+        first = min(members, key=lambda k: items[k]["timestamp"])
+        ev = make_id(norm_key(items[first]["title"]))
+        for k in members:
+            items[k]["event"] = ev
+            items[k]["event_n"] = len(members)
+    for it in items:
+        for key in ("_tk", "_bg", "_loc"):
+            it.pop(key, None)
+    return len(groups)
+
+
+# ───────────────────────────────────────────────────────────────
 # 5. 저장/불러오기 및 실행
 # ───────────────────────────────────────────────────────────────
 def load_existing():
@@ -1223,6 +1331,7 @@ def main():
     final = final[:MAX_ITEMS]
     for v in final:
         v["id"] = make_id(norm_key(v["title"]))
+    n_events = assign_events(final)        # 같은 사건 기사 묶기
 
     with open(NEWS_JSON, "w", encoding="utf-8") as f:
         f.write("[\n" + ",\n".join(json.dumps(v, ensure_ascii=False) for v in final) + "\n]\n")
@@ -1234,6 +1343,7 @@ def main():
         by_day[d] = by_day.get(d, 0) + 1
         by_src[v["source"]] = by_src.get(v["source"], 0) + 1
     unknown = sum(1 for v in final if v["lat"] is None)
+    print(f"같은 사건 묶기: 기사 {len(final)}개 → 사건 {n_events}건")
     print(f"=== 완료: 저장 {len(final)}건 (이번 신규 {new_count}건) / RSS 성공 {ok_feeds} 실패 {fail_feeds} ===")
     print("날짜별:", dict(sorted(by_day.items())))
     print("언론사 상위:", dict(sorted(by_src.items(), key=lambda x: -x[1])[:15]))
