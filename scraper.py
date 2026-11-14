@@ -3,11 +3,12 @@
 우리동네 사건사고 - 뉴스 수집기 (scraper.py)
 
 하는 일
-  1) 구글 뉴스(주제별·지역별 검색) + 각 언론사 RSS에서 기사를 모읍니다.
+  1) 언론사 직접 RSS(약 40곳, 매번) + 구글 뉴스(언론사별·주제별·지역별 검색, 15분마다)에서 기사를 모읍니다.
+     여러 주소를 동시에 내려받아서 주소가 많아도 1분 안팎에 끝납니다.
   2) 사건사고 기사만 골라서 카테고리(대분류/소분류)와 위치(시·군·구·동)를 붙입니다.
   3) 기존 news.json 에 합쳐서 '최근 7일치'를 계속 누적한 뒤 news.json 으로 저장합니다.
 
-* GitHub Actions(auto_update.yml)가 5분마다 이 파일을 실행합니다.
+* GitHub Actions(auto_update.yml)가 실행될 때마다 이 파일을 약 6분 간격으로 여러 번 돌립니다.
 * 동(洞)·장소 좌표는 geocache.json 에 저장해 두고 다시 씁니다. (자동으로 만들어집니다)
 * 실행 로그(Actions 탭)에 [OK]/[실패]로 어떤 주소가 되고 안 되는지 표시됩니다.
 """
@@ -45,31 +46,88 @@ def google_rss(query):
     return f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
 
 
-# (이름, 주소) - 각 언론사가 직접 제공하는 RSS. 로그에 [실패]가 뜨는 주소는 지우거나 바꿔 주세요.
+# (이름, 주소) - 각 언론사가 직접 제공하는 RSS. 언론사가 기사를 올리는 즉시 반영되어 가장 빠릅니다.
+# 2026-11-14 에 주소마다 실제로 열어서 최신 기사가 나오는지 확인했습니다. 로그에 [실패]가 뜨는 주소는 지우거나 바꿔 주세요.
+# (KBS·MBC·JTBC·중앙일보·한국경제의 예전 RSS 는 비어 있거나 2024년에 멈춰 있어서 아래 SITE_FEEDS(구글 뉴스 언론사 검색)로 옮겼습니다)
 PRESS_FEEDS = [
+    # 통신·방송
     ("연합뉴스", "https://www.yna.co.kr/rss/news.xml"),
     ("연합뉴스", "https://www.yna.co.kr/rss/society.xml"),
     ("연합뉴스", "https://www.yna.co.kr/rss/local.xml"),
+    ("연합뉴스TV", "https://www.yonhapnewstv.co.kr/browse/feed/"),
+    ("연합뉴스TV", "https://www.yonhapnewstv.co.kr/category/news/society/feed/"),
+    ("뉴시스", "https://newsis.com/RSS/society.xml"),
     ("SBS", "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=01&plink=RSS"),
     ("SBS", "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=02&plink=RSS"),
     ("SBS", "https://news.sbs.co.kr/news/SectionRssFeed.do?sectionId=03&plink=RSS"),
-    ("KBS", "https://news.kbs.co.kr/rss/rss.do"),
-    ("MBC", "https://imnews.imbc.com/rss/news/news_00.xml"),
-    ("JTBC", "https://fs.jtbc.co.kr/RSS/newsflash.xml"),
-    ("JTBC", "https://fs.jtbc.co.kr/RSS/society.xml"),
+    ("TV조선", "https://news.tvchosun.com/site/data/rss/news.xml"),
+    ("MBN", "https://www.mbn.co.kr/rss/society/"),
+    # 종합 일간지
     ("조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/?outputType=xml"),
     ("조선일보", "https://www.chosun.com/arc/outboundfeeds/rss/category/national/?outputType=xml"),
-    ("중앙일보", "https://rss.joins.com/joins_news_list.xml"),
     ("동아일보", "https://rss.donga.com/total.xml"),
     ("동아일보", "https://rss.donga.com/national.xml"),
-    ("한겨레", "https://www.hani.co.kr/rss/society/"),
+    ("한겨레", "https://www.hani.co.kr/rss/society"),
     ("경향신문", "https://www.khan.co.kr/rss/rssdata/society_news.xml"),
     ("세계일보", "https://www.segye.com/Articles/RSSList/segye_recent.xml"),
-    ("뉴시스", "https://newsis.com/RSS/society.xml"),
+    ("국민일보", "https://www.kmib.co.kr/rss/data/kmibSocRss.xml"),
+    ("서울신문", "https://www.seoul.co.kr/xml/rss/rss_society.xml"),
     ("노컷뉴스", "https://rss.nocutnews.co.kr/nocutnews.xml"),
-    ("한국경제", "https://www.hankyung.com/feed/society"),
     ("오마이뉴스", "https://rss.ohmynews.com/rss/ohmynews.xml"),
+    ("프레시안", "https://www.pressian.com/api/v3/site/rss/news"),
+    # 지역 언론
+    ("매일신문", "https://www.imaeil.com/rss"),
+    ("강원도민일보", "https://www.kado.net/rss/allArticle.xml"),
+    ("대전일보", "https://www.daejonilbo.com/rss/allArticle.xml"),
+    # 경제지 (사회면 위주)
+    ("매일경제", "https://www.mk.co.kr/rss/50400012/"),
+    ("머니투데이", "https://rss.mt.co.kr/mt_news.xml"),
+    ("아시아경제", "https://www.asiae.co.kr/rss/society.htm"),
+    ("헤럴드경제", "https://biz.heraldcorp.com/rss/google/society"),
+    ("파이낸셜뉴스", "https://www.fnnews.com/rss/r20/fn_realnews_society.xml"),
+    ("이데일리", "http://rss.edaily.co.kr/edaily_news.xml"),
+    ("조선비즈", "https://biz.chosun.com/arc/outboundfeeds/rss/?outputType=xml"),
+    # IT·전문지·주간지 (사건사고는 적지만 해킹·개인정보 유출·의료사고 등이 나옴)
+    ("아이뉴스24", "https://www.inews24.com/rss/news_society.xml"),
+    ("전자신문", "https://rss.etnews.com/Section901.xml"),
+    ("지디넷코리아", "https://feeds.feedburner.com/zdkorea"),
+    ("블로터", "https://www.bloter.net/rss/allArticle.xml"),
+    ("미디어오늘", "https://www.mediatoday.co.kr/rss/allArticle.xml"),
+    ("시사저널", "https://www.sisajournal.com/rss/allArticle.xml"),
+    ("더스쿠프", "https://www.thescoop.co.kr/rss/allArticle.xml"),
+    ("여성신문", "https://www.womennews.co.kr/rss/allArticle.xml"),
+    ("코메디닷컴", "https://kormedi.com/feed/"),
 ]
+
+# RSS 를 주지 않거나 RSS 가 멈춘 언론사: 구글 뉴스에서 '그 언론사 사이트의 사건사고 기사'만 검색합니다. (이름, 도메인)
+# 구글이 기사를 모으는 데 몇 분~수십 분 걸려서 직접 RSS 보다는 조금 늦습니다.
+SITE_FEEDS = [
+    # 방송
+    ("KBS", "news.kbs.co.kr"), ("MBC", "imnews.imbc.com"), ("JTBC", "news.jtbc.co.kr"), ("YTN", "ytn.co.kr"),
+    ("채널A", "ichannela.com"), ("뉴스1", "news1.kr"), ("한국경제TV", "wowtv.co.kr"), ("SBS Biz", "biz.sbs.co.kr"),
+    ("뉴스타파", "newstapa.org"),
+    # 종합지·경제지
+    ("중앙일보", "joongang.co.kr"), ("한국일보", "hankookilbo.com"), ("문화일보", "munhwa.com"),
+    ("한국경제", "hankyung.com"), ("서울경제", "sedaily.com"), ("데일리안", "dailian.co.kr"), ("더팩트", "tf.co.kr"),
+    ("비즈워치", "bizwatch.co.kr"), ("조세일보", "joseilbo.com"),
+    # 지역 언론·지역 방송
+    ("부산일보", "busan.com"), ("국제신문", "kookje.co.kr"), ("경기일보", "kyeonggi.com"), ("강원일보", "kwnews.co.kr"),
+    ("kbc광주방송", "ikbc.co.kr"), ("전주MBC", "jmbc.co.kr"), ("대구MBC", "dgmbc.com"), ("CJB청주방송", "cjb.co.kr"),
+    ("JIBS", "jibs.co.kr"),
+    # 주간지·월간지·전문지
+    ("시사IN", "sisain.co.kr"), ("한겨레21", "h21.hani.co.kr"), ("주간경향", "weekly.khan.co.kr"), ("주간동아", "weekly.donga.com"),
+    ("신동아", "shindonga.donga.com"), ("주간조선", "weekly.chosun.com"), ("월간산", "san.chosun.com"),
+    ("이코노미스트", "economist.co.kr"), ("한경비즈니스", "magazine.hankyung.com"),
+    ("디지털타임스", "dt.co.kr"), ("디지털데일리", "ddaily.co.kr"), ("기자협회보", "journalist.or.kr"),
+    ("일다", "ildaro.com"), ("농민신문", "nongmin.com"), ("헬스조선", "health.chosun.com"), ("동아사이언스", "dongascience.com"),
+]
+SITE_QUERY_WORDS = "(사건 OR 사고 OR 경찰 OR 화재 OR 사망 OR 숨져 OR 부상 OR 검거 OR 구속 OR 실종 OR 폭행 OR 사기 OR 피해)"
+
+
+def google_site_rss(domain):
+    """구글 뉴스에서 한 언론사 사이트의 최근 1일 사건사고 기사만 검색"""
+    q = urllib.parse.quote(f"site:{domain} {SITE_QUERY_WORDS} when:1d")
+    return f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
 
 # 구글 뉴스 주제별 검색 (구글 뉴스는 여러 언론사 기사를 모아서 보여줍니다)
 TOPIC_QUERIES = [
@@ -194,16 +252,57 @@ def translate_ko(text):
         return None
 
 
-def build_feed_list():
+def build_feed_list(include_google=True):
     feeds = []
     for name, url in PRESS_FEEDS:
         feeds.append({"name": name, "url": url, "kind": "press", "hint": None})
+    if not include_google:
+        return feeds
+    for name, domain in SITE_FEEDS:
+        feeds.append({"name": name, "url": google_site_rss(domain), "kind": "google", "hint": None})
     for q in TOPIC_QUERIES:
         feeds.append({"name": "구글 뉴스", "url": google_rss(q), "kind": "google", "hint": None})
     for city, sido in REGION_QUERIES:
         feeds.append({"name": "구글 뉴스", "url": google_rss(REGION_QUERY_TEMPLATE.format(city)),
                       "kind": "google", "hint": sido})
     return feeds
+
+
+# ── 빠르게 여러 번 수집하기 ──
+# 워크플로가 한 번 실행될 때 이 스크립트를 몇 분 간격으로 여러 번 돌립니다.
+# 언론사 직접 RSS 는 매번, 구글 뉴스 검색(요청이 많아 너무 자주 하면 구글이 막음)은 GOOGLE_EVERY_SEC 마다 한 번만 합니다.
+GOOGLE_EVERY_SEC = int(os.environ.get("GOOGLE_EVERY_SEC", "900"))   # 기본 15분
+STATE_FILE = ".scrape_state.json"                                     # 저장소에 올리지 않는 임시 기록
+
+
+def google_due():
+    try:
+        with open(STATE_FILE, encoding="utf-8") as f:
+            last = float(json.load(f).get("last_google", 0))
+    except Exception:
+        last = 0
+    return time.time() - last >= GOOGLE_EVERY_SEC
+
+
+def mark_google_done():
+    try:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"last_google": time.time()}, f)
+    except Exception:
+        pass
+
+
+def fetch_many(feeds, workers):
+    """여러 주소를 동시에 내려받음 → [(feed, entries 또는 None, 오류)] (순서 유지)"""
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(feed):
+        try:
+            return feed, fetch_entries(feed["url"]), None
+        except Exception as e:      # noqa
+            return feed, None, e
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        return list(ex.map(one, feeds))
 
 
 # ───────────────────────────────────────────────────────────────
@@ -323,7 +422,8 @@ RULES_SRC = [
     ("기타 범죄", r"무허가|짝퉁|저작권\s*침해|암표|불법\s*(?:영업|유통|판매|제조|도축)|식품위생법|원산지\s*(?:허위|위반|속여)|(?:산업\s*)?기술\s*유출|영업\s*비밀|불법\s*녹음|도청|불법\s*감청|직장\s*내\s*괴롭힘|갑질"),
     # ── 감염병·보건 (자연재해의 '주의보'보다 먼저) ──
     ("가축전염병", r"조류\s*인플루엔자|조류\s*독감|AI\s*(?:확진|발생|의심|항원|검출|방역)|고병원성|아프리카\s*돼지\s*열병|ASF|구제역|럼피스킨|살처분|브루셀라|가축\s*전염병"),
-    ("감염병", r"확진|감염병|전염병|판데믹|팬데믹|코로나|독감|인플루엔자|말라리아|뎅기열|홍역|백일해|결핵|수두|엠폭스|원숭이\s*두창|메르스|에볼라|콜레라|장티푸스|"
+    # ※ '수두'는 '수두룩'(=매우 많음)에 들어 있어서 스포츠·일반 기사가 감염병으로 잘못 분류되던 문제 → 뒤에 '룩'이 오면 제외
+    ("감염병", r"확진|감염병|전염병|판데믹|팬데믹|코로나|독감|인플루엔자|말라리아|뎅기열|홍역|백일해|결핵|(?<![가-힣])수두(?!룩)|엠폭스|원숭이\s*두창|메르스|에볼라|콜레라|장티푸스|"
              r"일본뇌염|SFTS|쯔쯔가무시|살인\s*진드기|비브리오|레지오넬라|성홍열|수족구|A형\s*간염|집단\s*감염|집단\s*발병|역학\s*조사|유행\s*주의보|니파\s*바이러스"),
     ("식중독·위생", r"식중독|노로\s*바이러스|살모넬라|대장균|집단\s*(?:설사|구토|복통)|이물질\s*(?:검출|발견)|회수\s*조치|유해\s*물질\s*검출"),
     # ── 자연재해 ──
@@ -411,7 +511,7 @@ REVIEW_RE = re.compile(r"신간|서평|출간|저자|지음|옮김|북콘서트|
 # 광고·홍보 (제목+요약)
 AD_RE = re.compile(r"협찬|보도자료|이벤트\s*(진행|실시)|할인\s*행사|프로모션|신제품|출시|분양|모델하우스|사전\s*예약|특가|구매\s*혜택|무료\s*체험|상담\s*문의|문의\s*[:☎]|☎|홈페이지\s*참조|제공\s*=|\(광고\)|sponsored", re.I)
 # 스포츠
-SPORTS_RE = re.compile(r"\[[^\]]{1,12}전\]|\[오피셜\]|출전\s*정지|(?<![A-Za-z])GK(?![A-Za-z])|에이징\s*커브|노마크|드리블|골문|크로스|프리킥|코너킥|페널티킥|오프사이드|벤치|교체\s*(투입|출전)|스쿼드|엔트리|주전|캡틴|손흥민|이강인|김민재|황희찬|오타니|류현진|이정후|김하성|홍명보|클린스만|토트넘|맨유|맨시티|리버풀|레알|바르셀로나|PSG|뮌헨|다저스|양키스|랭킹|세계\s*\d+위|금메달|은메달|동메달|메달|경기력|승점|연승|연패|역전승|완승|완패|대승|대패|동점골|결승골|선제골|역전골|멀티골|쐐기골|해트트릭|홈런|안타|타점|삼진|득점|실점|무승부|승부차기|\[?(전반|후반)\s*\d+분?\]?|전반전|후반전|연장전|\d+\s*-\s*\d+\s*(승|패|무|\[|$)|와\s*\d+-\d+|평가전|A매치|대표팀|국대|국가대표|월드컵|올림픽|아시안컵|아시안게임|챔피언스리그|K리그|KBO|EPL|MLB|NBA|APBC|WBC|프리미어12|AFC|FIFA|UFC|프로야구|프로축구|프로농구|프로배구|야구(?!방망이|배트)|축구|농구|배구|골프|테니스|감독|선수|이적|우승|준우승|결승|4강|8강|16강|라운드|타석|이닝|세트\s*스코어|마운드|타자|투수|포수|타선|불펜|등판|선발\s*(투수|출전|등판)|도쿄돔|구장|시범경기|개막전|플레이오프|한국시리즈|포스트시즌|득점왕|MVP|골키퍼|공격수|수비수|미드필더|스트라이커|슈팅|어시스트|타율|방어율|세이브|완봉|노히트|후계자|\[(스포츠|야구|축구|농구|배구|골프)[^\]]*\]")
+SPORTS_RE = re.compile(r"\[[^\]]{1,12}전\]|\[오피셜\]|출전\s*정지|(?<![A-Za-z])GK(?![A-Za-z])|에이징\s*커브|노마크|드리블|골문|크로스|프리킥|코너킥|페널티킥|오프사이드|벤치|교체\s*(투입|출전)|스쿼드|엔트리|주전|캡틴|손흥민|이강인|김민재|황희찬|오타니|류현진|이정후|김하성|홍명보|클린스만|토트넘|맨유|맨시티|리버풀|레알|바르셀로나|PSG|뮌헨|다저스|양키스|랭킹|세계\s*\d+위|금메달|은메달|동메달|메달|경기력|승점|연승|연패|역전승|완승|완패|대승|대패|동점골|결승골|선제골|역전골|멀티골|쐐기골|해트트릭|홈런|안타|타점|삼진|득점|실점|무승부|승부차기|\[?(전반|후반)\s*\d+분?\]?|전반전|후반전|연장전|\d+\s*-\s*\d+\s*(승|패|무|\[|$)|와\s*\d+-\d+|평가전|A매치|대표팀|국대|국가대표|월드컵|올림픽|아시안컵|아시안게임|챔피언스리그|K리그|KBO|EPL|MLB|NBA|APBC|WBC|프리미어12|AFC|FIFA|UFC|프로야구|프로축구|프로농구|프로배구|야구(?!방망이|배트)|축구|농구|배구|골프|테니스|감독|선수|이적|우승|준우승|결승|4강|8강|16강|라운드|타석|이닝|세트\s*스코어|마운드|타자|투수|포수|타선|불펜|등판|선발\s*(투수|출전|등판)|도쿄돔|구장|포메이션|(?<![\d.:])[2-5]-[1-6]-[1-4](?:-[1-3])?(?![\d-])|[가-힣]{2,6}전\s*['‘’“”\"]?\s*(?:참패|완패|대패|석패|완승|대승|신승)|[가-힣]{2,5}호\s*(?:감독|선수단|첫\s*승|첫\s*패|데뷔전)|시범경기|개막전|플레이오프|한국시리즈|포스트시즌|득점왕|MVP|골키퍼|공격수|수비수|미드필더|스트라이커|슈팅|어시스트|타율|방어율|세이브|완봉|노히트|후계자|\[(스포츠|야구|축구|농구|배구|골프)[^\]]*\]")
 # 따옴표 안의 비유 표현: 동점골 '폭발', 주가 '추락' 등
 QUOTED_METAPHOR_RE = re.compile(r"['‘’“”\"]\s*(폭발|붕괴|추락|충돌|화재|침몰|전복|난동|폭행|살인|테러|사망|지진|태풍|한파|폭탄|전쟁|쓰나미)\s*['‘’“”\"]")
 # 실제로 일어난 일임을 보여주는 낱말 (이 낱말이 있으면 정책·발언 필터를 통과)
@@ -837,6 +937,33 @@ def classify(title, content):
 
     # ── 3) 국내 사건사고 ──
     return _classify_incident(title, content, t, full)
+
+
+def all_tags(title, sub, group):
+    """제목에 함께 나온 다른 사건 유형까지 모두 돌려줌 (첫 번째 = 대표 분류).
+    예) '차량 추돌 후 화재…' → ['화재', '교통사고']  → 화면에서 두 분류 모두 표시되고, 두 분류 필터에 모두 나옵니다."""
+    tags = [sub]
+    if group == OVERSEAS_GROUP or sub == "북한 도발":
+        return tags
+    t = PRE_CLEAN.sub(" ", title)
+    for s, g, rx, broad in RULES:
+        if broad or s in tags or g == OVERSEAS_GROUP:
+            continue
+        if not rx.search(t):
+            continue
+        # 분류할 때와 같은 '비유 표현' 거르기를 그대로 적용
+        if s == "붕괴·추락" and not COLLAPSE_CTX_RE.search(t):
+            continue
+        if s == "폭발·가스누출" and "폭발" in t and not re.search(r"가스\s*누출|유독\s*가스|누출", t) and not EXPLOSION_CTX_RE.search(t):
+            continue
+        if g == NATURE_GROUP and group != NATURE_GROUP and not (WARNING_RE.search(t) or DAMAGE_RE.search(t)):
+            continue
+        if g == "감염병·보건" and (SPORTS_RE.search(t) or ENT_SPORT_RE.search(t)):
+            continue
+        tags.append(s)
+        if len(tags) >= 4:
+            break
+    return tags
 
 
 # ───────────────────────────────────────────────────────────────
@@ -1576,6 +1703,7 @@ def make_item(title, content, sub, group, source, link, ts, hint, orig=None):
         "content": content,
         "category": sub,
         "group": group,
+        "tags": all_tags(title, sub, group),   # 함께 해당하는 분류들 (예: 화재 + 교통사고)
         "location": loc,
         "lat": lat,
         "lng": lng,
@@ -1864,16 +1992,21 @@ def main():
     new_count = 0
     ok_feeds = fail_feeds = 0
     started = time.time()
-    for feed in build_feed_list():
-        if time.time() - started > 300:
-            print("[주의] 수집 시간이 길어져 남은 국내 주소는 다음 실행으로 넘깁니다.")
-            break
+    do_google = google_due()
+    feeds = build_feed_list(include_google=do_google)
+    print(f"수집 주소 {len(feeds)}곳 (구글 뉴스 검색 {'포함' if do_google else '이번엔 건너뜀 · ' + str(GOOGLE_EVERY_SEC // 60) + '분마다 한 번'})")
+    # 언론사 직접 RSS 는 여러 곳을 동시에, 구글 뉴스는 막히지 않도록 적게 동시에 내려받음
+    press = [f for f in feeds if f["kind"] == "press"]
+    goog = [f for f in feeds if f["kind"] != "press"]
+    fetched = fetch_many(press, 16) + fetch_many(goog, 4)
+    if do_google:
+        mark_google_done()
+    print(f"내려받기 완료: {time.time() - started:.1f}초")
+    for feed, entries, err in fetched:
         label = f"{feed['name']}" + (f" [{feed['hint']}]" if feed["hint"] else "") + f" {feed['url'][:70]}"
-        try:
-            entries = fetch_entries(feed["url"])
-        except Exception as e:
+        if err is not None or entries is None:
             fail_feeds += 1
-            print(f"[실패] {label} → {type(e).__name__}: {str(e)[:80]}")
+            print(f"[실패] {label} → {type(err).__name__}: {str(err)[:80]}")
             continue
         got = 0
         for entry in entries[:300]:
@@ -1895,23 +2028,22 @@ def main():
                     old["link"] = it["link"]
         ok_feeds += 1
         print(f"[OK ] {label} → 전체 {len(entries)}건 중 신규 사건사고 {got}건")
-        time.sleep(0.3)
 
     # ── 해외 언론: 실제 발생한 분쟁·공격 기사만 골라 한글로 번역 ──
     known_orig = {norm_key(v["orig"]) for v in items.values() if v.get("orig")}
     foreign = [{"name": n, "url": u, "google": False} for n, u in FOREIGN_FEEDS]
-    foreign += [{"name": "해외 언론", "url": google_rss_en(q), "google": True} for q in FOREIGN_QUERIES]
+    if do_google:
+        foreign += [{"name": "해외 언론", "url": google_rss_en(q), "google": True} for q in FOREIGN_QUERIES]
+    foreign_fetched = fetch_many([f for f in foreign if not f["google"]], 10) + fetch_many([f for f in foreign if f["google"]], 3)
     translated = 0
-    for feed in foreign:
+    for feed, entries, err in foreign_fetched:
         if time.time() - started > 480:
             print("[주의] 수집 시간이 길어져 남은 해외 주소는 다음 실행으로 넘깁니다.")
             break
         label = f"{feed['name']} {feed['url'][:70]}"
-        try:
-            entries = fetch_entries(feed["url"])
-        except Exception as e:
+        if err is not None or entries is None:
             fail_feeds += 1
-            print(f"[실패] {label} → {type(e).__name__}: {str(e)[:80]}")
+            print(f"[실패] {label} → {type(err).__name__}: {str(err)[:80]}")
             continue
         ok_feeds += 1
         got = 0
