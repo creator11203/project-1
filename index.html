@@ -87,7 +87,8 @@
         /* 커뮤니티 버튼 */
         .comm-btn { background: linear-gradient(135deg, #059669 0%, #0d9488 55%, #0284c7 100%); }
         .comm-btn:hover { filter: brightness(1.1); }
-        .comm-faces span { width: 22px; height: 22px; border-radius: 50%; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid #059669; margin-left: -7px; }
+        /* 맨 위 버튼 줄은 글씨 크기 조절과 상관없이 고정 → 크기를 px 대신 rem 으로 (제목 줄 고정 배율과 함께 항상 같은 크기) */
+        .comm-faces span { width: 1.375rem; height: 1.375rem; border-radius: 50%; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .8125rem; line-height: 1; border: .125rem solid #059669; margin-left: -.4375rem; }
         .comm-faces span:first-child { margin-left: 0; }
         .panel-flash { animation: panel-flash 1s ease-out 1; }
         @keyframes panel-flash { 0% { box-shadow: inset 0 0 0 4px #10b981; } 100% { box-shadow: inset 0 0 0 0 rgba(16,185,129,0); } }
@@ -149,10 +150,11 @@
         /* 분류 여러 개 선택: 선택될 때 톡 튀는 애니메이션 + ✓ 표시, 해제될 때 살짝 줄어듦 */
         .cat-btn { transition: transform .15s, opacity .15s, box-shadow .15s; }
         .cat-btn:active { transform: scale(.94); }
-        .cat-on { box-shadow: 0 2px 8px rgba(15,23,42,.18); }
+        .cat-on { box-shadow: 0 0 0 2px #1e293b, 0 3px 10px rgba(15,23,42,.22); }
+        .dark .cat-on { box-shadow: 0 0 0 2px #e2e8f0, 0 3px 10px rgba(0,0,0,.4); }
         .cat-dim { opacity: .62; }
         .cat-dim:hover { opacity: 1; }
-        .cat-check { display: inline-block; margin-right: 3px; font-weight: 900; animation: cat-check .3s ease-out 1; }
+        .cat-check { position: absolute; top: -7px; right: -6px; width: 16px; height: 16px; border-radius: 50%; background: #4f46e5; color: #fff; font-size: 10px; font-weight: 900; line-height: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.35); animation: cat-check .3s ease-out 1; pointer-events: none; }
         .cat-pop { animation: cat-pop .32s cubic-bezier(.3,1.6,.5,1) 1; }
         .cat-unpop { animation: cat-unpop .25s ease-out 1; }
         @keyframes cat-pop { 0% { transform: scale(.85); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
@@ -165,6 +167,15 @@
         .comm-tab.drop-after { box-shadow: 3px 0 0 0 #6366f1; }
         .safety-tab { background: linear-gradient(135deg, #dc2626, #ea580c) !important; color: #fff !important; border-color: transparent !important; }
         .safety-tab.off { background: linear-gradient(135deg, #fee2e2, #ffedd5) !important; color: #b91c1c !important; border: 1px solid #fca5a5 !important; }
+        .praise-tab { background: linear-gradient(135deg, #facc15, #f59e0b) !important; color: #422006 !important; border-color: transparent !important; }
+        .praise-tab.off { background: linear-gradient(135deg, #fef9c3, #fef3c7) !important; color: #92400e !important; border: 1px solid #fcd34d !important; }
+        .dark .praise-tab.off { background: linear-gradient(135deg, #422006, #451a03) !important; color: #fde68a !important; border-color: #78350f !important; }
+        /* 처음 한 번만: 탭을 끌어서 순서를 바꿀 수 있다는 안내 */
+        .tab-hint { position: relative; display: flex; align-items: center; gap: 6px; margin: 4px 8px 0; padding: 5px 10px; border-radius: 10px; background: #4f46e5; color: #fff; font-size: 11px; font-weight: 700; box-shadow: 0 4px 14px rgba(79,70,229,.35); animation: hint-in .35s ease-out 1; }
+        .tab-hint::before { content: ""; position: absolute; top: -5px; left: 28px; width: 10px; height: 10px; background: #4f46e5; transform: rotate(45deg); }
+        .tab-hint .hand { display: inline-block; animation: hint-drag 1.4s ease-in-out infinite; }
+        @keyframes hint-drag { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(14px); } }
+        @keyframes hint-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
         .dark .safety-tab.off { background: linear-gradient(135deg, #450a0a, #431407) !important; color: #fecaca !important; border-color: #7f1d1d !important; }
     </style>
 </head>
@@ -823,7 +834,7 @@
             '기타 특별법 범죄': { label: '기타 특별법 범죄', color: '#78716c', badge: badgeOf('stone'), law: '가정폭력처벌법, 아동학대처벌법, 중대재해처벌법, 동물보호법, 폐기물관리법, 병역법, 집시법, 출입국관리법 등',
                 subs: ['가정폭력·아동학대', '산업안전·중대재해법', '환경·동물 범죄', '병역·집시·출입국', '기타 범죄'] },
             '화재·사고': { label: '🔥 화재·사고', color: '#f59e0b', badge: badgeOf('amber'), law: '범죄가 아닌 사고: 화재, 폭발, 붕괴·추락, 산업재해, 안전사고',
-                subs: ['화재', '폭발·가스누출', '붕괴·추락', '산업재해', '구조·안전사고'] },
+                subs: ['화재', '폭발·가스누출', '붕괴·추락', '인파·압사 사고', '산업재해', '구조·안전사고'] },
             '교통사고': { label: '🚗 교통사고', color: '#10b981', badge: badgeOf('emerald'), law: '도로·철도·항공·선박 사고',
                 subs: ['교통사고', '철도·항공·선박 사고'] },
             '자연재해': { label: '🌧 자연재해', color: '#0ea5e9', badge: badgeOf('sky'), law: '재난안전법상 자연재난: 태풍·호우·대설·한파·폭염·지진·산사태·해일 등 (특보·경보 발령 포함)',
@@ -975,9 +986,8 @@
                 if (siteTag === null) { siteTag = tag; return; }
                 if (tag === siteTag) return;
                 siteTag = tag;
-                const a = document.activeElement, typing = a && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && a.type !== 'checkbox')) && a.value;
-                if (!typing && !call) location.reload();
-                else showAlertToast({ head: '🔄 새 버전', title: '웹사이트가 새 버전으로 업데이트되었습니다. 누르면 새로고침합니다.', reload: true });
+                // 페이지를 강제로 새로고침하지 않음 (보던 기사·지도·대화가 끊기지 않게). 원할 때 눌러서 새로고침
+                showAlertToast({ head: '🔄 새 버전', title: '웹사이트 화면이 새 버전으로 업데이트되었습니다. 편할 때 누르면 새 화면으로 바뀝니다. (기사 목록은 지금도 자동으로 계속 업데이트됩니다)', reload: true });
             } catch (e) {}
         }
         async function loadIncidentsFromJSON(isManualRefresh = false) {
@@ -1037,22 +1047,40 @@
             }
             if (!changed && !isManualRefresh) return;   // 새 기사가 없으면 화면을 건드리지 않음
             if (!selectedDate) { selectedDate = todayKey(); dateFollowToday = true; }
+            const firstLoad = !selectedNewsId;
 
+            // ▶ 자동 업데이트는 '기사 목록'에만 새 기사를 끼워 넣습니다.
+            //   지금 보고 있는 기사 원문, 지도 위치·확대, 열어 둔 팝업, 커뮤니티 화면은 그대로 둡니다. (사용자가 하던 일을 방해하지 않음)
             renderCategoryBar();
-            renderNewsList();
-            updateMapMarkers();
+            renderNewsList(!firstLoad && !isManualRefresh);
+            updateMapMarkersQuietly();
             renderTicker();
-            const filtered = getFilteredNews();
-            const stillThere = filtered.some(n => n.id === selectedNewsId);
             if (currentCategory === '범죄 다발 지역') {
-                if (!hotspotArticleOpen) renderCrimeHotspotsView();
-            } else if ((isManualRefresh || !selectedNewsId || !stillThere) && filtered.length > 0) {
+                if (!hotspotArticleOpen) renderCrimeHotspotsView(true);
+                return;
+            }
+            const filtered = getFilteredNews();
+            if ((isManualRefresh || firstLoad) && filtered.length > 0) {   // 처음 열 때와 직접 새로고침했을 때만 맨 위 기사를 엶
                 selectedNewsId = filtered[0].id;
                 renderNewsList();
                 renderDetailView(selectedNewsId);
                 if (isManualRefresh) focusMap(filtered[0], false);
             }
         }
+        // 지도 점 다시 그리기: 사용자가 지도를 끌거나 확대하는 중이거나 팝업을 열어 두었으면, 끝난 뒤에 조용히 반영
+        let markersPending = false;
+        function mapBusy() {
+            if (!map) return false;
+            if (map._popup && map.hasLayer(map._popup)) return true;
+            if (map._mapPane && map._mapPane.classList && (map.dragging && map.dragging._draggable && map.dragging._draggable._moving)) return true;
+            return !!map._animatingZoom || !!(map._panAnim && map._panAnim._inProgress) || !!map._flyToFrame;
+        }
+        function updateMapMarkersQuietly() {
+            if (mapBusy()) { markersPending = true; return; }
+            markersPending = false;
+            updateMapMarkers();
+        }
+        function flushPendingMarkers() { if (markersPending && !mapBusy()) { markersPending = false; updateMapMarkers(); } }
 
         // ================= 상단 속보 헤드라인 (가장 많이 보도되는 사건 순, 오른쪽 → 왼쪽으로 흐름) =================
         function renderTicker() {
@@ -1158,6 +1186,7 @@
             L.control.scale({ imperial: false }).addTo(map);
             applyMapStyle();
             markersLayer = makeMarkersLayer().addTo(map);
+            map.on('popupclose moveend zoomend dragend', () => setTimeout(flushPendingMarkers, 400));
             safetyLayer = L.layerGroup().addTo(map);
             const sel = document.getElementById('mapStyleSelect');
             if (sel) { sel.innerHTML = Object.keys(MAP_STYLES).map(k => `<option value="${k}">${MAP_STYLES[k].name}</option>`).join(''); sel.value = mapStyle; }
@@ -1260,8 +1289,7 @@
             const allOn = currentCategory === 'all' && selCats.size === 0;
             const selN = Array.from(selCats).reduce((a, g) => a + (gCount[g] || 0), 0);
 
-            let html = `<button onclick="setCategoryFilter('all')" data-cat="all" title="모든 분류 보기 (선택 모두 해제)" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition ${allOn ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold shadow-sm' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-medium'}">전체 <span class="opacity-70 font-mono">${base.length}</span></button>`;
-            if (selCats.size) html += `<span class="text-[0.625rem] font-bold text-indigo-600 dark:text-indigo-300 whitespace-nowrap">✓ ${selCats.size}개 선택 · 다시 누르면 해제</span>`;
+            let html = `<button onclick="setCategoryFilter('all')" data-cat="all" title="모든 분류 보기 (선택 모두 해제)" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition ${allOn ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold shadow-sm' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-bold'}">전체 <span class="opacity-70 font-mono">${base.length}</span></button>`;
             // 사건이 많은 순서대로 앞에 놓고, 해외는 항상 맨 뒤에 따로 구분해서 놓음
             const order = Object.keys(CATEGORY_GROUPS).filter(g => g !== OVERSEAS);
             const idx = {}; order.forEach((g, i) => { idx[g] = i; });
@@ -1269,11 +1297,14 @@
             const btn = g => {
                 const c = CATEGORY_GROUPS[g];
                 const on = selCats.has(g);
-                return `<button onclick="setCategoryFilter('${g}')" data-cat="${g}" aria-pressed="${on}" title="${esc(c.law || '')}${'\n'}누르면 선택 · 여러 개 함께 선택 가능 · 다시 누르면 해제" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition font-medium ${c.badge}${on ? ACTIVE + ' cat-on' : ''}${on && g === lastToggled ? ' cat-pop' : ''}${!on && g === lastToggled ? ' cat-unpop' : ''} ${(gCount[g] || 0) === 0 && !on ? 'opacity-50' : ''} ${selCats.size && !on ? 'cat-dim' : ''}">${on ? '<span class="cat-check">✓</span>' : ''}${c.label} <span class="opacity-70 font-mono">${gCount[g] || 0}</span></button>`;
+                // 선택 표시(✓)는 버튼 모서리에 겹쳐서 띄움 → 버튼 너비가 바뀌지 않아 옆 버튼들이 흔들리지 않음
+                return `<button onclick="setCategoryFilter('${g}')" data-cat="${g}" aria-pressed="${on}" title="${esc(c.law || '')}${'\n'}누르면 선택 · 여러 개 함께 선택 가능 · 다시 누르면 해제" class="cat-btn relative px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap font-medium ${c.badge}${on ? ' cat-on' : ''}${on && g === lastToggled ? ' cat-pop' : ''}${!on && g === lastToggled ? ' cat-unpop' : ''} ${(gCount[g] || 0) === 0 && !on ? 'opacity-50' : ''} ${selCats.size && !on ? 'cat-dim' : ''}">${on ? '<span class="cat-check">✓</span>' : ''}${c.label} <span class="opacity-70 font-mono">${gCount[g] || 0}</span></button>`;
             };
             html += order.map(btn).join('');
             html += `<span class="flex items-center pl-2 ml-1 border-l-2 border-dashed border-slate-400 dark:border-slate-500">${btn(OVERSEAS)}</span>`;
-            html += `<span class="ml-auto flex items-center gap-1.5 pl-2 border-l-2 border-slate-300 dark:border-slate-600"><button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
+            // 선택 안내문: '다발 지역' 버튼 왼쪽 빈 공간에 고정 폭으로 (내용이 바뀌어도 분류 버튼들이 움직이지 않음)
+            const hint = selCats.size ? `✓ ${selCats.size}개 분류 선택됨 · 다시 누르면 해제` : '분류를 누르면 선택 · 여러 개 함께 선택 가능';
+            html += `<span class="ml-auto flex items-center gap-1.5 pl-2 border-l-2 border-slate-300 dark:border-slate-600"><span class="cat-hint w-44 text-right text-[0.625rem] leading-tight ${selCats.size ? 'font-bold text-indigo-600 dark:text-indigo-300' : 'text-slate-400'}" style="white-space: normal;">${hint}</span><button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
             document.getElementById('groupButtons').innerHTML = html;
 
             lastToggled = null;
@@ -1363,9 +1394,11 @@
             renderNewsList();
         }
 
-        function renderNewsList() {
+        // anchor=true: 자동 업데이트로 새 기사가 위에 추가될 때, 사용자가 보고 있던 위치가 밀려나지 않게 그대로 유지
+        function renderNewsList(anchor) {
             const container = document.getElementById('newsListContainer');
             const prevScroll = container.scrollTop;
+            const oldHeight = container.scrollHeight;
             const filtered = getFilteredNews();
             const events = groupEvents(filtered);
             document.getElementById('listCount').textContent = '사건 ' + events.length + '건' + (filtered.length > events.length ? ' · 기사 ' + filtered.length + '개' : '');
@@ -1458,7 +1491,19 @@
                 more.onclick = showMoreNews;
                 container.appendChild(more);
             }
-            container.scrollTop = prevScroll;
+            if (anchor && prevScroll > 20) {
+                container.scrollTop = prevScroll + Math.max(0, container.scrollHeight - oldHeight);
+                // 아래쪽을 보고 있었다면: 위에 새 기사가 왔다는 작은 알림 (누르면 맨 위로)
+                const freshN = events.filter(ev => freshEventKeys.has(ev.key)).length;
+                if (freshN) {
+                    const pill = document.createElement('button');
+                    pill.className = 'sticky top-1 z-30 mx-auto block w-max px-3 py-1 rounded-full bg-emerald-600 text-white text-[0.6875rem] font-bold shadow-lg';
+                    pill.innerHTML = '▲ 새 기사 ' + freshN + '건';
+                    pill.onclick = () => { container.scrollTo({ top: 0, behavior: 'smooth' }); pill.remove(); };
+                    container.insertBefore(pill, container.firstChild);
+                    container.scrollTop += pill.offsetHeight;
+                }
+            } else container.scrollTop = prevScroll;
         }
 
         // ================= 다발 지역 (사건 수 기준, 같은 사건의 기사 여러 개는 1건) =================
@@ -1486,9 +1531,11 @@
             }).filter(s => s.lat != null).sort((a, b) => (b.count - a.count) || (b.articles - a.articles)).slice(0, 30);
         }
 
-        function renderCrimeHotspotsView() {
+        function renderCrimeHotspotsView(keepScroll) {
             hotspotArticleOpen = false;
             const container = document.getElementById('detailViewContainer');
+            const oldList = document.getElementById('hotspotList');
+            const keepTop = keepScroll && oldList ? oldList.scrollTop : 0;
             let listHTML = '';
             getCrimeHotspotsData().forEach((item, index) => {
                 let isSelected = selectedHotspotRegion === item.region;
@@ -1513,9 +1560,10 @@
                         <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 전국 사건사고 다발 지역</h2>
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">같은 사건을 다룬 기사 여러 개는 사건 1건으로 셉니다. 지역을 누르면 왼쪽에 그 지역 사건이 정리됩니다.</p>
                     </div>
-                    <div class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
+                    <div id="hotspotList" class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
                 </div>
             `;
+            if (keepTop) document.getElementById('hotspotList').scrollTop = keepTop;
         }
 
         function selectHotspotRegion(region, lat, lng) {
@@ -2905,7 +2953,7 @@
             const reqN = friendReqs.length + chatReqs.length;
             const tabDefs = {
                 talk: ['<i class="fa-solid fa-life-ring"></i> 우리동네 안전망', 'safety-tab'],
-                praise: ['👏 칭찬해요', 'bg-amber-500'],
+                praise: ['👏 칭찬해요', 'praise-tab'],
                 free: ['💬 이런저런', 'bg-sky-600'],
                 market: ['🛒 동네 장터', 'bg-emerald-600'],
                 meet: ['💞 동네 친구', 'bg-pink-600'],
@@ -2916,10 +2964,11 @@
             const nt = TAB_NOTICE[commTab];
             body.innerHTML = `
                 <div id="commTabBar" class="hscroll gap-1 px-2 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shrink-0" title="탭을 끌어서 순서를 바꿀 수 있습니다">
-                    ${commTabOrder().map(k => { const d = tabDefs[k]; const on = commTab === k; const safety = d[1] === 'safety-tab';
+                    ${commTabOrder().map(k => { const d = tabDefs[k]; const on = commTab === k; const special = d[1] === 'safety-tab' || d[1] === 'praise-tab';
                         return `<button data-tab="${k}" draggable="true" onclick="setCommTab('${k}')" ondragstart="tabDragStart(event)" ondragover="tabDragOver(event)" ondragleave="tabDragLeave(event)" ondrop="tabDrop(event)" ondragend="tabDragEnd(event)"
-                            class="comm-tab px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${safety ? 'safety-tab' + (on ? ' shadow-md ring-2 ring-red-300' : ' off') : (on ? d[1] + ' text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700')}">${d[0]}</button>`; }).join('')}
+                            class="comm-tab px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${special ? d[1] + (on ? ' shadow-md ring-2 ' + (k === 'talk' ? 'ring-red-300' : 'ring-yellow-300') : ' off') : (on ? d[1] + ' text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700')}">${d[0]}</button>`; }).join('')}
                 </div>
+                ${lsGet('tab_hint_seen') ? '' : `<div id="tabHint" class="tab-hint shrink-0" onclick="dismissTabHint()"><span class="hand">👆</span><span class="flex-1">탭을 마우스로 끌어서 원하는 순서로 바꿀 수 있어요</span><button class="opacity-80 hover:opacity-100">✕</button></div>`}
                 ${nt ? `<button onclick="toggleTabNotice()" title="눌러서 안내문 펼치기/접기" class="w-full text-left px-3 py-1.5 border-b shrink-0 flex items-start gap-1.5 text-[0.6875rem] ${nt.cls}" style="white-space: normal;">
                     <b class="shrink-0">📌 ${nt.title}</b>
                     <span id="tabNoticeText" class="flex-1 min-w-0 ${noticeOpen ? '' : 'truncate'}">${nt.text}</span>
@@ -2930,6 +2979,7 @@
                     ${(commTab === 'talk' || commTab === 'free') ? `<aside id="commMembers" class="w-40 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hide-narrow bg-slate-50 dark:bg-slate-900/60"></aside>` : ''}
                 </div>`;
             renderCommMembers();
+            if (document.getElementById('tabHint') && !tabHintTimer) tabHintTimer = setTimeout(dismissTabHint, 8000);
             if (commTab === 'friends') { renderCommBg(); renderFriends(); return; }
             if (commTab === 'praise') { renderCommBg(); renderPraise(); return; }
             if (commTab === 'market') { renderCommBg(); renderMarket(); return; }
@@ -3771,9 +3821,9 @@
         }
 
         // ---- 칭찬해요 (좋은 공간·고마운 일·좋은 아이디어를 사진과 짧은 글로 공유. 잡담 금지, 댓글은 80자까지) ----
-        const PRAISE_KINDS = [['place', '🏞 칭찬하고 싶은 공간'], ['deed', '🤝 고마운 일·선행'], ['idea', '💡 좋은 아이디어'], ['neighbor', '🌟 칭찬하고 싶은 이웃']];
+        const PRAISE_KINDS = [['all', '👏 칭찬해요'], ['place', '🏞 칭찬하고 싶은 공간'], ['deed', '🤝 고마운 일·선행'], ['idea', '💡 좋은 아이디어'], ['neighbor', '🌟 칭찬하고 싶은 이웃']];
         const PRAISE_POST_MAX = 300, PRAISE_REPLY_MAX = 80;
-        let praiseMessages = [], praiseUnsub = null, praiseAttach = null, praiseKind = 'place', praiseOpen = new Set();
+        let praiseMessages = [], praiseUnsub = null, praiseAttach = null, praiseKind = 'all', praiseOpen = new Set();
         function praiseLocalKey() { return 'comm_praise_' + townKey(myTown); }
         function praiseLocalSave() {
             if (!lsSet(praiseLocalKey(), JSON.stringify(praiseMessages.slice(0, 300)))) lsSet(praiseLocalKey(), JSON.stringify(praiseMessages.slice(0, 300).map(m => Object.assign({}, m, { img: '' }))));
@@ -3923,6 +3973,9 @@
             COMM_TABS_DEFAULT.forEach(k => { if (!o.includes(k)) o.push(k); });
             return o;
         }
+        // 탭 끌기 안내는 처음 한 번만 (닫거나, 8초가 지나거나, 탭을 한 번 끌면 다시 안 보임)
+        let tabHintTimer = null;
+        function dismissTabHint() { lsSet('tab_hint_seen', '1'); const h = document.getElementById('tabHint'); if (h) h.remove(); }
         let tabDragKey = null;
         function tabDragStart(e) { tabDragKey = e.currentTarget.dataset.tab; e.currentTarget.classList.add('dragging'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', tabDragKey); } catch (err) {} }
         function tabDragOver(e) {
@@ -3940,6 +3993,7 @@
             const o = commTabOrder().filter(k => k !== tabDragKey);
             o.splice(o.indexOf(target) + (after ? 1 : 0), 0, tabDragKey);
             lsSet('comm_tab_order', JSON.stringify(o));
+            lsSet('tab_hint_seen', '1');
             tabDragEnd();
             renderCommunity();
         }
