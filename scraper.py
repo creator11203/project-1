@@ -46,6 +46,12 @@ def google_rss(query):
     return f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
 
 
+def google_rss_day(query, day, next_day):
+    """구글 뉴스 검색 RSS 주소 (특정 날짜 하루치만). 날짜는 'YYYY-MM-DD'"""
+    q = urllib.parse.quote(f"{query} after:{day} before:{next_day}")
+    return f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
+
+
 # (이름, 주소) - 각 언론사가 직접 제공하는 RSS. 언론사가 기사를 올리는 즉시 반영되어 가장 빠릅니다.
 # 2026-11-14 에 주소마다 실제로 열어서 최신 기사가 나오는지 확인했습니다. 로그에 [실패]가 뜨는 주소는 지우거나 바꿔 주세요.
 # (KBS·MBC·JTBC·중앙일보·한국경제의 예전 RSS 는 비어 있거나 2024년에 멈춰 있어서 아래 SITE_FEEDS(구글 뉴스 언론사 검색)로 옮겼습니다)
@@ -274,6 +280,40 @@ def build_feed_list(include_google=True):
     return feeds
 
 
+# ── 빠진 날짜 채우기 ──
+#   예전에 최대 보관 건수(3000건)에 걸려 오래된 날짜(예: 9·10일) 기사가 news.json 에서 지워진 적이 있습니다.
+#   한 번 지워진 기사는 언론사 RSS 에 더 이상 없어서 보관 건수를 늘려도 돌아오지 않으므로,
+#   최근 7일 중 기사가 너무 적은 날짜는 구글 뉴스에서 '그 날짜 하루치'만 다시 검색해서 채웁니다.
+BACKFILL_MIN_PER_DAY = 150     # 하루 기사가 이보다 적으면 그 날을 다시 검색
+BACKFILL_MAX_FEEDS = 30        # 한 번 실행에 다시 검색할 최대 주소 수 (구글이 막지 않도록)
+
+
+def backfill_feeds(items, now):
+    counts = {}
+    for v in items.values():
+        d = datetime.fromtimestamp(v["timestamp"], KST).strftime("%Y-%m-%d")
+        counts[d] = counts.get(d, 0) + 1
+    queries = [(q, None) for q in TOPIC_QUERIES] + [(REGION_QUERY_TEMPLATE.format(c), s) for c, s in REGION_QUERIES]
+    # 매번 같은 검색어만 쓰지 않도록 15분마다 시작 위치를 돌려 가며 고름
+    start = int(time.time() // 900) * 7 % len(queries)
+    queries = queries[start:] + queries[:start]
+    thin = []
+    for i in range(1, KEEP_DAYS):              # 어제 ~ 6일 전 (오늘은 계속 수집 중이라 제외)
+        day = (now - timedelta(days=i)).date()
+        if counts.get(day.strftime("%Y-%m-%d"), 0) < BACKFILL_MIN_PER_DAY:
+            thin.append(day)
+    if not thin:
+        return []
+    per_day = max(5, BACKFILL_MAX_FEEDS // len(thin))   # 모자란 날짜들에 골고루 나눔
+    out = []
+    for day in thin:
+        key, nxt = day.strftime("%Y-%m-%d"), (day + timedelta(days=1)).strftime("%Y-%m-%d")
+        print(f"[채우기] {key} 기사 {counts.get(key, 0)}건 → 구글 뉴스에서 그 날짜를 다시 검색 ({per_day}개 검색어)")
+        for q, hint in queries[:per_day]:
+            out.append({"name": "구글 뉴스", "url": google_rss_day(q, key, nxt), "kind": "google", "hint": hint})
+    return out[:BACKFILL_MAX_FEEDS]
+
+
 # ── 빠르게 여러 번 수집하기 ──
 # 워크플로가 한 번 실행될 때 이 스크립트를 몇 분 간격으로 여러 번 돌립니다.
 # 언론사 직접 RSS 는 매번, 구글 뉴스 검색(요청이 많아 너무 자주 하면 구글이 막음)은 GOOGLE_EVERY_SEC 마다 한 번만 합니다.
@@ -373,7 +413,8 @@ RULES_SRC = [
     ("약취·유인·인신매매", r"납치|유괴|약취|인신\s*매매|미성년자\s*유인|유인\s*(?:해|한\s|하려|미수|혐의)"),
     ("체포·감금", r"감금|인질|불법\s*체포"),
     # ── 사회적 법익 ──
-    ("방화·실화", r"방화|불을\s*질러|불\s*지르|불\s*지른|불을\s*붙여|불을\s*붙인|실화\s*(?:혐의|죄)|실화로"),
+    # ※ '방화'는 지명(서울 강서구 방화동·방화근린공원·방화대교·방화역)과 건물 설비(방화문·방화셔터·방화벽·방화복)에도 쓰여서 그 경우는 제외
+    ("방화·실화", r"방화(?!\s*(?:\d|제?\d?동(?!기|원|시)|근린|공원|대교|역(?!대|할)|차량\s*기지|사거리|초등|중학|고등|초교|중교|고교|도서관|문(?!제|자)|셔터|벽|복(?!수)|구획|도료|유리|커튼|댐퍼|설비|시설\s*기준|성능))|불을\s*질러|불\s*지르|불\s*지른|불을\s*붙여|불을\s*붙인|실화\s*(?:혐의|죄)|실화로"),
     ("폭발물·범죄단체", r"폭발물\s*(?:사용|제조|소지)|사제\s*(?:폭탄|총)|총기\s*(?:제조|밀반입|소지|난사)|범죄\s*(?:단체|집단)|조직\s*폭력|조폭|폭력\s*조직|소요죄"),
     # ── 가정·아동·환경 등 특별법 ──
     ("가정폭력·아동학대", r"가정\s*폭력|아동\s*학대|정서적\s*학대|아동\s*방임|방임\s*혐의|아동복지법|(?:어린이집|유치원|보육\s*교사|계모|계부|친모|친부)[^.…]{0,12}학대"),
@@ -939,10 +980,26 @@ def _classify_incident(title, content, t, full):
     return sub, group
 
 
+# 동물이 '범인'처럼 쓰인 기사: 예) '원숭이들, 강아지 250마리 납치해 피의 복수' → 사람이 저지른 범죄가 아님
+_ANIMALS = r"(?:원숭이|침팬지|고릴라|오랑우탄|개코원숭이|코끼리|곰|늑대|들개|멧돼지|까마귀|까치|갈매기|비둘기|고양이|길고양이|쥐|너구리|여우|사자|호랑이|표범|하마|악어|상어|돌고래|물개|앵무새|독수리|뱀|개미)"
+ANIMAL_ACTOR_RE = re.compile(r"(?<![가-힣])" + _ANIMALS + r"(?:들|떼|무리)?\s*(?:,|이\s|가\s|은\s|는\s|들이|들은|들,|떼가|떼의|무리가)[^.…]{0,30}?"
+                             r"(?:납치|유괴|복수|보복|절도|훔쳐|훔친|도둑|강도|약탈|살해|감금|인질|범행|테러|습격해\s*빼앗)")
+HUMAN_HARM_RE = re.compile(r"주민|사람|시민|어린이|아이|학생|등산객|관광객|여성|남성|노인|부상|다쳐|다쳤|숨져|숨졌|사망|물려|공격당")
+# 경제·기술 경쟁을 '공습·폭격·침공·전쟁'에 빗댄 기사: 예) '삼성·현대차…中·빅테크 공습 넘는다', '中 저가 공세에 업계 비상'
+BIZ_WAR_METAPHOR_RE = re.compile(
+    r"(?:빅테크|테크|기업|업계|브랜드|제품|가전|반도체|배터리|전기차|스마트폰|플랫폼|이커머스|C커머스|직구|쇼핑|유통|게임|콘텐츠|OTT|AI|인공지능|저가|중국산|짝퉁|"
+    r"알리|테무|쉬인|삼성|현대차|LG|SK|네이버|카카오|쿠팡|애플|구글|엔비디아|TSMC|BYD|화웨이|샤오미)[^.…]{0,12}(?:공습|폭격|융단\s*폭격|침공|공세|대공세|전쟁|전면전|선전포고)|"
+    r"(?:초협력|합작|태스크포스|협업|파트너십|매출|점유율|수출|신제품)[^.…]{0,20}(?:공습|폭격|침공)")
+
+
 def classify(title, content):
     """(소분류, 대분류) 반환. 사건사고가 아니면 None."""
     if CAMPAIGN_RE.search(title) and not INCIDENT_FACT_RE.search(title) and not WARNING_RE.search(title):
         return None
+    if ANIMAL_ACTOR_RE.search(title) and not HUMAN_HARM_RE.search(title):
+        return None                      # 동물이 한 행동을 사람 범죄처럼 쓴 기사
+    if BIZ_WAR_METAPHOR_RE.search(title) and not KO_CASUALTY_RE.search(title):
+        return None                      # 기업·기술 경쟁을 전쟁에 빗댄 경제 기사
     t = PRE_CLEAN.sub(" ", title)
     full = PRE_CLEAN.sub(" ", title + " " + (content or ""))
     if NON_NEWS_RE.search(title) or AD_RE.search(full):
@@ -2194,7 +2251,8 @@ def reprocess_existing(old):
 def main():
     now = datetime.now(KST)
     now_ts = now.timestamp()
-    cutoff_ts = (now - timedelta(days=KEEP_DAYS)).timestamp()
+    # 보관 기간 = 오늘 포함 7개 날짜 전체 (6일 전 0시부터). 화면의 '최근 7일' 날짜 목록과 똑같은 기준
+    cutoff_ts = (now - timedelta(days=KEEP_DAYS - 1)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
     print("=== 우리동네 사건사고 수집 시작 ===", now.strftime("%Y-%m-%d %H:%M:%S"))
 
     items = reprocess_existing(load_existing())
@@ -2209,6 +2267,8 @@ def main():
     # 언론사 직접 RSS 는 여러 곳을 동시에, 구글 뉴스는 막히지 않도록 적게 동시에 내려받음
     press = [f for f in feeds if f["kind"] == "press"]
     goog = [f for f in feeds if f["kind"] != "press"]
+    if do_google:
+        goog += backfill_feeds(items, now)       # 기사가 비어 있는 지난 날짜 다시 채우기
     fetched = fetch_many(press, 16) + fetch_many(goog, 4)
     if do_google:
         mark_google_done()
