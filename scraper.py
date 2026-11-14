@@ -92,6 +92,17 @@ TOPIC_QUERIES = [
     "이스라엘 OR 이란 OR 가자 OR 레바논 공습 OR 타격",
     "홍해 OR 호르무즈 OR 대만해협 OR 남중국해 군함 OR 나포 OR 격침",
     "미군 OR 중국군 OR 자위대 OR 나토 공습 OR 격추 OR 타격",
+    "호르무즈 해협 OR 유조선 피격 OR 유조선 나포 OR 해상 봉쇄",
+    "드론 공격 OR 자폭 드론 OR 요격 OR 전투기 출격 OR 유도탄",
+    "폭탄 테러 OR 자폭 테러 OR 스파이 체포 OR 간첩 구금",
+    "전차 OR 자주포 OR 지뢰 매설 OR 기습 작전 OR 포로 교환 OR 투항",
+    # 사이버·보건·날씨
+    "랜섬웨어 OR 디도스 OR 계정 탈취 OR 악성코드 OR 사이버 공격",
+    "확진 OR 감염병 OR 조류인플루엔자 OR 독감 유행 OR 식중독",
+    "아프리카돼지열병 OR 구제역 OR 말라리아 OR 살처분 OR 집단감염",
+    "폭설 OR 한파 OR 빙판길 OR 블랙아이스 OR 동파 OR 얼음낚시 사고",
+    "폭우 OR 태풍 OR 강풍 OR 낙석 OR 산사태 OR 낙뢰",
+    "오픈런 경찰 출동 OR 인파 사고 OR 소동 경찰 출동",
 ]
 
 # 구글 뉴스 지역별 검색: (검색 지역명, 해당 시·도 정식명칭)
@@ -135,6 +146,9 @@ FOREIGN_QUERIES = [
     "Israel OR Gaza OR Iran OR Lebanon strike OR attack OR killed",
     "\"Red Sea\" OR Hormuz OR \"Taiwan Strait\" OR \"South China Sea\" attack OR seized OR military",
     "\"North Korea\" missile OR launch",
+    "Hormuz tanker attack OR seized OR drone",
+    "\"prisoner swap\" OR surrender OR landmine OR artillery OR \"car bomb\"",
+    "intercepted missile OR \"fighter jets scrambled\" OR \"spy arrested\"",
 ]
 MAX_TRANSLATE_PER_RUN = 60     # 한 번 실행에 번역할 최대 건수 (번역 서버 부담을 줄이기 위해)
 
@@ -176,10 +190,14 @@ def build_feed_list():
 GROUPS = {
     "강력범죄": ["살인·살해", "흉기·난동", "폭행·상해", "방화·납치·감금"],
     "성범죄·마약": ["성범죄", "불법촬영·딥페이크", "스토킹·교제폭력", "마약"],
-    "사기·금융": ["사기·보이스피싱", "금융·횡령·도박", "절도·강도", "해킹·개인정보"],
+    "사기·금융": ["사기·보이스피싱", "금융·횡령·도박", "절도·강도"],
+    "사이버범죄": ["해킹·랜섬웨어", "계정·암호 탈취", "디도스·사이버공격", "개인정보 유출"],
     "공직·기타": ["공직자 비리", "기타 범죄"],
-    "재난·사고": ["화재·폭발", "붕괴·산업재해", "자연재해", "구조·안전사고"],
+    "재난·사고": ["화재·폭발", "붕괴·산업재해", "구조·안전사고"],
+    "자연재해": ["호우·태풍·침수", "폭설·한파·빙판", "지진·산불·산사태"],
+    "공공보건": ["감염병·확진", "식중독·위생"],
     "교통사고": ["교통사고", "뺑소니", "음주·무면허"],
+    "기타 사건사고": ["소동·혼잡", "생활 사고", "기타 사건사고"],
     "실종·제보": ["실종·수색", "변사·시신발견", "시민제보"],
     "해외·안보": ["전쟁·교전", "공습·타격", "해상·격침", "테러·피격", "국가 안보", "해외 분쟁"],
 }
@@ -203,21 +221,35 @@ RULES_SRC = [
     ("공직자 비리", r"뇌물|금품\s*수수|향응|수수\s*의혹|초대권|청탁|직권\s*남용|직무\s*유기|공무상\s*비밀|비위|비리|김영란법|청탁금지법|공금|갑질|감찰\s*(?:착수|조사|결과)|내사|(?:공무원|공직자|경찰관|경찰\s*간부|현직\s*경찰|전·현직\s*경찰|경찰서장|부장검사|부장판사|현직\s*검사|현직\s*판사|군\s*간부|장교|부사관|시의원|구의원|군의원|도의원|소방관|교도관|공기업|공공기관)[^.…]{0,20}(?:횡령|유용|수수|징계|파면|해임|직위\s*해제|입건|구속|기소|송치|체포)"),
     ("사기·보이스피싱", r"(?<![가-힣])사기(?!업|\s*진작|진작|\s*저하|\s*충천)|전세\s*사기|투자\s*사기|보험\s*사기|대출\s*사기|중고\s*사기|결혼\s*사기|취업\s*사기|분양\s*사기|임대\s*사기|연애\s*사기|코인\s*사기|보이스\s*피싱|스미싱|(?<![가-힣])피싱|리딩방|로맨스\s*스캠|유사\s*수신|다단계|폰지|먹튀|대포\s*통장|대포폰|불법\s*대출|노쇼\s*사기|사칭"),
     ("금융·횡령·도박", r"횡령|배임|주가\s*조작|시세\s*조종|불공정\s*거래|불법\s*도박|도박|자금\s*세탁|돈세탁|탈세|조세\s*포탈|밀수|환치기"),
-    ("해킹·개인정보", r"해킹|랜섬웨어|개인정보\s*(유출|침해)|정보\s*유출|디도스|DDoS|사이버\s*(공격|범죄|테러)|악성\s*(코드|앱)|계정\s*탈취"),
+    # 사이버 범죄
+    ("계정·암호 탈취", r"계정\s*(탈취|도용|해킹)|암호\s*탈취|비밀번호\s*(탈취|유출)|패스워드\s*(탈취|유출)|크리덴셜|인증\s*정보\s*(탈취|유출)|인증서\s*(탈취|유출)|세션\s*탈취|유심\s*(복제|해킹|스와핑)|심\s*스와핑|가상자산\s*탈취|코인\s*탈취|지갑\s*(해킹|탈취)|키로거|정보\s*탈취형"),
+    ("해킹·랜섬웨어", r"해킹|해커|랜섬웨어|악성\s*(코드|앱|메일|링크)|멀웨어|스파이웨어|트로이\s*목마|백도어|봇넷|제로\s*데이|취약점\s*(악용|공격)|웹\s*셸|웹셸|침해\s*사고|무단\s*침입\s*(해|당)|시스템\s*침해|서버\s*침해|공급망\s*공격|APT|다크웹|크립토재킹|홈페이지\s*변조|디페이스|큐싱|파밍"),
+    ("디도스·사이버공격", r"디도스|DDoS|분산\s*서비스\s*거부|사이버\s*(공격|범죄|테러|위협|침해)|전산망\s*(마비|장애)|서비스\s*거부\s*공격"),
+    ("개인정보 유출", r"개인정보\s*(유출|침해|노출|도용|불법\s*수집|무단)|정보\s*유출|고객\s*정보\s*(유출|노출)|회원\s*정보\s*(유출|노출)|명의\s*도용|신상\s*털"),
     ("절도·강도", r"절도|(?<![가-힣])강도(?:범|상해|살인|행각|혐의|침입|피해|사건|짓)|편의점\s*강도|특수\s*강도|무장\s*강도|소매치기|날치기|빈집털이|갈취|공갈|금품\s*(빼앗|훔)|훔쳐|훔친|도둑|차량\s*털이|주거\s*침입|무단\s*침입"),
     # 기타 범죄(구체적 죄명)
     ("기타 범죄", r"공무집행\s*방해|업무\s*방해|재물\s*손괴|명예\s*훼손|모욕죄|무고|위증|위조|불법\s*체류|밀입국|동물\s*학대|무허가|짝퉁|저작권\s*침해|범인\s*도피|허위\s*신고|장난\s*전화|암표|불법\s*(영업|유통|판매|제조)|선거법\s*위반|허위\s*사실\s*공표"),
-    ("화재·폭발", r"화재|불이\s*나|(?<![가-힣])불(?:…|\.{2,}|\s*나|\s*붙)|불길|폭발(?!적)|산불|화마|전소|가스\s*누출|가스\s*폭발"),
+    ("화재·폭발", r"화재|불이\s*나|(?<![가-힣])불(?:…|\.{2,}|\s*나|\s*붙)|불길|폭발(?!적)|화마|전소|가스\s*누출|가스\s*폭발"),
     ("붕괴·산업재해", r"붕괴|무너|매몰|추락|끼임|끼여|질식|감전|중대\s*재해|산업\s*재해|산재|작업\s*중\s*(사망|숨)|낙하|깔려|깔림|크레인"),
-    ("자연재해", r"산사태|홍수|침수|지진|태풍|폭설|호우|폭우|낙뢰|싱크홀|도로\s*함몰|정전(?!\s*협정)|강풍|해일|온열\s*질환|대설"),
+    # 자연재해·날씨 피해
+    ("폭설·한파·빙판", r"폭설|대설|한파|동파|빙판|블랙\s*아이스|결빙|눈길|눈\s*폭탄|제설|고드름|동상(?!이몽)|저체온|얼음\s*(깨|낚시|판)|빙어\s*낚시|얼음낚시|살얼음|냉해"),
+    ("호우·태풍·침수", r"호우|폭우|장마|물\s*폭탄|태풍|침수|홍수|범람|강풍|돌풍|해일|너울|풍랑|낙뢰|벼락|우박|폭염|온열\s*질환|열사병|정전(?!\s*협정)"),
+    ("지진·산불·산사태", r"지진|여진|산사태|낙석|토사\s*(유출|붕괴)|싱크홀|도로\s*함몰|땅\s*꺼짐|지반\s*침하|산불|가뭄|황사|화산"),
+    # 공공보건 (감염병·식중독)
+    ("감염병·확진", r"확진|감염병|전염병|판데믹|팬데믹|코로나|독감|인플루엔자|조류\s*독감|AI\s*(확진|발생|의심|항원|검출|방역)|고병원성|아프리카\s*돼지\s*열병|ASF|구제역|럼피스킨|말라리아|뎅기열|홍역|백일해|결핵|수두|엠폭스|원숭이\s*두창|메르스|에볼라|콜레라|장티푸스|일본\s*뇌염|SFTS|쯔쯔가무시|비브리오|레지오넬라|성홍열|수족구|A형\s*간염|집단\s*감염|집단\s*발병|살처분|역학\s*조사|유행\s*주의보"),
+    ("식중독·위생", r"식중독|노로\s*바이러스|살모넬라|대장균|집단\s*(설사|구토|복통)|이물질\s*(검출|발견)|회수\s*조치|유해\s*물질\s*검출"),
     ("뺑소니", r"뺑소니|도주\s*치|사고\s*후\s*도주|사고를?\s*내고\s*(달아|도주)|달아난"),
     ("음주·무면허", r"음주\s*운전|음주\s*측정|무면허|만취\s*운전|약물\s*운전|혈중\s*알코올"),
     ("교통사고", r"교통사고|추돌|충돌\s*사고|차량\s*(전복|충돌)|전복|역주행|들이받|차에\s*치|치여|치였|오토바이\s*사고|버스\s*사고|고속도로\s*(사고|추돌)|차량[^,]{0,6}정면\s*충돌|보행자\s*(사망|치|사고)"),
     # 아래 True 표시는 '넓은 분류' → 제목에 있을 때만 인정
+    ("생활 사고", r"넘어져|넘어지|미끄러져|미끄러지|미끌|낙상|갇혀|갇힘|승강기\s*(사고|고장|멈)|엘리베이터\s*(사고|고장|멈)|벌\s*쏘|벌에\s*쏘|개\s*물림|개에\s*물|물려|낚시\s*(사고|중|하다)|등산\s*(사고|중|하다)|조난|물놀이|캠핑\s*(사고|중)|일산화\s*탄소|화상\s*입|놀이\s*기구", True),
     ("구조·안전사고", r"구조(?!조정|적|물|개편|개혁|화|론|상|계획)|안전\s*사고|익사|물에\s*빠|고립|유독\s*가스|화학\s*물질|누출|참변|중상|사망\s*사고|숨져|숨졌|사망", True),
     ("실종·수색", r"실종|행방불명|행방\s*묘연|(?<!압수)수색|가출|연락\s*두절|치매\s*노인", True),
     ("변사·시신발견", r"변사|시신|숨진\s*채|숨져\s*있|주검|백골|사체|심정지\s*상태", True),
-    ("기타 범죄", r"경찰|구속|입건|체포|검거|송치|영장|피의자|피해자|출동|적발|혐의", True),
+    ("기타 범죄", r"구속|입건|체포|검거|송치|영장|피의자|적발|혐의|기소|징역|범행", True),
+    # 범죄는 아니지만 경찰·소방이 출동한 일, 소동, 인파 등
+    ("소동·혼잡", r"오픈런|인파|몰려|줄\s*섰|긴\s*줄|대기\s*줄|북새통|아수라장|소동|혼잡|대란|해프닝|오인\s*신고|허탕|마비", True),
+    ("기타 사건사고", r"경찰|소방|출동|신고|피해자|사고", True),
 ]
 RULES = [(r[0], SUB_TO_GROUP[r[0]], re.compile(r[1]), len(r) > 2) for r in RULES_SRC]
 
@@ -226,9 +258,9 @@ RULES = [(r[0], SUB_TO_GROUP[r[0]], re.compile(r[1]), len(r) > 2) for r in RULES
 FOREIGN_RE = re.compile(r"우크라이나|우크라|러시아|러軍|키이우|모스크바|크림|하르키우|오데사|돈바스|가자|하마스|이스라엘|레바논|헤즈볼라|베이루트|이란|테헤란|시리아|예멘|후티|홍해|호르무즈|수단|미얀마|팔레스타인|서안지구|아프가니스탄|탈레반|이라크|소말리아|리비아|카슈미르|파키스탄|대만해협|남중국해|흑해|나토")
 # 큰 나라 이름은 군사 관련 낱말이 함께 있을 때만 분쟁 기사로 봄
 BIG_COUNTRY_RE = re.compile(r"미국|미군|美|중국|중국군|中|일본|자위대|日|대만|인도|튀르키예|사우디|이집트|프랑스|영국|독일")
-MIL_RE = re.compile(r"군함|함정|전투기|폭격기|항공모함|항모|잠수함|미사일|공습|폭격|격침|격추|교전|전쟁|침공|포격|핵실험|군사\s*작전|타격")
+MIL_RE = re.compile(r"군함|함정|구축함|호위함|전투기|폭격기|항공모함|항모|잠수함|미사일|유도탄|공습|폭격|격침|격추|요격|출격|교전|전쟁|침공|포격|자주포|전차|탱크|지뢰|핵실험|군사\s*작전|기습|타격|드론|무인기|유조선|포로|투항|스파이|간첩")
 # 실제로 벌어진 일(사건)을 나타내는 낱말
-CONFLICT_RE = re.compile(r"전쟁|교전|공습|폭격|타격|격침|격추|피격|침몰|나포|미사일|드론\s*공격|무인기\s*공격|침공|점령|진격|포격|무력\s*충돌|지상전|공격|테러|총격|암살|자폭|인질|쿠데타|폭발|사망|사상|휴전\s*(파기|위반|결렬)")
+CONFLICT_RE = re.compile(r"전쟁|교전|공습|폭격|타격|격침|격추|요격|피격|침몰|나포|억류|미사일|유도탄|유도\s*미사일|드론|무인기|자폭|침공|점령|진격|포격|자주포|전차|탱크|대전차|지뢰|무력\s*충돌|지상전|공격|기습|출격|테러|폭탄|총격|암살|인질|쿠데타|폭발|사망|사상|포로|투항|스파이|간첩|체포|구금|무기|휴전\s*(파기|위반|결렬)|봉쇄|유조선")
 # 말·전망·분석 (실제 사건이 아닌 문제 제기)
 KO_TALK_RE = re.compile(r"경고|우려|촉구|규탄|회담|논의|전망|분석|가능성|시사|검토|주장|비판|제안|협상|관측|해석|입장|발언|강조|평가|인터뷰|속내|셈법|의미는|배경은|왜\s|할까|일까|하나\?|으름장|엄포|위협")
 KO_CASUALTY_RE = re.compile(r"사망|숨져|숨졌|사상|부상|격침|격추|침몰|폭발|피격|나포|명\s*(죽|숨)")
@@ -238,20 +270,20 @@ NK_EVENT_RE = re.compile(r"도발|발사|침투|침범|월북|귀순|간첩|무�
 
 def overseas_sub(text):
     """해외·안보 소분류 결정 (한글 제목 기준)"""
-    if re.search(r"격침|침몰|나포|군함|함정|유조선|화물선|상선|해협|홍해|흑해|해상|어선", text):
+    if re.search(r"격침|침몰|나포|억류|군함|함정|구축함|유조선|화물선|상선|해협|호르무즈|홍해|흑해|해상|어선|봉쇄", text):
         return "해상·격침"
-    if re.search(r"테러|총격|암살|인질|자폭|괴한|피격", text):
+    if re.search(r"테러|폭탄|총격|암살|인질|자폭|괴한|피격|스파이|간첩|체포|구금", text):
         return "테러·피격"
-    if re.search(r"공습|폭격|타격|미사일|드론|무인기|포격|로켓|격추", text):
+    if re.search(r"공습|폭격|타격|미사일|유도탄|드론|무인기|포격|자주포|로켓|격추|요격|출격", text):
         return "공습·타격"
-    if re.search(r"교전|전쟁|침공|점령|진격|지상전|휴전|충돌|쿠데타", text):
+    if re.search(r"교전|전쟁|침공|점령|진격|지상전|휴전|충돌|쿠데타|전차|탱크|지뢰|기습|포로|투항|무기", text):
         return "전쟁·교전"
     return "해외 분쟁"
 
 
 # ── 해외 언론(영문 제목) ──
 EN_PLACE_RE = re.compile(r"Ukrain|Russia|Kyiv|Moscow|Crimea|Kharkiv|Odesa|Donetsk|Israel|Gaza|Hamas|Hezbollah|Leban|Beirut|Iran|Tehran|Syria|Yemen|Houthi|Red Sea|Iraq|Sudan|Myanmar|Taiwan|South China Sea|North Korea|Pyongyang|Pakistan|Kashmir|Afghan|Taliban|Somalia|Sahel|Mali\b|Congo|Nigeria|Venezuela|Hormuz|Black Sea|West Bank|Jerusalem|NATO|Pentagon|military|army|navy|air force|troops|warship|fighter jet|militant|rebel|soldier", re.I)
-EN_EVENT_RE = re.compile(r"air\s?strike|air raid|missile (strike|attack)|missiles? hit|drone (strike|attack)|strikes? (on|hit|kill)|struck|shell(ing|ed)|bomb(ing|ed|s)\b|blast|explosion|explode|kill(s|ed)\b|dead\b|death toll|wounded|attack(s|ed)?\b|shot down|shoots down|downed|intercept(s|ed)|sunk\b|sinks\b|sinking|torpedo|seiz(es|ed)|captur(es|ed)|hijack|invad(es|ed)|incursion|offensive|clash(es)?\b|fir(es|ed) (a |an )?(missile|rocket|ballistic)|launch(es|ed) (a |an )?(missile|rocket|attack|strike|ballistic)|rocket fire|gunmen|ambush|assassinat|coup\b|hostage", re.I)
+EN_EVENT_RE = re.compile(r"scrambl(e|es|ed)|tanker (hit|attacked|struck|seized)|landmine|mine blast|artillery|howitzer|tank (fire|attack)|prisoner (swap|exchange)|POWs?\b|surrender(s|ed)?\b|raid(s|ed)?\b|spy (arrested|detained)|arrest(s|ed) .{0,30}(spy|spies|espionage)|detain(s|ed)|car bomb|suicide bomb|guided missile|air\s?strike|air raid|missile (strike|attack)|missiles? hit|drone (strike|attack)|strikes? (on|hit|kill)|struck|shell(ing|ed)|bomb(ing|ed|s)\b|blast|explosion|explode|kill(s|ed)\b|dead\b|death toll|wounded|attack(s|ed)?\b|shot down|shoots down|downed|intercept(s|ed)|sunk\b|sinks\b|sinking|torpedo|seiz(es|ed)|captur(es|ed)|hijack|invad(es|ed)|incursion|offensive|clash(es)?\b|fir(es|ed) (a |an )?(missile|rocket|ballistic)|launch(es|ed) (a |an )?(missile|rocket|attack|strike|ballistic)|rocket fire|gunmen|ambush|assassinat|coup\b|hostage", re.I)
 EN_HARD_RE = re.compile(r"kill(s|ed)\b|dead\b|death toll|wounded|injur|sunk\b|sinks\b|shot down|downed|explosion|blast|struck|strikes? (hit|kill)|destroy|captur(es|ed)|seiz(es|ed)", re.I)
 EN_TALK_RE = re.compile(r"\b(warns?|warning|threatens?|vows?|urges?|calls? for|talks|negotiat\w*|plans?|considers?|could|may|might|would|fears?|concerns?|analysis|opinion|explainer|what to know|what we know|why|how|interview|podcast|live updates?|briefing|review|timeline|in pictures|editorial|column)\b", re.I)
 
@@ -283,11 +315,11 @@ REVIEW_RE = re.compile(r"신간|서평|출간|저자|지음|옮김|북콘서트|
 # 광고·홍보 (제목+요약)
 AD_RE = re.compile(r"협찬|보도자료|이벤트\s*(진행|실시)|할인\s*행사|프로모션|신제품|출시|분양|모델하우스|사전\s*예약|특가|구매\s*혜택|무료\s*체험|상담\s*문의|문의\s*[:☎]|☎|홈페이지\s*참조|제공\s*=|\(광고\)|sponsored", re.I)
 # 스포츠
-SPORTS_RE = re.compile(r"동점골|결승골|선제골|역전골|멀티골|쐐기골|해트트릭|홈런|안타|타점|삼진|득점|실점|무승부|승부차기|\[?(전반|후반)\s*\d+분?\]?|전반전|후반전|연장전|\d+\s*-\s*\d+\s*(승|패|무|\[|$)|와\s*\d+-\d+|평가전|A매치|대표팀|국대|국가대표|월드컵|올림픽|아시안컵|아시안게임|챔피언스리그|K리그|KBO|EPL|MLB|NBA|APBC|WBC|프리미어12|AFC|FIFA|UFC|프로야구|프로축구|프로농구|프로배구|야구(?!방망이|배트)|축구|농구|배구|골프|테니스|감독|선수|이적|우승|준우승|결승|4강|8강|16강|라운드|타석|이닝|세트\s*스코어|마운드|타자|투수|포수|타선|불펜|등판|선발\s*(투수|출전|등판)|도쿄돔|구장|시범경기|개막전|플레이오프|한국시리즈|포스트시즌|득점왕|MVP|골키퍼|공격수|수비수|미드필더|스트라이커|슈팅|어시스트|타율|방어율|세이브|완봉|노히트|후계자|\[(스포츠|야구|축구|농구|배구|골프)[^\]]*\]")
+SPORTS_RE = re.compile(r"\[[^\]]{1,12}전\]|에이징\s*커브|노마크|드리블|골문|크로스|프리킥|코너킥|페널티킥|오프사이드|벤치|교체\s*(투입|출전)|스쿼드|엔트리|주전|캡틴|손흥민|이강인|김민재|황희찬|오타니|류현진|이정후|김하성|홍명보|클린스만|토트넘|맨유|맨시티|리버풀|레알|바르셀로나|PSG|뮌헨|다저스|양키스|랭킹|세계\s*\d+위|금메달|은메달|동메달|메달|경기력|승점|연승|연패|역전승|완승|완패|대승|대패|동점골|결승골|선제골|역전골|멀티골|쐐기골|해트트릭|홈런|안타|타점|삼진|득점|실점|무승부|승부차기|\[?(전반|후반)\s*\d+분?\]?|전반전|후반전|연장전|\d+\s*-\s*\d+\s*(승|패|무|\[|$)|와\s*\d+-\d+|평가전|A매치|대표팀|국대|국가대표|월드컵|올림픽|아시안컵|아시안게임|챔피언스리그|K리그|KBO|EPL|MLB|NBA|APBC|WBC|프리미어12|AFC|FIFA|UFC|프로야구|프로축구|프로농구|프로배구|야구(?!방망이|배트)|축구|농구|배구|골프|테니스|감독|선수|이적|우승|준우승|결승|4강|8강|16강|라운드|타석|이닝|세트\s*스코어|마운드|타자|투수|포수|타선|불펜|등판|선발\s*(투수|출전|등판)|도쿄돔|구장|시범경기|개막전|플레이오프|한국시리즈|포스트시즌|득점왕|MVP|골키퍼|공격수|수비수|미드필더|스트라이커|슈팅|어시스트|타율|방어율|세이브|완봉|노히트|후계자|\[(스포츠|야구|축구|농구|배구|골프)[^\]]*\]")
 # 따옴표 안의 비유 표현: 동점골 '폭발', 주가 '추락' 등
 QUOTED_METAPHOR_RE = re.compile(r"['‘’“”\"]\s*(폭발|붕괴|추락|충돌|화재|침몰|전복|난동|폭행|살인|테러|사망)\s*['‘’“”\"]")
 # 실제로 일어난 일임을 보여주는 낱말 (이 낱말이 있으면 아래 정책·발언 필터를 통과)
-FACT2_RE = re.compile(r"사망|숨져|숨진|숨졌|검거|구속|입건|체포|부상|중상|경상|다쳐|다쳤|발생|발견|적발|붙잡|송치|기소|징역|선고|대피|진화|출동|불이?\s*나|화재로|들이받|추돌|실종\s*신고|유출|해킹\s*당|피습|찔려|찔러|숨진\s*채")
+FACT2_RE = re.compile(r"확진|감염|살처분|검출|사망|숨져|숨진|숨졌|검거|구속|입건|체포|부상|중상|경상|다쳐|다쳤|발생|발견|적발|붙잡|송치|기소|징역|선고|대피|진화|출동|불이?\s*나|화재로|들이받|추돌|실종\s*신고|유출|해킹\s*당|피습|찔려|찔러|숨진\s*채")
 # 정책·대책·발언·촉구 (사건 자체가 아니라 '무엇을 하겠다/해야 한다'는 기사)
 POLICY_RE = re.compile(r"해야|하겠다|할\s*것|필요|촉구|강조|당부|주문|제안|약속|추진|검토|마련|강화|대책|보강|지원|구제|개선|방안|계획|공약|조례|법안|개정|발의|예산|토론회|정책|투입|확대|도입|신설|협의|논의|점검\s*나서|특별\s*단속|집중\s*단속|근절|종합\s*대책")
 SPEAKER_RE = re.compile(r"의원|시장|군수|구청장|도지사|지사|장관|차관|대표|위원장|총리|대통령|교육감|청장|후보|의장|원내대표|대변인")
@@ -321,11 +353,16 @@ def is_not_incident(title, content):
 # 사건사고가 아닌 홍보·캠페인·모음 기사
 CAMPAIGN_RE = re.compile(r"캠페인|홍보|협약|설명회|공모전|서포터즈|간담회|세미나|발대식|시상식|기념식|합동\s*훈련|모의\s*훈련|안전\s*점검\s*실시|대책\s*회의|브리핑|운세|오늘의\s*뉴스|주요\s*뉴스|뉴스\s*모음|헤드라인|포토\s*뉴스|개최|예방(?!\s*접종)")
 INCIDENT_FACT_RE = re.compile(r"사망|숨져|숨졌|검거|구속|입건|체포|부상|피해자|발생|발견|적발|붙잡")
-FINANCE_RE = re.compile(r"주가|증시|코스피|코스닥|나스닥|환율|금리|비트코인|이더리움|시황|목표주가|상장|배당|펀드|매수|매도|실적")
-ENT_SPORT_RE = re.compile(r"열애|결혼|이혼|스캔들|아이돌|드라마|영화|앨범|콘서트|시청률|리그|토너먼트|골프")
+FINANCE_RE = re.compile(r"주가|증시|코스피|코스닥|나스닥|다우|환율|금리|비트코인|이더리움|가상자산|암호화폐|코인|시황|목표주가|상장|배당|펀드|매수|매도|실적|달러|원화|엔화|위안화|유로화|유가|금값|금\s*시세|시총|시가\s*총액|지수|채권|국채|집값|전셋값|아파트값|분양가|영업이익|매출|물가|수출|무역|관세|투자자|개미|외국인\s*매도|\d[\d,.]*\s*(천|만|억|조)?\s*(달러|원|엔|선|포인트|p|%)\s*(선\s*)?(붕괴|추락|폭락|급락|무너|침몰|폭발|돌파|회복)")
+# 돈·시장 낱말이 있어도 통과시키는 분류 (실제 범죄)
+FINANCE_OK_SUBS = {"사기·보이스피싱", "금융·횡령·도박", "공직자 비리", "해킹·랜섬웨어", "계정·암호 탈취", "디도스·사이버공격", "개인정보 유출", "절도·강도", "마약", "살인·살해"}
+ENT_SPORT_RE = re.compile(r"열애|결혼|이혼|스캔들|아이돌|드라마|영화|앨범|콘서트|시청률|리그|토너먼트|골프|배우|예능|출연|방송|주연|조연|작가|감독|웹툰|소설|뮤지컬|연극|OTT|넷플릭스|디즈니|티빙|웨이브|쿠팡플레이|유튜버|걸그룹|보이그룹|컴백|데뷔")
+# 드라마·예능 줄거리 기사 (무조건 제외)
+ENT_STRONG_RE = re.compile(r"시청률|분당\s*최고|최고\s*\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*%\s*[\(\[]|\d+\s*회\s*(예고|방송)|첫\s*방|첫방|종영|본방|재방|열연|극\s*중|극중|두\s*얼굴|반전\s*엔딩|엔딩|스포일러|명장면|[\(\[]\s*['‘’\"“”][^'‘’\"“”]{1,20}['‘’\"“”]\s*[\)\]]|\[종합\]\s*$|\[TV|\[어게인|\[SC|\[RE:|\[N")
+LEGAL_FACT_RE = re.compile(r"구속|입건|검거|체포|송치|기소|징역|선고|적발|숨져|숨졌|숨진|사망|부상|다쳐|다쳤")
 POLITICS_RE = re.compile(r"대통령|국회|의원|장관|정당|여당|야당|민주당|국민의힘|특검|청문회|탄핵|선거|국정감사|총리|비대위|시장|군수|구청장|도지사|공천|당원")
 METAPHOR_RE = re.compile(r"논란|갈등|파문|후폭풍|반발|공방|파장|감찰|집단행동|비판|압박|이해\s*충돌|국감|의혹")
-AMBIGUOUS_SUBS = {"화재·폭발", "붕괴·산업재해", "교통사고", "구조·안전사고", "자연재해"}   # 비유로도 쓰이는 낱말(폭발·붕괴·충돌...)
+AMBIGUOUS_SUBS = {"화재·폭발", "붕괴·산업재해", "교통사고", "구조·안전사고", "호우·태풍·침수", "폭설·한파·빙판", "지진·산불·산사태", "소동·혼잡", "생활 사고", "기타 사건사고"}   # 비유로도 쓰이는 낱말(폭발·붕괴·충돌...)
 PRE_CLEAN = re.compile(r"사기\s*진작|사기\s*저하|사기업|사기\s*충천")
 
 
@@ -370,19 +407,26 @@ def classify(title, content):
     sub, group, broad = found
     if sub == "구조·안전사고" and re.search(r"고양이|강아지|반려|동물|새끼", t):
         return None
-    if FINANCE_RE.search(t) and sub not in ("사기·보이스피싱", "금융·횡령·도박", "공직자 비리"):
+    soft = sub in AMBIGUOUS_SUBS or broad or group in ("재난·사고", "자연재해", "기타 사건사고", "실종·제보", "공공보건")
+    # 경제 기사: '4천달러 붕괴', '주가 추락' 등
+    if FINANCE_RE.search(t) and (soft or sub not in FINANCE_OK_SUBS):
         return None
-    if ENT_SPORT_RE.search(t) and group in ("재난·사고", "실종·제보"):
+    # 드라마·예능·영화 줄거리 기사
+    if ENT_STRONG_RE.search(t):
         return None
-    # 스포츠 기사: 골 '폭발', 순위 '추락' 같은 표현 때문에 잘못 잡히는 것 방지
-    if SPORTS_RE.search(t) and not FACT2_RE.search(t):
+    if ENT_SPORT_RE.search(t) and (soft or not LEGAL_FACT_RE.search(t)):
+        return None
+    # 스포츠 기사: 골 '폭발', 순위 '추락' 같은 표현 때문에 잘못 잡히는 것 방지 (선수가 실제로 입건·구속된 경우만 통과)
+    if SPORTS_RE.search(t) and (soft or not LEGAL_FACT_RE.search(t)):
         return None
     if QUOTED_METAPHOR_RE.search(t) and sub in AMBIGUOUS_SUBS and not FACT2_RE.search(t):
         return None
-    if sub == "기타 범죄" and broad and (POLITICS_RE.search(t) or FINANCE_RE.search(t)):
+    if broad and sub in ("기타 범죄", "기타 사건사고", "소동·혼잡") and (POLITICS_RE.search(t) or FINANCE_RE.search(t)):
         return None
     if sub in AMBIGUOUS_SUBS and (METAPHOR_RE.search(t) or POLITICS_RE.search(t)) and not INCIDENT_FACT_RE.search(t):
         return None
+    if sub in ("소동·혼잡", "기타 사건사고") and not re.search(r"경찰|소방|119|112|출동|신고|구조|대피|부상|다쳐|통제", t):
+        return None                      # 경찰·소방이 실제로 움직인 일만
     return sub, group
 
 
@@ -952,7 +996,7 @@ KOREAN_LINK_RE = re.compile(r"한국인|국민|교민|우리\s*국민|한국")
 
 def is_overseas_noise(title, group, lat):
     """한국과 무관한 해외 사고 기사 (위치를 못 찾았고 해외 지명이 있을 때)"""
-    return (lat is None and group in ("재난·사고", "교통사고", "실종·제보", "강력범죄", "공직·기타")
+    return (lat is None and group in ("재난·사고", "자연재해", "공공보건", "기타 사건사고", "교통사고", "실종·제보", "강력범죄", "공직·기타")
             and OVERSEAS_RE.search(title) and not KOREAN_LINK_RE.search(title))
 
 
@@ -1009,7 +1053,38 @@ def make_item(title, content, sub, group, source, link, ts, hint, orig=None):
         "timestamp": ts,
         "hint": hint,
         "orig": orig,       # 해외 언론 기사의 원문(영문) 제목
+        "embed": None,      # 이 사이트 안에 원문을 띄울 수 있는지 (False 면 언론사가 막아 둔 것)
     }
+
+
+# ── 언론사가 '다른 사이트 안에서 보기'를 막아 뒀는지 확인 ──
+#   막아 둔 언론사(예: "연결을 거부했습니다")는 화면 가운데에 빈 창 대신 안내와 원문 열기 버튼을 보여 줍니다.
+MAX_EMBED_CHECK = 25       # 한 번 실행에 새로 확인할 언론사(도메인) 수
+
+
+def domain_of(url):
+    try:
+        return urllib.parse.urlparse(url).netloc.lower()
+    except Exception:
+        return ""
+
+
+def check_embeddable(url):
+    """True: 띄울 수 있음 / False: 막혀 있음 / None: 확인 실패"""
+    try:
+        req = urllib.request.Request(url.replace("http://", "https://", 1), headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            xfo = (r.headers.get("X-Frame-Options") or "").lower()
+            csp = (r.headers.get("Content-Security-Policy") or "").lower()
+        if "deny" in xfo or "sameorigin" in xfo:
+            return False
+        m = re.search(r"frame-ancestors([^;]*)", csp)
+        if m and "*" not in m.group(1).split():
+            return False
+        return True
+    except Exception as e:
+        # https 로 열 수 없는 사이트는 https 페이지(GitHub Pages) 안에 띄울 수 없음
+        return False if url.startswith("http://") else None
 
 
 # ── 구글 뉴스 링크를 실제 언론사 기사 주소로 바꾸기 (실패해도 괜찮습니다) ──
@@ -1150,6 +1225,31 @@ def assign_events(items):
                 dy, dx = _jitter(a["title"], 0.008)
                 a["location"], a["lat"], a["lng"] = b["location"], round(b["lat"] + dy, 4), round(b["lng"] + dx, 4)
 
+    # 3) 분류·위치가 달라도 제목이 거의 같은 기사(통신사 기사를 여러 언론사가 그대로 실은 것)는 같은 사건
+    index = {}
+    for i, it in enumerate(items):
+        for w in it["_tk"]:
+            if len(w) >= 3:
+                index.setdefault(w, []).append(i)
+    for i, a in enumerate(items):
+        cand = {}
+        for w in a["_tk"]:
+            lst = index.get(w, ())
+            if len(w) < 3 or len(lst) > 60:
+                continue
+            for k in lst:
+                if k > i:
+                    cand[k] = cand.get(k, 0) + 1
+        for k, shared in cand.items():
+            if shared < 2:
+                continue
+            b = items[k]
+            if abs(a["timestamp"] - b["timestamp"]) > 48 * 3600:
+                continue
+            j, sh, overlap = _ev_sim(a, b)
+            if j >= 0.45 or (sh >= 4 and overlap >= 0.7):
+                union(i, k)
+
     groups = {}
     for i in range(n):
         groups.setdefault(find(i), []).append(i)
@@ -1203,11 +1303,13 @@ def reprocess_existing(old):
                 if not sub_en:
                     continue
                 out[norm_key(title)] = make_item(title, title, sub_en, "해외·안보", source, it.get("link", ""), ts, None, orig)
+                out[norm_key(title)]["embed"] = it.get("embed")
                 continue
             cls = classify(title, content)
             if not cls:
                 continue
             item = make_item(title, content[:400], cls[0], cls[1], source, it.get("link", ""), ts, it.get("hint"))
+            item["embed"] = it.get("embed")
             if is_overseas_noise(title, cls[1], item["lat"]):
                 continue
             out[norm_key(title)] = item
@@ -1325,6 +1427,24 @@ def main():
             resolved += 1
         time.sleep(0.4)
     print(f"원문 주소로 변환: {resolved}건 (구글 링크 남은 건수: {len(pending) - resolved}건)")
+
+    # 언론사별로 '사이트 안에 띄우기'가 되는지 확인 (한 번 확인한 언론사는 다시 확인하지 않음)
+    dom_embed = {}
+    for v in items.values():
+        if v.get("embed") is not None and not v["link"].startswith("https://news.google.com"):
+            dom_embed.setdefault(domain_of(v["link"]), v["embed"])
+    checked = 0
+    for v in sorted(items.values(), key=lambda x: -x["timestamp"]):
+        if not v["link"] or v["link"].startswith("https://news.google.com"):
+            v["embed"] = None
+            continue
+        d = domain_of(v["link"])
+        if d not in dom_embed and checked < MAX_EMBED_CHECK and time.time() - started < 540:
+            dom_embed[d] = check_embeddable(v["link"])
+            checked += 1
+        v["embed"] = dom_embed.get(d)
+    blocked = sorted(d for d, ok in dom_embed.items() if ok is False)
+    print(f"화면 안 표시 확인: 새로 {checked}곳 확인 / 막아 둔 언론사 {len(blocked)}곳 {blocked[:12]}")
 
     final = [v for v in items.values() if v["timestamp"] >= cutoff_ts]
     final.sort(key=lambda x: -x["timestamp"])
