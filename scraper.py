@@ -164,6 +164,8 @@ TOPIC_QUERIES = [
     "폭설 OR 한파 OR 빙판길 OR 블랙아이스 OR 동파 OR 얼음낚시 사고",
     "폭우 OR 태풍 OR 강풍 OR 낙석 OR 산사태 OR 낙뢰",
     "오픈런 경찰 출동 OR 인파 사고 OR 소동 경찰 출동",
+    "압사 OR 압사사고 OR 인파 사고 OR 다중인파 OR 군중 밀집 OR 인파 밀집 사고 OR 인파 통제",
+    "인파 몰려 부상 OR 깔림 사고 OR 떠밀려 넘어져 OR 축제 인파 사고 OR 공연장 인파",
     # 자연재해·특보
     "주의보 발령 OR 경보 발령 OR 특보 발효 OR 재난문자 OR 대피령",
     "지진 발생 OR 여진 OR 화산 분화 OR 쓰나미 OR 지진해일",
@@ -331,7 +333,7 @@ GROUPS = {
     "사이버범죄": ["해킹·정보통신망침해", "악성코드·랜섬웨어", "디도스·사이버공격", "개인정보 유출"],
     "기타 특별법 범죄": ["가정폭력·아동학대", "산업안전·중대재해법", "환경·동물 범죄", "병역·집시·출입국", "기타 범죄"],
     # ── 사고·재난 ──
-    "화재·사고": ["화재", "폭발·가스누출", "붕괴·추락", "산업재해", "구조·안전사고"],
+    "화재·사고": ["화재", "폭발·가스누출", "붕괴·추락", "인파·압사 사고", "산업재해", "구조·안전사고"],
     "교통사고": ["교통사고", "철도·항공·선박 사고"],
     "자연재해": ["기상특보·경보", "태풍·호우·홍수", "대설·한파·결빙", "강풍·낙뢰·우박", "폭염·가뭄", "지진·화산",
               "산사태·지반침하", "해양재난", "산불", "황사·미세먼지", "우주·생물 재난"],
@@ -439,7 +441,7 @@ RULES_SRC = [
     ("산불", r"산불|들불|임야\s*화재"),
     ("산사태·지반침하", r"산사태|사면\s*붕괴|낙석|토사\s*(?:유출|붕괴)|싱크홀|도로\s*함몰|땅\s*꺼짐|지반\s*침하|눈사태"),
     ("태풍·호우·홍수", r"호우|폭우|장마|물\s*폭탄|태풍|허리케인|사이클론|침수|홍수|범람"),
-    ("대설·한파·결빙", r"폭설|대설|눈보라|블리자드|한파|혹한|동파|빙판|블랙\s*아이스|결빙|서리\s*피해|눈길|눈\s*폭탄|저체온|동상\s*(?:환자|입|걸)|얼음\s*(?:깨|낚시|판)|빙어\s*낚시|얼음낚시|살얼음|냉해"),
+    ("대설·한파·결빙", r"폭설|대설|눈보라|블리자드|한파|혹한|동파|빙판|블랙\s*아이스|결빙|서리\s*피해|눈길\s*(?:사고|교통사고|미끄|운전|낙상|추돌|고립)|눈길에\s*(?:미끄|넘어|고립)|눈\s*폭탄|저체온|동상\s*(?:환자|입|걸)|얼음\s*(?:깨|낚시|판)|빙어\s*낚시|얼음낚시|살얼음|냉해"),
     ("강풍·낙뢰·우박", r"강풍|돌풍|용오름|토네이도|낙뢰|벼락|우박"),
     ("폭염·가뭄", r"폭염|열파|히트\s*웨이브|열대야|온열\s*질환|열사병|일사병|가뭄"),
     ("황사·미세먼지", r"황사|초?미세\s*먼지"),
@@ -452,7 +454,10 @@ RULES_SRC = [
     ("화재", r"화재(?!\s*의\s*인물)|불이\s*나|(?<![가-힣])불(?:…|\.{2,}|\s*나|\s*붙)|불길|화마|(?:건물|주택|공장|차량|창고|점포|가옥|[0-9]+\s*(?:채|동|곳|대))?\s*전소(?=됐|돼|된|되|했|해|\s*피해|[\s.,…'\"]|$)|잿더미"),
     ("폭발·가스누출", r"폭발(?!적)|가스\s*누출|폭발음|유독\s*가스|화학\s*물질\s*누출|암모니아\s*누출|염소\s*누출"),
     ("산업재해", r"끼임|끼여|질식|감전|중대\s*재해|산업\s*재해|산재|작업\s*중\s*(?:사망|숨|추락)|(?:노동자|근로자|작업자|인부)[^.…]{0,10}(?:사망|숨져|숨졌|숨진|추락|깔려|끼여)|크레인|지게차"),
-    ("붕괴·추락", r"붕괴|무너|매몰|추락|낙하|깔려|깔림|압사"),
+    # 다중 인파 밀집·압사 사고 (붕괴·추락보다 먼저 검사)
+    ("인파·압사 사고", r"압사|깔림\s*사고|(?:인파|군중|관람객|관중|인원|사람들?)\s*(?:사고|사태|에\s*밀려|에\s*깔|몰려\s*(?:넘어|부상|다쳐|쓰러|깔))|다중\s*인파|군중\s*(?:밀집|사고|압사|사태)|"
+                     r"인파\s*(?:밀집|운집|쏠림)[^.…]{0,12}(?:사고|부상|심정지|위험|통제|대피|넘어|쓰러)|밀집\s*사고|떠밀려\s*(?:넘어|부상|다쳐|쓰러)|도미노처럼\s*(?:넘어|쓰러)|(?:한꺼번에|무더기로)\s*넘어져"),
+    ("붕괴·추락", r"붕괴|무너|매몰|추락|낙하|깔려|깔림"),
     ("교통사고", r"교통사고|추돌|충돌\s*사고|(?:차량|버스|트럭|화물차|승용차|SUV|택시|오토바이|보트)[^.…]{0,6}(?:전복|충돌)|전복\s*(?:사고|돼|됐|된|되)|역주행|들이받|차에\s*치|치여|치였|오토바이\s*사고|버스\s*사고|고속도로\s*(?:사고|추돌)|"
               r"차량[^,]{0,6}정면\s*충돌|보행자\s*(?:사망|치|사고)|급발진|돌진"),
     # ── 아래 True 표시는 '넓은 분류' → 제목에 있을 때만 인정 ──
@@ -627,6 +632,10 @@ ENT_SPORT_RE = re.compile(r"열애|결혼|이혼|스캔들|아이돌|드라마|�
                           r"미모|자태|비주얼|각선미|몸매|볼륨|노출\s*(?:패션|드레스|의상)|과감한?\s*(?:패션|노출|드레스|의상)|레드\s*카펫|드레스\s*자태|(?:공항|사복|하객|시사회)\s*패션|패셔니스타|"
                           r"영화제|부국제|부산국제영화제|청룡\s*(?:영화상|시리즈)|백상\s*예술|대종상|시상식|무대\s*인사|쇼케이스|팬\s*사인회|웃음꽃|훈훈|러블리|청순|섹시|여신|"
                           r"소속사|매니지먼트|연예계|연예인|셀럽|인플루언서|SNS\s*(?:근황|게시물|사진)|인스타그램|틱톡커|BJ|스트리머")
+# 연예 행사장(영화제·시상식·콘서트 등)에서 실제로 사건사고가 났음을 보여 주는 낱말
+EVENT_INCIDENT_RE = re.compile(r"화재(?!\s*의)|불이\s*나|불길|연기\s*(?:치솟|발생|가득)|폭발(?!적)|압사|깔려|깔림|붕괴|무너|추락|흉기|칼부림|난동|폭행|피습|"
+                               r"부상(?!\s*(?:투혼|복귀|병동|이탈|선수))|다쳐|다친|다쳤|사망|숨져|숨진|숨졌|심정지|실신|쓰러져|쓰러진|이송|대피|구조|119|112|"
+                               r"경찰\s*(?:출동|조사|수사)|소방\s*(?:출동|당국)|안전\s*사고|인파\s*(?:사고|몰려|밀집)|테러|폭발물|협박")
 # 지금 일어난 일이 아니라 '과거의 논란·사건'을 다시 이야기하는 기사 (예: '학력 위조 논란 트라우마 타파→웃음꽃')
 PAST_TALK_RE = re.compile(r"(?:논란|사건|사고|루머|의혹|오명|구설)\s*(?:트라우마|딛고|극복|이겨|이후|그\s*후|\d+\s*년\s*만|재조명|회상|고백|언급|해명|털어놓|심경)|"
                           r"트라우마|타파|재조명|회상|떠올리|추억|심경\s*고백|과거\s*(?:논란|사건|사고|발언)|\d+\s*년\s*전")
@@ -881,10 +890,12 @@ def _classify_incident(title, content, t, full):
     if ENT_STRONG_RE.search(t):
         return None
     ent = ENT_SPORT_RE.search(t) or ENT_SOURCE_RE.search(content or "")
-    # 연예 기사: 연예인이 실제로 사고를 내거나(들이받아·추돌·숨져) 입건·구속된 경우만 통과
-    if ent and not (LEGAL_FACT_RE.search(t) or HARD_FACT_RE.search(t)):
+    # 연예 기사: 연예인이 실제로 사고를 내거나(들이받아·추돌·숨져) 입건·구속된 경우,
+    # 또는 영화제·시상식·공연장 '현장에서 실제 사건사고가 난' 경우(화재·폭발·압사·부상·대피·출동 등)만 통과
+    real = LEGAL_FACT_RE.search(t) or HARD_FACT_RE.search(t) or EVENT_INCIDENT_RE.search(t)
+    if ent and not real:
         return None
-    if ent and soft and not HARD_FACT_RE.search(t):
+    if ent and soft and not (HARD_FACT_RE.search(t) or EVENT_INCIDENT_RE.search(t)):
         return None
     # 과거 논란·사건을 다시 꺼낸 기사(트라우마·재조명·회상 등)는 지금 일어난 사건이 아님
     if PAST_TALK_RE.search(t) and not STRICT_FACT_RE.search(t):
@@ -1266,6 +1277,11 @@ def _rx(alias):
 
 @functools.lru_cache(maxsize=None)
 def _dong_rx(label):
+    """동 이름 찾기. '역삼동'으로 묶어 둔 동도 기사에 '역삼1동·역삼 2동·역삼제1동'처럼 번호가 붙어 있으면 찾음"""
+    if len(label) >= 3 and label[-1] in "동가":
+        stem, last = label[:-1], label[-1]
+        return re.compile(r"(?<![가-힣])" + re.escape(stem) + r"\s?(?:제?\d{1,2}(?:[·.,]\d{1,2})?)?" + re.escape(last)
+                          + r"(?:(?![가-힣])|(?=[" + _SUFFIX_OK + r"]))")
     return _rx(label)
 
 
@@ -1414,7 +1430,8 @@ def match_sigungu(text, hint_sido):
                 continue
             m = _dong_rx(dlabel).search(text)
             if m and (dbest is None or m.start() < dbest[0]):
-                dbest = (m.start(), dlabel)
+                exact = re.sub(r"\s+", "", m.group(0))
+                dbest = (m.start(), exact if re.search(r"\d", exact) else dlabel)   # '역삼1동'처럼 번호까지 있으면 그대로 (지도에 더 정확히)
         if dbest:
             dong = dbest[1]
             label += " " + dong
@@ -1593,7 +1610,7 @@ def refine_locations(items, started=None):
 def locate(title, content, hint_sido=None, overseas=False):
     """(위치이름, 위도, 경도, 정밀도정보) 반환. 모르면 (미상, None, None, …)"""
     key = title
-    full = title + " | " + (content or "")[:400]
+    full = title + " | " + (content or "")[:900]     # 요약 + 본문에서 찾은 위치 문장(loctext)까지
     if overseas:
         hit = find_foreign(title, full) or find_foreign(full, full)
         if hit:
@@ -1654,6 +1671,119 @@ def clean_text(s):
     except Exception:
         pass
     return re.sub(r"\s+", " ", s).strip()
+
+
+# ── 기사 본문에서 위치 문장 찾기 ──
+#   RSS·구글 뉴스에는 제목(과 짧은 요약)만 있어서 '○○1동', '○○리', '○○로 12', '○○아파트' 같은 자세한 위치를 놓치기 쉽습니다.
+#   그래서 위치가 시·군·구 이하로 확인되지 않은 최신 기사는 언론사 기사 페이지를 한 번 열어 본문에서 위치가 나오는 문장만 골라 둡니다(loctext).
+MAX_ENRICH_PER_RUN = 30
+_LOC_CUE_RE = re.compile(r"[가-힣]{1,6}\d{0,2}(?:가)?\d?동(?![가-힣])|[가-힣]{1,5}(?:읍|면)\s*[가-힣]{1,4}리(?![가-힣])|[가-힣]{1,5}(?:읍|면)(?![가-힣])|"
+                         r"[가-힣0-9]{2,10}(?:대로|로|길)\s*\d|사거리|교차로|삼거리|오거리|[가-힣]{2,6}역(?![가-힣])|아파트|빌라|오피스텔|상가|IC|나들목|요금소|톨게이트|터널|휴게소|"
+                         r"초등학교|중학교|고등학교|공원|시장|해수욕장|항구|부두|인근|일대|앞\s*도로|소재|번지")
+
+
+class _BodyParser(HTMLParser):
+    """기사 페이지에서 본문 문단(<p>, 기사 영역)과 요약(og:description)만 뽑음"""
+    def __init__(self):
+        super().__init__()
+        self.parts, self.desc, self._skip, self._p = [], "", 0, 0
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag in ("script", "style", "noscript", "header", "footer", "nav", "aside", "form", "button"):
+            self._skip += 1
+        elif tag == "meta" and (a.get("property") in ("og:description",) or a.get("name") == "description") and not self.desc:
+            self.desc = a.get("content") or ""
+        elif tag in ("p", "article") or (tag == "div" and re.search(r"article|content|news_?body|text|view", (a.get("id") or "") + " " + (a.get("class") or ""), re.I)):
+            self._p += 1
+
+    def handle_endtag(self, tag):
+        if tag in ("script", "style", "noscript", "header", "footer", "nav", "aside", "form", "button"):
+            self._skip = max(0, self._skip - 1)
+        elif tag in ("p", "article", "div") and self._p:
+            self._p -= 1
+
+    def handle_data(self, d):
+        if not self._skip and self._p and d.strip():
+            self.parts.append(d)
+
+
+def fetch_article_text(url):
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,*/*"})
+    with urllib.request.urlopen(req, timeout=8) as r:
+        raw = r.read(800_000)
+        ctype = r.headers.get("Content-Type", "")
+    m = re.search(r"charset=([\w-]+)", ctype, re.I) or re.search(rb"charset=[\"']?([\w-]+)", raw[:4000], re.I)
+    enc = (m.group(1).decode() if isinstance(m.group(1), bytes) else m.group(1)) if m else "utf-8"
+    try:
+        html = raw.decode(enc, "ignore")
+    except LookupError:
+        html = raw.decode("utf-8", "ignore")
+    p = _BodyParser()
+    try:
+        p.feed(html)
+    except Exception:
+        pass
+    body = re.sub(r"\s+", " ", " ".join(p.parts))
+    return (p.desc + " " + body).strip()
+
+
+def location_sentences(text, limit=220):
+    """본문에서 위치가 나오는 문장만 골라 짧게 (저작권을 고려해 위치 확인용 최소한만 보관)"""
+    out, total = [], 0
+    for s in re.split(r"(?<=[다요\.!?])\s+", text):
+        s = s.strip()
+        if 8 <= len(s) <= 220 and _LOC_CUE_RE.search(s) and s not in out:
+            out.append(s)
+            total += len(s)
+            if total >= limit or len(out) >= 3:
+                break
+    return " ".join(out)[:limit]
+
+
+_PREC_RANK = {"poi": 4, "dong": 3, "sgg": 2, "sido": 1, "world": 1, None: 0}
+
+
+def enrich_locations(items, started):
+    """위치가 자세하지 않은 최신 국내 기사: 기사 본문을 읽어 더 작은 범위의 위치를 찾음"""
+    from concurrent.futures import ThreadPoolExecutor
+    cands = []
+    for v in sorted(items, key=lambda x: -x["timestamp"]):
+        if len(cands) >= MAX_ENRICH_PER_RUN:
+            break
+        g = v.get("_geo") or {}
+        if v.get("enr") or v.get("group") == OVERSEAS_GROUP or v.get("category") == "북한 도발":
+            continue
+        if not v.get("link") or v["link"].startswith("https://news.google.com"):
+            continue
+        if v.get("prec") in ("poi",) or g.get("place") or g.get("dong"):
+            continue                                # 이미 장소·동까지 알고 있음
+        cands.append(v)
+    if not cands or time.time() - started > 420:
+        return 0
+
+    def one(v):
+        try:
+            return v, fetch_article_text(v["link"])
+        except Exception:
+            return v, ""
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        res = list(ex.map(one, cands))
+    better = 0
+    for v, text in res:
+        v["enr"] = 1                                # 한 번 확인한 기사는 다시 열지 않음
+        lt = location_sentences(text) if text else ""
+        if not lt:
+            continue
+        v["loctext"] = lt
+        loc, lat, lng, geo = locate(v["title"], (v.get("content") or "") + " " + lt, v.get("hint"), False)
+        old_g = v.get("_geo") or {}
+        new_rank = _PREC_RANK.get(geo.get("prec"), 0) + (0.5 if (geo.get("place") or geo.get("dong")) else 0)
+        old_rank = _PREC_RANK.get(v.get("prec"), 0) + (0.5 if (old_g.get("place") or old_g.get("dong")) else 0)
+        if lat is not None and new_rank > old_rank:
+            v["location"], v["lat"], v["lng"], v["prec"], v["_geo"] = loc, lat, lng, geo.get("prec"), geo
+            better += 1
+    return better
 
 
 def split_publisher(title):
@@ -1739,9 +1869,9 @@ def build_item(entry, feed, now_ts):
     return make_item(title, content, sub, group, source, link, ts, feed.get("hint"))
 
 
-def make_item(title, content, sub, group, source, link, ts, hint, orig=None):
+def make_item(title, content, sub, group, source, link, ts, hint, orig=None, loctext=None):
     overseas = group == OVERSEAS_GROUP or sub == "북한 도발"
-    loc, lat, lng, geo = locate(title, content + (" " + orig if orig else ""), None if overseas else hint, overseas)
+    loc, lat, lng, geo = locate(title, content + (" " + orig if orig else "") + (" " + loctext if loctext else ""), None if overseas else hint, overseas)
     summary = content[:130] + ("..." if len(content) > 130 else "")
     return {
         "id": make_id(norm_key(title)),
@@ -2019,8 +2149,12 @@ def reprocess_existing(old):
             cls = classify(title, content)
             if not cls:
                 continue
-            item = make_item(title, content[:400], cls[0], cls[1], source, it.get("link", ""), ts, it.get("hint"))
+            item = make_item(title, content[:400], cls[0], cls[1], source, it.get("link", ""), ts, it.get("hint"), None, it.get("loctext"))
             item["embed"] = it.get("embed")
+            if it.get("enr"):
+                item["enr"] = 1                        # 본문 위치 확인을 이미 한 기사
+            if it.get("loctext"):
+                item["loctext"] = it["loctext"]
             out[norm_key(title)] = item
         except Exception:
             continue
@@ -2164,6 +2298,8 @@ def main():
     final = [v for v in items.values() if v["timestamp"] >= cutoff_ts]
     final.sort(key=lambda x: -x["timestamp"])
     final = final[:MAX_ITEMS]
+    n_enr = enrich_locations(final, started)            # 본문에서 '○○1동·○○리·○○로 12·○○아파트' 같은 자세한 위치 찾기
+    print(f"기사 본문에서 더 자세한 위치를 찾은 기사: {n_enr}건")
     for v in final:
         v["id"] = make_id(norm_key(v["title"]))
     n_poi, n_dong = refine_locations(final, started)   # 동·장소 단위까지 좌표를 정밀하게
