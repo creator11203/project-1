@@ -31,7 +31,7 @@ import pytz
 KST = pytz.timezone("Asia/Seoul")
 NEWS_JSON = "news.json"
 KEEP_DAYS = 7              # 며칠치를 보관할지
-MAX_ITEMS = 3000           # 최대 보관 건수
+MAX_ITEMS = 6000           # 최대 보관 건수 (하루 500~700건 × 7일. 예전 3000건 제한 때문에 오래된 날짜 기사가 잘려 0건으로 보였음)
 MAX_RESOLVE_PER_RUN = 40   # 한 번 실행에 구글 뉴스 링크를 원문 주소로 바꿔볼 최대 건수
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -330,7 +330,7 @@ GROUPS = {
     "교통범죄": ["음주·약물운전", "무면허운전", "뺑소니·사고후미조치", "난폭·보복운전"],
     "경제·금융범죄": ["주가조작·불공정거래", "유사수신·불법사금융", "조세·관세포탈", "자금세탁·환치기"],
     "마약·보건범죄": ["마약류", "무면허의료·부정의약품"],
-    "사이버범죄": ["해킹·정보통신망침해", "악성코드·랜섬웨어", "디도스·사이버공격", "개인정보 유출"],
+    "사이버범죄": ["해킹·정보통신망침해", "악성코드·랜섬웨어", "디도스·사이버공격", "개인정보 유출", "IT·전산 장애"],
     "기타 특별법 범죄": ["가정폭력·아동학대", "산업안전·중대재해법", "환경·동물 범죄", "병역·집시·출입국", "기타 범죄"],
     # ── 사고·재난 ──
     "화재·사고": ["화재", "폭발·가스누출", "붕괴·추락", "인파·압사 사고", "산업재해", "구조·안전사고"],
@@ -410,6 +410,11 @@ RULES_SRC = [
                     r"공급망\s*공격|APT|다크웹|크립토재킹|홈페이지\s*변조|디페이스|정보통신망\s*침해"),
     ("디도스·사이버공격", r"디도스|DDoS|분산\s*서비스\s*거부|사이버\s*(?:공격|범죄|테러|위협|침해)|전산망\s*(?:마비|장애)|서비스\s*거부\s*공격"),
     ("개인정보 유출", r"개인정보\s*(?:유출|침해|노출|도용|불법\s*수집|무단)|정보\s*유출|고객\s*정보\s*(?:유출|노출)|회원\s*정보\s*(?:유출|노출)|명의\s*도용|신상\s*털"),
+    # 공격이 아니어도 클라우드·서버·통신망이 멈춰 업무가 마비된 일 (예: 'MS 서비스 장애로 전세계 업무 마비') → 사이버 부문
+    #   ※ '마비'·'대란'만 보고 '혼잡·인파'로 잘못 분류되던 문제를 막으려고, 넓은 분류(혼잡·인파)보다 먼저 검사합니다.
+    ("IT·전산 장애", r"(?:서비스|서버|전산|전산망|시스템|클라우드|데이터\s*센터|데이터센터|네트워크|인터넷|통신|통신망|접속|결제|앱|홈페이지|사이트|플랫폼|메신저|"
+                  r"윈도우?|MS|마이크로소프트|애저|Azure|AWS|아마존\s*웹|구글|카카오톡?|카톡|네이버|유튜브|인스타그램|페이스북|IT)\s*(?:장애|먹통|오류|마비|중단|다운|불통|셧다운|대란)|"
+                  r"먹통|접속\s*(?:장애|불가|폭주)|블루\s*스크린|IT\s*대란|클라우드\s*대란|전산\s*대란|크라우드\s*스트라이크|CrowdStrike"),
     ("절도·강도", r"절도|(?<![가-힣])강도(?:범|상해|살인|행각|혐의|침입|피해|사건|짓)|편의점\s*강도|특수\s*강도|무장\s*강도|소매치기|날치기|빈집털이|금품\s*(?:빼앗|훔)|"
                r"훔쳐|훔친|도둑|차량\s*털이|자동차\s*불법\s*사용"),
     ("주거침입", r"주거\s*침입|무단\s*침입|퇴거\s*불응|비밀\s*침해"),
@@ -1343,9 +1348,9 @@ def build_regions():
     for r in rows:
         r.compiled = []
         for a in r.strong:
-            r.compiled.append((_rx(a), a, count[a] > 1, a.split(" ")[0]))
+            r.compiled.append((_rx(a), a, count[a] > 1, a.split(" ")[0], count[a] == 1))
         for a in r.weak:
-            r.compiled.append((_rx(a), a, True, a.split(" ")[0]))
+            r.compiled.append((_rx(a), a, True, a.split(" ")[0], count[a] == 1))
         # 기관명은 글자 그대로 포함되어 있는지만 확인 (후순위)
         r.inst_compiled = [(re.compile(a), a) for a in r.inst]
     return rows
@@ -1385,6 +1390,18 @@ def find_sidos(text):
     return {s: m.start() for s, rx in SIDO_RX.items() for m in [rx.search(t)] if m}
 
 
+# 시·도 이름이 없어도, 지명 바로 뒤에 그 지역 관공서·바다 표현이 붙어 있으면 그 지역으로 인정
+#   예) '완도해경'·'완도해양경찰서'·'완도 해상' → 전남 완도군,  '진도 앞바다' → 전남 진도군,  '성주경찰서' → 경북 성주군
+_OFFICE_AFTER = re.compile(r"\s?(?:해경|해양\s*경찰|경찰서|경찰|소방서|소방본부|군청|시청|군수|군의회|시의회|보건소|교육지원청|해상|앞바다|연안|인근\s*해상|항(?![가-힣])|항에서|항구|읍(?![가-힣])|군(?![가-힣]))")
+_OFFICE_AFTER_STRICT = re.compile(r"\s?(?:경찰서|소방서|군청|시청|군수|군의회|시의회|보건소|교육지원청)")
+_SEA_AMBIG = {"남해", "동해"}          # '남해 해상'·'동해 앞바다'는 바다 이름일 때가 많아 관공서 이름일 때만 인정
+
+
+def _office_ok(text, alias, m):
+    rx = _OFFICE_AFTER_STRICT if alias in _SEA_AMBIG else _OFFICE_AFTER
+    return bool(rx.match(text, m.end()))
+
+
 def match_sigungu(text, hint_sido):
     text = _NOT_PLACE.sub(" ", text)
     sidos = set(find_sidos(text))
@@ -1392,14 +1409,19 @@ def match_sigungu(text, hint_sido):
         sidos.add(hint_sido)
     best = None
     for r in regions():
-        for rx, alias, need_sido, probe in r.compiled:
+        for rx, alias, need_sido, probe, unique in r.compiled:
             if probe not in text:                      # 빠른 사전 검사 (속도 향상)
-                continue
-            if need_sido and r.sido not in sidos:
                 continue
             m = rx.search(text)
             if not m:
                 continue
+            if need_sido and r.sido not in sidos:
+                # 이름이 전국에 하나뿐인 지명이면 '○○해경·○○경찰서·○○ 해상' 처럼 쓰였을 때 인정
+                if not unique:
+                    continue
+                m = next((x for x in rx.finditer(text) if _office_ok(text, alias, x)), None)
+                if not m:
+                    continue
             key = (0, m.start(), -len(alias))
             if best is None or key < best[0]:
                 best = (key, r)
@@ -1677,6 +1699,7 @@ def clean_text(s):
 #   RSS·구글 뉴스에는 제목(과 짧은 요약)만 있어서 '○○1동', '○○리', '○○로 12', '○○아파트' 같은 자세한 위치를 놓치기 쉽습니다.
 #   그래서 위치가 시·군·구 이하로 확인되지 않은 최신 기사는 언론사 기사 페이지를 한 번 열어 본문에서 위치가 나오는 문장만 골라 둡니다(loctext).
 MAX_ENRICH_PER_RUN = 30
+ENRICH_VER = 2        # 본문 위치 찾기 방식을 고치면 숫자를 올립니다 (2: 시·군·구 이름만 있는 문장도 위치 문장으로 인정)
 _LOC_CUE_RE = re.compile(r"[가-힣]{1,6}\d{0,2}(?:가)?\d?동(?![가-힣])|[가-힣]{1,5}(?:읍|면)\s*[가-힣]{1,4}리(?![가-힣])|[가-힣]{1,5}(?:읍|면)(?![가-힣])|"
                          r"[가-힣0-9]{2,10}(?:대로|로|길)\s*\d|사거리|교차로|삼거리|오거리|[가-힣]{2,6}역(?![가-힣])|아파트|빌라|오피스텔|상가|IC|나들목|요금소|톨게이트|터널|휴게소|"
                          r"초등학교|중학교|고등학교|공원|시장|해수욕장|항구|부두|인근|일대|앞\s*도로|소재|번지")
@@ -1733,7 +1756,8 @@ def location_sentences(text, limit=220):
     out, total = [], 0
     for s in re.split(r"(?<=[다요\.!?])\s+", text):
         s = s.strip()
-        if 8 <= len(s) <= 220 and _LOC_CUE_RE.search(s) and s not in out:
+        # 동·읍·면·도로명 같은 자세한 위치뿐 아니라 '최근 여수에서…', '완도해경은…'처럼 시·군·구 이름만 나오는 문장도 위치 문장으로 봄
+        if 8 <= len(s) <= 220 and (_LOC_CUE_RE.search(s) or _has_domestic_place(s)) and s not in out:
             out.append(s)
             total += len(s)
             if total >= limit or len(out) >= 3:
@@ -1748,11 +1772,17 @@ def enrich_locations(items, started):
     """위치가 자세하지 않은 최신 국내 기사: 기사 본문을 읽어 더 작은 범위의 위치를 찾음"""
     from concurrent.futures import ThreadPoolExecutor
     cands = []
-    for v in sorted(items, key=lambda x: -x["timestamp"]):
+    # 지도에 아예 못 찍은 기사(위치 미상) → 시·도까지만 아는 기사 → 시·군·구까지 아는 기사 순서로 먼저 확인
+    order = {None: 0, "sido": 1, "sgg": 2}
+    for v in sorted(items, key=lambda x: (order.get(x.get("prec"), 3), -x["timestamp"])):
         if len(cands) >= MAX_ENRICH_PER_RUN:
             break
         g = v.get("_geo") or {}
-        if v.get("enr") or v.get("group") == OVERSEAS_GROUP or v.get("category") == "북한 도발":
+        enr = v.get("enr") or 0
+        if v.get("group") == OVERSEAS_GROUP or v.get("category") == "북한 도발":
+            continue
+        # 예전 방식(1)으로 이미 확인한 기사는, 위치를 아직 모르거나 시·도까지만 아는 경우에만 새 방식으로 한 번 더 확인
+        if enr >= ENRICH_VER or (enr and v.get("prec") not in (None, "sido")):
             continue
         if not v.get("link") or v["link"].startswith("https://news.google.com"):
             continue
@@ -1771,7 +1801,7 @@ def enrich_locations(items, started):
         res = list(ex.map(one, cands))
     better = 0
     for v, text in res:
-        v["enr"] = 1                                # 한 번 확인한 기사는 다시 열지 않음
+        v["enr"] = ENRICH_VER                       # 한 번 확인한 기사는 다시 열지 않음
         lt = location_sentences(text) if text else ""
         if not lt:
             continue
@@ -2152,7 +2182,7 @@ def reprocess_existing(old):
             item = make_item(title, content[:400], cls[0], cls[1], source, it.get("link", ""), ts, it.get("hint"), None, it.get("loctext"))
             item["embed"] = it.get("embed")
             if it.get("enr"):
-                item["enr"] = 1                        # 본문 위치 확인을 이미 한 기사
+                item["enr"] = it["enr"]                # 본문 위치 확인을 이미 한 기사 (몇 번째 방식으로 확인했는지)
             if it.get("loctext"):
                 item["loctext"] = it["loctext"]
             out[norm_key(title)] = item
