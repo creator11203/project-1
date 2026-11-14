@@ -12,6 +12,9 @@
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 지도 마커 묶음(클러스터): 멀리서 보면 숫자로 묶이고, 확대하면 하나씩 풀립니다 -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -53,8 +56,35 @@
         .refresh-spin { display: inline-block; animation: refresh-rotate 2.4s linear infinite; }
         .refresh-spin.fast { animation-duration: .5s; }
         @keyframes refresh-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        /* 속보 헤드라인: 왼쪽(로고 쪽)에서 나와 오른쪽(글씨 크기 버튼 쪽)으로 사라짐 */
-        @keyframes ticker-ltr { from { transform: translateX(-100%); } to { transform: translateX(var(--ticker-end, 100vw)); } }
+        /* 속보 헤드라인: 오른쪽에서 나와 왼쪽으로 흐름 (글을 읽는 방향과 같게) */
+        @keyframes ticker-rtl { from { transform: translateX(var(--ticker-start, 100vw)); } to { transform: translateX(-100%); } }
+        /* 화면 설정: 4개 패널(사건 목록·기사 원문·지도·커뮤니티)을 3칸에 자유롭게 배치 */
+        .panel { display: flex; flex-direction: column; height: 100%; width: 100%; min-height: 0; min-width: 0; overflow: hidden; position: relative; }
+        #detailViewContainer { overflow-x: hidden; overflow-wrap: anywhere; }
+        /* 지도 마커 */
+        .pin { border-radius: 50%; border: 2px solid #fff; box-sizing: border-box; }
+        .pin.approx { border-style: dashed; opacity: .78; }
+        .pin.exact { box-shadow: 0 0 0 2px rgba(15,23,42,.35), 0 2px 6px rgba(0,0,0,.45); }
+        .pin.sel { animation: pin-pulse 1.4s ease-out infinite; }
+        @keyframes pin-pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.75); } 100% { box-shadow: 0 0 0 16px rgba(239,68,68,0); } }
+        .cluster-bubble { border-radius: 50%; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 2px 8px rgba(0,0,0,.35); font-family: system-ui, sans-serif; }
+        .safety-pin { width: 26px; height: 26px; border-radius: 8px; background: #fff; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+        .dark .leaflet-container { background: #0b1220; }
+        .leaflet-popup-content { margin: 10px 12px; }
+        /* 커뮤니티 버튼 */
+        .comm-btn { background: linear-gradient(135deg, #059669 0%, #0d9488 55%, #0284c7 100%); }
+        .comm-btn:hover { filter: brightness(1.1); }
+        .comm-faces span { width: 22px; height: 22px; border-radius: 50%; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; border: 2px solid #059669; margin-left: -7px; }
+        .comm-faces span:first-child { margin-left: 0; }
+        .panel-flash { animation: panel-flash 1s ease-out 1; }
+        @keyframes panel-flash { 0% { box-shadow: inset 0 0 0 4px #10b981; } 100% { box-shadow: inset 0 0 0 0 rgba(16,185,129,0); } }
+        .react-chip { display: inline-flex; align-items: center; gap: 2px; font-size: 0.6875rem; padding: 1px 6px; border-radius: 999px; border: 1px solid #cbd5e1; background: rgba(255,255,255,.85); color: #334155; }
+        .react-chip.on { border-color: #f43f5e; background: #ffe4e6; color: #be123c; font-weight: 700; }
+        .dark .react-chip { background: rgba(15,23,42,.8); border-color: #475569; color: #e2e8f0; }
+        .dark .react-chip.on { background: #4c0519; border-color: #f43f5e; color: #fecdd3; }
+        .msg-row .msg-tools { visibility: hidden; }
+        .msg-row:hover .msg-tools, .msg-row:focus-within .msg-tools { visibility: visible; }
+        @media (hover: none) { .msg-row .msg-tools { visibility: visible; } }
         #tickerWrap:hover #tickerTrack { animation-play-state: paused; }
         @keyframes live-bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .35; } 40% { transform: translateY(-5px); opacity: 1; } }
     </style>
@@ -98,10 +128,12 @@
             <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-yellow-400 text-xs font-medium px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-2">
                 <i id="themeIcon" class="fa-solid fa-moon"></i> <span id="themeText">다크모드</span>
             </button>
-            <button onclick="openCommunity()" class="relative bg-emerald-600 hover:bg-emerald-500 text-white text-xs md:text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-emerald-600/20 transition flex items-center gap-2">
-                <i class="fa-solid fa-people-group"></i> 우리동네 커뮤니티
-                <span id="commBadge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full animate-pulse">SOS</span>
-            </button>
+            <div class="relative">
+                <button onclick="toggleLayoutPanel()" title="화면 배치 바꾸기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-table-columns"></i> 화면 설정</button>
+                <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
+            </div>
+            <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-2 whitespace-nowrap"><i class="fa-solid fa-mobile-screen-button"></i> 앱 다운로드</button>
+            <span id="floatBtnWrap"></span>
             <button onclick="openCommunity('report')" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs md:text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-red-600/20 transition flex items-center gap-2">
                 <i class="fa-solid fa-bullhorn"></i> 실시간 제보하기
             </button>
@@ -109,19 +141,28 @@
         </div>
     </header>
 
-    <!-- 메인 3분할 레이아웃 -->
+    <!-- 메인 3칸 레이아웃: 각 칸에 어떤 패널을 넣을지는 [화면 설정]에서 고릅니다 -->
     <main id="splitContainer" class="flex-1 flex flex-col lg:flex-row overflow-hidden w-full">
-        
-        <!-- 1. 왼쪽: 필터 및 뉴스 피드 -->
-        <section id="leftPane" style="width: 28%; min-width: 250px;" class="bg-white dark:bg-slate-900/90 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
+        <section id="leftPane" style="width: 28%; min-width: 250px;" class="bg-white dark:bg-slate-900/90 border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden shrink-0"></section>
+        <div id="resizer1" class="resizer hidden lg:block"></div>
+        <section id="centerPane" style="width: 40%; min-width: 300px;" class="bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 h-full overflow-hidden shrink-0"></section>
+        <div id="resizer2" class="resizer hidden lg:block"></div>
+        <section id="rightPane" style="flex: 1; min-width: 240px;" class="bg-white dark:bg-slate-900 h-full relative overflow-hidden"></section>
+    </main>
+
+    <!-- 패널 4개 (화면 설정에 따라 위의 3칸 또는 떠 있는 창으로 옮겨집니다) -->
+    <div id="panelStore" class="hidden">
+        <!-- 패널 1: 사건 목록 (지역 필터 + 요약 기사) -->
+        <div id="panel-list" class="panel bg-white dark:bg-slate-900/90">
             <div class="p-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 space-y-2">
                 <div class="flex items-center justify-between text-xs text-slate-500">
                     <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 전국 지역별 상세 필터
                     </span>
-                    <button onclick="manualRefreshData()" title="지금 바로 새 기사를 확인합니다 (기사는 이 버튼과 상관없이 자동으로 계속 갱신됩니다)" class="flex items-center gap-1.5 text-[0.6875rem] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-2 py-1 rounded-md">
-                        <i id="refreshIcon" class="fa-solid fa-rotate refresh-spin"></i> 뉴스 새로고침
-                    </button>
+                    <span title="새 기사는 자동으로 계속 갱신됩니다" class="flex items-center gap-1.5 text-[0.6875rem] font-bold text-emerald-600 dark:text-emerald-400">
+                        <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-500"></span></span>
+                        실시간 업데이트 중 <span class="live-dots"><i></i><i></i><i></i></span>
+                    </span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-1.5">
@@ -167,13 +208,9 @@
             </div>
 
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
-        </section>
-
-        <!-- 화살표 UI가 포함된 첫 번째 분할선 -->
-        <div id="resizer1" class="resizer hidden lg:block"></div>
-
-        <!-- 2. 중앙: 카테고리 및 원문 뷰어 패널 -->
-        <section id="centerPane" style="width: 40%; min-width: 300px;" class="bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full overflow-hidden shrink-0">
+        </div>
+        <!-- 패널 2: 카테고리 + 기사 원문 -->
+        <div id="panel-article" class="panel bg-slate-50 dark:bg-slate-950">
             <div id="categoryBar" class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex flex-col gap-1.5 shrink-0">
                 <div id="groupButtons" class="flex flex-wrap items-center gap-1.5"></div>
                 <div id="subButtons" class="flex flex-wrap items-center gap-1" style="display:none"></div>
@@ -181,25 +218,45 @@
             
             <!-- 원문 본문 뷰어 영역 (상세 content 출력) -->
             <div id="detailViewContainer" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 select-text flex flex-col gap-3"></div>
-        </section>
-
-        <!-- 화살표 UI가 포함된 두 번째 분할선 -->
-        <div id="resizer2" class="resizer hidden lg:block"></div>
-
-        <!-- 3. 오른쪽: 지도 패널 -->
-        <section id="rightPane" style="flex: 1; min-width: 240px;" class="bg-white dark:bg-slate-900 flex flex-col h-full relative overflow-hidden">
-            <div class="absolute top-3 right-3 z-[400] flex items-center gap-2">
+        </div>
+        <!-- 패널 3: 사건 발생 지도 -->
+        <div id="panel-map" class="panel bg-white dark:bg-slate-900">
+            <div class="absolute top-3 right-3 z-[400] flex flex-wrap items-center justify-end gap-2" style="max-width: calc(100% - 4rem);">
                 <button id="alertButton" onclick="toggleAlertPanel()" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-amber-400 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-800 whitespace-nowrap"><i class="fa-regular fa-bell"></i> 알림 설정</button>
-                <div class="bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-700 text-xs px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span>전국 동(洞) 단위 정밀 관제 지도</span>
-                </div>
+                <button onclick="toggleSafetyPanel()" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-red-400 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-slate-800 whitespace-nowrap"><i class="fa-solid fa-kit-medical text-red-500"></i> 내 주변 안전시설</button>
+                <select id="mapStyleSelect" onchange="setMapStyle(this.value)" title="지도 모양" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-600 text-xs font-bold px-2 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200"></select>
             </div>
             <div id="map" class="flex-1 w-full h-full z-10"></div>
+            <div id="mapLegend" class="absolute bottom-6 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-700 rounded-lg shadow px-2.5 py-1.5 text-[0.625rem] text-slate-600 dark:text-slate-300 leading-relaxed" style="z-index: 500;"></div>
+            <div id="safetyPanel" class="hidden absolute top-14 left-3 w-72 max-h-[80%] overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3" style="z-index: 1100;"></div>
             <div id="alertPanel" class="hidden absolute top-14 right-3 w-64 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3" style="z-index: 1100;"></div>
             <div id="alertToasts" class="absolute bottom-7 right-3 flex flex-col gap-2 items-end" style="z-index: 1100;"></div>
-        </section>
-    </main>
+        </div>
+        <!-- 패널 4: 우리동네 커뮤니티 -->
+        <div id="panel-community" class="panel bg-white dark:bg-slate-900">
+            <div class="px-4 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 shrink-0">
+                <h3 class="font-bold text-sm text-slate-900 dark:text-white flex items-center gap-2 min-w-0">
+                    <i class="fa-solid fa-people-group text-emerald-500"></i> <span id="commTitle" class="truncate">우리동네 커뮤니티</span>
+                </h3>
+                <div id="commHeadBtns" class="flex items-center gap-1.5 shrink-0"></div>
+            </div>
+            <div id="commBody" class="flex-1 min-h-0 flex flex-col select-text"></div>
+            <div id="commProfileCard" onclick="closeProfile()" class="hidden absolute inset-0 z-10 bg-black/50 flex items-center justify-center p-4"></div>
+        </div>
+    </div>
+
+    <!-- 3칸에 넣지 않은 패널이 뜨는 창 -->
+    <div id="floatModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if (event.target === this) closeFloat()">
+        <div id="floatBox" class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="height: 88vh;">
+            <div id="floatHead" class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 shrink-0"></div>
+            <div id="floatBody" class="flex-1 min-h-0"></div>
+        </div>
+    </div>
+
+    <!-- 앱 다운로드(QR) 창 -->
+    <div id="appModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4" style="z-index: 65;" onclick="if (event.target === this) closeAppModal()">
+        <div id="appModalBox" class="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5"></div>
+    </div>
 
     <!-- 음성·영상 통화 화면 -->
     <div id="callOverlay" class="hidden fixed inset-0 bg-black/95 flex flex-col items-center justify-center" style="z-index: 70;">
@@ -214,19 +271,6 @@
     </div>
     <div id="callIncoming" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-2xl shadow-2xl px-5 py-3 text-center" style="z-index: 71;"></div>
 
-    <!-- 우리동네 커뮤니티 창 -->
-    <div id="communityModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="height: 88vh;">
-            <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 shrink-0">
-                <h3 class="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                    <i class="fa-solid fa-people-group text-emerald-500"></i> <span id="commTitle">우리동네 커뮤니티</span>
-                </h3>
-                <button onclick="closeCommunity()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-            <div id="commBody" class="flex-1 min-h-0 flex flex-col select-text"></div>
-            <div id="commProfileCard" onclick="closeProfile()" class="hidden absolute inset-0 z-10 bg-black/50 flex items-center justify-center p-4"></div>
-        </div>
-    </div>
     <div id="commMediaView" onclick="closeMedia()" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out" style="z-index: 60;">
         <img id="commMediaImg" class="max-w-full max-h-full rounded-lg" alt="">
     </div>
@@ -538,6 +582,8 @@
         const SIGUNGU_CENTERS = {"서울특별시 종로구": [37.573, 126.9794], "서울특별시 중구": [37.5636, 126.9976], "서울특별시 용산구": [37.5326, 126.9906], "서울특별시 성동구": [37.5634, 127.0369], "서울특별시 광진구": [37.5385, 127.0824], "서울특별시 동대문구": [37.5744, 127.0396], "서울특별시 중랑구": [37.6066, 127.0927], "서울특별시 성북구": [37.5894, 127.0167], "서울특별시 강북구": [37.6396, 127.0257], "서울특별시 도봉구": [37.6688, 127.0471], "서울특별시 노원구": [37.6542, 127.0568], "서울특별시 은평구": [37.6027, 126.9291], "서울특별시 서대문구": [37.5791, 126.9368], "서울특별시 마포구": [37.5663, 126.9016], "서울특별시 양천구": [37.517, 126.8664], "서울특별시 강서구": [37.5509, 126.8495], "서울특별시 구로구": [37.4954, 126.8874], "서울특별시 금천구": [37.4519, 126.902], "서울특별시 영등포구": [37.5264, 126.8962], "서울특별시 동작구": [37.5124, 126.9393], "서울특별시 관악구": [37.4784, 126.9516], "서울특별시 서초구": [37.4837, 127.0324], "서울특별시 강남구": [37.5172, 127.0473], "서울특별시 송파구": [37.5145, 127.1059], "서울특별시 강동구": [37.5301, 127.1238], "부산광역시 중구": [35.1063, 129.0324], "부산광역시 서구": [35.0979, 129.0243], "부산광역시 동구": [35.1294, 129.0454], "부산광역시 영도구": [35.0912, 129.0679], "부산광역시 부산진구": [35.1629, 129.0532], "부산광역시 동래구": [35.2049, 129.0837], "부산광역시 남구": [35.1366, 129.0843], "부산광역시 북구": [35.1972, 128.9903], "부산광역시 해운대구": [35.1631, 129.1639], "부산광역시 사하구": [35.1046, 128.9748], "부산광역시 금정구": [35.243, 129.0922], "부산광역시 강서구": [35.2122, 128.9806], "부산광역시 연제구": [35.176, 129.0799], "부산광역시 수영구": [35.1456, 129.113], "부산광역시 사상구": [35.1527, 128.991], "부산광역시 기장군": [35.2447, 129.2222], "대구광역시 중구": [35.8693, 128.6061], "대구광역시 동구": [35.8866, 128.6355], "대구광역시 서구": [35.8719, 128.5592], "대구광역시 남구": [35.846, 128.5974], "대구광역시 북구": [35.8858, 128.5828], "대구광역시 수성구": [35.8583, 128.6307], "대구광역시 달서구": [35.8299, 128.5329], "대구광역시 달성군": [35.7746, 128.4313], "대구광역시 군위군": [36.2428, 128.5728], "인천광역시 중구": [37.4738, 126.6217], "인천광역시 동구": [37.4739, 126.6432], "인천광역시 미추홀구": [37.4635, 126.6505], "인천광역시 연수구": [37.4102, 126.6783], "인천광역시 남동구": [37.447, 126.7314], "인천광역시 부평구": [37.507, 126.7219], "인천광역시 계양구": [37.5372, 126.7378], "인천광역시 서구": [37.5455, 126.676], "인천광역시 강화군": [37.7469, 126.4878], "인천광역시 옹진군": [37.4467, 126.6368], "광주광역시 동구": [35.146, 126.923], "광주광역시 서구": [35.1519, 126.8895], "광주광역시 남구": [35.133, 126.9026], "광주광역시 북구": [35.174, 126.9119], "광주광역시 광산구": [35.1396, 126.7938], "대전광역시 동구": [36.312, 127.4548], "대전광역시 중구": [36.3256, 127.4214], "대전광역시 서구": [36.3555, 127.3838], "대전광역시 유성구": [36.3622, 127.3562], "대전광역시 대덕구": [36.3466, 127.415], "울산광역시 중구": [35.5695, 129.3327], "울산광역시 남구": [35.5439, 129.33], "울산광역시 동구": [35.505, 129.4166], "울산광역시 북구": [35.5826, 129.3614], "울산광역시 울주군": [35.5222, 129.0942], "세종특별자치시 세종시": [36.48, 127.289], "경기도 수원시": [37.2636, 127.0286], "경기도 수원시 장안구": [37.304, 127.01], "경기도 수원시 권선구": [37.2579, 126.972], "경기도 수원시 팔달구": [37.2825, 127.0203], "경기도 수원시 영통구": [37.251, 127.071], "경기도 성남시": [37.42, 127.1267], "경기도 성남시 수정구": [37.45, 127.1456], "경기도 성남시 중원구": [37.4306, 127.1378], "경기도 성남시 분당구": [37.3825, 127.1189], "경기도 고양시": [37.6584, 126.832], "경기도 고양시 덕양구": [37.6372, 126.832], "경기도 고양시 일산동구": [37.6584, 126.774], "경기도 고양시 일산서구": [37.676, 126.75], "경기도 용인시": [37.2411, 127.1776], "경기도 용인시 처인구": [37.234, 127.201], "경기도 용인시 기흥구": [37.28, 127.115], "경기도 용인시 수지구": [37.322, 127.098], "경기도 안산시": [37.3219, 126.8309], "경기도 안산시 상록구": [37.3017, 126.847], "경기도 안산시 단원구": [37.319, 126.808], "경기도 안양시": [37.3943, 126.9568], "경기도 안양시 만안구": [37.3866, 126.932], "경기도 안양시 동안구": [37.3925, 126.9514], "경기도 부천시": [37.5034, 126.766], "경기도 화성시": [37.1995, 126.8313], "경기도 평택시": [36.9921, 127.1127], "경기도 남양주시": [37.636, 127.2165], "경기도 의정부시": [37.7381, 127.0337], "경기도 시흥시": [37.38, 126.803], "경기도 파주시": [37.76, 126.78], "경기도 김포시": [37.6152, 126.7156], "경기도 광명시": [37.4786, 126.8644], "경기도 광주시": [37.4295, 127.255], "경기도 군포시": [37.3617, 126.9352], "경기도 하남시": [37.5393, 127.2148], "경기도 오산시": [37.1499, 127.0775], "경기도 이천시": [37.272, 127.435], "경기도 안성시": [37.008, 127.2797], "경기도 의왕시": [37.3449, 126.9683], "경기도 양주시": [37.7853, 127.0458], "경기도 구리시": [37.5943, 127.1296], "경기도 포천시": [37.8949, 127.2003], "경기도 동두천시": [37.9036, 127.0606], "경기도 과천시": [37.4292, 126.9876], "경기도 여주시": [37.2984, 127.6375], "경기도 양평군": [37.4917, 127.4875], "경기도 가평군": [37.8315, 127.5095], "경기도 연천군": [38.0966, 127.0749], "강원특별자치도 춘천시": [37.8813, 127.7298], "강원특별자치도 원주시": [37.3422, 127.9202], "강원특별자치도 강릉시": [37.7519, 128.8761], "강원특별자치도 동해시": [37.5247, 129.1143], "강원특별자치도 태백시": [37.1641, 128.9856], "강원특별자치도 속초시": [38.207, 128.5918], "강원특별자치도 삼척시": [37.4499, 129.1652], "강원특별자치도 홍천군": [37.6971, 127.8888], "강원특별자치도 횡성군": [37.4917, 127.9847], "강원특별자치도 영월군": [37.1837, 128.4617], "강원특별자치도 평창군": [37.3705, 128.3903], "강원특별자치도 정선군": [37.3807, 128.6608], "강원특별자치도 철원군": [38.1466, 127.3132], "강원특별자치도 화천군": [38.1063, 127.7082], "강원특별자치도 양구군": [38.1098, 127.9895], "강원특별자치도 인제군": [38.0695, 128.1707], "강원특별자치도 고성군": [38.3806, 128.4678], "강원특별자치도 양양군": [38.0754, 128.619], "충청북도 청주시": [36.6424, 127.489], "충청북도 청주시 상당구": [36.59, 127.51], "충청북도 청주시 서원구": [36.63, 127.46], "충청북도 청주시 흥덕구": [36.64, 127.43], "충청북도 청주시 청원구": [36.7, 127.5], "충청북도 충주시": [36.991, 127.926], "충청북도 제천시": [37.1326, 128.1909], "충청북도 보은군": [36.4894, 127.7295], "충청북도 옥천군": [36.3064, 127.5714], "충청북도 영동군": [36.175, 127.7834], "충청북도 증평군": [36.7853, 127.5814], "충청북도 진천군": [36.8553, 127.4356], "충청북도 괴산군": [36.8153, 127.7868], "충청북도 음성군": [36.9403, 127.6906], "충청북도 단양군": [36.9845, 128.3655], "충청남도 천안시": [36.8151, 127.1139], "충청남도 천안시 동남구": [36.78, 127.17], "충청남도 천안시 서북구": [36.84, 127.13], "충청남도 공주시": [36.4465, 127.119], "충청남도 보령시": [36.3333, 126.6128], "충청남도 아산시": [36.7898, 127.0018], "충청남도 서산시": [36.7845, 126.4503], "충청남도 논산시": [36.1872, 127.0987], "충청남도 계룡시": [36.2746, 127.2486], "충청남도 당진시": [36.893, 126.6475], "충청남도 금산군": [36.1088, 127.488], "충청남도 부여군": [36.2756, 126.9098], "충청남도 서천군": [36.0803, 126.6918], "충청남도 청양군": [36.4592, 126.8023], "충청남도 홍성군": [36.601, 126.6608], "충청남도 예산군": [36.6826, 126.845], "충청남도 태안군": [36.7456, 126.298], "전북특별자치도 전주시": [35.8242, 127.148], "전북특별자치도 전주시 완산구": [35.81, 127.12], "전북특별자치도 전주시 덕진구": [35.85, 127.13], "전북특별자치도 군산시": [35.9676, 126.7369], "전북특별자치도 익산시": [35.9483, 126.9577], "전북특별자치도 정읍시": [35.5699, 126.856], "전북특별자치도 남원시": [35.4164, 127.3905], "전북특별자치도 김제시": [35.8036, 126.8809], "전북특별자치도 완주군": [35.9047, 127.162], "전북특별자치도 진안군": [35.7917, 127.4249], "전북특별자치도 무주군": [36.007, 127.6608], "전북특별자치도 장수군": [35.6473, 127.5213], "전북특별자치도 임실군": [35.6176, 127.289], "전북특별자치도 순창군": [35.3744, 127.1375], "전북특별자치도 고창군": [35.4358, 126.702], "전북특별자치도 부안군": [35.7318, 126.7336], "전라남도 목포시": [34.8118, 126.3922], "전라남도 여수시": [34.7604, 127.6622], "전라남도 순천시": [34.9506, 127.4875], "전라남도 나주시": [35.016, 126.7108], "전라남도 광양시": [34.9407, 127.6959], "전라남도 담양군": [35.3214, 126.9882], "전라남도 곡성군": [35.2819, 127.292], "전라남도 구례군": [35.2026, 127.4627], "전라남도 고흥군": [34.6112, 127.285], "전라남도 보성군": [34.7714, 127.08], "전라남도 화순군": [35.0645, 126.9865], "전라남도 장흥군": [34.6816, 126.9069], "전라남도 강진군": [34.642, 126.7673], "전라남도 해남군": [34.5736, 126.599], "전라남도 영암군": [34.8002, 126.6968], "전라남도 무안군": [34.9904, 126.4816], "전라남도 함평군": [35.066, 126.5167], "전라남도 영광군": [35.2773, 126.512], "전라남도 장성군": [35.3018, 126.7886], "전라남도 완도군": [34.311, 126.755], "전라남도 진도군": [34.4868, 126.2634], "전라남도 신안군": [34.8268, 126.1068], "경상북도 포항시": [36.019, 129.3435], "경상북도 포항시 남구": [36.0, 129.35], "경상북도 포항시 북구": [36.06, 129.37], "경상북도 경주시": [35.8562, 129.2247], "경상북도 김천시": [36.1398, 128.1136], "경상북도 안동시": [36.5684, 128.7294], "경상북도 구미시": [36.1195, 128.3446], "경상북도 영주시": [36.8057, 128.6241], "경상북도 영천시": [35.9733, 128.9386], "경상북도 상주시": [36.4109, 128.159], "경상북도 문경시": [36.5867, 128.1992], "경상북도 경산시": [35.8251, 128.7414], "경상북도 의성군": [36.3527, 128.697], "경상북도 청송군": [36.436, 129.0572], "경상북도 영양군": [36.6667, 129.1124], "경상북도 영덕군": [36.415, 129.3657], "경상북도 청도군": [35.6473, 128.734], "경상북도 고령군": [35.7285, 128.2631], "경상북도 성주군": [35.919, 128.2827], "경상북도 칠곡군": [35.9955, 128.4017], "경상북도 예천군": [36.6577, 128.452], "경상북도 봉화군": [36.8931, 128.7325], "경상북도 울진군": [36.993, 129.4004], "경상북도 울릉군": [37.4845, 130.9057], "경상남도 창원시": [35.228, 128.6811], "경상남도 창원시 의창구": [35.2544, 128.64], "경상남도 창원시 성산구": [35.197, 128.7], "경상남도 창원시 마산합포구": [35.19, 128.57], "경상남도 창원시 마산회원구": [35.22, 128.58], "경상남도 창원시 진해구": [35.133, 128.71], "경상남도 진주시": [35.18, 128.1076], "경상남도 통영시": [34.8544, 128.4331], "경상남도 사천시": [35.0035, 128.0642], "경상남도 김해시": [35.2285, 128.8894], "경상남도 밀양시": [35.5038, 128.7466], "경상남도 거제시": [34.8806, 128.6211], "경상남도 양산시": [35.335, 129.0373], "경상남도 의령군": [35.3222, 128.2617], "경상남도 함안군": [35.2723, 128.4065], "경상남도 창녕군": [35.5445, 128.4923], "경상남도 고성군": [34.973, 128.3224], "경상남도 남해군": [34.8377, 127.8924], "경상남도 하동군": [35.0674, 127.7513], "경상남도 산청군": [35.4153, 127.8736], "경상남도 함양군": [35.5205, 127.7253], "경상남도 거창군": [35.6865, 127.9096], "경상남도 합천군": [35.5665, 128.1657], "제주특별자치도 제주시": [33.4996, 126.5312], "제주특별자치도 서귀포시": [33.2541, 126.5601]};
 
         document.addEventListener('DOMContentLoaded', () => {
+            sortSidoOptions();
+            applyLayout(true);
             initMap();
             initResizers();
             renderCategoryBar();
@@ -555,6 +601,7 @@
             // 날짜 메뉴 바깥을 누르면 닫기
             document.addEventListener('click', (e) => {
                 if (e.target && e.target.closest && !e.target.closest('#dateBarWrap')) toggleDateMenu(false);
+                if (e.target && e.target.closest && !e.target.closest('#layoutPanel') && !e.target.closest('[onclick="toggleLayoutPanel()"]')) toggleLayoutPanel(false);
             });
         });
 
@@ -587,6 +634,11 @@
             document.addEventListener('mouseup', () => { isResizing1 = false; isResizing2 = false; document.body.classList.remove('resizing'); fitArticleFrame(); });
         }
 
+        const koSort = (a, b) => String(a).localeCompare(String(b), 'ko');
+        function sortSidoOptions() {
+            const sel = document.getElementById('sidoSelect');
+            Array.from(sel.options).slice(1).sort((a, b) => koSort(a.value, b.value)).forEach(o => sel.appendChild(o));
+        }
         function onSidoChange() {
             const sido = document.getElementById('sidoSelect').value;
             const sigunguSelect = document.getElementById('sigunguSelect');
@@ -600,7 +652,7 @@
                 sigunguSelect.disabled = true;
             } else {
                 sigunguSelect.disabled = false;
-                const sigungus = regionHierarchy[sido] ? Object.keys(regionHierarchy[sido]) : [];
+                const sigungus = (regionHierarchy[sido] ? Object.keys(regionHierarchy[sido]) : []).sort(koSort);
                 sigungus.forEach(sg => {
                     const opt = document.createElement('option');
                     opt.value = sg;
@@ -622,7 +674,7 @@
                 dongSelect.disabled = true;
             } else {
                 dongSelect.disabled = false;
-                const dongs = (regionHierarchy[sido] && regionHierarchy[sido][sigungu]) ? regionHierarchy[sido][sigungu] : [];
+                const dongs = ((regionHierarchy[sido] && regionHierarchy[sido][sigungu]) ? regionHierarchy[sido][sigungu] : []).slice().sort(koSort);
                 dongs.forEach(d => {
                     if (d !== '전체') {
                         const opt = document.createElement('option');
@@ -642,40 +694,61 @@
 
         // ================= 카테고리(대분류 → 소분류) 설정 =================
         // ※ scraper.py 의 GROUPS 와 이름이 같아야 합니다. 색상/문구를 바꾸고 싶으면 여기만 고치면 됩니다.
+        const badgeOf = c => `bg-${c}-100 text-${c}-700 border-${c}-300 dark:bg-${c}-950/60 dark:text-${c}-300 dark:border-${c}-800`;
+        // 범죄는 형법 각칙 체계(개인적·사회적·국가적 법익)와 주요 특별법 기준으로 묶었습니다. law = 근거 법률(버튼에 마우스를 올리면 보입니다)
         const CATEGORY_GROUPS = {
-            '강력범죄': { label: '살인·폭행·흉기', color: '#ef4444', badge: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
-                subs: ['살인·살해', '흉기·난동', '폭행·상해', '방화·납치·감금'] },
-            '성범죄·마약': { label: '성범죄·마약·스토킹', color: '#a855f7', badge: 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
-                subs: ['성범죄', '불법촬영·딥페이크', '스토킹·교제폭력', '마약'] },
-            '사기·금융': { label: '사기·절도·금융', color: '#3b82f6', badge: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
-                subs: ['사기·보이스피싱', '금융·횡령·도박', '절도·강도'] },
-            '사이버범죄': { label: '💻 사이버 범죄', color: '#6366f1', badge: 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
-                subs: ['해킹·랜섬웨어', '계정·암호 탈취', '디도스·사이버공격', '개인정보 유출'] },
-            '공직·기타': { label: '공직비리·기타범죄', color: '#0891b2', badge: 'bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-950/60 dark:text-cyan-300 dark:border-cyan-800',
-                subs: ['공직자 비리', '기타 범죄'] },
-            '재난·사고': { label: '화재·붕괴·안전', color: '#f59e0b', badge: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
-                subs: ['화재·폭발', '붕괴·산업재해', '구조·안전사고'] },
-            '자연재해': { label: '🌧 자연재해·날씨', color: '#0ea5e9', badge: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800',
-                subs: ['호우·태풍·침수', '폭설·한파·빙판', '지진·산불·산사태'] },
-            '공공보건': { label: '🦠 공공보건·감염병', color: '#14b8a6', badge: 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800',
-                subs: ['감염병·확진', '식중독·위생'] },
-            '교통사고': { label: '교통사고·뺑소니', color: '#10b981', badge: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
-                subs: ['교통사고', '뺑소니', '음주·무면허'] },
-            '기타 사건사고': { label: '기타 사건사고', color: '#78716c', badge: 'bg-stone-200 text-stone-700 border-stone-300 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-700',
-                subs: ['소동·혼잡', '생활 사고', '기타 사건사고'] },
-            '실종·제보': { label: '실종·변사·제보', color: '#64748b', badge: 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-                subs: ['실종·수색', '변사·시신발견', '시민제보'] },
-            '해외·안보': { label: '🌍 해외·안보', color: '#f97316', badge: 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800',
-                subs: ['전쟁·교전', '공습·타격', '해상·격침', '테러·피격', '국가 안보', '해외 분쟁'] }
+            '생명·신체 범죄': { label: '생명·신체 범죄', color: '#ef4444', badge: badgeOf('rose'), law: '형법 제24~28장: 살인, 상해·폭행, 과실치사상, 유기·학대',
+                subs: ['살인', '상해·폭행', '과실치사상', '유기·학대'] },
+            '자유·인격 범죄': { label: '자유·인격 범죄', color: '#ec4899', badge: badgeOf('pink'), law: '형법 제29~36장: 체포·감금, 협박·강요, 약취·유인, 명예, 업무방해, 주거침입 / 스토킹처벌법',
+                subs: ['체포·감금', '협박·강요', '약취·유인·인신매매', '명예훼손·모욕', '업무방해', '주거침입', '스토킹'] },
+            '성범죄': { label: '성범죄', color: '#a855f7', badge: badgeOf('purple'), law: '형법 제32장(강간과 추행의 죄), 성폭력처벌법, 청소년성보호법, 성매매처벌법',
+                subs: ['강간·강제추행', '불법촬영·딥페이크', '아동·청소년 성범죄', '성매매·음란'] },
+            '재산 범죄': { label: '재산 범죄', color: '#3b82f6', badge: badgeOf('blue'), law: '형법 제38~42장: 절도·강도, 사기·공갈, 횡령·배임, 장물, 손괴 / 통신사기피해환급법',
+                subs: ['절도·강도', '사기·공갈', '전기통신금융사기', '횡령·배임', '손괴·장물'] },
+            '공공안전 범죄': { label: '공공안전 범죄', color: '#f97316', badge: badgeOf('orange'), law: '형법 사회적 법익: 방화·실화, 폭발물, 범죄단체, 통화·문서 위조, 도박, 사체에 관한 죄',
+                subs: ['방화·실화', '폭발물·범죄단체', '문서·통화 위조', '도박', '사체·풍속'] },
+            '공무·사법 범죄': { label: '공무·사법 범죄', color: '#0891b2', badge: badgeOf('cyan'), law: '형법 국가적 법익: 뇌물·직권남용, 공무집행방해, 도주·범인은닉, 위증·무고 / 공직선거법',
+                subs: ['뇌물·직권남용', '공무집행방해', '위증·무고·도주', '선거범죄'] },
+            '국가안보·테러': { label: '국가안보·테러', color: '#b91c1c', badge: badgeOf('red'), law: '형법 내란·외환의 죄, 국가보안법, 테러방지법, 형법 제116조의2(공중협박), 항공보안법',
+                subs: ['북한 도발', '간첩·내란·외환', '테러·공중협박'] },
+            '교통범죄': { label: '교통범죄', color: '#65a30d', badge: badgeOf('lime'), law: '도로교통법, 특정범죄가중처벌법(도주치사상·위험운전치사상·어린이보호구역치사상)',
+                subs: ['음주·약물운전', '무면허운전', '뺑소니·사고후미조치', '난폭·보복운전'] },
+            '경제·금융범죄': { label: '경제·금융범죄', color: '#6366f1', badge: badgeOf('indigo'), law: '자본시장법, 유사수신행위법, 대부업법, 조세범처벌법, 관세법, 범죄수익은닉규제법',
+                subs: ['주가조작·불공정거래', '유사수신·불법사금융', '조세·관세포탈', '자금세탁·환치기'] },
+            '마약·보건범죄': { label: '마약·보건범죄', color: '#d946ef', badge: badgeOf('fuchsia'), law: '마약류관리법, 보건범죄단속법, 의료법',
+                subs: ['마약류', '무면허의료·부정의약품'] },
+            '사이버범죄': { label: '사이버범죄', color: '#8b5cf6', badge: badgeOf('violet'), law: '정보통신망법, 개인정보보호법',
+                subs: ['해킹·정보통신망침해', '악성코드·랜섬웨어', '디도스·사이버공격', '개인정보 유출'] },
+            '기타 특별법 범죄': { label: '기타 특별법 범죄', color: '#78716c', badge: badgeOf('stone'), law: '가정폭력처벌법, 아동학대처벌법, 중대재해처벌법, 동물보호법, 폐기물관리법, 병역법, 집시법, 출입국관리법 등',
+                subs: ['가정폭력·아동학대', '산업안전·중대재해법', '환경·동물 범죄', '병역·집시·출입국', '기타 범죄'] },
+            '화재·사고': { label: '🔥 화재·사고', color: '#f59e0b', badge: badgeOf('amber'), law: '범죄가 아닌 사고: 화재, 폭발, 붕괴·추락, 산업재해, 안전사고',
+                subs: ['화재', '폭발·가스누출', '붕괴·추락', '산업재해', '구조·안전사고'] },
+            '교통사고': { label: '🚗 교통사고', color: '#10b981', badge: badgeOf('emerald'), law: '도로·철도·항공·선박 사고',
+                subs: ['교통사고', '철도·항공·선박 사고'] },
+            '자연재해': { label: '🌧 자연재해', color: '#0ea5e9', badge: badgeOf('sky'), law: '재난안전법상 자연재난: 태풍·호우·대설·한파·폭염·지진·산사태·해일 등 (특보·경보 발령 포함)',
+                subs: ['기상특보·경보', '태풍·호우·홍수', '대설·한파·결빙', '강풍·낙뢰·우박', '폭염·가뭄', '지진·화산', '산사태·지반침하', '해양재난', '산불', '황사·미세먼지', '우주·생물 재난'] },
+            '감염병·보건': { label: '🦠 감염병·보건', color: '#14b8a6', badge: badgeOf('teal'), law: '감염병예방법, 가축전염병예방법, 식품위생법',
+                subs: ['감염병', '가축전염병', '식중독·위생'] },
+            '실종·변사': { label: '실종·변사', color: '#64748b', badge: badgeOf('slate'), law: '실종 신고·수색, 변사 사건',
+                subs: ['실종·수색', '변사·시신발견'] },
+            '생활안전·소동': { label: '📣 생활안전·소동', color: '#ca8a04', badge: badgeOf('yellow'), law: '범죄는 아니지만 알아 두면 좋은 일: 혼잡·인파, 경찰·소방 출동, 소동, 생활 사고, 시민제보',
+                subs: ['혼잡·인파', '경찰·소방 출동', '소동·해프닝', '생활 사고', '시민제보'] },
+            '해외': { label: '🌍 해외', color: '#52525b', badge: badgeOf('zinc'), law: '나라 밖에서 일어난 전쟁·테러·사고·재해·범죄',
+                subs: ['해외 전쟁·분쟁', '해외 테러·피격', '해외 사고·재난', '해외 자연재해', '해외 범죄', '해외 기타'] }
         };
+        const OVERSEAS = '해외';
         const SUB_TO_GROUP = {};
         Object.keys(CATEGORY_GROUPS).forEach(g => CATEGORY_GROUPS[g].subs.forEach(s => { SUB_TO_GROUP[s] = g; }));
-        const LEGACY_GROUP = { '강력·치안': '강력범죄', '사건·수사': '공직·기타', '해킹·개인정보': '사이버범죄' };   // 예전 news.json 에 있던 이름
+        // 예전 news.json 에 남아 있을 수 있는 옛 분류 이름 → 새 분류
+        const LEGACY_GROUP = { '강력·치안': '생명·신체 범죄', '강력범죄': '생명·신체 범죄', '성범죄·마약': '성범죄', '사기·금융': '재산 범죄', '공직·기타': '공무·사법 범죄',
+            '사건·수사': '기타 특별법 범죄', '해킹·개인정보': '사이버범죄', '재난·사고': '화재·사고', '공공보건': '감염병·보건', '기타 사건사고': '생활안전·소동', '실종·제보': '실종·변사', '해외·안보': '해외' };
+        function isOverseas(n) { return groupOf(n) === OVERSEAS; }
 
         let currentSub = null;        // 선택된 소분류
         let selectedDate = null;      // 날짜 필터: null=자동(가장 최근 날짜), 'all'=7일 전체, 그 외=특정 날짜
         let renderLimit = 100;        // 왼쪽 목록에 한 번에 보여줄 개수
-        const ARTICLE_BASE_WIDTH = 1100;   // 기사 원문을 이 폭(px) 기준으로 그린 뒤 가운데 창 폭에 맞게 축소
+        const ARTICLE_BASE_WIDTH = 1240;   // PC 화면형 기사: 이 폭(px)으로 그린 뒤 칸 너비에 맞게 통째로 축소 (가로 스크롤이 생기지 않음)
+        const ARTICLE_MOBILE_WIDTH = 430;  // 모바일형 기사: 언론사 페이지가 휴대폰 화면처럼 한 줄로 정리됨
         let localReports = [];        // 이 화면에서 직접 등록한 제보
         let lastSig = '';
         let lastTag = '', pendingTag = '';   // news.json 이 바뀌었는지 확인하는 표식
@@ -683,8 +756,8 @@
         let hotspotArticleOpen = false;   // 다발 지역 화면에서 기사를 보고 있는 중인지
         const expandedEvents = new Set();  // '관련 기사'를 펼친 사건
         const READ_WIDTH = 820;            // 기사 원문을 가운데에 놓을 때의 폭(px)
-        let articleWide = false;           // true: 넓게 보기(PC 화면 그대로) / false: 가운데 좁게 보기
-        try { articleWide = localStorage.getItem('article_wide') === '1'; } catch (e) {}
+        let articleMode = 'fit';           // 'fit': 칸 너비에 맞춤(PC 화면을 통째로 축소) / 'mobile': 모바일형(글씨 크게)
+        try { articleMode = localStorage.getItem('article_mode') === 'mobile' ? 'mobile' : 'fit'; } catch (e) {}
 
         // ================= 공통 도우미 =================
         function esc(s) {
@@ -698,7 +771,7 @@
             if (SUB_TO_GROUP[c]) return SUB_TO_GROUP[c];
             if (news.group && CATEGORY_GROUPS[news.group]) return news.group;
             if (CATEGORY_GROUPS[c]) return c;
-            return LEGACY_GROUP[c] || '실종·제보';
+            return LEGACY_GROUP[news.group] || LEGACY_GROUP[c] || '생활안전·소동';
         }
         function getCategoryBadgeClass(news) {
             return CATEGORY_GROUPS[groupOf(news)].badge;
@@ -782,7 +855,7 @@
 
             if (newsData.length === 0) {
                 newsData = [{
-                    id: 1, category: "사건·수사", group: "실종·제보", title: "[안내] 전국 실시간 관제 시스템 대기 중",
+                    id: 1, category: "시민제보", group: "생활안전·소동", title: "[안내] 전국 실시간 관제 시스템 대기 중",
                     summary: "크롤러가 7일간의 전국 사건사고를 수집하는 중입니다.",
                     content: "잠시만 기다리시면 최신 속보가 업데이트됩니다.",
                     location: "서울특별시 중구", lat: 37.5636, lng: 126.9975,
@@ -805,11 +878,11 @@
                 selectedNewsId = filtered[0].id;
                 renderNewsList();
                 renderDetailView(selectedNewsId);
-                if (isManualRefresh && map && hasCoords(filtered[0])) map.flyTo([filtered[0].lat, filtered[0].lng], 13, { duration: 1.2 });
+                if (isManualRefresh) focusMap(filtered[0], false);
             }
         }
 
-        // ================= 상단 속보 헤드라인 (가장 많이 보도되는 사건 순, 왼쪽 → 오른쪽으로 흐름) =================
+        // ================= 상단 속보 헤드라인 (가장 많이 보도되는 사건 순, 오른쪽 → 왼쪽으로 흐름) =================
         function renderTicker() {
             const wrap = document.getElementById('tickerWrap'), track = document.getElementById('tickerTrack');
             if (!wrap || !track) return;
@@ -819,18 +892,19 @@
             evs.sort((a, b) => (b.items.length - a.items.length) || (b.lead.timestamp - a.lead.timestamp));
             const top = evs.slice(0, 10);
             if (top.length === 0) { track.innerHTML = ''; return; }
-            // 오른쪽으로 흐르므로 1위가 가장 먼저(오른쪽 끝에) 나오도록 거꾸로 놓음
+            // 오른쪽에서 나와 왼쪽으로 흐름: 1위가 맨 앞(왼쪽)에 놓여 가장 먼저 나옵니다
             track.innerHTML = top.map((ev, i) => `
                 <button onclick="openHeadline(${ev.lead.id})" class="inline-flex items-center gap-1.5 mx-5 text-xs text-slate-800 dark:text-slate-100 hover:text-red-500">
                     <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[0.625rem] font-extrabold">${i === 0 ? '속보' : (i + 1) + '위'}</span>
+                    ${isOverseas(ev.lead) ? '<span class="px-1 py-0.5 rounded bg-zinc-700 text-white text-[0.625rem] font-bold">해외</span>' : ''}
                     <b>${esc(ev.lead.title)}</b>
                     <span class="text-slate-400">${esc((ev.lead.location || '').replace('대한민국 (세부 위치 미상)', ''))}${ev.items.length > 1 ? ' · 기사 ' + ev.items.length + '개' : ''}</span>
-                </button>`).reverse().join('');
+                </button>`).join('');
             const w = wrap.clientWidth || 600, tw = track.scrollWidth || top.length * 320;
-            track.style.setProperty('--ticker-end', w + 'px');
+            track.style.setProperty('--ticker-start', w + 'px');
             track.style.animation = 'none';
             void track.offsetWidth;
-            track.style.animation = 'ticker-ltr ' + Math.max(20, Math.round((w + tw) / 70)) + 's linear infinite';
+            track.style.animation = 'ticker-rtl ' + Math.max(20, Math.round((w + tw) / 70)) + 's linear infinite';
         }
         function openHeadline(id) {
             const n = newsData.find(x => x.id === id);
@@ -842,11 +916,81 @@
         }
 
         // ================= 지도 =================
+        const KOREA_VIEW = { center: [36.2, 127.8], zoom: 7 };
+        const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+        const CARTO_ATTR = OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>';
+        // 지도 모양. 'auto' 는 화면이 다크모드면 어두운 지도, 아니면 기본 지도를 씁니다.
+        const MAP_STYLES = {
+            auto: { name: '지도: 자동' },
+            voyager: { name: '지도: 기본(깔끔)', url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attr: CARTO_ATTR, sub: 'abcd' },
+            light: { name: '지도: 밝게', url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', attr: CARTO_ATTR, sub: 'abcd' },
+            dark: { name: '지도: 어둡게', url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr: CARTO_ATTR, sub: 'abcd' },
+            osm: { name: '지도: 상세(건물·골목)', url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', attr: OSM_ATTR, sub: 'abc' },
+            sat: { name: '지도: 위성 사진', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Tiles &copy; Esri', sub: '' }
+        };
+        let mapStyle = 'auto', baseLayer = null, safetyLayer = null;
+        try { mapStyle = localStorage.getItem('map_style') || 'auto'; if (!MAP_STYLES[mapStyle]) mapStyle = 'auto'; } catch (e) {}
+
+        function applyMapStyle() {
+            if (!map) return;
+            const key = mapStyle === 'auto' ? (document.documentElement.classList.contains('dark') ? 'dark' : 'voyager') : mapStyle;
+            const st = MAP_STYLES[key];
+            if (baseLayer) map.removeLayer(baseLayer);
+            baseLayer = L.tileLayer(st.url, { maxZoom: 19, attribution: st.attr, subdomains: st.sub || 'abc' }).addTo(map);
+            baseLayer.bringToBack();
+        }
+        function setMapStyle(v) { mapStyle = MAP_STYLES[v] ? v : 'auto'; try { localStorage.setItem('map_style', mapStyle); } catch (e) {} applyMapStyle(); }
+
+        function makeMarkersLayer() {
+            if (!L.markerClusterGroup) return L.layerGroup();      // 플러그인을 못 불러온 경우: 묶지 않고 그대로 표시
+            return L.markerClusterGroup({
+                maxClusterRadius: 46, disableClusteringAtZoom: 13, showCoverageOnHover: false, spiderfyOnMaxZoom: true, chunkedLoading: true,
+                iconCreateFunction: c => {
+                    const n = c.getChildCount();
+                    const size = n < 10 ? 34 : (n < 50 ? 42 : (n < 200 ? 50 : 58));
+                    const color = n < 10 ? '#f59e0b' : (n < 50 ? '#f97316' : (n < 200 ? '#ef4444' : '#b91c1c'));
+                    return L.divIcon({ className: '', html: `<div class="cluster-bubble" style="width:${size}px;height:${size}px;background:${color};font-size:${n < 100 ? 13 : 11}px;">${n}</div>`, iconSize: [size, size] });
+                }
+            });
+        }
+
         function initMap() {
-            map = L.map('map').setView([36.5000, 127.5000], 7);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-            markersLayer = L.layerGroup().addTo(map);
+            map = L.map('map', { zoomControl: true, worldCopyJump: true }).setView(KOREA_VIEW.center, KOREA_VIEW.zoom);
+            L.control.scale({ imperial: false }).addTo(map);
+            applyMapStyle();
+            markersLayer = makeMarkersLayer().addTo(map);
+            safetyLayer = L.layerGroup().addTo(map);
+            const sel = document.getElementById('mapStyleSelect');
+            if (sel) { sel.innerHTML = Object.keys(MAP_STYLES).map(k => `<option value="${k}">${MAP_STYLES[k].name}</option>`).join(''); sel.value = mapStyle; }
+            const lg = document.getElementById('mapLegend');
+            if (lg) lg.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 1.5px #334155;vertical-align:-1px;"></span> 동·장소까지 확인된 위치 &nbsp; <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px dashed #fff;opacity:.75;vertical-align:-1px;"></span> 시·군·구 단위(대략)<br>숫자 = 그 근처 사건 수 (확대하면 하나씩 보입니다)';
             updateMapMarkers();
+        }
+
+        // 위치 정밀도: poi(요금소·역 등 장소) > dong(읍·면·동) > sgg(시·군·구) > sido(시·도). scraper.py 가 news.json 에 넣어 줍니다.
+        function precOf(n) {
+            if (!n || !hasCoords(n)) return null;
+            if (n.prec) return n.prec;
+            const loc = n.location || '';
+            if (loc.startsWith('해외') || loc.startsWith('북한')) return 'world';
+            return loc.includes(' ') ? 'sgg' : 'sido';
+        }
+        const PREC_RANK = { poi: 4, dong: 3, sgg: 2, sido: 1, world: 1 };
+        const PREC_ZOOM = { poi: 16, dong: 15, sgg: 13, sido: 9, world: 5 };
+        const PREC_TEXT = { poi: '장소까지 확인', dong: '읍·면·동까지 확인', sgg: '시·군·구 단위(대략)', sido: '시·도 단위(대략)', world: '해외(대략)' };
+        // 같은 사건의 기사들 가운데 위치가 가장 자세한 기사
+        function bestLocated(items) {
+            let best = null;
+            items.forEach(n => { const r = PREC_RANK[precOf(n)] || 0; if (r > 0 && (!best || r > best.r)) best = { n: n, r: r }; });
+            return best ? best.n : null;
+        }
+        // 지도를 그 사건 위치로 이동. 위치가 자세할수록 더 가까이 확대하고, 위치를 모르면 전국 지도를 보여 줍니다.
+        function focusMap(n, silent) {
+            if (!map) return;
+            const p = precOf(n);
+            if (!p) { if (!silent) map.flyTo(KOREA_VIEW.center, KOREA_VIEW.zoom, { duration: 1.0 }); return; }
+            const z = PREC_ZOOM[p] || 11;
+            map.flyTo([n.lat, n.lng], silent ? Math.min(map.getZoom(), Math.min(z, 11)) : z, { duration: 1.2 });
         }
 
         function updateMapMarkers() {
@@ -869,29 +1013,34 @@
                 return;
             }
 
-            groupEvents(getFilteredNews()).slice(0, 800).forEach(ev => {
-                const news = ev.items.find(hasCoords);
+            const list = [];
+            groupEvents(getFilteredNews()).slice(0, 1200).forEach(ev => {
+                const news = bestLocated(ev.items);
                 if (!news) return;
                 const g = groupOf(ev.lead);
                 const color = CATEGORY_GROUPS[g].color;
                 const selected = ev.items.some(n => n.id === selectedNewsId);
-                const size = selected ? 20 : 14;
+                const p = precOf(news);
+                const exact = p === 'poi' || p === 'dong';
+                const size = selected ? 22 : (exact ? 16 : (p === 'sgg' ? 14 : 12));
                 const icon = L.divIcon({
                     className: 'custom-icon',
-                    html: `<div style="background-color: ${color}; width: ${size}px; height: ${size}px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color};"></div>`,
+                    html: `<div class="pin ${exact ? 'exact' : (p === 'sgg' ? '' : 'approx')} ${selected ? 'sel' : ''}" style="background:${color};width:${size}px;height:${size}px;${exact || selected ? '' : 'box-shadow:0 0 8px ' + color + ';'}"></div>`,
                     iconSize: [size, size], iconAnchor: [size / 2, size / 2]
                 });
-                const marker = L.marker([news.lat, news.lng], { icon, zIndexOffset: selected ? 1000 : 0 });
+                const marker = L.marker([news.lat, news.lng], { icon, zIndexOffset: selected ? 1000 : (exact ? 100 : 0) });
                 marker.bindPopup(`
-                    <div style="font-family: sans-serif; max-width: 220px;">
-                        <span style="font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight:bold;">${esc(ev.lead.category)}</span>
-                        <h4 style="font-size: 12px; font-weight: bold; margin: 5px 0;">${esc(ev.lead.title)}</h4>
-                        <p style="font-size: 11px; color: #475569; margin: 0;"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}${ev.items.length > 1 ? ' · 관련 기사 ' + ev.items.length + '개' : ''}</p>
+                    <div style="font-family: sans-serif; max-width: 240px;">
+                        <span style="font-size: 10px; background: ${color}; color:#fff; padding: 2px 6px; border-radius: 4px; font-weight:bold;">${esc(ev.lead.category)}</span>
+                        <h4 style="font-size: 12px; font-weight: bold; margin: 6px 0 4px;">${esc(ev.lead.title)}</h4>
+                        <p style="font-size: 11px; color: #475569; margin: 0;"><i class="fa-solid fa-location-dot" style="color:#ef4444"></i> ${esc(news.location)}${ev.items.length > 1 ? ' · 관련 기사 ' + ev.items.length + '개' : ''}</p>
+                        <p style="font-size: 10px; color: #94a3b8; margin: 2px 0 0;">위치: ${PREC_TEXT[p] || ''}${news.place ? ' · ' + esc(news.place) : ''}</p>
                     </div>
                 `);
                 marker.on('click', () => selectNews(ev.lead.id));
-                markersLayer.addLayer(marker);
+                list.push(marker);
             });
+            if (markersLayer.addLayers) markersLayer.addLayers(list); else list.forEach(m => markersLayer.addLayer(m));
         }
 
         // ================= 중앙 상단: 카테고리 버튼 =================
@@ -906,10 +1055,16 @@
             const ACTIVE = ' ring-2 ring-offset-1 ring-slate-800 dark:ring-slate-200 dark:ring-offset-slate-900 font-bold';
 
             let html = `<button onclick="setCategoryFilter('all')" data-cat="all" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition ${currentCategory === 'all' ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold shadow-sm' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-medium'}">전체 <span class="opacity-70 font-mono">${base.length}</span></button>`;
-            Object.keys(CATEGORY_GROUPS).forEach(g => {
+            // 사건이 많은 순서대로 앞에 놓고, 해외는 항상 맨 뒤에 따로 구분해서 놓음
+            const order = Object.keys(CATEGORY_GROUPS).filter(g => g !== OVERSEAS);
+            const idx = {}; order.forEach((g, i) => { idx[g] = i; });
+            order.sort((a, b) => ((gCount[b] || 0) - (gCount[a] || 0)) || (idx[a] - idx[b]));
+            const btn = g => {
                 const c = CATEGORY_GROUPS[g];
-                html += `<button onclick="setCategoryFilter('${g}')" data-cat="${g}" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition font-medium ${c.badge}${currentCategory === g ? ACTIVE : ''}">${c.label} <span class="opacity-70 font-mono">${gCount[g] || 0}</span></button>`;
-            });
+                return `<button onclick="setCategoryFilter('${g}')" data-cat="${g}" title="${esc(c.law || '')}" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition font-medium ${c.badge}${currentCategory === g ? ACTIVE : ''} ${(gCount[g] || 0) === 0 && currentCategory !== g ? 'opacity-50' : ''}">${c.label} <span class="opacity-70 font-mono">${gCount[g] || 0}</span></button>`;
+            };
+            html += order.map(btn).join('');
+            html += `<span class="flex items-center pl-2 ml-1 border-l-2 border-dashed border-slate-400 dark:border-slate-500">${btn(OVERSEAS)}</span>`;
             html += `<span class="ml-auto flex items-center gap-1.5 pl-2 border-l-2 border-slate-300 dark:border-slate-600"><button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
             document.getElementById('groupButtons').innerHTML = html;
 
@@ -1054,7 +1209,10 @@
                 main.onclick = () => selectNews(news.id);
                 main.innerHTML = `
                     <div class="flex items-center justify-between mb-1.5 gap-1">
-                        <span class="text-[0.625rem] px-2 py-0.5 rounded border ${badgeClass} font-bold shrink-0">${esc(news.category)}</span>
+                        <span class="flex items-center gap-1 shrink-0">
+                            ${isOverseas(news) ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-zinc-700 text-white font-extrabold">🌍 해외</span>' : ''}
+                            <span class="text-[0.625rem] px-2 py-0.5 rounded border ${badgeClass} font-bold">${esc(news.category)}</span>
+                        </span>
                         <span class="text-[0.625rem] text-slate-500 truncate">${esc(news.time)}</span>
                     </div>
                     <h3 class="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 mb-1">${esc(news.title)}</h3>
@@ -1076,7 +1234,7 @@
                             const row = document.createElement('div');
                             row.className = `px-3 py-1.5 text-[0.6875rem] cursor-pointer border-t border-slate-100 dark:border-slate-800 ${n.id === selectedNewsId ? 'bg-red-50 dark:bg-red-950/30 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`;
                             row.onclick = () => selectNews(n.id);
-                            row.innerHTML = `<div class="text-slate-800 dark:text-slate-100 line-clamp-2">${esc(n.title)}</div><div class="text-[0.625rem] text-slate-500">${esc(n.source)} · ${esc(n.time)}</div>`;
+                            row.innerHTML = `<div class="text-slate-800 dark:text-slate-100 line-clamp-2">${isOverseas(n) ? '<b class="text-zinc-500">[해외]</b> ' : ''}${esc(n.title)}</div><div class="text-[0.625rem] text-slate-500">${esc(n.source)} · ${esc(n.time)}</div>`;
                             card.appendChild(row);
                         });
                     }
@@ -1097,7 +1255,7 @@
         // ================= 다발 지역 (사건 수 기준, 같은 사건의 기사 여러 개는 1건) =================
         function getCrimeHotspotsData() {
             const stats = {};
-            newsData.filter(n => inLast7(n) && hasCoords(n) && groupOf(n) !== '해외·안보' && (n.location || '').includes(' ') && !(n.location || '').includes('세부 위치 미상')).forEach(news => {
+            newsData.filter(n => inLast7(n) && hasCoords(n) && !isOverseas(n) && !(n.location || '').startsWith('북한') && (n.location || '').includes(' ') && !(n.location || '').includes('세부 위치 미상')).forEach(news => {
                 const reg = sigunguOf(news.location);
                 if (!stats[reg]) stats[reg] = { region: reg, events: new Set(), articles: 0, lat: news.lat, lng: news.lng };
                 stats[reg].events.add(evOf(news));
@@ -1181,7 +1339,7 @@
                             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                             style="position:absolute; top:0; left:0; border:0; background:#fff; transform-origin:0 0; box-shadow:0 0 24px rgba(0,0,0,.25);"></iframe>
                         <div style="position:absolute; right:14px; bottom:14px; z-index:5; opacity:.9;" class="flex items-center gap-1.5">
-                            <button onclick="toggleArticleWide()" title="기사 폭 바꾸기" class="${fab}"><i class="fa-solid fa-arrows-left-right"></i> ${articleWide ? '가운데로 좁게' : '넓게 보기'}</button>
+                            <button onclick="toggleArticleMode()" title="기사 보는 방식 바꾸기" class="${fab}"><i class="fa-solid fa-arrows-left-right"></i> ${articleMode === 'fit' ? '모바일형으로(글씨 크게)' : '화면 너비에 맞춤'}</button>
                             <a href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="기사가 보이지 않으면 눌러서 새 창으로 여세요" class="${fab}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 새 창</a>
                         </div>
                     </div>`;
@@ -1208,15 +1366,16 @@
                 </div>`);
         }
 
-        function toggleArticleWide() {
-            articleWide = !articleWide;
-            try { localStorage.setItem('article_wide', articleWide ? '1' : '0'); } catch (e) {}
+        function toggleArticleMode() {
+            articleMode = articleMode === 'fit' ? 'mobile' : 'fit';
+            try { localStorage.setItem('article_mode', articleMode); } catch (e) {}
             if (selectedNewsId) renderDetailView(selectedNewsId);
         }
 
-        // 기사 원문 배치. 기본은 '가운데 좁게': 기사를 가운데에 두고 양옆에 여백을 줍니다.
-        // 좁은 폭으로 열면 대부분의 언론사 페이지가 모바일형으로 바뀌어 양옆 광고·랭킹 뉴스가 빠집니다.
-        // (다른 사이트 페이지의 내용 자체를 지우는 것은 브라우저 보안상 불가능합니다)
+        // 기사 원문 배치: 언제나 '이 칸의 너비'에 기사 전체가 들어오게 맞춥니다. (옆으로 넘겨 보는 가로 스크롤이 생기지 않게)
+        //  - fit   : 기사 페이지를 PC 화면 폭으로 그린 뒤, 칸 너비에 맞게 통째로 축소합니다. 칸을 넓히면 글씨도 같이 커집니다.
+        //  - mobile: 기사 페이지를 휴대폰 폭으로 그려서 칸 가운데에 놓습니다. (모바일 화면을 지원하는 언론사에서 글씨가 큼)
+        // (다른 사이트 페이지의 내용 자체를 고치는 것은 브라우저 보안상 불가능해서, 그리는 폭과 배율만 조절합니다)
         function fitArticleFrame() {
             const wrap = document.getElementById('articleWrap');
             const frame = document.getElementById('articleFrame');
@@ -1225,12 +1384,12 @@
             if (!w || !h) return;
             const fontFactor = currentFontSizePx / 16;
             let shown, virtualWidth;
-            if (articleWide) {
-                shown = Math.max(200, w - 32);
-                virtualWidth = Math.max(shown, ARTICLE_BASE_WIDTH) / fontFactor;
+            if (articleMode === 'fit') {
+                shown = w;
+                virtualWidth = Math.max(w, ARTICLE_BASE_WIDTH / fontFactor);
             } else {
-                shown = Math.max(200, Math.min(READ_WIDTH, w - 48));
-                virtualWidth = Math.max(shown, 360) / fontFactor;
+                shown = Math.min(w, Math.round(ARTICLE_MOBILE_WIDTH * 1.5 * fontFactor));
+                virtualWidth = Math.min(shown, ARTICLE_MOBILE_WIDTH);
             }
             const scale = shown / virtualWidth;
             frame.style.left = Math.round((w - shown) / 2) + 'px';
@@ -1254,9 +1413,12 @@
             }
             renderNewsList();
             renderDetailView(id);
-            if (news && map && hasCoords(news)) {
-                map.flyTo([news.lat, news.lng], silent ? Math.min(map.getZoom(), 11) : 14, { duration: 1.2 });
+            if (!silent) updateMapMarkers();   // 선택한 사건의 점을 크게 표시
+            if (news) {
+                const same = newsData.filter(n => evOf(n) === evOf(news));
+                focusMap(bestLocated(same) || news, silent);
             }
+            if (!silent && hiddenPanel() === 'article') openFloat();   // 기사 원문 패널을 칸에 넣지 않은 경우: 창으로 띄움
         }
 
         // ================= 필터 =================
@@ -1330,11 +1492,333 @@
             });
         }
 
+        // ================= 화면 설정: 패널 4개를 3칸에 자유롭게 배치 =================
+        // 칸에 넣지 않은 나머지 패널 1개는 상단 버튼(원래 '우리동네 커뮤니티' 버튼 자리)을 누르면 창으로 뜹니다.
+        const PANELS = {
+            list: { label: '사건 목록(요약 기사)', short: '사건 목록', icon: 'fa-list-ul' },
+            article: { label: '기사 원문', short: '기사 원문', icon: 'fa-newspaper' },
+            map: { label: '사건 발생 지도', short: '사건 발생 지도', icon: 'fa-map-location-dot' },
+            community: { label: '우리동네 커뮤니티', short: '우리동네 커뮤니티', icon: 'fa-people-group' }
+        };
+        const SLOT_IDS = ['leftPane', 'centerPane', 'rightPane'];
+        const SLOT_NAMES = ['왼쪽 칸', '가운데 칸', '오른쪽 칸'];
+        const DEFAULT_LAYOUT = ['list', 'article', 'map'];
+        const LAYOUT_PRESETS = [
+            ['기본 (목록 · 원문 · 지도)', ['list', 'article', 'map']],
+            ['커뮤니티를 오른쪽에 (목록 · 원문 · 커뮤니티)', ['list', 'article', 'community']],
+            ['커뮤니티를 가운데에 (목록 · 커뮤니티 · 지도)', ['list', 'community', 'map']],
+            ['지도를 크게 (목록 · 지도 · 원문)', ['list', 'map', 'article']]
+        ];
+        let layout = (() => {
+            try {
+                const l = JSON.parse(localStorage.getItem('layout_v1') || 'null');
+                if (Array.isArray(l) && l.length === 3 && l.every(k => PANELS[k]) && new Set(l).size === 3) return l;
+            } catch (e) {}
+            return DEFAULT_LAYOUT.slice();
+        })();
+        let floatWide = false;
+        try { floatWide = localStorage.getItem('float_wide') === '1'; } catch (e) {}
+
+        function hiddenPanel() { return Object.keys(PANELS).find(k => !layout.includes(k)); }
+        function panelEl(k) { return document.getElementById('panel-' + k); }
+        function isDocked(k) { return layout.includes(k); }
+
+        function applyLayout(first) {
+            SLOT_IDS.forEach((id, i) => document.getElementById(id).appendChild(panelEl(layout[i])));
+            const h = hiddenPanel();
+            document.getElementById('floatBody').appendChild(panelEl(h));
+            renderFloatButton();
+            renderFloatHead();
+            renderCommHead();
+            if (!first) {
+                try { localStorage.setItem('layout_v1', JSON.stringify(layout)); } catch (e) {}
+                closeFloat();
+                if (isDocked('community')) renderCommunity();
+                setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); renderTicker(); }, 60);
+                if (selectedNewsId && document.getElementById('articleFrame')) renderDetailView(selectedNewsId);   // 옮기면 원문 창이 비므로 다시 불러옴
+            }
+        }
+        // 상단 버튼: 칸에 없는 패널을 여는 버튼 (커뮤니티일 때는 커뮤니티 전용 디자인)
+        function renderFloatButton() {
+            const wrap = document.getElementById('floatBtnWrap');
+            const h = hiddenPanel();
+            if (h === 'community') {
+                wrap.innerHTML = `<button onclick="openCommunity()" title="이웃과 사건사고를 나누는 우리 동네 게시판" class="comm-btn relative text-white pl-2 pr-4 py-1.5 rounded-full shadow-lg shadow-emerald-600/30 transition flex items-center gap-2 whitespace-nowrap">
+                    <span class="comm-faces flex items-center"><span>🙂</span><span>🐶</span><span>🌸</span></span>
+                    <span class="flex flex-col items-start leading-tight"><span class="text-[0.625rem] opacity-90 font-medium">이웃과 함께</span><span class="text-xs md:text-sm font-extrabold">우리동네 커뮤니티</span></span>
+                    <i class="fa-solid fa-comments text-sm opacity-90"></i>
+                    <span id="commBadge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full animate-pulse">SOS</span>
+                </button>`;
+            } else {
+                wrap.innerHTML = `<button onclick="openFloat()" class="bg-sky-600 hover:bg-sky-500 text-white text-xs md:text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-sky-600/20 transition flex items-center gap-2 whitespace-nowrap"><i class="fa-solid ${PANELS[h].icon}"></i> ${PANELS[h].short}</button>`;
+            }
+            if (typeof updateCommBadge === 'function') updateCommBadge();
+        }
+        function wideBtnHtml() {
+            return `<button onclick="toggleFloatWide()" title="창 가로 길이 바꾸기" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-left-right"></i> ${floatWide ? '보통 크기로' : '가로로 길게 보기'}</button>`;
+        }
+        function renderFloatHead() {
+            const head = document.getElementById('floatHead'), box = document.getElementById('floatBox');
+            const h = hiddenPanel();
+            box.classList.toggle('max-w-4xl', !floatWide);
+            box.style.maxWidth = floatWide ? '96vw' : '';
+            if (h === 'community') { head.style.display = 'none'; return; }     // 커뮤니티는 자체 제목 줄을 씀
+            head.style.display = '';
+            head.innerHTML = `<b class="text-sm text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid ${PANELS[h].icon} text-sky-500"></i> ${PANELS[h].label}</b>
+                <span class="flex items-center gap-1.5">${wideBtnHtml()}<button onclick="closeFloat()" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-xmark text-lg"></i></button></span>`;
+        }
+        // 커뮤니티 패널 제목 줄의 오른쪽 버튼
+        function renderCommHead() {
+            const box = document.getElementById('commHeadBtns');
+            if (!box) return;
+            if (isDocked('community')) {
+                const h = hiddenPanel();
+                box.innerHTML = `<button onclick="openFloat()" class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[0.6875rem] font-bold whitespace-nowrap"><i class="fa-solid ${PANELS[h].icon}"></i> ${PANELS[h].short}</button>`;
+            } else {
+                box.innerHTML = wideBtnHtml() + `<button onclick="closeFloat()" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-xmark text-lg"></i></button>`;
+            }
+        }
+        function toggleFloatWide() {
+            floatWide = !floatWide;
+            try { localStorage.setItem('float_wide', floatWide ? '1' : '0'); } catch (e) {}
+            renderFloatHead(); renderCommHead();
+            setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
+        }
+        function openFloat() {
+            document.getElementById('floatModal').classList.remove('hidden');
+            const h = hiddenPanel();
+            if (h === 'community') { renderCommunity(); commTouch(); }
+            setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
+        }
+        function closeFloat() {
+            document.getElementById('floatModal').classList.add('hidden');
+            if (typeof closeProfile === 'function') closeProfile();
+        }
+        function toggleLayoutPanel(show) {
+            const p = document.getElementById('layoutPanel');
+            if (!p) return;
+            const want = (typeof show === 'boolean') ? show : p.classList.contains('hidden');
+            if (want) { renderLayoutPanel(); p.classList.remove('hidden'); } else p.classList.add('hidden');
+        }
+        function renderLayoutPanel() {
+            const p = document.getElementById('layoutPanel');
+            const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1.5 text-xs text-slate-800 dark:text-slate-100';
+            const h = hiddenPanel();
+            p.innerHTML = `
+                <div class="flex items-center justify-between mb-2"><b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-columns"></i> 화면 설정</b><button onclick="toggleLayoutPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button></div>
+                <p class="text-[0.6875rem] text-slate-500 mb-2 leading-relaxed">화면 3칸에 어떤 화면을 놓을지 고르세요. 같은 화면을 고르면 두 칸이 서로 자리를 바꿉니다.</p>
+                <div class="grid grid-cols-3 gap-1 mb-2">${layout.map((k, i) => `<div class="rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-1.5 text-center"><div class="text-[0.625rem] text-slate-400">${SLOT_NAMES[i]}</div><i class="fa-solid ${PANELS[k].icon} text-emerald-500"></i><div class="text-[0.625rem] font-bold text-slate-700 dark:text-slate-200 leading-tight">${PANELS[k].short}</div></div>`).join('')}</div>
+                ${layout.map((k, i) => `
+                    <label class="block text-[0.6875rem] text-slate-500 mb-0.5">${SLOT_NAMES[i]}</label>
+                    <select onchange="setSlot(${i}, this.value)" class="${inp} mb-2">${Object.keys(PANELS).map(x => `<option value="${x}" ${x === k ? 'selected' : ''}>${PANELS[x].label}</option>`).join('')}</select>`).join('')}
+                <div class="text-[0.6875rem] text-slate-500 mb-2">버튼으로 여는 화면: <b class="text-slate-800 dark:text-slate-100">${PANELS[h].label}</b> <span class="text-slate-400">(상단 오른쪽 버튼)</span></div>
+                <div class="text-[0.6875rem] text-slate-500 mb-1">빠른 배치</div>
+                <div class="space-y-1 mb-2">${LAYOUT_PRESETS.map((x, i) => `<button onclick="setLayoutPreset(${i})" class="w-full text-left px-2 py-1 rounded text-[0.6875rem] border ${JSON.stringify(x[1]) === JSON.stringify(layout) ? 'border-emerald-500 text-emerald-600 font-bold' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200'} hover:bg-slate-100 dark:hover:bg-slate-700">${x[0]}</button>`).join('')}</div>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 border-t border-slate-200 dark:border-slate-700 pt-2"><span>창으로 뜨는 화면을 가로로 길게</span><input type="checkbox" ${floatWide ? 'checked' : ''} onchange="toggleFloatWide()"></label>
+                <p class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">칸 사이의 세로 막대(⇄)를 끌면 칸 너비를 바꿀 수 있습니다.</p>`;
+        }
+        function setSlot(i, key) {
+            if (!PANELS[key] || layout[i] === key) return;
+            const j = layout.indexOf(key);
+            if (j >= 0) layout[j] = layout[i];      // 이미 다른 칸에 있으면 서로 자리 바꿈
+            layout[i] = key;
+            applyLayout();
+            renderLayoutPanel();
+        }
+        function setLayoutPreset(i) { layout = LAYOUT_PRESETS[i][1].slice(); applyLayout(); renderLayoutPanel(); }
+
+        // ================= 앱 다운로드 (QR 코드) =================
+        // 앱 장터(구글 플레이·앱 스토어)에 앱을 올린 뒤, 아래 따옴표 안에 그 주소를 넣으면 QR 코드가 그 주소로 바뀝니다.
+        // 비워 두면 QR 코드는 이 웹사이트 주소를 가리키고, 휴대폰 홈 화면에 추가해서 앱처럼 쓰는 방법을 안내합니다.
+        const APP_LINKS = { android: '', ios: '' };
+        function closeAppModal() { document.getElementById('appModal').classList.add('hidden'); }
+        async function openAppModal() {
+            const site = location.origin + location.pathname;
+            const links = { android: APP_LINKS.android || site, ios: APP_LINKS.ios || site };
+            const ready = !!(APP_LINKS.android || APP_LINKS.ios);
+            const box = document.getElementById('appModalBox');
+            box.innerHTML = `
+                <div class="flex items-center justify-between mb-3"><b class="text-base text-slate-900 dark:text-white"><i class="fa-solid fa-mobile-screen-button text-emerald-500"></i> 휴대폰 앱으로 이용하기</b><button onclick="closeAppModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+                <p class="text-xs text-slate-600 dark:text-slate-300 mb-3">휴대폰 카메라로 QR 코드를 비추면 바로 열립니다.</p>
+                <div class="grid grid-cols-2 gap-3">
+                    ${[['android', 'fa-brands fa-android', '안드로이드', 'text-emerald-600'], ['ios', 'fa-brands fa-apple', '아이폰', 'text-slate-800 dark:text-white']].map(x => `
+                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 text-center">
+                        <div class="text-sm font-bold ${x[3]} mb-2"><i class="${x[1]}"></i> ${x[2]}</div>
+                        <div id="qr_${x[0]}" class="mx-auto bg-white p-2 rounded-lg inline-block" style="min-width:164px;min-height:164px;"></div>
+                        <a href="${esc(links[x[0]])}" target="_blank" rel="noopener noreferrer" class="block mt-2 text-[0.625rem] text-blue-500 break-all hover:underline">${esc(links[x[0]])}</a>
+                    </div>`).join('')}
+                </div>
+                ${ready ? '' : `<div class="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-[0.6875rem] text-amber-800 dark:text-amber-200 leading-relaxed">
+                    아직 앱 장터에 올린 앱이 없어서 QR 코드는 <b>이 웹사이트</b>로 연결됩니다. 휴대폰에서 연 뒤 아래처럼 하면 앱처럼 쓸 수 있습니다.<br>
+                    · <b>안드로이드(크롬)</b>: 오른쪽 위 ⋮ → <b>홈 화면에 추가</b><br>
+                    · <b>아이폰(사파리)</b>: 아래 공유 버튼 → <b>홈 화면에 추가</b></div>`}`;
+            document.getElementById('appModal').classList.remove('hidden');
+            try {
+                await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
+                ['android', 'ios'].forEach(k => { const el = document.getElementById('qr_' + k); el.innerHTML = ''; new QRCode(el, { text: links[k], width: 160, height: 160 }); });
+            } catch (e) {
+                ['android', 'ios'].forEach(k => { const el = document.getElementById('qr_' + k); if (el) el.innerHTML = '<div class="text-[0.6875rem] text-slate-500 p-4">QR 코드를 만들지 못했습니다.<br>아래 주소로 접속해 주세요.</div>'; });
+            }
+        }
+
+        // ================= 내 주변 안전시설 (응급실·AED·소화기·경찰서·소방서·대피소·쉼터) =================
+        // 공개 지도(OpenStreetMap)에 등록된 시설을 내 위치 주변에서 찾아 지도에 표시합니다. (별도 가입·인증키가 필요 없습니다)
+        // 등록이 빠진 시설이 있을 수 있어서, 공식 안내 사이트 링크를 함께 보여 줍니다.
+        const SAFETY_TYPES = [
+            { k: 'er', icon: '🏥', name: '응급실 (응급의료기관)', on: true },
+            { k: 'hospital', icon: '➕', name: '종합병원·병원', on: false },
+            { k: 'aed', icon: '❤️', name: 'AED (자동심장충격기)', on: true },
+            { k: 'ext', icon: '🧯', name: '소화기·소화전', on: true },
+            { k: 'police', icon: '🚓', name: '경찰서·지구대·파출소', on: true },
+            { k: 'fire', icon: '🚒', name: '소방서·119안전센터', on: true },
+            { k: 'shelter', icon: '⛑️', name: '재난 대피소·대피 장소', on: true },
+            { k: 'rest', icon: '🏠', name: '무더위·한파 쉼터로 쓰이는 곳 (주민센터·경로당·도서관)', on: false }
+        ];
+        const SAFETY_QUERY = {
+            er: ['nwr["amenity"="hospital"]["emergency"="yes"]', 'nwr["healthcare"="hospital"]["emergency"="yes"]'],
+            hospital: ['nwr["amenity"="hospital"]'],
+            aed: ['nwr["emergency"="defibrillator"]'],
+            ext: ['nwr["emergency"~"^(fire_extinguisher|fire_hydrant)$"]'],
+            police: ['nwr["amenity"="police"]'],
+            fire: ['nwr["amenity"="fire_station"]'],
+            shelter: ['nwr["emergency"="assembly_point"]', 'nwr["amenity"="shelter"]["shelter_type"!="public_transport"]', 'nwr["social_facility"="shelter"]', 'nwr["military"="bunker"]["access"!="private"]'],
+            rest: ['nwr["amenity"~"^(community_centre|townhall|library|social_centre)$"]']
+        };
+        let safety = { origin: null, originText: '', radius: 2, on: {}, results: [], msg: '', busy: false };
+        SAFETY_TYPES.forEach(t => { safety.on[t.k] = t.on; });
+        try { const sv = JSON.parse(localStorage.getItem('safety_cfg') || 'null'); if (sv) { Object.assign(safety.on, sv.on || {}); safety.radius = sv.radius || 2; } } catch (e) {}
+
+        function toggleSafetyPanel(show) {
+            const p = document.getElementById('safetyPanel');
+            const want = (typeof show === 'boolean') ? show : p.classList.contains('hidden');
+            if (want) { renderSafetyPanel(); p.classList.remove('hidden'); } else p.classList.add('hidden');
+        }
+        function safetyKind(tags) {
+            const e = tags.emergency, a = tags.amenity;
+            if (e === 'defibrillator') return 'aed';
+            if (e === 'fire_extinguisher' || e === 'fire_hydrant') return 'ext';
+            if (a === 'hospital' || tags.healthcare === 'hospital') return e === 'yes' ? 'er' : 'hospital';
+            if (a === 'police') return 'police';
+            if (a === 'fire_station') return 'fire';
+            if (e === 'assembly_point' || a === 'shelter' || tags.social_facility === 'shelter' || tags.military === 'bunker') return 'shelter';
+            return 'rest';
+        }
+        function safetyName(tags, kind) {
+            const base = { aed: 'AED', ext: tags.emergency === 'fire_hydrant' ? '소화전' : '소화기', er: '응급실', hospital: '병원', police: '경찰', fire: '소방', shelter: '대피 장소', rest: '공공시설' }[kind];
+            const nm = tags['name:ko'] || tags.name || '';
+            const where = tags['defibrillator:location'] || tags.description || tags.indoor === 'yes' && '실내' || '';
+            return (nm || base) + (nm && (kind === 'aed' || kind === 'ext') ? ' (' + base + ')' : '') + (where && !nm ? ' · ' + where : '');
+        }
+        function safetyLocate() {
+            return new Promise(res => {
+                const fallback = why => { const c = map.getCenter(); res({ lat: c.lat, lng: c.lng, text: '지도 가운데 기준' + (why ? ' (' + why + ')' : '') }); };
+                if (!navigator.geolocation) return fallback('이 기기는 위치 확인을 지원하지 않음');
+                navigator.geolocation.getCurrentPosition(
+                    pos => res({ lat: pos.coords.latitude, lng: pos.coords.longitude, text: '내 현재 위치 기준', mine: true }),
+                    err => fallback(err && err.code === 1 ? '위치 권한이 꺼져 있음' : '현재 위치를 확인하지 못함'),
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+            });
+        }
+        async function safetySearch(useMapCenter) {
+            if (safety.busy) return;
+            const kinds = SAFETY_TYPES.filter(t => safety.on[t.k]).map(t => t.k);
+            if (kinds.length === 0) { safety.msg = '찾을 시설을 하나 이상 골라 주세요.'; renderSafetyPanel(); return; }
+            try { localStorage.setItem('safety_cfg', JSON.stringify({ on: safety.on, radius: safety.radius })); } catch (e) {}
+            safety.busy = true; safety.msg = '주변 시설을 찾는 중입니다...'; renderSafetyPanel();
+            const o = useMapCenter ? (() => { const c = map.getCenter(); return { lat: c.lat, lng: c.lng, text: '지도 가운데 기준' }; })() : await safetyLocate();
+            safety.origin = o; safety.originText = o.text;
+            const r = Math.round(safety.radius * 1000);
+            const parts = [];
+            kinds.forEach(k => SAFETY_QUERY[k].forEach(q => parts.push(q + '(around:' + r + ',' + o.lat.toFixed(5) + ',' + o.lng.toFixed(5) + ');')));
+            const query = '[out:json][timeout:25];(' + parts.join('') + ');out center tags 400;';
+            const servers = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+            let data = null;
+            for (const url of servers) {
+                try {
+                    const res = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+                    if (res.ok) { data = await res.json(); break; }
+                } catch (e) {}
+            }
+            safety.busy = false;
+            if (!data) { safety.msg = '시설 정보를 불러오지 못했습니다. 잠시 후 다시 시도하거나 아래 공식 사이트를 이용해 주세요.'; renderSafetyPanel(); return; }
+            const seen = new Set();
+            safety.results = (data.elements || []).map(el => {
+                const lat = el.lat != null ? el.lat : (el.center && el.center.lat), lng = el.lon != null ? el.lon : (el.center && el.center.lon);
+                if (lat == null || lng == null) return null;
+                const kind = safetyKind(el.tags || {});
+                if (!safety.on[kind]) return null;
+                const name = safetyName(el.tags || {}, kind);
+                const key = kind + '|' + name + '|' + lat.toFixed(3) + '|' + lng.toFixed(3);
+                if (seen.has(key)) return null;
+                seen.add(key);
+                return { kind: kind, name: name, lat: lat, lng: lng, dist: distKm(lat, lng, o.lat, o.lng), phone: (el.tags || {}).phone || (el.tags || {})['contact:phone'] || '', addr: (el.tags || {})['addr:full'] || (el.tags || {})['addr:street'] || '' };
+            }).filter(Boolean).sort((a, b) => a.dist - b.dist);
+            safety.msg = safety.results.length ? '' : '반경 ' + safety.radius + 'km 안에서 등록된 시설을 찾지 못했습니다. 반경을 넓혀 보세요.';
+            drawSafety();
+            renderSafetyPanel();
+        }
+        function drawSafety() {
+            if (!safetyLayer) return;
+            safetyLayer.clearLayers();
+            const o = safety.origin;
+            if (!o) return;
+            L.circle([o.lat, o.lng], { radius: safety.radius * 1000, color: '#ef4444', weight: 1.5, fillColor: '#ef4444', fillOpacity: 0.04, dashArray: '6 6' }).addTo(safetyLayer);
+            L.marker([o.lat, o.lng], { zIndexOffset: 2000, icon: L.divIcon({ className: '', html: '<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 4px rgba(37,99,235,.3);"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }) })
+                .bindPopup('<b>' + esc(o.text) + '</b>').addTo(safetyLayer);
+            const icons = {}; SAFETY_TYPES.forEach(t => { icons[t.k] = t.icon; });
+            safety.results.slice(0, 300).forEach((f, i) => {
+                const m = L.marker([f.lat, f.lng], { zIndexOffset: 1500, icon: L.divIcon({ className: '', html: `<div class="safety-pin">${icons[f.kind]}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }) });
+                m.bindPopup(`<div style="font-family:sans-serif;max-width:220px;"><b style="font-size:12px;">${icons[f.kind]} ${esc(f.name)}</b><br><span style="font-size:11px;color:#475569;">여기서 약 ${f.dist < 1 ? Math.round(f.dist * 1000) + 'm' : f.dist.toFixed(1) + 'km'}${f.addr ? ' · ' + esc(f.addr) : ''}</span>${f.phone ? '<br><a style="font-size:11px;" href="tel:' + esc(f.phone.replace(/[^0-9+]/g, '')) + '">☎ ' + esc(f.phone) + '</a>' : ''}<br><a style="font-size:11px;" target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/link/to/${encodeURIComponent(f.name)},${f.lat},${f.lng}">길찾기(카카오맵) ↗</a></div>`);
+                f._m = m;
+                safetyLayer.addLayer(m);
+            });
+            map.flyTo([o.lat, o.lng], safety.radius <= 1 ? 15 : (safety.radius <= 2 ? 14 : (safety.radius <= 5 ? 13 : 12)), { duration: 1.0 });
+        }
+        function safetyGo(i) { const f = safety.results[i]; if (!f) return; map.flyTo([f.lat, f.lng], 17, { duration: 0.8 }); if (f._m) setTimeout(() => f._m.openPopup(), 850); }
+        function safetyClear() { safety.results = []; safety.origin = null; safety.msg = ''; if (safetyLayer) safetyLayer.clearLayers(); renderSafetyPanel(); }
+        function renderSafetyPanel() {
+            const p = document.getElementById('safetyPanel');
+            if (!p) return;
+            const inp = 'bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-100';
+            const fmt = d => d < 1 ? Math.round(d * 1000) + 'm' : d.toFixed(1) + 'km';
+            let list = '';
+            SAFETY_TYPES.forEach(t => {
+                const rows = safety.results.map((f, i) => ({ f: f, i: i })).filter(x => x.f.kind === t.k);
+                if (!rows.length) return;
+                list += `<div class="mt-2"><div class="text-[0.6875rem] font-bold text-slate-700 dark:text-slate-200">${t.icon} ${t.name} <span class="font-normal text-slate-400">${rows.length}곳</span></div>`
+                    + rows.slice(0, 6).map(x => `<button onclick="safetyGo(${x.i})" class="w-full flex items-center justify-between gap-2 px-2 py-1 rounded text-left text-[0.6875rem] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"><span class="truncate">${esc(x.f.name)}</span><span class="shrink-0 font-mono text-slate-500">${fmt(x.f.dist)}</span></button>`).join('') + '</div>';
+            });
+            p.innerHTML = `
+                <div class="flex items-center justify-between mb-2"><b class="text-sm text-slate-900 dark:text-white">🆘 내 주변 안전시설</b><button onclick="toggleSafetyPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button></div>
+                <div class="grid grid-cols-2 gap-1.5 mb-2">
+                    <a href="tel:119" class="text-center py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold">🚒 119 화재·구급</a>
+                    <a href="tel:112" class="text-center py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">🚓 112 범죄 신고</a>
+                </div>
+                <div class="space-y-1 mb-2">${SAFETY_TYPES.map(t => `<label class="flex items-center gap-2 text-[0.6875rem] text-slate-700 dark:text-slate-200"><input type="checkbox" ${safety.on[t.k] ? 'checked' : ''} onchange="safety.on['${t.k}'] = this.checked"><span>${t.icon} ${t.name}</span></label>`).join('')}</div>
+                <div class="flex items-center gap-1.5 mb-2">
+                    <select onchange="safety.radius = Number(this.value)" class="${inp}">${[0.5, 1, 2, 5, 10].map(k => `<option value="${k}" ${safety.radius === k ? 'selected' : ''}>반경 ${k < 1 ? k * 1000 + 'm' : k + 'km'}</option>`).join('')}</select>
+                    <button onclick="safetySearch(false)" class="flex-1 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white text-xs font-bold whitespace-nowrap"><i class="fa-solid fa-location-crosshairs"></i> 내 위치에서 찾기</button>
+                </div>
+                <div class="flex items-center gap-1.5 mb-1">
+                    <button onclick="safetySearch(true)" class="flex-1 py-1 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">지도 가운데에서 찾기</button>
+                    <button onclick="safetyClear()" class="py-1 px-2 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">지우기</button>
+                </div>
+                ${safety.originText && safety.results.length ? `<div class="text-[0.625rem] text-slate-500">${esc(safety.originText)} · 가까운 순</div>` : ''}
+                ${safety.msg ? `<div class="text-[0.6875rem] text-amber-600 dark:text-amber-400 mt-1">${esc(safety.msg)}</div>` : ''}
+                ${list}
+                <div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700 text-[0.625rem] text-slate-500 leading-relaxed">
+                    공개 지도에 등록된 시설만 나오므로 빠진 곳이 있을 수 있습니다. 정확한 목록은 공식 사이트에서 확인하세요.<br>
+                    · <a class="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" href="https://www.e-gen.or.kr/egen/search_emergency_room.do">응급실 찾기 (응급의료포털)</a> ·
+                    <a class="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" href="https://www.e-gen.or.kr/egen/search_aed.do">AED 찾기</a><br>
+                    · <a class="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer" href="https://www.safekorea.go.kr">대피소·무더위쉼터·한파쉼터 (국민재난안전포털)</a>
+                </div>`;
+        }
+
         // ================= 우리 동네 사건사고 알림 =================
         // 새 기사가 들어왔을 때 '알림 지역'에 해당하면 지도 오른쪽 아래에 알림 창을 띄우고 소리를 냅니다.
         const ALERT_SOUNDS = { dingdong: '띵동', bell: '종소리', siren: '경보음', none: '소리 없음' };
         let alertCfg = (() => {
-            const base = { enabled: true, sound: 'dingdong', volume: 70, scope: 'sigungu', region: null, useLocation: false, radiusKm: 5 };
+            const base = { enabled: true, sound: 'dingdong', volume: 70, scope: 'sigungu', region: null, useLocation: false, radiusKm: 5, sos: true, report: true, dm: true };
             try { return Object.assign(base, JSON.parse(localStorage.getItem('alert_cfg') || '{}')); } catch (e) { return base; }
         })();
         let alertSeenIds = null;      // 이미 본 기사 번호 (처음 불러올 때는 알림을 띄우지 않음)
@@ -1382,7 +1866,7 @@
         }
         function matchHere(news) {
             if (!alertCfg.useLocation || !alertHere) return false;
-            if (groupOf(news) === '해외·안보') return false;
+            if (isOverseas(news)) return false;
             const loc = news.location || '';
             if (alertHere.sigungu && loc.includes(alertHere.sido)) {
                 const city = alertHere.sigungu.split(' ')[0];
@@ -1476,7 +1960,7 @@
                 if (e && e.target && e.target.classList && e.target.classList.contains('alert-x')) { close(); return; }
                 if (o.newsId) {
                     const n = newsData.find(x => x.id === o.newsId);
-                    if (n) { currentCategory = 'all'; currentSub = null; selectedHotspotRegion = null; hotspotArticleOpen = false; selectedDate = dateKey(n.timestamp); dateFollowToday = (selectedDate === todayKey()); renderCategoryBar(); updateMapMarkers(); selectNews(n.id); }
+                    if (n) { currentCategory = 'all'; currentSub = null; selectedHotspotRegion = null; hotspotArticleOpen = false; selectedDate = dateKey(n.timestamp); dateFollowToday = (selectedDate === todayKey()); renderCategoryBar(); selectNews(n.id); }
                 } else if (o.openCommunity) { openCommunity(); }
                 close();
             };
@@ -1559,6 +2043,20 @@
                     ${[3, 5, 10, 20].map(k => `<option value="${k}" ${alertCfg.radiusKm === k ? 'selected' : ''}>내 위치에서 ${k}km 이내</option>`).join('')}
                 </select>` : '<div class="text-[0.625rem] text-slate-400 mb-2">켜 두면 지금 있는 곳 주변에서 사건이 나면 알려 줍니다. 위치는 이 기기 안에서만 쓰이고 저장·전송되지 않습니다.</div>'}
                 <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
+                <div class="text-[0.6875rem] text-slate-500 mb-1">커뮤니티 알림</div>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
+                    <span>🚨 이웃의 SOS 알림 받기</span>
+                    <input type="checkbox" ${alertCfg.sos !== false ? 'checked' : ''} onchange="setAlertCfg('sos', this.checked)">
+                </label>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
+                    <span>📢 이웃의 사건사고 제보 알림 받기</span>
+                    <input type="checkbox" ${alertCfg.report !== false ? 'checked' : ''} onchange="setAlertCfg('report', this.checked)">
+                </label>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
+                    <span>✉ 1:1 대화 알림 받기</span>
+                    <input type="checkbox" ${alertCfg.dm !== false ? 'checked' : ''} onchange="setAlertCfg('dm', this.checked)">
+                </label>
+                <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
                 <div class="text-[0.6875rem] text-slate-500 mb-1">알림 소리</div>
                 <select onchange="setAlertCfg('sound', this.value); playAlertSound();" class="${inp} mb-2">
                     ${Object.keys(ALERT_SOUNDS).map(k => `<option value="${k}" ${alertCfg.sound === k ? 'selected' : ''}>${ALERT_SOUNDS[k]}</option>`).join('')}
@@ -1566,7 +2064,7 @@
                 <div class="flex items-center justify-between text-[0.6875rem] text-slate-500 mb-1"><span>볼륨</span><span id="alertVolText">${alertCfg.volume}%</span></div>
                 <input type="range" min="0" max="100" step="5" value="${alertCfg.volume}" oninput="setAlertCfg('volume', Number(this.value)); document.getElementById('alertVolText').textContent = this.value + '%';" onchange="playAlertSound()" class="w-full mb-2">
                 <button onclick="testAlert()" class="w-full py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold">알림 미리 보기 (소리 테스트)</button>
-                <p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">이 화면을 열어 둔 동안에만 알림이 옵니다. 새 기사는 2분마다 확인합니다.</p>`;
+                <p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">이 화면을 열어 둔 동안에만 알림이 옵니다. 새 기사는 10초마다 확인합니다. 기사에 읍·면·동이나 장소(요금소·역 등)가 적혀 있으면 그 지점 기준으로 알립니다.</p>`;
         }
         function setAlertCfg(key, value) { alertCfg[key] = value; saveAlertCfg(); if (key === 'scope' || key === 'enabled' || key === 'useLocation') renderAlertPanel(); updateAlertButton(); }
         function setAlertRegionFromTown() {
@@ -1633,6 +2131,163 @@
         })();
         let commBg = lsGet('comm_bg') || '';
         function myNick() { return (commProfile.nick || '').trim() || '이웃'; }
+        const PHOTO_RE = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+        function myPhoto() { return (commProfile.photo && PHOTO_RE.test(commProfile.photo)) ? commProfile.photo : ''; }
+        function myArea() { return myTown ? [myTown.sido, myTown.sigungu, myTown.dong].join(' ') : ''; }
+        // 글·채팅에 함께 저장하는 내 정보 (닉네임·아이콘·프로필 사진·사는 지역)
+        function meFields() { const o = { nick: myNick(), emoji: commProfile.emoji || '🙂', area: myArea() }; if (myPhoto()) o.photo = myPhoto(); return o; }
+        // 프로필 그림: 앨범에서 고른 사진이 있으면 사진, 없으면 이모지
+        function avatarHtml(o, box, text) {
+            const ph = o && o.photo && PHOTO_RE.test(o.photo) ? o.photo : '';
+            return ph ? `<img src="${ph}" alt="" class="${box} rounded-full object-cover border border-slate-300 dark:border-slate-600 bg-white">`
+                : `<span class="${box} rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 inline-flex items-center justify-center ${text || 'text-base'}">${esc((o && o.emoji) || '🙂')}</span>`;
+        }
+        function shortArea(a) { const w = (a || '').split(' '); return w.length >= 3 ? w.slice(1).join(' ') : (a || ''); }
+
+        // ---- 차단 ----
+        // 차단하면 그 사람의 글·물건·채팅·프로필이 내게 보이지 않고, 서로 1:1 대화와 통화를 할 수 없습니다. (상대 화면에서도 내가 보이지 않습니다)
+        let blocked = (() => { try { return JSON.parse(lsGet('comm_blocked') || '{}') || {}; } catch (e) { return {}; } })();   // { uid: { nick, emoji, ts } }
+        let blockedBy = new Set();      // 나를 차단한 사람
+        let blocksUnsub = null;
+        function isBlocked(uid) { return !!uid && (Object.prototype.hasOwnProperty.call(blocked, uid) || blockedBy.has(uid)); }
+        function iBlocked(uid) { return Object.prototype.hasOwnProperty.call(blocked, uid); }
+        function refreshAfterBlock() {
+            updateCommBadge();
+            if (document.getElementById('commBody') && (isDocked('community') || !document.getElementById('floatModal').classList.contains('hidden'))) renderCommunity();
+        }
+        async function saveBlocks() {
+            lsSet('comm_blocked', JSON.stringify(blocked));
+            try { const db = await commInit(); if (db) await db.collection('blocks').doc(COMM_UID).set({ uids: Object.keys(blocked), info: blocked, ts: Date.now() }); } catch (e) { console.error(e); }
+        }
+        async function blockUser(uid, nick, emoji) {
+            if (!uid || uid === COMM_UID) return;
+            if (!confirm((nick || '이웃') + '님을 차단할까요?\n차단하면 서로의 글이 보이지 않고 1:1 대화·통화를 할 수 없습니다.')) return;
+            blocked[uid] = { nick: nick || '이웃', emoji: emoji || '🙂', ts: Date.now() };
+            if (dmWith && dmWith.uid === uid) { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } }
+            dmUnread.delete(uid);
+            closeProfile();
+            await saveBlocks();
+            refreshAfterBlock();
+            showAlertToast({ head: '차단', title: (nick || '이웃') + '님을 차단했습니다.', foot: '커뮤니티 위쪽의 [차단 관리]에서 풀 수 있습니다' });
+        }
+        async function unblockUser(uid) {
+            delete blocked[uid];
+            await saveBlocks();
+            refreshAfterBlock();
+            showBlockList();
+        }
+        function listenBlocks() {
+            if (blocksUnsub || !commDb) return;
+            commDb.collection('blocks').doc(COMM_UID).get().then(d => {          // 다른 기기에서 차단한 목록과 합침
+                const info = d.exists ? (d.data().info || {}) : {};
+                let changed = false;
+                Object.keys(info).forEach(u => { if (!blocked[u]) { blocked[u] = info[u]; changed = true; } });
+                if (changed) { lsSet('comm_blocked', JSON.stringify(blocked)); refreshAfterBlock(); }
+            }).catch(() => {});
+            blocksUnsub = commDb.collection('blocks').where('uids', 'array-contains', COMM_UID).onSnapshot(snap => {
+                blockedBy = new Set(snap.docs.map(d => d.id));
+                refreshAfterBlock();
+            }, err => console.error(err));
+        }
+        function showBlockList() {
+            const card = document.getElementById('commProfileCard');
+            if (!card) return;
+            const uids = Object.keys(blocked);
+            card.innerHTML = `
+                <div class="w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 space-y-3" onclick="event.stopPropagation()">
+                    <div class="text-sm font-bold text-slate-900 dark:text-white">🚫 차단 관리 <span class="font-normal text-slate-400">${uids.length}명</span></div>
+                    <div class="max-h-64 overflow-y-auto custom-scrollbar space-y-1.5">${uids.length ? uids.map(u => `
+                        <div class="flex items-center justify-between gap-2 text-xs text-slate-800 dark:text-slate-100">
+                            <span class="truncate">${esc(blocked[u].emoji || '🙂')} ${esc(blocked[u].nick || '이웃')}</span>
+                            <button onclick="unblockUser('${esc(u)}')" class="shrink-0 px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] font-bold hover:bg-slate-100 dark:hover:bg-slate-700">차단 해제</button>
+                        </div>`).join('') : '<div class="text-xs text-slate-400 text-center py-6">차단한 이웃이 없습니다.<br>이웃의 프로필에서 [차단하기]를 누르면 여기에 나타납니다.</div>'}</div>
+                    <div class="text-right"><button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">닫기</button></div>
+                </div>`;
+            card.classList.remove('hidden');
+        }
+
+        // ---- 채팅 공통: 공감(하트 등) · 답장 · 이모지 ----
+        const REACTIONS = [['heart', '❤️'], ['like', '👍'], ['haha', '😂'], ['wow', '😮'], ['sad', '😢'], ['pray', '🙏']];
+        const CHAT_EMOJIS = ['😀', '😂', '🤣', '😊', '😍', '🥰', '😘', '😎', '🤔', '😅', '😭', '😢', '😡', '😱', '🥺', '😴', '🤗', '🙄', '😷', '🤒', '👍', '👎', '👏', '🙏', '💪', '🤝', '👌', '✌️', '🙌', '👀',
+            '❤️', '🧡', '💛', '💚', '💙', '💜', '💔', '🔥', '⭐', '🎉', '🎁', '🍀', '🌸', '☀️', '🌧️', '❄️', '🚨', '🚓', '🚒', '🚑', '⚠️', '✅', '❌', '❓', '❗', '🏠', '🐶', '🐱', '☕', '🍚', '🍺', '🚗', '🚌', '📍', '📞',
+            '^^', 'ㅎㅎ', 'ㅋㅋ', 'ㅠㅠ', 'ㅜㅜ', '(>_<)', '(^o^)', '(ㅇㅅㅇ)', 'OTL', '👋 안녕하세요', '감사합니다 🙏', '조심하세요 ⚠️'];
+        const replyTo = {};       // 채팅 종류 → 답장할 글 { id, nick, text }
+        // 채팅 종류별로 글 목록·저장 위치·다시 그리기 방법을 모아 둠
+        const CHAT_CTX = {
+            talk: { list: () => commMessages, ref: id => commCol(townKey(myTown)).doc(id), saveLocal: () => commLocalWrite(townKey(myTown), commMessages), render: () => renderCommMessages(), input: 'commText' },
+            free: { list: () => freeMessages, ref: id => commDoc(townKey(myTown)).collection('free').doc(id), saveLocal: () => freeLocalSave(), render: () => renderFreeMessages(), input: 'freeText' },
+            dm: { list: () => dmChat, ref: id => commDb.collection('dm').doc(pairId(COMM_UID, dmWith.uid)).collection('messages').doc(id),
+                saveLocal: () => { const l = dmLocal(); if (dmWith && l[dmWith.uid]) { l[dmWith.uid].msgs = dmChat; lsSet('dm_local', JSON.stringify(l)); } }, render: () => renderDMChat(), input: 'dmText' }
+        };
+        async function toggleReact(ctx, id, key) {
+            const c = CHAT_CTX[ctx];
+            const m = c && c.list().find(x => x.id === id);
+            if (!m || !REACTIONS.some(r => r[0] === key)) return;
+            const has = ((m.reactions || {})[key] || []).includes(COMM_UID);
+            try {
+                const db = await commInit();
+                if (db) {
+                    const FV = firebase.firestore.FieldValue;
+                    await c.ref(id).update({ ['reactions.' + key]: has ? FV.arrayRemove(COMM_UID) : FV.arrayUnion(COMM_UID) });
+                } else {
+                    m.reactions = m.reactions || {};
+                    const arr = m.reactions[key] || [];
+                    m.reactions[key] = has ? arr.filter(u => u !== COMM_UID) : arr.concat(COMM_UID);
+                    c.saveLocal(); c.render();
+                }
+            } catch (e) { console.error(e); }
+        }
+        // 글 아래에 붙는 줄: 눌린 공감 표시 + (마우스를 올리면) 공감 버튼·답장 버튼
+        function reactRow(ctx, m, mine) {
+            if (!m.id) return '';
+            const r = m.reactions || {};
+            const chips = REACTIONS.filter(x => (r[x[0]] || []).length).map(x =>
+                `<button onclick="toggleReact('${ctx}', '${esc(m.id)}', '${x[0]}')" class="react-chip ${(r[x[0]] || []).includes(COMM_UID) ? 'on' : ''}">${x[1]} ${(r[x[0]] || []).length}</button>`).join('');
+            const tools = `<span class="msg-tools inline-flex items-center gap-0.5 px-1 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700">`
+                + REACTIONS.map(x => `<button onclick="toggleReact('${ctx}', '${esc(m.id)}', '${x[0]}')" title="공감" class="text-sm leading-none px-0.5 hover:scale-125 transition">${x[1]}</button>`).join('')
+                + `<button onclick="setReply('${ctx}', '${esc(m.id)}')" class="text-[0.625rem] font-bold text-sky-600 dark:text-sky-400 px-1 whitespace-nowrap">↩ 답장</button></span>`;
+            return `<div class="flex flex-wrap items-center gap-1 mt-0.5 ${mine ? 'justify-end' : ''}">${chips}${tools}</div>`;
+        }
+        function replyQuote(m) {
+            const q = m.replyTo;
+            if (!q) return '';
+            return `<div class="mb-1 px-2 py-1 rounded-lg bg-black/5 dark:bg-white/10 border-l-2 border-sky-500 text-[0.6875rem] text-slate-600 dark:text-slate-300"><b>↩ ${esc(q.nick || '이웃')}</b><div class="truncate" style="max-width:16rem;">${esc(q.text || '')}</div></div>`;
+        }
+        function setReply(ctx, id) {
+            const c = CHAT_CTX[ctx];
+            const m = c && c.list().find(x => x.id === id);
+            if (!m) return;
+            const nick = m.nick || (m.uid === COMM_UID ? myNick() : (ctx === 'dm' && dmWith ? dmWith.nick : '이웃'));
+            replyTo[ctx] = { id: id, nick: nick, text: (m.text || (m.img ? '(사진)' : '(동영상)')).slice(0, 60) };
+            renderReplyBar(ctx);
+            const inp = document.getElementById(c.input); if (inp) inp.focus();
+        }
+        function clearReply(ctx) { delete replyTo[ctx]; renderReplyBar(ctx); }
+        function renderReplyBar(ctx) {
+            const el = document.getElementById('replyBar_' + ctx);
+            if (!el) return;
+            const q = replyTo[ctx];
+            el.innerHTML = q ? `<div class="flex items-center justify-between gap-2 px-2 py-1 rounded-lg bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-[0.6875rem] text-slate-700 dark:text-slate-200"><span class="truncate">↩ <b>${esc(q.nick)}</b>님에게 답장: ${esc(q.text)}</span><button onclick="clearReply('${ctx}')" class="shrink-0 text-red-500">취소</button></div>` : '';
+        }
+        // 이모지 고르는 창 (입력칸 옆 😊 버튼)
+        function emojiBtn(inputId) {
+            return `<span class="relative shrink-0"><button type="button" onclick="toggleEmoji('${inputId}')" title="이모지·이모티콘" class="px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">😊</button>
+                <div id="emo_${inputId}" class="hidden absolute bottom-full left-0 mb-1 w-64 max-h-44 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-xl shadow-2xl p-2" style="z-index: 30;"></div></span>`;
+        }
+        function toggleEmoji(inputId) {
+            const box = document.getElementById('emo_' + inputId);
+            if (!box) return;
+            if (!box.innerHTML) box.innerHTML = '<div class="flex flex-wrap gap-0.5">' + CHAT_EMOJIS.map((e, i) => `<button type="button" onclick="insertEmoji('${inputId}', ${i})" class="${e.length > 3 ? 'px-1.5 text-[0.6875rem] border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200' : 'w-7 text-lg'} h-7 rounded hover:bg-slate-100 dark:hover:bg-slate-700">${esc(e)}</button>`).join('') + '</div>';
+            box.classList.toggle('hidden');
+        }
+        function insertEmoji(inputId, i) {
+            const inp = document.getElementById(inputId), e = CHAT_EMOJIS[i];
+            if (!inp || !e) return;
+            const a = inp.selectionStart == null ? inp.value.length : inp.selectionStart, b = inp.selectionEnd == null ? a : inp.selectionEnd;
+            inp.value = inp.value.slice(0, a) + e + inp.value.slice(b);
+            inp.focus();
+            try { inp.setSelectionRange(a + e.length, a + e.length); } catch (err) {}
+        }
 
         // 개포1동 → 개포동 (같은 이름의 1동·2동은 하나의 동네로 묶음)
         function communityDong(d) {
@@ -1643,7 +2298,7 @@
             const list = (regionHierarchy[sido] && regionHierarchy[sido][sigungu]) || [];
             const out = [];
             list.forEach(d => { if (d !== '전체') { const c = communityDong(d); if (!out.includes(c)) out.push(c); } });
-            return out;
+            return out.sort(koSort);
         }
         function townKey(t) { return [t.sido, t.sigungu, t.dong].join('_').replace(/[\s\/.#$\[\]]/g, ''); }
         function townName(t) { return t.sido + ' ' + t.sigungu + ' ' + t.dong; }
@@ -1734,6 +2389,8 @@
         function commNotify(m) {
             if (typeof alertCfg !== 'undefined' && !alertCfg.enabled) return;
             const sos = m.type === 'sos';
+            if (sos ? alertCfg.sos === false : alertCfg.report === false) return;   // 알림 설정에서 끈 종류는 알리지 않음
+            if (isBlocked(m.uid)) return;
             showAlertToast({
                 danger: sos, head: sos ? '🚨 우리 동네 SOS' : '📢 우리 동네 제보',
                 badge: sos ? '' : (m.kind || ''), title: m.text || (m.img ? '(사진)' : '(동영상)'),
@@ -1745,7 +2402,7 @@
         // 접속 표시: 내 프로필과 마지막 접속 시각을 동네 명단에 기록
         async function commTouch() {
             if (!myTown) return;
-            const me = { uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂', intro: commProfile.intro || '', joinedAt: commProfile.joinedAt || Date.now(), lastSeen: Date.now() };
+            const me = Object.assign({ uid: COMM_UID, intro: commProfile.intro || '', joinedAt: commProfile.joinedAt || Date.now(), lastSeen: Date.now(), photo: myPhoto() }, meFields());
             const db = await commInit();
             if (db) { try { await commDoc(townKey(myTown)).collection('members').doc(COMM_UID).set(me, { merge: true }); } catch (e) { console.error(e); } }
             else { commMembers = [me]; renderCommMembers(); }
@@ -1805,7 +2462,8 @@
             if (!myTown) return;
             if (!text && !commAttach) { commStatus('내용을 입력하거나 사진·동영상을 첨부해 주세요.'); return; }
             if (text.length > 500) { commStatus('500자 이내로 적어 주세요.'); return; }
-            const msg = { nick: myNick(), emoji: commProfile.emoji || '🙂', text: text, type: commType, ts: Date.now(), uid: COMM_UID, town: myTown.dong };
+            const msg = Object.assign({ text: text, type: commType, ts: Date.now(), uid: COMM_UID, town: myTown.dong }, meFields());
+            if (replyTo.talk) msg.replyTo = replyTo.talk;
             if (commType === 'report') {
                 msg.kind = (document.getElementById('commKind') || {}).value || '기타';
                 msg.place = (((document.getElementById('commPlace') || {}).value) || '').trim().slice(0, 60);
@@ -1829,6 +2487,7 @@
                 }
                 input.value = '';
                 commAttach = null;
+                delete replyTo.talk;
                 if (commType === 'sos') commType = 'talk';
                 renderCommComposer();
                 renderCommMessages(true);
@@ -1850,14 +2509,17 @@
         function commStatus(msg) { const el = document.getElementById('commStatus'); if (el) el.textContent = msg || ''; }
         function openCommunity(type) {
             if (type) { commTab = 'talk'; commType = type; marketOpen = null; marketForm = false; }   // 예: openCommunity('report') → 제보 쓰기
-            document.getElementById('communityModal').classList.remove('hidden');
-            renderCommunity();
-            commTouch();
+            if (isDocked('community')) {
+                renderCommunity();
+                const el = panelEl('community');
+                el.classList.remove('panel-flash'); void el.offsetWidth; el.classList.add('panel-flash');
+                commTouch();
+            } else openFloat();
         }
-        function closeCommunity() { document.getElementById('communityModal').classList.add('hidden'); closeProfile(); }
+        function closeCommunity() { closeFloat(); }
 
         function activeSosCount() {
-            return commMessages.filter(m => m.type === 'sos' && Date.now() - m.ts < 86400000).length;
+            return commMessages.filter(m => m.type === 'sos' && Date.now() - m.ts < 86400000 && !isBlocked(m.uid)).length;
         }
         function updateCommBadge() {
             const b = document.getElementById('commBadge');
@@ -1892,12 +2554,13 @@
                         <span class="flex items-center gap-1" title="배경 색 고르기">배경 <span id="commBgDots" class="flex items-center gap-1"></span></span>
                         <button onclick="inviteNeighbors()" class="px-2 py-0.5 rounded border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-700"><i class="fa-solid fa-user-plus"></i> 초대하기</button>
                         <button onclick="showProfile('${COMM_UID}')" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">내 프로필</button>
+                        <button onclick="showBlockList()" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">🚫 차단 관리${Object.keys(blocked).length ? ' ' + Object.keys(blocked).length : ''}</button>
                         <button onclick="resetTown()" class="text-blue-500 hover:underline shrink-0">동네 다시 인증</button>
                     </div>
                 </div>
                 ${FIREBASE_CONFIG ? '' : '<div class="px-4 py-1.5 text-[0.6875rem] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 shrink-0">체험 모드입니다. 아직 서버가 연결되지 않아 글이 이 기기에만 저장되고 다른 사람에게는 보이지 않습니다.</div>'}
                 <div class="px-3 pt-2 flex flex-wrap items-end gap-1 border-b border-slate-200 dark:border-slate-800 shrink-0">
-                    ${[['talk', '🚨 사건사고 이야기', 'text-red-600'], ['free', '💬 이런저런', 'text-sky-600'], ['market', '🛒 동네 장터', 'text-emerald-600'], ['meet', '💞 동네 친구', 'text-pink-600'], ['random', '🎲 랜덤 채팅', 'text-violet-600'], ['dm', '✉ 1:1 대화' + (dmUnread.size ? ' <span class="text-sky-500">●</span>' : ''), 'text-sky-600']].map(x =>
+                    ${[['talk', '🚨 사건사고', 'text-red-600'], ['free', '💬 이런저런', 'text-sky-600'], ['market', '🛒 동네 장터', 'text-emerald-600'], ['meet', '💞 동네 친구', 'text-pink-600'], ['random', '🎲 랜덤 채팅', 'text-violet-600'], ['dm', '✉ 1:1 대화' + (dmUnread.size ? ' <span class="text-sky-500">●</span>' : ''), 'text-sky-600']].map(x =>
                         `<button onclick="setCommTab('${x[0]}')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 whitespace-nowrap ${commTab === x[0] ? 'bg-white dark:bg-slate-900 ' + x[2] + ' border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">${x[1]}</button>`).join('')}
                 </div>
                 <div class="flex-1 min-h-0 flex">
@@ -1961,18 +2624,22 @@
                 </div>` : ''}
                 ${sos ? '<div class="text-[0.6875rem] text-red-600 dark:text-red-400 font-semibold">🚨 SOS 글은 맨 위에 24시간 동안 빨갛게 고정되고 이웃에게 경보음 알림이 갑니다. 인상착의, 마지막으로 본 장소·시간, 연락 방법을 적어 주세요. 위급하면 먼저 112·119에 신고하세요.</div>' : ''}
                 ${attach}
+                <div id="replyBar_talk"></div>
                 <div class="flex items-end gap-2">
                     <input id="commFile" type="file" accept="image/*,video/*" class="hidden" onchange="commPickFile(this)">
                     <button onclick="document.getElementById('commFile').click()" title="사진·동영상 첨부" class="px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-paperclip"></i></button>
+                    ${emojiBtn('commText')}
                     <textarea id="commText" rows="2" maxlength="500" placeholder="${sos ? '예) 7살 남자아이, 파란 점퍼, 오후 3시쯤 ○○놀이터에서 마지막으로 봤어요' : (rep ? '무슨 일이 있었는지 적어 주세요 (언제, 어디서, 무엇을 봤는지)' : '이웃과 이야기를 나눠 보세요')}" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border ${sos ? 'border-red-500' : (rep ? 'border-amber-500' : 'border-slate-300 dark:border-slate-700')} rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
                     <button onclick="commPost()" class="px-4 py-2 rounded-lg text-sm font-bold text-white whitespace-nowrap ${sos ? 'bg-red-600 hover:bg-red-500' : (rep ? 'bg-amber-500 hover:bg-amber-400' : 'bg-emerald-600 hover:bg-emerald-500')}">${sos ? 'SOS 등록' : (rep ? '제보 등록' : '등록')}</button>
                 </div>`;
             document.getElementById('commText').value = prevText;
+            renderReplyBar('talk');
             if (rep) { document.getElementById('commPlace').value = prevPlace; if (prevKind) document.getElementById('commKind').value = prevKind; }
         }
 
         // 글 목록 (대화창 형태: 오래된 글이 위, 새 글이 아래)
         function renderCommMsg(m, delFn) {
+            const ctx = delFn === 'freeDelete' ? 'free' : 'talk';
             const mine = m.uid === COMM_UID, sos = m.type === 'sos', rep = m.type === 'report';
             const bubble = sos ? 'bg-red-50 dark:bg-red-950/70 border-red-400 text-slate-900 dark:text-red-50'
                 : rep ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-400 text-slate-900 dark:text-amber-50'
@@ -1984,16 +2651,18 @@
             if (v) media += `<video src="${esc(v)}" controls preload="metadata" class="mt-1 rounded-lg max-h-64 max-w-full"></video>`;
             else if (m.videoLocal) media += '<div class="mt-1 text-[0.6875rem] text-slate-400">🎬 (체험 모드에서는 동영상이 새로고침 후 남지 않습니다)</div>';
             return `
-                <div class="flex gap-2 ${mine ? 'flex-row-reverse' : ''}">
-                    <button onclick="showProfile('${esc(m.uid)}')" title="프로필 보기" class="w-8 h-8 shrink-0 rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-base shadow-sm">${esc(m.emoji || '🙂')}</button>
+                <div class="msg-row flex gap-2 ${mine ? 'flex-row-reverse' : ''}">
+                    <button onclick="showProfile('${esc(m.uid)}')" title="프로필 보기" class="shrink-0 self-start shadow-sm rounded-full">${avatarHtml(mine ? Object.assign({}, m, { photo: myPhoto() || m.photo, emoji: commProfile.emoji || m.emoji }) : m, 'w-8 h-8')}</button>
                     <div class="flex flex-col ${mine ? 'items-end' : 'items-start'}" style="max-width:78%;">
                         <div class="text-[0.625rem] mb-0.5 px-1.5 rounded bg-white/70 dark:bg-slate-900/70 text-slate-600 dark:text-slate-300"><b>${esc(m.nick || '이웃')}</b>${mine ? ' (나)' : ''} · ${timeAgo(m.ts)}</div>
                         <div class="rounded-2xl border px-3 py-2 text-sm shadow-sm ${bubble}">
+                            ${replyQuote(m)}
                             ${sos ? '<div class="text-[0.6875rem] font-extrabold text-red-600 dark:text-red-300 mb-0.5">🚨 SOS</div>' : ''}
                             ${rep ? `<div class="text-[0.6875rem] font-extrabold text-amber-700 dark:text-amber-300 mb-0.5">📢 제보 · ${esc(m.kind || '기타')}${m.place ? ' · ' + esc(m.place) : ''}</div>` : ''}
                             ${m.text ? `<p class="whitespace-pre-line break-words">${esc(m.text)}</p>` : ''}
                             ${media}
                         </div>
+                        ${reactRow(ctx, m, mine)}
                         ${mine ? `<button onclick="${delFn || 'commDelete'}('${esc(m.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500 mt-0.5 px-1 rounded bg-white/70 dark:bg-slate-900/70">삭제</button>` : ''}
                     </div>
                 </div>`;
@@ -2003,12 +2672,12 @@
             const list = document.getElementById('commList');
             if (!list) return;
             const now = Date.now();
-            const live = commMessages.filter(m => m.type === 'sos' && now - m.ts < 86400000).sort((a, b) => b.ts - a.ts);
+            const live = commMessages.filter(m => m.type === 'sos' && now - m.ts < 86400000 && !isBlocked(m.uid)).sort((a, b) => b.ts - a.ts);
             const pinned = document.getElementById('commPinned');
             if (pinned) pinned.innerHTML = live.map(m => `<div class="px-3 py-2 bg-red-600 text-white text-xs flex items-start gap-2 border-b border-red-700"><b class="shrink-0">🚨 SOS</b><span class="flex-1 min-w-0 break-words">${esc(m.nick || '이웃')}: ${esc(m.text || '(첨부 확인)')}</span><span class="shrink-0 opacity-80">${timeAgo(m.ts)}</span></div>`).join('');
             const nearBottom = (list.scrollHeight - list.scrollTop - list.clientHeight) < 150;
-            const sorted = commMessages.slice().sort((a, b) => a.ts - b.ts);
-            list.innerHTML = sorted.length ? sorted.map(renderCommMsg).join('')
+            const sorted = commMessages.filter(m => !isBlocked(m.uid)).sort((a, b) => a.ts - b.ts);
+            list.innerHTML = sorted.length ? sorted.map(m => renderCommMsg(m)).join('')
                 : '<div class="text-center py-16 text-xs text-slate-400">아직 글이 없습니다. 첫 글을 남겨 보세요.</div>';
             if (scrollBottom || nearBottom) list.scrollTop = list.scrollHeight;
         }
@@ -2018,12 +2687,12 @@
             const box = document.getElementById('commMembers');
             if (!box) return;
             const now = Date.now();
-            const list = commMembers.slice().sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+            const list = commMembers.filter(m => !isBlocked(m.uid)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
             const isOn = m => now - (m.lastSeen || 0) < 3 * 60000;
             box.innerHTML = `<div class="px-3 py-2 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-900">이웃 ${list.length}명 <span class="text-emerald-500">· 접속 중 ${list.filter(isOn).length}</span></div>`
                 + list.map(m => `
                     <button onclick="showProfile('${esc(m.uid)}')" class="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-200/70 dark:hover:bg-slate-800">
-                        <span class="relative w-7 h-7 shrink-0 rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-sm">${esc(m.emoji || '🙂')}<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${isOn(m) ? 'bg-emerald-500' : 'bg-slate-300'}"></span></span>
+                        <span class="relative w-7 h-7 shrink-0">${avatarHtml(m, 'w-7 h-7', 'text-sm')}<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${isOn(m) ? 'bg-emerald-500' : 'bg-slate-300'}"></span></span>
                         <span class="truncate text-xs text-slate-800 dark:text-slate-100">${esc(m.nick || '이웃')}${m.uid === COMM_UID ? ' (나)' : ''}</span>
                     </button>`).join('');
         }
@@ -2035,15 +2704,21 @@
             if (!card) return;
             const mine = uid === COMM_UID;
             let m = commMembers.find(x => x.uid === uid);
-            if (!m) { const last = commMessages.find(x => x.uid === uid); m = last ? { uid: uid, nick: last.nick, emoji: last.emoji } : { uid: uid }; }
-            if (mine) m = Object.assign({}, m, { nick: myNick(), emoji: commProfile.emoji, intro: commProfile.intro, joinedAt: commProfile.joinedAt });
+            if (!m) {
+                const last = commMessages.concat(freeMessages, marketItems, marketNation).find(x => x.uid === uid) || dmThreads.find(x => x.uid === uid);
+                m = last ? { uid: uid, nick: last.nick, emoji: last.emoji, photo: last.photo, area: last.area } : { uid: uid };
+            }
+            if (mine) m = Object.assign({}, m, { nick: myNick(), emoji: commProfile.emoji, intro: commProfile.intro, joinedAt: commProfile.joinedAt, photo: myPhoto(), area: myArea() });
+            if (!mine && blockedBy.has(uid)) { showAlertToast({ head: '프로필', title: '볼 수 없는 프로필입니다.' }); return; }
+            const area = m.area || '';
             const posts = commMessages.filter(x => x.uid === uid).length;
             const on = m.lastSeen && Date.now() - m.lastSeen < 3 * 60000;
             card.innerHTML = `
                 <div class="w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 text-center" onclick="event.stopPropagation()">
-                    <div class="w-16 h-16 mx-auto rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-3xl">${esc(m.emoji || '🙂')}</div>
+                    <div class="flex justify-center">${avatarHtml(m, 'w-20 h-20', 'text-4xl')}</div>
                     <div class="mt-2 text-base font-bold text-slate-900 dark:text-white">${esc(m.nick || '이웃')}${mine ? ' (나)' : ''}</div>
-                    <div class="text-[0.6875rem] text-slate-500">${myTown ? esc(myTown.dong) + ' 이웃' : ''}${on || mine ? ' · <span class="text-emerald-500">접속 중</span>' : (m.lastSeen ? ' · ' + timeAgo(m.lastSeen) + ' 접속' : '')}</div>
+                    <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-location-dot"></i> ${esc(area || (myTown ? myArea() : '지역 미상'))}</div>
+                    <div class="text-[0.6875rem] text-slate-500">${area && myTown && area !== myArea() ? '다른 동네 이웃' : (myTown ? esc(myTown.dong) + ' 이웃' : '')}${on || mine ? ' · <span class="text-emerald-500">접속 중</span>' : (m.lastSeen ? ' · ' + timeAgo(m.lastSeen) + ' 접속' : '')}</div>
                     <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words">${esc(m.intro || '아직 소개가 없습니다.')}</p>
                     <div class="mt-2 text-[0.6875rem] text-slate-500">작성한 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}</div>
                     <div id="pfTrust" class="mt-1 text-[0.6875rem] font-bold text-amber-600 dark:text-amber-400">${esc(trustText(trustCache[uid]))}</div>
@@ -2052,24 +2727,37 @@
                         <button onclick="closeProfile(); startCall('${esc(uid)}', profileShown.nick, true)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold"><i class="fa-solid fa-video"></i> 영상 통화</button>
                     </div>`}
                     <div class="mt-3 flex gap-2 justify-center">
-                        ${mine ? '<button onclick="editProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">프로필 수정</button>' : `<button onclick="openDM('${esc(uid)}', profileShown.nick, profileShown.emoji)" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold"><i class="fa-solid fa-comment"></i> 1:1 대화</button>`}
+                        ${mine ? '<button onclick="editProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">프로필 수정</button>' : `<button onclick="openDM('${esc(uid)}', profileShown.nick, profileShown.emoji, profileShown.photo, profileShown.area)" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold"><i class="fa-solid fa-comment"></i> 1:1 대화</button>`}
                         <button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">닫기</button>
                     </div>
+                    ${mine ? '' : `<div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700">${iBlocked(uid)
+                        ? `<button onclick="unblockUser('${esc(uid)}')" class="text-[0.6875rem] font-bold text-emerald-600 hover:underline">차단 해제하기</button>`
+                        : `<button onclick="blockUser('${esc(uid)}', profileShown.nick, profileShown.emoji)" class="text-[0.6875rem] font-bold text-red-500 hover:underline">🚫 이 이웃 차단하기</button>`}</div>`}
                 </div>`;
             card.classList.remove('hidden');
-            profileShown = { uid: uid, nick: m.nick || '이웃', emoji: m.emoji || '🙂' };
+            profileShown = { uid: uid, nick: m.nick || '이웃', emoji: m.emoji || '🙂', photo: m.photo || '', area: area };
             loadTrust(uid).then(tr => { const el = document.getElementById('pfTrust'); if (el && profileShown.uid === uid) el.textContent = trustText(tr); });
         }
-        let profileShown = { uid: '', nick: '', emoji: '' };
+        let profileShown = { uid: '', nick: '', emoji: '', photo: '', area: '' };
+        let commEditPhoto = null;     // 프로필 수정 중인 사진 (null=그대로, ''=지움, 그 외=새 사진)
         function editProfile(keep) {
             const card = document.getElementById('commProfileCard');
             const val = id => (document.getElementById(id) || {}).value;
             const nick = keep ? val('pfNick') : commProfile.nick, intro = keep ? val('pfIntro') : commProfile.intro;
-            if (!keep) commEditEmoji = commProfile.emoji || '🙂';
+            if (!keep) { commEditEmoji = commProfile.emoji || '🙂'; commEditPhoto = null; }
+            const curPhoto = commEditPhoto === null ? myPhoto() : commEditPhoto;
             const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
             card.innerHTML = `
                 <div class="w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 space-y-3" onclick="event.stopPropagation()">
                     <div class="text-sm font-bold text-slate-900 dark:text-white">내 프로필 수정</div>
+                    <div class="flex items-center gap-3">
+                        ${avatarHtml({ photo: curPhoto, emoji: commEditEmoji }, 'w-16 h-16', 'text-3xl')}
+                        <div class="flex flex-col gap-1.5">
+                            <input id="pfFile" type="file" accept="image/*" class="hidden" onchange="pickProfilePhoto(this)">
+                            <button onclick="document.getElementById('pfFile').click()" class="px-3 py-1.5 rounded-lg border border-emerald-500 text-emerald-600 dark:text-emerald-400 text-xs font-bold hover:bg-emerald-50 dark:hover:bg-slate-800"><i class="fa-solid fa-image"></i> 내 앨범에서 사진 고르기</button>
+                            ${curPhoto ? '<button onclick="commEditPhoto = \'\'; editProfile(true)" class="text-[0.6875rem] text-red-500 hover:underline text-left">사진 지우고 아이콘 쓰기</button>' : '<span class="text-[0.625rem] text-slate-400">사진이 없으면 아래 아이콘이 쓰입니다</span>'}
+                        </div>
+                    </div>
                     <div class="flex flex-wrap gap-1.5 justify-center">
                         ${COMM_EMOJIS.map(e => `<button onclick="pickEmoji('${e}')" class="w-9 h-9 rounded-full text-xl border ${commEditEmoji === e ? 'border-emerald-500 ring-2 ring-emerald-400 bg-emerald-50 dark:bg-emerald-950' : 'border-slate-300 dark:border-slate-600'}">${e}</button>`).join('')}
                     </div>
@@ -2085,14 +2773,24 @@
             card.classList.remove('hidden');
         }
         function pickEmoji(e) { commEditEmoji = e; editProfile(true); }
+        async function pickProfilePhoto(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if (!f || f.type.indexOf('image/') !== 0) return;
+            try { commEditPhoto = await compressImage(f, 160, 14 * 1024); } catch (e) { showAlertToast({ head: '프로필', title: '사진을 읽지 못했습니다.' }); return; }
+            editProfile(true);
+        }
         function saveProfile() {
             commProfile.nick = (document.getElementById('pfNick').value || '').trim().slice(0, 12);
             commProfile.intro = (document.getElementById('pfIntro').value || '').trim().slice(0, 40);
             commProfile.emoji = commEditEmoji || '🙂';
+            if (commEditPhoto !== null) commProfile.photo = commEditPhoto;
+            commEditPhoto = null;
             lsSet('comm_profile', JSON.stringify(commProfile));
             closeProfile();
             commTouch();
             renderCommMembers();
+            renderCommMessages(); renderFreeMessages();
         }
 
         // 사진 크게 보기
@@ -2110,8 +2808,35 @@
         let commTab = 'talk';         // 'talk'(사건사고·이야기) / 'market'(장터)
         let marketItems = [], marketUnsub = null, marketOpen = null, marketChat = [], marketChatUnsub = null;
         let marketForm = false, marketAttach = null, marketFilter = '전체';
+        let marketScope = 'town';     // 'town'(우리 동네 장터) / 'nation'(전국 장터)
+        let marketNation = [], marketNationUnsub = null, marketQuery = '';
 
         function marketCol() { return commDoc(townKey(myTown)).collection('market'); }
+        function marketColFor(tk) { return commDoc(tk || townKey(myTown)).collection('market'); }   // 물건이 올라온 동네의 장터
+        function marketNationCol() { return commDb.collection('marketNational'); }                  // 전국 장터용 목록 (모든 동네의 물건이 함께 올라감)
+        function marketFind(id) { return marketItems.find(x => x.id === id) || marketNation.find(x => x.id === id) || null; }
+        async function subscribeMarketNation() {
+            if (marketNationUnsub) { marketNationUnsub(); marketNationUnsub = null; }
+            const db = await commInit();
+            if (db) {
+                marketNationUnsub = marketNationCol().orderBy('ts', 'desc').limit(300).onSnapshot(snap => {
+                    marketNation = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                    if (commTab === 'market' && marketScope === 'nation' && !marketOpen && !marketForm) renderMarket();
+                }, err => console.error(err));
+            } else { marketNation = marketItems.slice(); if (commTab === 'market') renderMarket(); }
+        }
+        function setMarketScope(sc) {
+            marketScope = sc; marketOpen = null; stopMarketChat();
+            if (sc === 'nation') subscribeMarketNation();
+            else if (marketNationUnsub) { marketNationUnsub(); marketNationUnsub = null; }
+            renderMarket();
+        }
+        function setMarketQuery(v) {
+            marketQuery = (v || '').trim();
+            renderMarket();
+            const el = document.getElementById('mkSearch');
+            if (el) { el.focus(); try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {} }
+        }
         function marketLocalKey() { return 'comm_market_' + townKey(myTown); }
         function marketLocalSave() {
             const list = marketItems.slice(0, 100);
@@ -2136,7 +2861,8 @@
             commTab = tab; marketOpen = null; marketForm = false; stopMarketChat();
             meetChatWith = null; meetMsg = '';
             renderCommunity();
-            if (tab === 'market') subscribeMarket();
+            if (tab === 'market') { subscribeMarket(); if (marketScope === 'nation') subscribeMarketNation(); }
+            if (tab === 'dm') subscribeDM();
             if (tab === 'meet') subscribeMeet();
             if (tab === 'free') subscribeFree();
             if (tab !== 'dm') { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } }
@@ -2158,44 +2884,55 @@
             const v = id => ((document.getElementById(id) || {}).value || '').trim();
             const title = v('mkTitle');
             if (!title) { marketStatus('물건 이름을 적어 주세요.'); return; }
-            const item = {
+            const item = Object.assign({
                 kind: v('mkKind') || '판매', title: title.slice(0, 40), price: v('mkPrice').slice(0, 20), desc: v('mkDesc').slice(0, 500),
                 contact: v('mkContact').slice(0, 60), img: marketAttach || '', status: 'open',
-                nick: myNick(), emoji: commProfile.emoji || '🙂', uid: COMM_UID, ts: Date.now()
-            };
+                uid: COMM_UID, ts: Date.now(), townKey: townKey(myTown)
+            }, meFields());
             try {
                 const db = await commInit();
-                if (db) await marketCol().add(item);
+                if (db) {
+                    const ref = marketCol().doc();
+                    await ref.set(item);
+                    try { await marketNationCol().doc(ref.id).set(item); } catch (e) { console.error(e); }   // 전국 장터에도 함께 올림
+                }
                 else { item.id = 'm' + Date.now() + Math.random().toString(36).slice(2, 7); item.chat = []; marketItems.unshift(item); marketLocalSave(); }
                 marketForm = false; marketAttach = null;
                 renderMarket();
             } catch (e) { console.error(e); marketStatus('등록에 실패했습니다. 잠시 후 다시 시도해 주세요.'); }
         }
         async function marketSetStatus(id, status) {
+            const it = marketFind(id);
             try {
                 const db = await commInit();
-                if (db) await marketCol().doc(id).update({ status: status });
-                else { const it = marketItems.find(x => x.id === id); if (it) { it.status = status; marketLocalSave(); renderMarket(); } }
+                if (db) {
+                    await marketColFor(it && it.townKey).doc(id).update({ status: status });
+                    marketNationCol().doc(id).update({ status: status }).catch(() => {});
+                } else { if (it) { it.status = status; marketLocalSave(); renderMarket(); } }
             } catch (e) { console.error(e); }
         }
         async function marketDelete(id) {
             if (!confirm('이 물건 글을 삭제할까요?')) return;
+            const it = marketFind(id);
             try {
                 const db = await commInit();
-                if (db) await marketCol().doc(id).delete();
-                else { marketItems = marketItems.filter(x => x.id !== id); marketLocalSave(); }
+                if (db) {
+                    await marketColFor(it && it.townKey).doc(id).delete();
+                    marketNationCol().doc(id).delete().catch(() => {});
+                } else { marketItems = marketItems.filter(x => x.id !== id); marketNation = marketNation.filter(x => x.id !== id); marketLocalSave(); }
                 closeMarketItem();
             } catch (e) { console.error(e); }
         }
         async function openMarketItem(id) {
             marketOpen = id; marketChat = []; stopMarketChat();
+            const it = marketFind(id);
             const db = await commInit();
             if (db) {
-                marketChatUnsub = marketCol().doc(id).collection('chat').orderBy('ts', 'asc').limit(200).onSnapshot(snap => {
+                marketChatUnsub = marketColFor(it && it.townKey).doc(id).collection('chat').orderBy('ts', 'asc').limit(200).onSnapshot(snap => {
                     marketChat = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
                     renderMarketChat();
                 }, err => console.error(err));
-            } else { const it = marketItems.find(x => x.id === id); marketChat = (it && it.chat) || []; }
+            } else { marketChat = (it && it.chat) || []; }
             renderMarket();
         }
         function closeMarketItem() { marketOpen = null; stopMarketChat(); renderMarket(); }
@@ -2203,12 +2940,14 @@
             const input = document.getElementById('mkChatText');
             const text = ((input && input.value) || '').trim();
             if (!text || !marketOpen) return;
-            const msg = { nick: myNick(), emoji: commProfile.emoji || '🙂', text: text.slice(0, 300), uid: COMM_UID, ts: Date.now() };
+            const msg = Object.assign({ text: text.slice(0, 300), uid: COMM_UID, ts: Date.now() }, meFields());
+            const cur = marketFind(marketOpen);
+            if (cur && isBlocked(cur.uid)) return;
             try {
                 const db = await commInit();
-                if (db) await marketCol().doc(marketOpen).collection('chat').add(msg);
+                if (db) await marketColFor(cur && cur.townKey).doc(marketOpen).collection('chat').add(msg);
                 else {
-                    const it = marketItems.find(x => x.id === marketOpen);
+                    const it = marketFind(marketOpen);
                     if (it) { it.chat = it.chat || []; it.chat.push(msg); marketChat = it.chat; marketLocalSave(); renderMarketChat(); }
                 }
                 input.value = '';
@@ -2217,14 +2956,15 @@
         function renderMarketChat() {
             const box = document.getElementById('mkChat');
             if (!box) return;
-            const it = marketItems.find(x => x.id === marketOpen);
-            box.innerHTML = marketChat.length ? marketChat.map(m => {
+            const it = marketFind(marketOpen);
+            const shown = marketChat.filter(m => !isBlocked(m.uid));
+            box.innerHTML = shown.length ? shown.map(m => {
                 const mine = m.uid === COMM_UID, seller = it && m.uid === it.uid;
                 return `
                     <div class="flex gap-2 ${mine ? 'flex-row-reverse' : ''}">
-                        <button onclick="showProfile('${esc(m.uid)}')" class="w-7 h-7 shrink-0 rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-sm">${esc(m.emoji || '🙂')}</button>
+                        <button onclick="showProfile('${esc(m.uid)}')" class="shrink-0 self-start">${avatarHtml(m, 'w-7 h-7', 'text-sm')}</button>
                         <div class="flex flex-col ${mine ? 'items-end' : 'items-start'}" style="max-width:78%;">
-                            <div class="text-[0.625rem] text-slate-500 mb-0.5"><b>${esc(m.nick || '이웃')}</b>${seller ? ' · <span class="text-emerald-600 font-bold">글쓴이</span>' : ''} · ${timeAgo(m.ts)}</div>
+                            <div class="text-[0.625rem] text-slate-500 mb-0.5"><b>${esc(m.nick || '이웃')}</b>${m.area && it && m.area !== it.area ? ' · ' + esc(shortArea(m.area)) : ''}${seller ? ' · <span class="text-emerald-600 font-bold">글쓴이</span>' : ''} · ${timeAgo(m.ts)}</div>
                             <div class="rounded-2xl border px-3 py-1.5 text-sm ${mine ? 'bg-emerald-100 dark:bg-emerald-900/80 border-emerald-300 dark:border-emerald-700 text-slate-900 dark:text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}"><span class="whitespace-pre-line break-words">${esc(m.text)}</span></div>
                         </div>
                     </div>`;
@@ -2266,12 +3006,12 @@
             }
 
             // 2) 물건 상세 + 문의 채팅
-            const it = marketOpen ? marketItems.find(x => x.id === marketOpen) : null;
+            const it = marketOpen ? marketFind(marketOpen) : null;
             if (it) {
                 const mine = it.uid === COMM_UID, done = it.status === 'done';
                 main.innerHTML = `
                     <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-                        <button onclick="closeMarketItem()" class="text-xs text-blue-500 hover:underline">← 동네 장터 목록</button>
+                        <button onclick="closeMarketItem()" class="text-xs text-blue-500 hover:underline">← ${marketScope === 'nation' ? '전국 장터 목록' : '동네 장터 목록'}</button>
                         ${mine ? `<span class="flex items-center gap-2 text-xs">
                             <button onclick="marketSetStatus('${esc(it.id)}', '${done ? 'open' : 'done'}')" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">${done ? '다시 거래중으로' : '거래완료 표시'}</button>
                             <button onclick="marketDelete('${esc(it.id)}')" class="text-red-500 hover:underline">삭제</button></span>` : ''}
@@ -2282,17 +3022,22 @@
                             <div class="flex items-center gap-2">${badge(it.kind)}${done ? '<span class="text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-slate-400 text-white">거래완료</span>' : ''}</div>
                             <h3 class="mt-1 text-base font-bold text-slate-900 dark:text-white break-words">${esc(it.title)}</h3>
                             <div class="text-sm font-extrabold text-emerald-600">${esc(it.price || (it.kind === '나눔' ? '무료 나눔' : '가격 문의'))}</div>
-                            <div class="mt-1 text-[0.6875rem] text-slate-500"><button onclick="showProfile('${esc(it.uid)}')" class="hover:underline">${esc(it.emoji || '🙂')} ${esc(it.nick || '이웃')}</button> · ${timeAgo(it.ts)}</div>
+                            <div class="mt-1 text-[0.6875rem] text-slate-500 flex flex-wrap items-center gap-1.5"><button onclick="showProfile('${esc(it.uid)}')" class="hover:underline inline-flex items-center gap-1">${avatarHtml(it, 'w-5 h-5', 'text-xs')} ${esc(it.nick || '이웃')}</button> · ${timeAgo(it.ts)}
+                                <span class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold"><i class="fa-solid fa-location-dot"></i> ${esc(it.area || myArea())}</span>
+                                ${mine ? '' : `<button onclick="openDM('${esc(it.uid)}', marketFind('${esc(it.id)}').nick, marketFind('${esc(it.id)}').emoji, marketFind('${esc(it.id)}').photo, marketFind('${esc(it.id)}').area)" class="px-2 py-0.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-bold"><i class="fa-solid fa-comment"></i> 글쓴이와 1:1 대화</button>`}
+                            </div>
+                            ${it.area && myTown && it.area !== myArea() ? '<div class="mt-1 text-[0.6875rem] text-amber-700 dark:text-amber-300">다른 동네에 올라온 물건입니다. 택배 거래를 할 때는 먼저 돈을 보내 달라는 요구를 특히 조심하세요.</div>' : ''}
                         </div>
                         ${it.desc ? `<p class="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-line break-words">${esc(it.desc)}</p>` : ''}
                         <div id="mkRating">${tradeRatingHtml(it)}</div>
                         ${it.contact ? `<div class="text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2">연락 방법: <b class="select-all">${esc(it.contact)}</b></div>` : ''}
                         <div class="pt-2 border-t border-slate-200 dark:border-slate-800">
-                            <div class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">💬 문의 채팅 <span class="font-normal text-slate-400">(같은 동네 이웃에게 공개됩니다)</span></div>
+                            <div class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">💬 문의 채팅 <span class="font-normal text-slate-400">(이 물건을 보는 사람에게 공개됩니다)</span></div>
                             <div id="mkChat" class="space-y-2"></div>
                         </div>
                     </div>
                     <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
+                        ${emojiBtn('mkChatText')}
                         <textarea id="mkChatText" rows="1" maxlength="300" placeholder="${mine ? '문의에 답해 주세요' : '글쓴이에게 물어보세요 (예: 아직 있나요?)'}" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
                         <button onclick="marketChatSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-500 whitespace-nowrap">보내기</button>
                     </div>`;
@@ -2300,14 +3045,23 @@
                 return;
             }
 
-            // 3) 목록
-            const list = marketItems.filter(x => marketFilter === '전체' || x.kind === marketFilter);
+            // 3) 목록 (우리 동네 / 전국)
+            const nation = marketScope === 'nation';
+            const q = marketQuery.toLowerCase();
+            const list = (nation ? marketNation : marketItems).filter(x => !isBlocked(x.uid) && (marketFilter === '전체' || x.kind === marketFilter)
+                && (!q || ((x.title || '') + ' ' + (x.desc || '') + ' ' + (x.area || '')).toLowerCase().includes(q)));
             const chip = f => `<button onclick="setMarketFilter('${f}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${marketFilter === f ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${f === '전체' ? f : kindLabel(f)}</button>`;
+            const scopeBtn = (sc, label) => `<button onclick="setMarketScope('${sc}')" class="px-3 py-1.5 text-xs font-bold ${marketScope === sc ? 'bg-emerald-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}">${label}</button>`;
             main.innerHTML = `
                 <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
-                    <div class="flex flex-wrap items-center gap-1.5">${['전체'].concat(MARKET_KINDS).map(chip).join('')}</div>
+                    <div class="inline-flex rounded-lg overflow-hidden border border-emerald-600">${scopeBtn('town', '🏘 우리 동네')}${scopeBtn('nation', '🌐 전국 장터 보기')}</div>
                     <button onclick="openMarketForm(true)" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"><i class="fa-solid fa-plus"></i> 물건 올리기</button>
                 </div>
+                <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-2 shrink-0">
+                    <div class="flex flex-wrap items-center gap-1.5">${['전체'].concat(MARKET_KINDS).map(chip).join('')}</div>
+                    <input id="mkSearch" type="search" placeholder="${nation ? '전국에서 물건 찾기 (물건 이름·지역)' : '우리 동네에서 물건 찾기'}" onchange="setMarketQuery(this.value)" onkeydown="if (event.key === 'Enter') setMarketQuery(this.value)" class="flex-1 min-w-[8rem] bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-white">
+                </div>
+                ${nation ? `<div class="px-3 py-1.5 text-[0.6875rem] bg-sky-50 dark:bg-sky-950/30 text-sky-800 dark:text-sky-200 border-b border-sky-200 dark:border-sky-800 shrink-0">전국 모든 동네에 올라온 물건입니다. 물건마다 올린 사람의 지역이 표시되고, 물건을 누르면 다른 동네 이웃과도 문의 채팅·1:1 대화를 할 수 있습니다.${FIREBASE_CONFIG ? '' : ' (체험 모드에서는 이 기기에서 올린 물건만 보입니다)'}</div>` : ''}
                 <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
                     ${list.length ? `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">` + list.map(x => `
                         <button onclick="openMarketItem('${esc(x.id)}')" class="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:border-emerald-500 transition ${x.status === 'done' ? 'opacity-50' : ''}">
@@ -2316,10 +3070,12 @@
                                 <div class="flex items-center gap-1">${badge(x.kind)}${x.status === 'done' ? '<span class="text-[0.625rem] font-bold px-1.5 py-0.5 rounded bg-slate-400 text-white">완료</span>' : ''}</div>
                                 <div class="mt-1 text-xs font-bold text-slate-900 dark:text-white truncate">${esc(x.title)}</div>
                                 <div class="text-xs font-extrabold text-emerald-600 truncate">${esc(x.price || (x.kind === '나눔' ? '무료 나눔' : '가격 문의'))}</div>
+                                <div class="text-[0.625rem] text-slate-500 truncate"><i class="fa-solid fa-location-dot text-emerald-500"></i> ${esc(shortArea(x.area) || (myTown ? myTown.dong : ''))}</div>
                                 <div class="text-[0.625rem] text-slate-500 truncate">${esc(x.nick || '이웃')} · ${timeAgo(x.ts)}</div>
                             </div>
-                        </button>`).join('') + `</div>` : '<div class="text-center py-16 text-xs text-slate-400">아직 올라온 물건이 없습니다. 첫 물건을 올려 보세요.</div>'}
+                        </button>`).join('') + `</div>` : `<div class="text-center py-12 text-xs text-slate-400 space-y-3"><div>${q ? '찾는 물건이 ' + (nation ? '전국 장터에' : '우리 동네에') + ' 없습니다.' : '아직 올라온 물건이 없습니다. 첫 물건을 올려 보세요.'}</div>${nation ? '' : '<button onclick="setMarketScope(\'nation\')" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold">🌐 전국 장터에서 찾아보기</button>'}</div>`}
                 </div>`;
+            const se = document.getElementById('mkSearch'); if (se) se.value = marketQuery;
         }
 
         // ---- 동네 친구 (같은 시·군·구 이웃과 서로 '좋아요'를 누르면 1:1 대화) ----
@@ -2339,7 +3095,7 @@
         function meetArea() { return myTown.sido + ' ' + myTown.sigungu; }
         function meetDoc() { return commDb.collection('meet').doc(meetKey()); }
         function pairId(a, b) { return [a, b].sort().join('__'); }
-        function meetMatches() { return meetProfiles.filter(p => meetLikesOut.has(p.uid) && meetLikesIn.has(p.uid)); }
+        function meetMatches() { return meetProfiles.filter(p => !isBlocked(p.uid) && meetLikesOut.has(p.uid) && meetLikesIn.has(p.uid)); }
         function stopMeet() { meetUnsubs.forEach(u => u()); meetUnsubs = []; if (meetChatUnsub) { meetChatUnsub(); meetChatUnsub = null; } }
 
         async function subscribeMeet() {
@@ -2401,7 +3157,7 @@
             meetProfile = null; lsSet('meet_profile', 'null'); stopMeet(); meetProfiles = [];
             renderMeet();
         }
-        function meetQueue() { return meetProfiles.filter(p => !meetSeen.has(p.uid) && !meetLikesOut.has(p.uid)); }
+        function meetQueue() { return meetProfiles.filter(p => !isBlocked(p.uid) && !meetSeen.has(p.uid) && !meetLikesOut.has(p.uid)); }
         function meetMarkSeen(uid) { meetSeen.add(uid); lsSet('meet_seen', JSON.stringify(Array.from(meetSeen).slice(-500))); }
         function meetPass(uid) { meetMarkSeen(uid); renderMeet(); }
         async function meetLike(uid) {
@@ -2505,6 +3261,7 @@
                     </div>
                     <div id="mtChat" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
                     <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
+                        ${emojiBtn('mtChatText')}
                         <textarea id="mtChatText" rows="1" maxlength="300" placeholder="메시지를 입력하세요" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
                         <button onclick="meetChatSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-pink-600 hover:bg-pink-500 whitespace-nowrap">보내기</button>
                     </div>`;
@@ -2593,13 +3350,15 @@
             const input = document.getElementById('freeText');
             const text = ((input && input.value) || '').trim();
             if (!myTown || (!text && !freeAttach)) return;
-            const msg = { nick: myNick(), emoji: commProfile.emoji || '🙂', text: text.slice(0, 500), type: 'talk', ts: Date.now(), uid: COMM_UID };
+            const msg = Object.assign({ text: text.slice(0, 500), type: 'talk', ts: Date.now(), uid: COMM_UID }, meFields());
             if (freeAttach) msg.img = freeAttach;
+            if (replyTo.free) msg.replyTo = replyTo.free;
             try {
                 const db = await commInit();
                 if (db) await commDoc(townKey(myTown)).collection('free').add(msg);
                 else { msg.id = 'f' + Date.now() + Math.random().toString(36).slice(2, 7); freeMessages.unshift(msg); freeLocalSave(); }
                 input.value = ''; freeAttach = null;
+                clearReply('free');
                 const p = document.getElementById('freePreview'); if (p) p.innerHTML = '';
                 renderFreeMessages(true);
             } catch (e) { console.error(e); }
@@ -2619,22 +3378,25 @@
                 <div id="freeList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
                 <div class="border-t border-slate-200 dark:border-slate-800 p-3 space-y-2 shrink-0 bg-white dark:bg-slate-900">
                     <div id="freePreview" class="flex items-center gap-2"></div>
+                    <div id="replyBar_free"></div>
                     <div class="flex items-end gap-2">
                         <input id="freeFile" type="file" accept="image/*" class="hidden" onchange="freePickFile(this)">
                         <button onclick="document.getElementById('freeFile').click()" title="사진 첨부" class="px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-paperclip"></i></button>
+                        ${emojiBtn('freeText')}
                         <textarea id="freeText" rows="2" maxlength="500" placeholder="맛집, 날씨, 동네 소식… 이웃과 편하게 이야기해 보세요" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
                         <button onclick="freePost()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-500 whitespace-nowrap">등록</button>
                     </div>
                 </div>`;
             const list = document.getElementById('freeList');
             if (list) list.style.background = commBg;
+            renderReplyBar('free');
             renderFreeMessages(true);
         }
         function renderFreeMessages(scrollBottom) {
             const list = document.getElementById('freeList');
             if (!list) return;
             const nearBottom = (list.scrollHeight - list.scrollTop - list.clientHeight) < 150;
-            const sorted = freeMessages.slice().sort((a, b) => a.ts - b.ts);
+            const sorted = freeMessages.filter(m => !isBlocked(m.uid)).sort((a, b) => a.ts - b.ts);
             list.innerHTML = sorted.length ? sorted.map(m => renderCommMsg(m, 'freeDelete')).join('')
                 : '<div class="text-center py-16 text-xs text-slate-400">아직 글이 없습니다. 가벼운 이야기로 시작해 보세요.</div>';
             if (scrollBottom || nearBottom) list.scrollTop = list.scrollHeight;
@@ -2653,118 +3415,173 @@
             }
         }
 
-        // ---- 1:1 대화 ----
+        // ---- 1:1 대화 (채팅 앱처럼 상대마다 채팅방이 따로 있습니다) ----
         let dmThreads = [], dmWith = null, dmChat = [], dmUnsub = null, dmInboxUnsub = null, dmUnread = new Set(), dmInboxReady = false;
         function dmLocal() { try { return JSON.parse(lsGet('dm_local') || '{}'); } catch (e) { return {}; } }
+        function dmRooms() {
+            const rooms = dmThreads.filter(t => !isBlocked(t.uid));
+            if (dmWith && !rooms.some(t => t.uid === dmWith.uid)) rooms.unshift({ uid: dmWith.uid, nick: dmWith.nick, emoji: dmWith.emoji, photo: dmWith.photo, area: dmWith.area, last: '', ts: 0 });   // 방금 연 새 채팅방
+            return rooms;
+        }
         async function subscribeDM() {
             if (dmInboxUnsub) { dmInboxUnsub(); dmInboxUnsub = null; }
             const db = await commInit();
             if (!db) {
                 const l = dmLocal();
-                dmThreads = Object.keys(l).map(uid => ({ uid: uid, nick: l[uid].nick, emoji: l[uid].emoji, last: (l[uid].msgs.slice(-1)[0] || {}).text || '', ts: (l[uid].msgs.slice(-1)[0] || {}).ts || 0 })).sort((a, b) => b.ts - a.ts);
+                dmThreads = Object.keys(l).map(uid => ({ uid: uid, nick: l[uid].nick, emoji: l[uid].emoji, photo: l[uid].photo, area: l[uid].area, last: (l[uid].msgs.slice(-1)[0] || {}).text || '', ts: (l[uid].msgs.slice(-1)[0] || {}).ts || 0 })).sort((a, b) => b.ts - a.ts);
+                if (commTab === 'dm') renderDMRooms();
                 return;
             }
             dmInboxReady = false;
             dmInboxUnsub = db.collection('dmThreads').doc(COMM_UID).collection('list').orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
                 if (dmInboxReady) snap.docChanges().forEach(ch => {
                     const d = ch.doc.data();
-                    if (ch.type !== 'removed' && d.from && d.from !== COMM_UID && d.uid !== dmWith) {
+                    if (ch.type !== 'removed' && d.from && d.from !== COMM_UID && !isBlocked(d.uid) && !(dmWith && d.uid === dmWith.uid)) {
                         dmUnread.add(d.uid);
-                        showAlertToast({ head: '✉ 1:1 대화', badge: d.nick || '이웃', title: d.last || '', foot: '눌러서 커뮤니티 열기', openCommunity: true });
-                        playAlertSound();
+                        if (alertCfg.enabled && alertCfg.dm !== false) {
+                            showAlertToast({ head: '✉ 1:1 대화', badge: d.nick || '이웃', title: d.last || '', foot: '눌러서 커뮤니티 열기', openCommunity: true });
+                            playAlertSound();
+                        }
                     }
                 });
                 dmInboxReady = true;
                 dmThreads = snap.docs.map(d => d.data());
-                if (commTab === 'dm' && !dmWith) renderDM();
+                if (commTab === 'dm') renderDMRooms();
             }, err => console.error(err));
         }
-        async function openDM(uid, nick, emoji) {
+        async function openDM(uid, nick, emoji, photo, area) {
             if (uid === COMM_UID) return;
+            if (isBlocked(uid)) { showAlertToast({ head: '1:1 대화', title: iBlocked(uid) ? '차단한 이웃입니다. [차단 관리]에서 차단을 풀면 대화할 수 있습니다.' : '이 이웃과는 대화할 수 없습니다.' }); return; }
             closeProfile();
-            dmWith = { uid: uid, nick: nick || '이웃', emoji: emoji || '🙂' };
+            if (!isDocked('community')) document.getElementById('floatModal').classList.remove('hidden');
+            dmWith = { uid: uid, nick: nick || '이웃', emoji: emoji || '🙂', photo: photo || '', area: area || '' };
             dmUnread.delete(uid);
             dmChat = [];
+            delete replyTo.dm;
             if (dmUnsub) { dmUnsub(); dmUnsub = null; }
-            if (commTab !== 'dm') { commTab = 'dm'; renderCommunity(); }
+            if (commTab !== 'dm') { commTab = 'dm'; marketOpen = null; marketForm = false; stopMarketChat(); renderCommunity(); }
             const db = await commInit();
             if (db) {
                 dmUnsub = db.collection('dm').doc(pairId(COMM_UID, uid)).collection('messages').orderBy('ts', 'asc').limit(300).onSnapshot(snap => {
-                    dmChat = snap.docs.map(d => d.data());
+                    dmChat = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
                     renderDMChat();
                 }, err => console.error(err));
-            } else { dmChat = ((dmLocal()[uid] || {}).msgs) || []; }
+            } else { dmChat = ((dmLocal()[uid] || {}).msgs) || []; dmChat.forEach((m, i) => { if (!m.id) m.id = 'd' + m.ts + '_' + i; }); }
             renderDM();
         }
+        function openDMRoom(uid) { const t = dmRooms().find(x => x.uid === uid); if (t) openDM(t.uid, t.nick, t.emoji, t.photo, t.area); }
         function closeDM() { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } renderDM(); }
+        // 채팅방 나가기: 내 목록에서만 지웁니다 (상대의 목록에는 남습니다)
+        async function leaveDM(uid) {
+            if (!confirm('이 채팅방을 목록에서 지울까요?')) return;
+            try {
+                const db = await commInit();
+                if (db) await db.collection('dmThreads').doc(COMM_UID).collection('list').doc(uid).delete();
+                else { const l = dmLocal(); delete l[uid]; lsSet('dm_local', JSON.stringify(l)); await subscribeDM(); }
+            } catch (e) { console.error(e); }
+            dmThreads = dmThreads.filter(t => t.uid !== uid);
+            if (dmWith && dmWith.uid === uid) closeDM(); else renderDM();
+        }
         async function dmSend() {
             const input = document.getElementById('dmText');
             const text = ((input && input.value) || '').trim();
             if (!text || !dmWith) return;
+            if (isBlocked(dmWith.uid)) { showAlertToast({ head: '1:1 대화', title: '이 이웃에게는 메시지를 보낼 수 없습니다.' }); return; }
             const msg = { uid: COMM_UID, text: text.slice(0, 500), ts: Date.now() };
+            if (replyTo.dm) msg.replyTo = replyTo.dm;
             try {
                 const db = await commInit();
                 if (db) {
+                    // 상대가 나를 차단했는지 한 번 더 확인 (차단되어 있으면 보내지 않음)
+                    try { const b = await db.collection('blocks').doc(dmWith.uid).get(); if (b.exists && (b.data().uids || []).includes(COMM_UID)) { blockedBy.add(dmWith.uid); showAlertToast({ head: '1:1 대화', title: '이 이웃에게는 메시지를 보낼 수 없습니다.' }); return; } } catch (e) {}
                     await db.collection('dm').doc(pairId(COMM_UID, dmWith.uid)).collection('messages').add(msg);
                     const base = { last: msg.text.slice(0, 60), ts: msg.ts, from: COMM_UID };
-                    await db.collection('dmThreads').doc(COMM_UID).collection('list').doc(dmWith.uid).set(Object.assign({ uid: dmWith.uid, nick: dmWith.nick, emoji: dmWith.emoji }, base));
-                    await db.collection('dmThreads').doc(dmWith.uid).collection('list').doc(COMM_UID).set(Object.assign({ uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂' }, base));
+                    await db.collection('dmThreads').doc(COMM_UID).collection('list').doc(dmWith.uid).set(Object.assign({ uid: dmWith.uid, nick: dmWith.nick, emoji: dmWith.emoji, photo: dmWith.photo || '', area: dmWith.area || '' }, base));
+                    await db.collection('dmThreads').doc(dmWith.uid).collection('list').doc(COMM_UID).set(Object.assign({ uid: COMM_UID, photo: myPhoto() }, meFields(), base));
                 } else {
+                    msg.id = 'd' + msg.ts + Math.random().toString(36).slice(2, 6);
                     const l = dmLocal();
-                    l[dmWith.uid] = l[dmWith.uid] || { nick: dmWith.nick, emoji: dmWith.emoji, msgs: [] };
+                    l[dmWith.uid] = l[dmWith.uid] || { nick: dmWith.nick, emoji: dmWith.emoji, photo: dmWith.photo || '', area: dmWith.area || '', msgs: [] };
                     l[dmWith.uid].msgs.push(msg);
                     lsSet('dm_local', JSON.stringify(l));
                     dmChat = l[dmWith.uid].msgs;
-                    subscribeDM();
+                    await subscribeDM();
                     renderDMChat();
                 }
                 input.value = '';
+                clearReply('dm');
             } catch (e) { console.error(e); }
         }
-        function chatBubbles(list, color) {
+        // 말풍선 목록. ctx 를 주면(1:1 대화) 공감·답장을 쓸 수 있습니다.
+        function chatBubbles(list, color, ctx) {
             return list.map(m => {
                 const mine = m.uid === COMM_UID;
-                return `<div class="flex ${mine ? 'justify-end' : 'justify-start'}"><div style="max-width:78%;" class="rounded-2xl border px-3 py-1.5 text-sm ${mine ? color : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}"><span class="whitespace-pre-line break-words">${esc(m.text)}</span><div class="text-[0.625rem] text-slate-400 mt-0.5">${timeAgo(m.ts)}</div></div></div>`;
+                return `<div class="msg-row flex ${mine ? 'justify-end' : 'justify-start'}"><div class="flex flex-col ${mine ? 'items-end' : 'items-start'}" style="max-width:78%;">
+                    <div class="rounded-2xl border px-3 py-1.5 text-sm ${mine ? color : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}">${ctx ? replyQuote(m) : ''}<span class="whitespace-pre-line break-words">${esc(m.text)}</span><div class="text-[0.625rem] text-slate-400 mt-0.5">${timeAgo(m.ts)}</div></div>
+                    ${ctx ? reactRow(ctx, m, mine) : ''}</div></div>`;
             }).join('');
         }
         function renderDMChat() {
             const box = document.getElementById('dmChat');
             if (!box) return;
-            box.innerHTML = dmChat.length ? chatBubbles(dmChat, 'bg-sky-100 dark:bg-sky-900/70 border-sky-300 dark:border-sky-700 text-slate-900 dark:text-white')
+            const near = (box.scrollHeight - box.scrollTop - box.clientHeight) < 150;
+            box.innerHTML = dmChat.length ? chatBubbles(dmChat, 'bg-sky-100 dark:bg-sky-900/70 border-sky-300 dark:border-sky-700 text-slate-900 dark:text-white', 'dm')
                 : '<div class="text-center py-10 text-xs text-slate-400">첫 인사를 건네 보세요.</div>';
-            box.scrollTop = box.scrollHeight;
+            if (near || !box.dataset.ready) { box.scrollTop = box.scrollHeight; box.dataset.ready = '1'; }
+        }
+        function renderDMRooms() {
+            const box = document.getElementById('dmRooms');
+            if (!box) return;
+            const rooms = dmRooms();
+            box.innerHTML = `<div class="px-3 py-2 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-900">채팅방 ${rooms.length}개${dmUnread.size ? ' <span class="text-sky-500">· 새 글 ' + dmUnread.size + '</span>' : ''}</div>`
+                + (rooms.length ? rooms.map(t => {
+                    const on = dmWith && dmWith.uid === t.uid, un = dmUnread.has(t.uid);
+                    return `<div class="group flex items-center border-b border-slate-100 dark:border-slate-800 ${on ? 'bg-sky-100 dark:bg-sky-900/40' : 'hover:bg-slate-100 dark:hover:bg-slate-800'}">
+                        <button onclick="openDMRoom('${esc(t.uid)}')" class="flex-1 min-w-0 flex items-center gap-2 px-3 py-2 text-left">
+                            <span class="relative shrink-0">${avatarHtml(t, 'w-9 h-9', 'text-lg')}${un ? '<span class="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-900"></span>' : ''}</span>
+                            <span class="min-w-0 flex-1">
+                                <span class="flex items-center justify-between gap-1"><span class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(t.nick || '이웃')}</span><span class="text-[0.625rem] text-slate-400 shrink-0">${t.ts ? timeAgo(t.ts) : '새 대화'}</span></span>
+                                <span class="block text-[0.6875rem] ${un ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-500'} truncate">${esc(t.last || (t.area ? shortArea(t.area) : '대화를 시작해 보세요'))}</span>
+                            </span>
+                        </button>
+                        <button onclick="leaveDM('${esc(t.uid)}')" title="채팅방 나가기" class="px-2 text-slate-300 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button>
+                    </div>`;
+                }).join('') : '<div class="text-center py-10 px-3 text-[0.6875rem] text-slate-400 leading-relaxed">아직 채팅방이 없습니다.<br>이웃의 아이콘이나 이름을 눌러 프로필에서 <b>1:1 대화</b>를 시작해 보세요.</div>');
         }
         function renderDM() {
             const main = document.getElementById('commMain');
             if (!main || commTab !== 'dm') return;
             const callBtn = 'px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700';
-            if (dmWith) {
-                main.innerHTML = `
-                    <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
-                        <button onclick="closeDM()" class="text-xs text-blue-500 hover:underline shrink-0">← 대화 목록</button>
-                        <b class="text-xs text-slate-800 dark:text-slate-100 truncate">${esc(dmWith.emoji)} ${esc(dmWith.nick)}</b>
-                        <span class="flex items-center gap-1.5 shrink-0">
-                            <button onclick="startCall('${esc(dmWith.uid)}', dmWith.nick, false)" class="${callBtn}"><i class="fa-solid fa-phone"></i> 음성</button>
-                            <button onclick="startCall('${esc(dmWith.uid)}', dmWith.nick, true)" class="${callBtn}"><i class="fa-solid fa-video"></i> 영상</button>
-                        </span>
-                    </div>
-                    ${FIREBASE_CONFIG ? '' : '<div class="px-3 py-1.5 text-[0.6875rem] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 shrink-0">체험 모드: 보낸 글이 이 기기에만 저장되고 상대에게 전달되지 않습니다.</div>'}
-                    <div id="dmChat" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
-                    <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
-                        <textarea id="dmText" rows="1" maxlength="500" placeholder="메시지를 입력하세요" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
-                        <button onclick="dmSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-500 whitespace-nowrap">보내기</button>
-                    </div>`;
-                renderDMChat();
-                return;
-            }
+            // 왼쪽: 채팅방 목록 / 오른쪽: 고른 채팅방. 화면이 좁으면 한 번에 하나만 보입니다.
             main.innerHTML = `
-                <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 shrink-0">이웃의 아이콘이나 이름을 누르면 프로필에서 <b>1:1 대화 · 음성 통화 · 영상 통화</b>를 시작할 수 있습니다.</div>
-                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2">${dmThreads.length ? dmThreads.map(t => `
-                    <button onclick="openDM('${esc(t.uid)}', dmThreads.find(x => x.uid === '${esc(t.uid)}').nick, dmThreads.find(x => x.uid === '${esc(t.uid)}').emoji)" class="w-full flex items-center gap-3 p-3 rounded-xl border ${dmUnread.has(t.uid) ? 'border-sky-500' : 'border-slate-200 dark:border-slate-700'} bg-white dark:bg-slate-900 hover:border-sky-500 text-left">
-                        <span class="w-9 h-9 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-lg">${esc(t.emoji || '🙂')}</span>
-                        <span class="min-w-0 flex-1"><span class="block text-sm font-bold text-slate-900 dark:text-white truncate">${esc(t.nick || '이웃')}${dmUnread.has(t.uid) ? ' <span class="text-[0.625rem] text-sky-500">새 글</span>' : ''}</span><span class="block text-xs text-slate-500 truncate">${esc(t.last || '')}</span></span>
-                        <span class="text-[0.625rem] text-slate-400 shrink-0">${t.ts ? timeAgo(t.ts) : ''}</span>
-                    </button>`).join('') : '<div class="text-center py-16 text-xs text-slate-400">아직 1:1 대화가 없습니다.</div>'}</div>`;
+                <div class="flex-1 min-h-0 flex">
+                    <aside id="dmRooms" class="${dmWith ? 'hidden md:block' : 'block'} w-full md:w-60 shrink-0 overflow-y-auto custom-scrollbar border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60"></aside>
+                    <section class="${dmWith ? 'flex' : 'hidden md:flex'} flex-1 min-w-0 flex-col">
+                        ${dmWith ? `
+                        <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                            <button onclick="closeDM()" class="md:hidden text-xs text-blue-500 hover:underline shrink-0">← 채팅방 목록</button>
+                            <button onclick="showProfile('${esc(dmWith.uid)}')" class="flex items-center gap-2 min-w-0 text-left">${avatarHtml(dmWith, 'w-7 h-7', 'text-sm')}<span class="min-w-0"><b class="block text-xs text-slate-800 dark:text-slate-100 truncate">${esc(dmWith.nick)}</b>${dmWith.area ? `<span class="block text-[0.625rem] text-slate-500 truncate">${esc(dmWith.area)}</span>` : ''}</span></button>
+                            <span class="flex items-center gap-1.5 shrink-0">
+                                <button onclick="startCall('${esc(dmWith.uid)}', dmWith.nick, false)" class="${callBtn}"><i class="fa-solid fa-phone"></i> 음성</button>
+                                <button onclick="startCall('${esc(dmWith.uid)}', dmWith.nick, true)" class="${callBtn}"><i class="fa-solid fa-video"></i> 영상</button>
+                                <button onclick="blockUser('${esc(dmWith.uid)}', dmWith.nick, dmWith.emoji)" title="차단하기" class="${callBtn}">🚫</button>
+                            </span>
+                        </div>
+                        ${FIREBASE_CONFIG ? '' : '<div class="px-3 py-1.5 text-[0.6875rem] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 shrink-0">체험 모드: 보낸 글이 이 기기에만 저장되고 상대에게 전달되지 않습니다.</div>'}
+                        <div id="dmChat" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
+                        <div class="border-t border-slate-200 dark:border-slate-800 p-3 space-y-2 shrink-0 bg-white dark:bg-slate-900">
+                            <div id="replyBar_dm"></div>
+                            <div class="flex items-end gap-2">
+                                ${emojiBtn('dmText')}
+                                <textarea id="dmText" rows="1" maxlength="500" placeholder="메시지를 입력하세요" onkeydown="if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); dmSend(); }" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
+                                <button onclick="dmSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-500 whitespace-nowrap">보내기</button>
+                            </div>
+                        </div>` : `
+                        <div class="flex-1 flex flex-col items-center justify-center gap-2 text-center text-xs text-slate-400 p-6"><div class="text-4xl">💬</div><div>왼쪽에서 채팅방을 고르세요.<br>상대마다 채팅방이 따로 만들어집니다.</div></div>`}
+                    </section>
+                </div>`;
+            renderDMRooms();
+            if (dmWith) { renderReplyBar('dm'); renderDMChat(); }
         }
 
         // ---- 음성·영상 통화 (WebRTC) ----
@@ -2789,6 +3606,7 @@
             return pc;
         }
         async function startCall(uid, nick, video) {
+            if (isBlocked(uid)) { showAlertToast({ head: '통화', title: '이 이웃과는 통화할 수 없습니다.' }); return; }
             const db = await commInit();
             if (!db) { needServer(video ? '영상 통화' : '음성 통화'); return; }
             if (call) return;
@@ -2860,6 +3678,7 @@
                 snap.docChanges().forEach(ch => {
                     const d = ch.doc.data();
                     if (ch.type !== 'added' || Date.now() - d.ts > 60000 || call) return;
+                    if (isBlocked(d.from)) { declineCall(ch.doc.id); return; }      // 차단한 상대의 전화는 받지 않음
                     if (autoAcceptFrom && d.from === autoAcceptFrom) { autoAcceptFrom = null; answerCall(ch.doc.id); return; }   // 랜덤 화상 채팅 상대
                     const box = document.getElementById('callIncoming');
                     if (!box) return;
@@ -2961,6 +3780,7 @@
                     return { wait: room };
                 });
                 if (res.join) {
+                    if (isBlocked(res.join.uid)) { rnd.state = 'idle'; renderRandom(); showAlertToast({ head: '랜덤 채팅', title: '지금은 연결할 상대가 없습니다. 잠시 후 다시 시도해 주세요.' }); return; }
                     rnd.room = res.join.room; rnd.peer = { uid: res.join.uid, nick: res.join.nick, emoji: res.join.emoji }; rnd.state = 'chatting';
                     await db.collection('randomRooms').doc(rnd.room).set({ a: rnd.peer, b: me, status: 'open', mode: mode, ts: Date.now() });
                     rndListenRoom(db, rnd.room);
@@ -3020,6 +3840,7 @@
                     </div>
                     <div id="rndChat" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
                     <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
+                        ${emojiBtn('rndText')}
                         <textarea id="rndText" rows="1" maxlength="300" placeholder="메시지를 입력하세요" ${rnd.state === 'ended' ? 'disabled' : ''} class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
                         <button onclick="rndSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-500 whitespace-nowrap">보내기</button>
                     </div>`;
@@ -3045,7 +3866,7 @@
         }
 
         function socialInit() {
-            commInit().then(db => { if (db) listenCalls(); subscribeDM(); });
+            commInit().then(db => { if (db) { listenCalls(); listenBlocks(); } subscribeDM(); });
         }
 
         // ---- 동네 인증 ----
@@ -3157,6 +3978,7 @@
             if (commUnsub) { commUnsub(); commUnsub = null; }
             if (commUnsubMembers) { commUnsubMembers(); commUnsubMembers = null; }
             if (marketUnsub) { marketUnsub(); marketUnsub = null; }
+            if (marketNationUnsub) { marketNationUnsub(); marketNationUnsub = null; } marketNation = []; marketScope = 'town';
             stopMeet(); meetProfiles = []; meetChatWith = null;
             if (freeUnsub) { freeUnsub(); freeUnsub = null; } freeMessages = [];
             stopMarketChat(); marketItems = []; marketOpen = null;
@@ -3171,6 +3993,7 @@
             if (myTown) commSubscribe();   // 인증된 동네가 있으면 제보·SOS 알림을 받기 위해 바로 연결
             socialInit();
             updateAlertButton();
+            if (isDocked('community')) renderCommunity();
         }
 
         function manualRefreshData() {
@@ -3199,6 +4022,7 @@
 
         function toggleTheme() {
             document.documentElement.classList.toggle('dark');
+            if (mapStyle === 'auto') applyMapStyle();
             if (map) map.invalidateSize();
         }
 
@@ -3216,7 +4040,7 @@
             const centers = { '서울특별시': [37.5665, 126.9780], '경기도': [37.4138, 127.5183], '충청남도': [36.5184, 126.8000], '부산광역시': [35.1796, 129.0756] };
             const c = centers[sido] || [36.35, 127.38];
             const newR = {
-                id: Date.now(), category: '시민제보', group: '실종·제보', title: `[시민제보] ${title}`,
+                id: Date.now(), category: '시민제보', group: '생활안전·소동', title: `[시민제보] ${title}`,
                 summary: content || title, content: content || '제보 내용',
                 location: `${sido} ${loc}`, lat: c[0] + (Math.random() - 0.5) * 0.05, lng: c[1] + (Math.random() - 0.5) * 0.05,
                 time: `${now.getFullYear()}.${pad(now.getMonth() + 1)}.${pad(now.getDate())} (${WD_KR[now.getDay()]}요일) ${pad(now.getHours())}:${pad(now.getMinutes())}`,
