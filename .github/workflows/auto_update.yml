@@ -2,11 +2,11 @@ name: Auto Update Incidents and News
 
 on:
   schedule:
-    # 5분마다 실행 (GitHub Actions가 허용하는 가장 짧은 간격입니다. 1초·1분 단위는 불가능)
+    # 5분마다 시작 (GitHub Actions가 허용하는 가장 짧은 간격). 실제로는 GitHub 사정에 따라 몇 분씩 늦게 시작되기도 합니다.
     - cron: '*/5 * * * *'
   workflow_dispatch:   # Actions 탭에서 수동으로 "Run workflow" 버튼으로 실행할 수도 있습니다
 
-# 이전 실행이 아직 끝나지 않았으면 겹쳐서 실행하지 않음
+# 이전 실행이 아직 끝나지 않았으면 겹쳐서 실행하지 않고 기다렸다가 이어서 실행
 concurrency:
   group: auto-update-news
   cancel-in-progress: false
@@ -14,9 +14,14 @@ concurrency:
 jobs:
   update-news:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: write
+
+    env:
+      LOOP_MINUTES: 20        # 한 번 실행될 때 계속 수집하는 시간 (분)
+      CYCLE_SECONDS: 360      # 수집 간격 (초). 6분 = 한 시간에 최대 10번 올림 → GitHub Pages 배포 한도(시간당 약 10회) 안쪽
+      GOOGLE_EVERY_SEC: 900   # 구글 뉴스 검색은 15분마다 한 번 (너무 자주 하면 구글이 막음). 언론사 직접 RSS 는 매번
 
     steps:
       - name: Checkout repository
@@ -31,20 +36,32 @@ jobs:
         run: |
           pip install feedparser pytz
 
-      - name: Run Scraper Script
-        run: python scraper.py
-
-      - name: Commit and push changes
+      # 공개(public) 저장소는 Actions 사용 시간이 무제한 무료라서, 한 번 실행될 때 약 20분 동안 6분마다 수집·저장을 반복합니다.
+      # 새 기사가 있을 때만 저장(commit)하고, 웹사이트는 1초마다 news.json 을 확인해서 새로고침 없이 바로 보여 줍니다.
+      - name: Scrape and push repeatedly
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add news.json
-          # geocache.json: 동(洞)·장소 좌표를 한 번 찾으면 저장해 두는 파일 (scraper.py 가 자동으로 만듭니다)
-          if [ -f geocache.json ]; then git add geocache.json; fi
-          if git diff --staged --quiet; then
-            echo "변경된 뉴스가 없어 저장을 건너뜁니다."
-          else
-            git commit -m "Auto-update latest news dataset [skip ci]"
-            git pull --rebase origin ${{ github.ref_name }}
-            git push
-          fi
+          END=$(( $(date +%s) + LOOP_MINUTES * 60 ))
+          ROUND=0
+          while true; do
+            ROUND=$((ROUND + 1))
+            START=$(date +%s)
+            echo "::group::수집 ${ROUND}회차 ($(TZ=Asia/Seoul date '+%H:%M:%S'))"
+            python scraper.py || echo "[경고] scraper.py 실행 중 오류 — 다음 회차에 다시 시도합니다."
+            git add news.json
+            # geocache.json: 동(洞)·장소 좌표를 한 번 찾으면 저장해 두는 파일 (scraper.py 가 자동으로 만듭니다)
+            if [ -f geocache.json ]; then git add geocache.json; fi
+            if git diff --staged --quiet; then
+              echo "변경된 뉴스가 없어 저장을 건너뜁니다."
+            else
+              git commit -m "Auto-update latest news dataset [skip ci]"
+              git pull --rebase origin ${{ github.ref_name }} || git rebase --abort
+              git push || echo "[경고] 올리기 실패 — 다음 회차에 다시 시도합니다."
+            fi
+            echo "::endgroup::"
+            NOW=$(date +%s)
+            NEXT=$(( START + CYCLE_SECONDS ))
+            if [ $NEXT -ge $END ]; then break; fi
+            if [ $NEXT -gt $NOW ]; then sleep $(( NEXT - NOW )); fi
+          done
