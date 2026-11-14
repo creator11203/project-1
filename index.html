@@ -138,6 +138,10 @@
         .reply-quote { cursor: pointer; }
         .reply-quote:hover { filter: brightness(.95); }
         .msg-row { scroll-margin-top: 12px; }
+        /* 아래로 펼쳐지는 안내 말풍선 (화면 위쪽 버튼용) */
+        .tip.tip-down .tip-box { top: calc(100% + 8px); bottom: auto; left: 0; transform: none; width: 230px; }
+        .tip.tip-down.tip-right .tip-box { left: auto; right: 0; }
+        .tip-down:hover .tip-box { visibility: visible; opacity: 1; }
         /* 신뢰 지수 안내 말풍선 */
         .tip { position: relative; display: inline-flex; align-items: center; gap: 3px; cursor: help; }
         .tip .tip-box { visibility: hidden; opacity: 0; position: absolute; left: 50%; bottom: calc(100% + 8px); transform: translateX(-50%); width: 250px; padding: 8px 10px; border-radius: 10px;
@@ -154,6 +158,11 @@
         .cat-btn:active { transform: scale(.94); }
         .cat-on { box-shadow: 0 0 0 2px #1e293b, 0 3px 10px rgba(15,23,42,.22); }
         .dark .cat-on { box-shadow: 0 0 0 2px #e2e8f0, 0 3px 10px rgba(0,0,0,.4); }
+        .comm-split { height: 12px; margin: -4px 0 2px; cursor: ns-resize; display: flex; align-items: center; justify-content: center; touch-action: none; }
+        .comm-split > span { width: 56px; height: 4px; border-radius: 4px; background: #cbd5e1; transition: background .15s, width .15s; }
+        .comm-split:hover > span { background: #10b981; width: 80px; }
+        .dark .comm-split > span { background: #475569; }
+        body.resizing-v, body.resizing-v * { cursor: ns-resize !important; user-select: none !important; }
         .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: live-blink 1s ease-in-out infinite; }
         @keyframes live-blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
         .float-grip { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 30; }
@@ -312,7 +321,7 @@
         </div>
         <!-- 패널 2: 카테고리 + 기사 원문 -->
         <div id="panel-article" class="panel bg-slate-50 dark:bg-slate-950">
-            <div id="categoryBar" class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex flex-col gap-1.5 shrink-0">
+            <div id="categoryBar" class="relative z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex flex-col gap-1.5 shrink-0">
                 <div id="groupButtons" class="flex flex-wrap items-center gap-1.5"></div>
                 <div id="subButtons" class="flex flex-wrap items-center gap-1" style="display:none"></div>
             </div>
@@ -1384,9 +1393,14 @@
             const hint = exMode
                 ? (exCats.size ? `⊘ ${exCats.size}개 빼고 보는 중` : '누르면 그 분류만 빼고 보기')
                 : (selCats.size ? `✓ ${selCats.size}개 선택됨 · 다시 누르면 해제` : '여러 개 함께 선택 가능');
-            const modeBtn = (m, label) => `<button onclick="setCatMode('${m}')" class="px-1.5 py-0.5 text-[0.625rem] font-bold whitespace-nowrap ${catMode === m ? (m === 'exclude' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white') : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}">${label}</button>`;
+            // 마우스를 올리면 바로 뜨는 안내 말풍선 (어떻게 누르면 되는지)
+            const MODE_TIPS = {
+                include: '<b>✓ 골라 보기</b><br>분류 버튼을 <b>마우스 왼쪽 클릭</b>하면 그 분류만 골라서 봅니다. 여러 개를 함께 고를 수 있고, 다시 누르면 해제됩니다.',
+                exclude: '<b>⊘ 빼고 보기</b><br>분류 버튼을 <b>마우스 오른쪽 클릭</b>하면 바로 그 분류만 빼고 봅니다. (이 버튼을 켜 두면 왼쪽 클릭으로도 뺄 수 있습니다) 다시 누르면 다시 보입니다.'
+            };
+            const modeBtn = (m, label) => `<span class="tip tip-down ${m === 'exclude' ? 'tip-right' : ''}" style="cursor:pointer;"><button onclick="setCatMode('${m}')" class="px-1.5 py-0.5 text-[0.625rem] font-bold whitespace-nowrap ${catMode === m ? (m === 'exclude' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white') : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}">${label}</button><span class="tip-box">${MODE_TIPS[m]}</span></span>`;
             html += `<span class="ml-auto flex items-center gap-1.5 pl-2 border-l-2 border-slate-300 dark:border-slate-600">
-                <span class="flex items-center rounded-md border border-slate-300 dark:border-slate-600 overflow-hidden" title="분류 버튼을 누를 때: 골라 보기(선택) 또는 빼고 보기(제외)">${modeBtn('include', '✓ 골라 보기')}${modeBtn('exclude', '⊘ 빼고 보기')}</span>
+                <span class="flex items-center rounded-md border border-slate-300 dark:border-slate-600">${modeBtn('include', '✓ 골라 보기')}${modeBtn('exclude', '⊘ 빼고 보기')}</span>
                 <span class="cat-hint whitespace-nowrap text-[0.625rem] ${(exMode ? exCats.size : selCats.size) ? 'font-bold ' + (exMode ? 'text-red-600 dark:text-red-300' : 'text-indigo-600 dark:text-indigo-300') : 'text-slate-400'}">${hint}</span>
                 ${exCats.size ? `<button onclick="clearExcluded()" title="빼 둔 분류를 모두 다시 보기" class="whitespace-nowrap text-[0.625rem] font-bold text-red-600 dark:text-red-300 border border-red-300 dark:border-red-700 rounded px-1.5 py-0.5 hover:bg-red-50 dark:hover:bg-red-950/40">⊘ 제외 ${exCats.size}개 해제</button>` : ''}
                 <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
@@ -1598,21 +1612,41 @@
             if (isOverseas(n) || loc.startsWith('북한') || loc.startsWith('해외') || loc.includes('미상') || !loc.includes(' ')) return null;
             return sigunguOf(loc);
         }
-        // 최근 7일, 시·군·구별 '사건 수' (같은 사건을 다룬 기사 여러 개는 1건). 왼쪽 목록도 똑같은 기준으로 그 지역 사건을 보여 줌
+        // 사건 하나 = 지역 하나: 같은 사건의 기사들이 서로 다른 곳으로 찍혀 있으면(예: 한 기사는 동까지, 다른 기사는 법원 소재지)
+        //  예전에는 두 지역에 모두 1건씩 세어졌음 → 이제는 위치가 가장 자세한 기사의 시·군·구 한 곳에만 셉니다.
+        function eventRegion(ev) {
+            let best = null;
+            const by = {};
+            ev.items.forEach(n => {
+                const r = hotspotRegionOf(n);
+                if (!r) return;
+                const o = by[r] = by[r] || { r: r, n: 0, p: 0 };
+                o.n++; o.p = Math.max(o.p, PREC_RANK[precOf(n)] || 0);
+            });
+            Object.values(by).forEach(o => { if (!best || o.p > best.p || (o.p === best.p && o.n > best.n)) best = o; });
+            return best ? best.r : null;
+        }
+        // 최근 7일(오늘 포함 7개 날짜) 사건 목록 → 사건마다 지역 하나. 지금 고른 분류(골라 보기·빼고 보기)를 그대로 따름
+        function hotspotEvents() {
+            const evs = groupEvents(newsData.filter(n => inLast7(n) && n.source !== '시스템' && catPass(n)));
+            evs.forEach(ev => { ev.region = eventRegion(ev); });
+            return evs.filter(ev => ev.region);
+        }
+        // 시·군·구별 '사건 수' (종류가 다른 사건마다 1건, 같은 사건을 다룬 기사 여러 개는 1건). 왼쪽 목록도 똑같은 기준
         function getCrimeHotspotsData() {
             const stats = {};
-            newsData.filter(n => inLast7(n) && n.source !== '시스템').forEach(news => {
-                const reg = hotspotRegionOf(news);
-                if (!reg) return;
-                if (!stats[reg]) stats[reg] = { region: reg, events: new Set(), articles: 0, lat: null, lng: null };
-                const s = stats[reg];
-                s.events.add(evOf(news));
-                s.articles++;
-                if (s.lat == null && hasCoords(news)) { s.lat = news.lat; s.lng = news.lng; }
+            hotspotEvents().forEach(ev => {
+                const s = stats[ev.region] = stats[ev.region] || { region: ev.region, count: 0, articles: 0, types: {}, lat: null, lng: null };
+                s.count++;
+                s.articles += ev.items.length;
+                const g = groupOf(ev.lead); s.types[g] = (s.types[g] || 0) + 1;
+                const b = bestLocated(ev.items);
+                if (s.lat == null && b) { s.lat = b.lat; s.lng = b.lng; }
             });
             return Object.values(stats).map(s => {
                 const c = SIGUNGU_CENTERS[s.region] || SIGUNGU_CENTERS[s.region.split(' ').slice(0, 2).join(' ')];
-                return { region: s.region, count: s.events.size, articles: s.articles, lat: c ? c[0] : s.lat, lng: c ? c[1] : s.lng };
+                const types = Object.keys(s.types).sort((a, b) => s.types[b] - s.types[a]).map(g => ({ g: g, n: s.types[g] }));
+                return { region: s.region, count: s.count, articles: s.articles, types: types, lat: c ? c[0] : s.lat, lng: c ? c[1] : s.lng };
             }).filter(s => s.lat != null).sort((a, b) => (b.count - a.count) || (b.articles - a.articles)).slice(0, 30);
         }
 
@@ -1630,7 +1664,8 @@
                             <span class="w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-extrabold shrink-0">${index + 1}</span>
                             <div>
                                 <h4 class="text-sm font-bold text-slate-900 dark:text-white">${esc(item.region)}</h4>
-                                <p class="text-xs text-slate-500">관련 기사 ${item.articles}개 · 누르면 왼쪽에 사건 목록이 나옵니다</p>
+                                <p class="text-xs text-slate-500">관련 기사 ${item.articles}개 · 누르면 왼쪽에 사건 목록(관련 기사 펼치기 가능)이 나옵니다</p>
+                                <div class="mt-1 flex flex-wrap gap-1">${item.types.slice(0, 4).map(t => `<span class="text-[0.625rem] px-1.5 py-0.5 rounded border ${CATEGORY_GROUPS[t.g].badge} font-bold">${esc(CATEGORY_GROUPS[t.g].label.replace(/^[^\s가-힣]+\s/, ''))} ${t.n}</span>`).join('')}</div>
                             </div>
                         </div>
                         <span class="text-base font-extrabold text-red-500 shrink-0">사건 ${item.count}건</span>
@@ -1643,7 +1678,7 @@
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/25">
                         <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 전국 사건사고 다발 지역</h2>
-                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">같은 사건을 다룬 기사 여러 개는 사건 1건으로 셉니다. 지역을 누르면 왼쪽에 그 지역 사건이 정리됩니다.</p>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">오늘 포함 최근 7일 동안 서로 다른 사건마다 1건으로 셉니다. 같은 사건을 다룬 기사 여러 개는 1건으로 묶고, 사건 하나는 위치가 가장 자세한 지역 한 곳에만 셉니다. 해외·위치 미상·시·도까지만 알려진 기사는 빠집니다.${selCats.size || exCats.size ? ' <b class="text-rose-600">지금 고른 분류 기준으로 집계 중입니다.</b>' : ''} 지역을 누르면 왼쪽에 그 지역 사건이 정리됩니다.</p>
                     </div>
                     <div id="hotspotList" class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
                 </div>
@@ -1863,23 +1898,32 @@
             if (f.length > 0) selectNews(f[0].id, true);
         }
 
+        // 분류 조건(빼고 보기 · 골라 보기 · 세부 분류)을 통과하는지
+        function catPass(news) {
+            if (exCats.size && groupsOf(news).some(g => exCats.has(g))) return false;              // 빼고 보기로 고른 분류의 기사는 숨김
+            if (selCats.size) {
+                if (!groupsOf(news).some(g => selCats.has(g))) return false;                       // 화재+추돌 기사는 '화재·사고'와 '교통사고' 양쪽에 모두 나옴
+                if (currentSub && !tagsOf(news).includes(currentSub)) return false;
+            }
+            return true;
+        }
         function getFilteredNews(ignoreCategory = false, ignoreDate = false) {
             const sido = document.getElementById('sidoSelect').value;
             const sigungu = document.getElementById('sigunguSelect').value;
             const dong = document.getElementById('dongSelect').value;
 
+            // 다발 지역에서 고른 지역: 순위와 똑같은 기준(사건 단위)으로, 그 사건의 관련 기사 전부
+            let regionEvents = null;
+            if (selectedHotspotRegion && !ignoreCategory) {
+                regionEvents = new Set();
+                hotspotEvents().forEach(ev => { if (ev.region === selectedHotspotRegion) regionEvents.add(ev.key); });
+            }
             return newsData.filter(news => {
                 const loc = news.location || '';
-                if (selectedHotspotRegion && !ignoreCategory) return inLast7(news) && hotspotRegionOf(news) === selectedHotspotRegion;   // 순위 집계와 같은 기준
+                if (regionEvents) return inLast7(news) && regionEvents.has(evOf(news));
                 if (ignoreDate ? !inLast7(news) : !inPeriod(news)) return false;
 
-                if (!ignoreCategory && currentCategory !== '범죄 다발 지역' && exCats.size) {
-                    if (groupsOf(news).some(g => exCats.has(g))) return false;                // 빼고 보기로 고른 분류의 기사는 숨김
-                }
-                if (!ignoreCategory && currentCategory !== '범죄 다발 지역' && selCats.size) {
-                    if (!groupsOf(news).some(g => selCats.has(g))) return false;              // 화재+추돌 기사는 '화재·사고'와 '교통사고' 양쪽에 모두 나옴
-                    if (currentSub && !tagsOf(news).includes(currentSub)) return false;
-                }
+                if (!ignoreCategory && currentCategory !== '범죄 다발 지역' && !catPass(news)) return false;
 
                 if (sido !== 'all') {
                     if (!loc.includes(sido)) return false;
@@ -2030,7 +2074,7 @@
             if (h === 'community') { head.style.display = 'none'; return; }     // 커뮤니티는 자체 제목 줄을 씀
             head.style.display = '';
             head.innerHTML = `<b class="text-sm text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid ${PANELS[h].icon} text-sky-500"></i> ${PANELS[h].label}</b>
-                <span class="flex items-center gap-1.5">${wideBtnHtml()}<button onclick="closeFloat()" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-xmark text-lg"></i></button></span>`;
+                <span class="flex items-center gap-1.5"><button onclick="setFloatW(0)" title="창 너비를 기본 크기로 (너비는 창 양쪽 가장자리를 끌어서 조절)" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 ${floatW ? '' : 'opacity-60'}"><i class="fa-solid fa-compress"></i> 기본 크기</button><button onclick="closeFloat()" class="text-slate-400 hover:text-slate-600 px-1"><i class="fa-solid fa-xmark text-lg"></i></button></span>`;
         }
         // 커뮤니티 패널 제목 줄의 오른쪽 버튼
         function renderCommHead() {
@@ -2043,7 +2087,8 @@
             if (isDocked('community')) {
                 box.innerHTML = modeChip + menu;
             } else {
-                const wide = wideBtnHtml(true);
+                // 너비는 창 양쪽 가장자리를 끌어서 조절 → 제목 줄에는 '기본 크기' 버튼만
+                const wide = `<button onclick="setFloatW(0)" title="창 너비를 기본 크기로 (너비는 창 양쪽 가장자리를 끌어서 조절)" class="comm-head-btn px-2 py-1 rounded-lg text-[0.6875rem] font-bold ${floatW ? '' : 'opacity-60'}"><i class="fa-solid fa-compress"></i> <span class="hide-narrow">기본 크기</span></button>`;
                 box.innerHTML = modeChip + menu + wide + `<button onclick="closeFloat()" title="닫기" class="comm-head-btn px-2 py-1 rounded-lg"><i class="fa-solid fa-xmark"></i></button>`;
             }
         }
@@ -2872,11 +2917,34 @@
                 <button type="button" onclick="document.getElementById('${fileInputId}').click()" title="${title}" class="w-8 h-8 shrink-0 rounded-lg border border-slate-300 dark:border-slate-600 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center"><i class="fa-solid fa-paperclip"></i></button>`;
         }
         // 대화 입력줄: [첨부·이모지(세로)] [넓은 입력칸] [작은 보내기 버튼]  → 입력칸을 최대한 넓게
+        // 대화창 ↔ 작성칸 경계 막대: 위아래로 끌면 작성칸이 커지고(대화창이 줄고) 작아짐. 칸마다 크기를 기억
+        function splitH(id) { const v = Number(lsGet('split_h_' + id)); return v >= 40 ? v : 0; }
+        function splitStart(e, id) {
+            const ta = document.getElementById(id);
+            if (!ta) return;
+            e.preventDefault();
+            const pt = ev => (ev.touches ? ev.touches[0].clientY : ev.clientY);
+            const startY = pt(e), startH = ta.offsetHeight;
+            const scroller = ta.closest('.panel, #floatBody') || document.body;
+            const maxH = Math.max(120, Math.round((scroller.clientHeight || window.innerHeight) * 0.6));
+            document.body.classList.add('resizing-v');
+            const move = ev => { const h = Math.max(40, Math.min(maxH, startH + (startY - pt(ev)))); ta.style.height = h + 'px'; };
+            const up = () => {
+                document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up);
+                document.removeEventListener('touchmove', move); document.removeEventListener('touchend', up);
+                document.body.classList.remove('resizing-v');
+                lsSet('split_h_' + id, String(ta.offsetHeight));
+            };
+            document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+            document.addEventListener('touchmove', move, { passive: false }); document.addEventListener('touchend', up);
+        }
         function chatInputRow(o) {
             const enter = o.enter ? `onkeydown="if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); ${o.send}; }"` : '';
-            return `<div class="flex items-stretch gap-1.5">
+            const h = splitH(o.id);
+            return `<div class="comm-split" onmousedown="splitStart(event, '${o.id}')" ontouchstart="splitStart(event, '${o.id}')" ondblclick="lsSet('split_h_${o.id}', ''); const t = document.getElementById('${o.id}'); if (t) t.style.height = '';" title="위아래로 끌어서 대화창 / 작성칸 크기 조절 (두 번 누르면 원래대로)"><span></span></div>
+                <div class="flex items-stretch gap-1.5">
                 <div class="flex flex-col justify-end gap-1 shrink-0">${o.attach || ''}${emojiBtn(o.id)}</div>
-                <textarea id="${o.id}" rows="${o.rows || 3}" maxlength="${o.max || 500}" ${enter} placeholder="${esc(o.placeholder || '')}" class="flex-1 min-w-0 resize-none bg-slate-100 dark:bg-slate-800 border ${o.border || 'border-slate-300 dark:border-slate-700'} rounded-xl px-3 py-2 text-sm leading-relaxed text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-400/50" style="min-height: ${o.minH || '4.25rem'};"></textarea>
+                <textarea id="${o.id}" rows="${o.rows || 3}" maxlength="${o.max || 500}" ${enter} placeholder="${esc(o.placeholder || '')}" class="flex-1 min-w-0 resize-none bg-slate-100 dark:bg-slate-800 border ${o.border || 'border-slate-300 dark:border-slate-700'} rounded-xl px-3 py-2 text-sm leading-relaxed text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400/50" style="min-height: ${h ? '40px' : (o.minH || '4.25rem')};${h ? ' height:' + h + 'px;' : ''}"></textarea>
                 <button onclick="${o.send}" title="${esc(o.label || '보내기')}" class="shrink-0 w-12 rounded-xl flex flex-col items-center justify-center gap-0.5 text-white text-[0.625rem] font-bold ${o.btn || 'bg-sky-600 hover:bg-sky-500'}"><i class="fa-solid fa-paper-plane text-sm"></i>${esc(o.label || '보내기')}</button>
             </div>`;
         }
@@ -2989,6 +3057,7 @@
                 renderCommMessages();
             }
             subscribeLives();          // 우리 동네 실시간 방송
+            subscribeBoard('hello');   // 새로 이사 온 이웃 알림(탭 배지)을 위해 항상 받아 둠
             commTouch();
             if (!commHeartbeat) commHeartbeat = setInterval(() => { commTouch(); renderCommMembers(); }, 60000);
         }
@@ -3072,10 +3141,7 @@
             if (commType !== 'sos') commType = 'report';      // 안전망에는 제보·SOS만 올라감
             const msg = Object.assign({ text: text, type: commType, ts: Date.now(), uid: COMM_UID, town: myTown.dong }, meFields());
             if (replyTo.talk) msg.replyTo = replyTo.talk;
-            if (commType === 'report') {
-                msg.kind = (document.getElementById('commKind') || {}).value || '기타';
-                msg.place = (((document.getElementById('commPlace') || {}).value) || '').trim().slice(0, 60);
-            }
+            if (commType === 'report') msg.kind = guessReportKind(text);
             const key = townKey(myTown);
             try {
                 const db = await commInit();
@@ -3154,6 +3220,12 @@
                 text: '서로 친구로 등록한 이웃 목록입니다. 친구 이름은 내가 알아보기 쉬운 이름으로 바꿔 둘 수 있고(나에게만 보임), 바로 1:1 대화를 시작할 수 있습니다.' },
             random: { title: '랜덤 채팅', cls: 'bg-violet-50 dark:bg-violet-950/40 text-violet-800 dark:text-violet-200 border-violet-200 dark:border-violet-900',
                 text: '처음 만나는 사람과 가볍게 대화하는 곳입니다. 불쾌한 대화는 바로 나가고 차단하세요. 개인정보는 알려 주지 마세요.' },
+            food: { title: '우리동네 맛집', cls: 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-900',
+                text: '직접 가 본 동네 맛집을 상호명·위치·별점(5점 만점)·짧은 후기·사진으로 소개하는 곳입니다. 같은 가게 후기는 하나로 모여 평균 별점이 보이고, 상호명을 누르면 후기 모음과 지도(네이버·카카오)로 바로 이어집니다. 광고·협찬 후기는 올리지 말아 주세요.' },
+            spot: { title: '우리동네 명소', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900',
+                text: '산책길·공원·쉼터·전시·아이와 가기 좋은 곳 등 동네에서 가 볼 만한 곳을 추천하는 곳입니다. 장소 이름을 누르면 추천 모음과 지도로 이어집니다.' },
+            hello: { title: '이사왔어요', cls: 'bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-200 border-sky-200 dark:border-sky-900',
+                text: '새로 이사 온 이웃이 인사를 남기는 곳입니다. 먼저 살던 이웃은 👋 환영해요와 짧은 댓글로 반겨 주세요. 집 주소·동호수 같은 개인정보는 적지 마세요.' },
             dm: { title: '1:1 대화', cls: 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
                 text: '이웃과 1:1로 대화하는 곳입니다. 돈을 먼저 보내 달라는 요구나 개인정보 요청은 조심하세요.' }
         };
@@ -3184,25 +3256,11 @@
             }
             title.textContent = myTown.dong + ' 커뮤니티';
             renderCommHead();
-            const reqN = friendReqs.length + chatReqs.length;
-            const tabDefs = {
-                talk: ['<i class="fa-solid fa-life-ring"></i> 우리동네 안전망', 'safety-tab'],
-                praise: ['👏 칭찬해요', 'praise-tab'],
-                free: ['💬 이런저런', 'bg-sky-600'],
-                market: ['🛒 동네 장터', 'bg-emerald-600'],
-                meet: ['💞 동네 친구', 'bg-pink-600'],
-                friends: ['👥 친구' + (friendReqs.length ? ' <span class="text-[0.625rem] bg-red-500 text-white rounded-full px-1">' + friendReqs.length + '</span>' : ''), 'bg-teal-600'],
-                random: ['🎲 랜덤 채팅', 'bg-violet-600'],
-                dm: ['✉ 1:1 대화' + (chatReqs.length ? ' <span class="text-[0.625rem] bg-red-500 text-white rounded-full px-1">' + chatReqs.length + '</span>' : (dmUnread.size ? ' <span class="text-red-400">●</span>' : '')), 'bg-sky-700']
-            };
             const nt = TAB_NOTICE[commTab];
+            const helloN = helloNewCount();
             body.innerHTML = `
-                <div id="commTabBar" class="hscroll gap-1 px-2 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 shrink-0" title="탭을 끌어서 순서를 바꿀 수 있습니다">
-                    ${commTabOrder().map(k => { const d = tabDefs[k]; const on = commTab === k; const special = d[1] === 'safety-tab' || d[1] === 'praise-tab';
-                        return `<button data-tab="${k}" draggable="true" onclick="setCommTab('${k}')" ondragstart="tabDragStart(event)" ondragover="tabDragOver(event)" ondragleave="tabDragLeave(event)" ondrop="tabDrop(event)" ondragend="tabDragEnd(event)"
-                            class="comm-tab px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${special ? d[1] + (on ? ' shadow-md ring-2 ' + (k === 'talk' ? 'ring-red-300' : 'ring-yellow-300') : ' off') : (on ? d[1] + ' text-white shadow-sm' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700')}">${d[0]}</button>`; }).join('')}
-                </div>
-                ${lsGet('tab_hint_seen') ? '' : `<div id="tabHint" class="tab-hint shrink-0" onclick="dismissTabHint()"><span class="hand">👆</span><span class="flex-1">탭을 마우스로 끌어서 원하는 순서로 바꿀 수 있어요</span><button class="opacity-80 hover:opacity-100">✕</button></div>`}
+                <div id="commTabBar" class="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60"></div>
+                ${commTab === 'free' && helloN ? `<button onclick="setCommTab('hello')" class="w-full shrink-0 px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold flex items-center gap-2 text-left"><span class="text-base">👋</span><span class="flex-1">새로 이사 온 이웃 ${helloN}명이 인사를 남겼어요 · 환영해 주세요!</span><span>보러 가기 →</span></button>` : ''}
                 ${nt ? `<button onclick="toggleTabNotice()" title="눌러서 안내문 펼치기/접기" class="w-full text-left px-3 py-1.5 border-b shrink-0 flex items-start gap-1.5 text-[0.6875rem] ${nt.cls}" style="white-space: normal;">
                     <b class="shrink-0">📌 ${nt.title}</b>
                     <span id="tabNoticeText" class="flex-1 min-w-0 ${noticeOpen ? '' : 'truncate'}">${nt.text}</span>
@@ -3212,8 +3270,9 @@
                     <div id="commMain" class="flex-1 min-w-0 flex flex-col"></div>
                     ${(commTab === 'talk' || commTab === 'free') ? `<aside id="commMembers" class="w-40 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hide-narrow bg-slate-50 dark:bg-slate-900/60"></aside>` : ''}
                 </div>`;
+            renderCommTabBar();
             renderCommMembers();
-            if (document.getElementById('tabHint') && !tabHintTimer) tabHintTimer = setTimeout(dismissTabHint, 8000);
+            if (BOARDS[commTab]) { renderCommBg(); renderBoard(commTab); return; }
             if (commTab === 'friends') { renderCommBg(); renderFriends(); return; }
             if (commTab === 'praise') { renderCommBg(); renderPraise(); return; }
             if (commTab === 'market') { renderCommBg(); renderMarket(); return; }
@@ -3268,8 +3327,6 @@
                     ${chip('report', '📢 실시간 제보', rep, 'bg-amber-500 text-white border-amber-600')}
                     ${chip('sos', '🚨 SOS 긴급 도움 요청', sos, 'bg-red-600 text-white border-red-700')}
                     <button onclick="openLiveStart()" title="현장을 카메라로 생중계하고 이웃과 함께 보기" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border border-rose-700 bg-gradient-to-r from-rose-600 to-red-600 text-white whitespace-nowrap shadow-sm"><span class="live-dot"></span> ${live ? '내 방송 보기' : '실시간 방송'}</button>
-                    ${rep ? `<select id="commKind" class="${inp} py-1">${REPORT_KINDS.map(k => `<option value="${k}">${k}</option>`).join('')}</select>
-                    <input id="commPlace" type="text" maxlength="60" placeholder="장소 (예: ○○사거리)" class="w-40 ${inp} py-1">` : ''}
                     <button onclick="pressFromComposer()" class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-[0.6875rem] font-bold text-white whitespace-nowrap shadow-sm" title="제보 가이드라인·신뢰 지수를 확인한 뒤, 원하면 언론사·방송사 제보 창을 엽니다">📺 언론사 제보하기</button>
                     <button onclick="showReportGuide()" class="text-[0.6875rem] text-slate-500 hover:text-slate-800 dark:hover:text-white underline whitespace-nowrap">가이드라인</button>
                 </div>
@@ -3281,13 +3338,16 @@
                 <div id="replyBar_talk"></div>
                 ${chatInputRow({ id: 'commText', send: 'commPost()', label: sos ? 'SOS' : '제보',
                     attach: attachBtn('commFile', 'image/*,video/*', 'commPickFile(this)', '사진·동영상 첨부'),
-                    placeholder: sos ? '예) 7살 남자아이, 파란 점퍼, 오후 3시쯤 ○○놀이터에서 마지막으로 봤어요' : '무슨 일이 있었는지 적어 주세요 (언제, 어디서, 무엇을 봤는지)',
+                    placeholder: sos ? '예) 7살 남자아이, 파란 점퍼, 오후 3시쯤 ○○놀이터에서 마지막으로 봤어요' : '예) 오후 3시쯤 ○○사거리에서 차량 화재가 났어요. 연기가 많이 나고 소방차가 오고 있어요. (무슨 일인지 · 장소 · 시간을 함께 적어 주세요)',
                     border: sos ? 'border-red-500' : 'border-amber-500',
                     btn: sos ? 'bg-red-600 hover:bg-red-500' : 'bg-amber-500 hover:bg-amber-400' })}`;
             document.getElementById('commText').value = prevText;
             renderReplyBar('talk');
-            if (rep) { document.getElementById('commPlace').value = prevPlace; if (prevKind) document.getElementById('commKind').value = prevKind; }
         }
+        // 제보 종류는 따로 고르지 않고 글 내용에서 짐작 (글 위의 작은 꼬리표로만 쓰임)
+        const REPORT_KIND_RX = [['화재', /화재|불이|불길|연기|타고\s*있|전소/], ['교통사고', /교통사고|추돌|충돌|사고\s*났|차량\s*전복|들이받|오토바이\s*사고/], ['실종', /실종|잃어버|찾고\s*있|찾습니다|미아/],
+            ['범죄 의심', /도둑|절도|폭행|싸움|흉기|강도|사기|수상한\s*거래|몰카|불법\s*촬영/], ['수상한 사람', /수상한\s*(?:사람|남성|여성|차)|배회|따라오/], ['안전사고', /넘어|미끄러|추락|떨어|부상|다쳤|쓰러|정전|가스\s*냄새|누수|침수|싱크홀/]];
+        function guessReportKind(text) { const k = REPORT_KIND_RX.find(x => x[1].test(text || '')); return k ? k[0] : '제보'; }
 
         // 글 목록 (대화창 형태: 오래된 글이 위, 새 글이 아래)
         function renderCommMsg(m, delFn) {
@@ -3528,6 +3588,9 @@
             if (tab === 'free') subscribeFree();
             if (tab === 'friends') subscribeFriends();
             if (tab === 'praise') subscribePraise();
+            if (BOARDS[tab]) subscribeBoard(tab);
+            if (tab === 'hello') { lsSet('hello_seen', String(Date.now())); }
+            lsSet('comm_last_' + commGroupOf(tab).k, tab);      // 묶음마다 마지막으로 본 탭 기억
             if (tab !== 'dm') { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } }
         }
         function setMarketFilter(f) { marketFilter = f; renderMarket(); }
@@ -4202,6 +4265,349 @@
                 </article>`;
             }).join('') : '<div class="text-center py-16 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">아직 칭찬 글이 없습니다.<br>우리 동네의 좋은 공간, 고마운 일, 좋은 아이디어를 사진과 함께 소개해 보세요.</div>';
             list.scrollTop = toTop ? 0 : keep;
+        }
+
+        // ================= 커뮤니티 탭 묶음 =================
+        // 탭이 11개로 늘어나 한 줄에 다 보이지 않던 문제 → 5개 묶음(큰 버튼)으로 나누고, 묶음 안의 탭은 그 아래 작은 줄에 보여 줌.
+        // 안전망은 가장 중요해서 혼자 따로(빨간색), 맛집·명소처럼 성격이 같은 것은 한 묶음으로.
+        const COMM_GROUPS = [
+            { k: 'safe', label: '안전망', icon: '🆘', tabs: ['talk'], on: 'bg-gradient-to-br from-red-600 to-rose-600 text-white border-red-700', off: 'text-red-600 dark:text-red-400 border-red-300 dark:border-red-800' },
+            { k: 'life', label: '동네 이야기', icon: '🏘️', tabs: ['free', 'hello', 'praise'], on: 'bg-sky-600 text-white border-sky-700', off: '' },
+            { k: 'local', label: '맛집·명소', icon: '📍', tabs: ['food', 'spot'], on: 'bg-orange-500 text-white border-orange-600', off: '' },
+            { k: 'market', label: '동네 장터', icon: '🛒', tabs: ['market'], on: 'bg-emerald-600 text-white border-emerald-700', off: '' },
+            { k: 'people', label: '이웃·대화', icon: '💬', tabs: ['meet', 'friends', 'random', 'dm'], on: 'bg-violet-600 text-white border-violet-700', off: '' }
+        ];
+        const COMM_TAB_LABEL = { talk: '🆘 우리동네 안전망', free: '💬 이런저런', hello: '👋 이사왔어요', praise: '👏 칭찬해요', food: '🍜 우리동네 맛집', spot: '🌳 우리동네 명소',
+            market: '🛒 동네 장터', meet: '💞 동네 친구', friends: '👥 친구', random: '🎲 랜덤 채팅', dm: '✉ 1:1 대화' };
+        function commGroupOf(tab) { return COMM_GROUPS.find(g => g.tabs.includes(tab)) || COMM_GROUPS[0]; }
+        function setCommGroup(k) {
+            const g = COMM_GROUPS.find(x => x.k === k) || COMM_GROUPS[0];
+            const last = lsGet('comm_last_' + g.k);
+            setCommTab(g.tabs.includes(last) ? last : g.tabs[0]);
+        }
+        function tabBadge(tab) {
+            if (tab === 'friends') return friendReqs.length;
+            if (tab === 'dm') return chatReqs.length || (dmUnread.size ? '●' : 0);
+            if (tab === 'hello') return helloNewCount();
+            if (tab === 'talk') return activeSosCount() + commLives.length;
+            return 0;
+        }
+        function renderCommTabBar() {
+            const bar = document.getElementById('commTabBar');
+            if (!bar) return;
+            const cur = commGroupOf(commTab);
+            const badge = n => n ? `<span class="absolute -top-1.5 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[0.625rem] font-bold leading-[1.1rem] text-center shadow">${n === '●' ? '' : n}</span>` : '';
+            const groups = COMM_GROUPS.map(g => {
+                const on = g === cur;
+                const n = g.tabs.reduce((a, t) => { const b = tabBadge(t); return a + (typeof b === 'number' ? b : (b ? 1 : 0)); }, 0);
+                return `<button onclick="setCommGroup('${g.k}')" title="${g.tabs.map(t => COMM_TAB_LABEL[t]).join(' · ')}" class="relative flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 px-1 min-w-0 transition ${on ? g.on + ' shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 ' + g.off}">
+                    <span class="text-base leading-none">${g.icon}</span><span class="text-[0.6875rem] font-bold truncate max-w-full">${g.label}</span>${badge(n)}</button>`;
+            }).join('');
+            const subs = cur.tabs.length > 1 ? `<div class="hscroll gap-1 px-2 pb-1.5">${cur.tabs.map(t => {
+                const on = t === commTab, b = tabBadge(t);
+                return `<button onclick="setCommTab('${t}')" class="relative px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap border ${on ? cur.on : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}">${COMM_TAB_LABEL[t]}${b ? ` <span class="ml-0.5 text-[0.625rem] bg-red-500 text-white rounded-full px-1">${b === '●' ? '●' : b}</span>` : ''}</button>`;
+            }).join('')}</div>` : '';
+            bar.innerHTML = `<div class="grid grid-cols-5 gap-1 px-2 pt-1.5 ${subs ? 'pb-1' : 'pb-1.5'}">${groups}</div>${subs}`;
+        }
+
+        // ================= 우리동네 맛집 · 명소 · 이사왔어요 =================
+        //  맛집·명소: 같은 가게(장소) 후기는 이름으로 하나로 묶어 평균 별점·후기 수를 보여 주고, 이름을 누르면 후기 모음 + 지도(네이버·카카오)로 이어짐
+        //  이사왔어요: 새 이웃의 인사 글 + 👋 환영해요 + 짧은 댓글
+        const BOARDS = {
+            food: { col: 'food', name: '우리동네 맛집', icon: '🍜', place: true, kinds: ['한식', '중식', '일식', '양식', '분식', '고기·구이', '카페·디저트', '빵집', '술집', '기타'],
+                nameLabel: '상호명', namePh: '예) ○○칼국수', textPh: '예) 바지락이 듬뿍, 국물이 시원해요. 점심엔 줄을 서요.', ratingLabel: '별점', btn: 'bg-orange-500 hover:bg-orange-400', ring: 'border-orange-300 dark:border-orange-800', chip: 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-200', write: '맛집 후기 쓰기' },
+            spot: { col: 'spots', name: '우리동네 명소', icon: '🌳', place: true, kinds: ['공원·산책길', '카페·쉼터', '문화·전시', '아이와 함께', '운동·체육', '야경·풍경', '기타'],
+                nameLabel: '장소 이름', namePh: '예) ○○천 벚꽃길', textPh: '예) 저녁 산책하기 좋아요. 4월엔 벚꽃이 장관이에요.', ratingLabel: '추천도', btn: 'bg-emerald-600 hover:bg-emerald-500', ring: 'border-emerald-300 dark:border-emerald-800', chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200', write: '명소 추천하기' },
+            hello: { col: 'hello', name: '이사왔어요', icon: '👋', place: false, btn: 'bg-sky-600 hover:bg-sky-500', ring: 'border-sky-300 dark:border-sky-800', chip: 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-200', write: '이사 인사 남기기' }
+        };
+        const BOARD_TEXT_MAX = 150, BOARD_REPLY_MAX = 80;
+        const boardData = { food: [], spot: [], hello: [] }, boardUnsub = {};
+        const boardUi = { food: { place: null, form: false, sort: 'rating', kind: '전체', q: '' }, spot: { place: null, form: false, sort: 'rating', kind: '전체', q: '' }, hello: { form: false } };
+        let boardDraft = { rating: 0, img: null };
+        const boardOpen = new Set();     // 댓글을 펼친 인사 글
+        function boardCol(b) { return commDoc(townKey(myTown)).collection(BOARDS[b].col); }
+        function boardLocalKey(b) { return 'comm_board_' + BOARDS[b].col + '_' + townKey(myTown); }
+        function boardLocalSave(b) {
+            const l = boardData[b].slice(0, 300);
+            if (!lsSet(boardLocalKey(b), JSON.stringify(l))) lsSet(boardLocalKey(b), JSON.stringify(l.map(m => Object.assign({}, m, { img: '' }))));
+        }
+        async function subscribeBoard(b) {
+            if (boardUnsub[b]) { boardUnsub[b](); boardUnsub[b] = null; }
+            if (!myTown) return;
+            const done = () => { if (commTab === b) renderBoardBody(b); if (b === 'hello') renderCommTabBar(); };
+            const db = await commInit();
+            if (db) {
+                boardUnsub[b] = boardCol(b).orderBy('ts', 'desc').limit(400).onSnapshot(snap => {
+                    boardData[b] = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                    done();
+                }, err => console.error(err));
+            } else {
+                try { boardData[b] = JSON.parse(lsGet(boardLocalKey(b)) || '[]'); } catch (e) { boardData[b] = []; }
+                done();
+            }
+        }
+        // 최근 7일 안에 새로 올라온, 아직 안 본 이사 인사 수
+        function helloNewCount() {
+            const seen = Number(lsGet('hello_seen')) || 0, since = Date.now() - 7 * 86400000;
+            return boardData.hello.filter(m => m.type !== 'reply' && m.uid !== COMM_UID && m.ts > Math.max(seen, since) && !isBlocked(m.uid)).length;
+        }
+        function placeKey(name) { return String(name || '').replace(/[\s·.,()\-]/g, '').toLowerCase(); }
+        function boardPlaces(b) {
+            const by = {};
+            boardData[b].filter(m => m.type !== 'reply' && !isBlocked(m.uid)).forEach(m => {
+                const k = placeKey(m.name);
+                if (!k) return;
+                const p = by[k] = by[k] || { key: k, name: m.name, place: '', kind: '', reviews: [], sum: 0, n: 0, img: '', last: 0 };
+                p.reviews.push(m);
+                if (m.rating >= 1 && m.rating <= 5) { p.sum += m.rating; p.n++; }
+                if (m.ts > p.last) { p.last = m.ts; p.name = m.name; if (m.place) p.place = m.place; if (m.kind) p.kind = m.kind; }
+                if (!p.img && m.img && IMG_DATA_RE.test(m.img)) p.img = m.img;
+            });
+            return Object.values(by).map(p => Object.assign(p, { avg: p.n ? p.sum / p.n : 0 }));
+        }
+        // 별 5개 (평균은 반 개 단위까지 색칠)
+        function starsHtml(v, cls) {
+            let s = '';
+            for (let i = 1; i <= 5; i++) { const f = Math.max(0, Math.min(1, v - i + 1)); s += `<span class="relative inline-block text-slate-300 dark:text-slate-600">★<span class="absolute inset-0 overflow-hidden text-amber-400" style="width:${Math.round(f * 2) * 50}%;">★</span></span>`; }
+            return `<span class="inline-flex leading-none ${cls || 'text-sm'}">${s}</span>`;
+        }
+        function mapLinks(name, place) {
+            const q = encodeURIComponent([myTown ? myTown.sigungu : '', myTown ? myTown.dong.replace(/\d+동$/, '동') : '', name].filter(Boolean).join(' '));
+            const a = 'inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold border';
+            return `<a target="_blank" rel="noopener noreferrer" href="https://map.naver.com/p/search/${q}" class="${a} border-green-500 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-slate-800">🟢 네이버 지도에서 정보 보기</a>
+                <a target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/?q=${q}" class="${a} border-yellow-400 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-slate-800">🟡 카카오맵에서 보기</a>`;
+        }
+        function boardSet(b, k, v) { boardUi[b][k] = v; if (k !== 'q') renderBoardBody(b); else renderBoardList(b); }
+        function boardOpenForm(b, show, preset) {
+            boardUi[b].form = show; boardDraft = { rating: 0, img: null, preset: preset || null };
+            renderBoardBody(b);
+            if (show) setTimeout(() => { const el = document.getElementById(BOARDS[b].place && !(preset && preset.name) ? 'bdName' : 'bdText'); if (el) el.focus(); }, 30);
+        }
+        function boardOpenPlace(b, key) { boardUi[b].place = key; boardUi[b].form = false; renderBoardBody(b); const s = document.getElementById('boardScroll'); if (s) s.scrollTop = 0; }
+        function boardSetRating(i) {
+            boardDraft.rating = i;
+            const el = document.getElementById('bdStars');
+            if (el) el.innerHTML = starPickerInner();
+        }
+        function starPickerInner() {
+            const labels = ['', '별로예요', '그저 그래요', '괜찮아요', '좋아요', '최고예요'];
+            let s = '';
+            for (let i = 1; i <= 5; i++) s += `<button type="button" onclick="boardSetRating(${i})" title="${i}점" class="text-2xl leading-none ${i <= boardDraft.rating ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'} hover:scale-110 transition">★</button>`;
+            return s + `<span class="ml-2 text-xs font-bold ${boardDraft.rating ? 'text-amber-600' : 'text-slate-400'}">${boardDraft.rating ? boardDraft.rating + '점 · ' + labels[boardDraft.rating] : '별을 눌러 평가해 주세요 (5점 만점)'}</span>`;
+        }
+        async function boardPickFile(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if (!f || f.type.indexOf('image/') !== 0) return;
+            try { boardDraft.img = await compressImage(f, 1280, 550 * 1024); } catch (e) { return; }
+            const el = document.getElementById('bdPhoto');
+            if (el) el.innerHTML = boardPhotoInner();
+        }
+        function boardPhotoInner() {
+            return boardDraft.img ? `<img src="${boardDraft.img}" class="h-14 rounded-lg border border-slate-300"><button type="button" onclick="boardDraft.img = null; document.getElementById('bdPhoto').innerHTML = boardPhotoInner()" class="text-xs text-red-500">사진 빼기</button>`
+                : `<button type="button" onclick="document.getElementById('bdFile').click()" class="px-3 py-1.5 rounded-lg border border-dashed border-slate-400 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">📷 사진 올리기 (선택)</button>`;
+        }
+        function boardMsg(m) { const el = document.getElementById('bdMsg'); if (el) el.textContent = m || ''; }
+        async function boardPost(b) {
+            const B = BOARDS[b], v = id => ((document.getElementById(id) || {}).value || '').trim();
+            if (!myTown) return;
+            const text = v('bdText');
+            const msg = Object.assign({ type: 'post', ts: Date.now(), uid: COMM_UID, text: text.slice(0, BOARD_TEXT_MAX) }, meFields());
+            if (B.place) {
+                msg.name = v('bdName').slice(0, 30); msg.place = v('bdPlace').slice(0, 40); msg.kind = v('bdKind') || '기타'; msg.rating = boardDraft.rating;
+                if (!msg.name) { boardMsg(B.nameLabel + '을 적어 주세요.'); return; }
+                if (!msg.rating) { boardMsg(B.ratingLabel + '을 별로 매겨 주세요.'); return; }
+                if (!text) { boardMsg('짧은 평가를 한 줄 적어 주세요.'); return; }
+            } else if (!text && !boardDraft.img) { boardMsg('인사말을 적어 주세요.'); return; }
+            if (text.length > BOARD_TEXT_MAX) { boardMsg(BOARD_TEXT_MAX + '자 이내로 짧게 적어 주세요.'); return; }
+            if (boardDraft.img) msg.img = boardDraft.img;
+            try {
+                const db = await commInit();
+                if (db) await boardCol(b).add(msg);
+                else { msg.id = 'b' + Date.now() + Math.random().toString(36).slice(2, 7); boardData[b].unshift(msg); boardLocalSave(b); }
+                boardDraft = { rating: 0, img: null };
+                boardUi[b].form = false;
+                if (B.place) boardUi[b].place = placeKey(msg.name);      // 올리면 그 가게(장소) 후기 모음으로 이동
+                renderBoardBody(b);
+                if (b === 'hello') renderCommTabBar();
+            } catch (e) { console.error(e); boardMsg('올리지 못했습니다. 잠시 후 다시 시도해 주세요.'); }
+        }
+        async function boardDelete(b, id) {
+            if (!myTown || !confirm('삭제할까요?')) return;
+            try {
+                const db = await commInit();
+                if (db) await boardCol(b).doc(id).delete();
+                else { boardData[b] = boardData[b].filter(m => m.id !== id && m.parent !== id); boardLocalSave(b); renderBoardBody(b); }
+            } catch (e) { console.error(e); }
+        }
+        async function helloWelcome(id) {
+            const m = boardData.hello.find(x => x.id === id);
+            if (!m || m.uid === COMM_UID) return;
+            const has = (m.welcome || []).includes(COMM_UID);
+            try {
+                const db = await commInit();
+                if (db) { const FV = firebase.firestore.FieldValue; await boardCol('hello').doc(id).update({ welcome: has ? FV.arrayRemove(COMM_UID) : FV.arrayUnion(COMM_UID) }); }
+                else { m.welcome = has ? (m.welcome || []).filter(u => u !== COMM_UID) : (m.welcome || []).concat(COMM_UID); boardLocalSave('hello'); renderBoardBody('hello'); }
+            } catch (e) { console.error(e); }
+        }
+        async function helloReply(id) {
+            const inp = document.getElementById('hr_' + id);
+            const text = ((inp && inp.value) || '').trim().slice(0, BOARD_REPLY_MAX);
+            if (!text || !myTown) return;
+            const msg = Object.assign({ type: 'reply', parent: id, text: text, ts: Date.now(), uid: COMM_UID }, meFields());
+            try {
+                const db = await commInit();
+                if (db) await boardCol('hello').add(msg);
+                else { msg.id = 'r' + Date.now() + Math.random().toString(36).slice(2, 7); boardData.hello.unshift(msg); boardLocalSave('hello'); renderBoardBody('hello'); }
+                boardOpen.add(id);
+            } catch (e) { console.error(e); }
+        }
+        function toggleHelloReplies(id) { if (boardOpen.has(id)) boardOpen.delete(id); else boardOpen.add(id); renderBoardBody('hello'); }
+
+        function renderBoard(b) {
+            const main = document.getElementById('commMain');
+            if (!main) return;
+            main.innerHTML = `<div id="boardScroll" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar"></div>`;
+            const s = document.getElementById('boardScroll'); if (s) s.style.background = commBg;
+            renderBoardBody(b);
+        }
+        // 글쓰기 상자 (맛집·명소: 상호명·위치·종류·별점·짧은 평가·사진 / 이사왔어요: 인사말·사진)
+        function boardFormHtml(b) {
+            const B = BOARDS[b], pre = boardDraft.preset || {};
+            const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400';
+            const names = B.place ? Array.from(new Set(boardPlaces(b).map(p => p.name))) : [];
+            return `<div class="rounded-2xl border-2 ${B.ring} bg-white dark:bg-slate-900 p-3 space-y-2 shadow-sm">
+                <div class="flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white">${B.icon} ${B.write}</b><button onclick="boardOpenForm('${b}', false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button></div>
+                ${B.place ? `
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="block text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300">${B.nameLabel} *<input id="bdName" list="bdNames" maxlength="30" value="${esc(pre.name || '')}" placeholder="${B.namePh}" class="${inp} mt-0.5"><datalist id="bdNames">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist></label>
+                    <label class="block text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300">위치<input id="bdPlace" maxlength="40" value="${esc(pre.place || '')}" placeholder="예) ○○역 2번 출구 앞" class="${inp} mt-0.5"></label>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <select id="bdKind" class="${inp} !w-auto py-1.5">${B.kinds.map(k => `<option ${pre.kind === k ? 'selected' : ''}>${k}</option>`).join('')}</select>
+                    <div id="bdStars" class="flex items-center">${starPickerInner()}</div>
+                </div>` : `<div class="text-xs text-slate-500" style="white-space:normal;">예) 지난주 ○○아파트로 이사 왔어요. 아이 둘 키우고 있고, 동네 산책 코스 추천 부탁드려요! (동·호수 같은 자세한 주소는 적지 마세요)</div>`}
+                <textarea id="bdText" rows="2" maxlength="${BOARD_TEXT_MAX}" placeholder="${B.place ? B.textPh : '안녕하세요! ○○동에 새로 이사 왔어요. 잘 부탁드립니다 🙂'}" class="${inp} resize-none leading-relaxed" oninput="document.getElementById('bdCount').textContent = this.value.length + ' / ${BOARD_TEXT_MAX}자'"></textarea>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <input id="bdFile" type="file" accept="image/*" class="hidden" onchange="boardPickFile(this)">
+                    <div id="bdPhoto" class="flex items-center gap-2">${boardPhotoInner()}</div>
+                    <span class="flex items-center gap-2"><span id="bdCount" class="text-[0.625rem] text-slate-400">0 / ${BOARD_TEXT_MAX}자</span>
+                    <button onclick="boardPost('${b}')" class="px-4 py-2 rounded-xl ${B.btn} text-white text-sm font-bold shadow">올리기</button></span>
+                </div>
+                <div id="bdMsg" class="text-[0.6875rem] text-red-500 font-bold"></div>
+            </div>`;
+        }
+        function renderBoardBody(b) {
+            const box = document.getElementById('boardScroll');
+            if (!box || commTab !== b) return;
+            const B = BOARDS[b], ui = boardUi[b];
+            const keepTop = box.scrollTop;
+            if (b === 'hello') { box.innerHTML = renderHelloHtml(); box.scrollTop = keepTop; return; }
+            // 가게(장소) 하나의 후기 모음
+            if (ui.place) {
+                const p = boardPlaces(b).find(x => x.key === ui.place);
+                if (!p) { ui.place = null; return renderBoardBody(b); }
+                const revs = p.reviews.slice().sort((a, c) => c.ts - a.ts);
+                box.innerHTML = `<div class="p-3 space-y-3">
+                    <button onclick="boardOpenPlace('${b}', null)" class="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white">← ${B.name} 목록으로</button>
+                    <div class="rounded-2xl border ${B.ring} bg-white dark:bg-slate-900 overflow-hidden shadow-sm">
+                        ${p.img ? `<img src="${p.img}" onclick="openMedia(this.src)" class="w-full max-h-56 object-cover cursor-zoom-in">` : ''}
+                        <div class="p-3 space-y-2">
+                            <div class="flex flex-wrap items-center gap-2"><h3 class="text-lg font-extrabold text-slate-900 dark:text-white">${B.icon} ${esc(p.name)}</h3>${p.kind ? `<span class="text-[0.6875rem] font-bold px-2 py-0.5 rounded-full ${B.chip}">${esc(p.kind)}</span>` : ''}</div>
+                            <div class="flex items-center gap-2">${starsHtml(p.avg, 'text-xl')}<b class="text-lg text-amber-600">${p.avg.toFixed(1)}</b><span class="text-xs text-slate-500">후기 ${p.reviews.length}개</span></div>
+                            ${p.place ? `<div class="text-sm text-slate-600 dark:text-slate-300">📍 ${esc(p.place)}</div>` : ''}
+                            <div class="flex flex-wrap gap-1.5">${mapLinks(p.name, p.place)}</div>
+                            <p class="text-[0.625rem] text-slate-400">영업시간·전화번호·메뉴 같은 자세한 정보는 지도 앱에서 확인할 수 있습니다.</p>
+                            <button onclick="boardOpenForm('${b}', true, { name: ${esc(JSON.stringify(p.name))}, place: ${esc(JSON.stringify(p.place))}, kind: ${esc(JSON.stringify(p.kind))} })" class="w-full py-2 rounded-xl ${B.btn} text-white text-sm font-bold">✍ 이 ${b === 'food' ? '가게' : '장소'} 후기 쓰기</button>
+                        </div>
+                    </div>
+                    ${ui.form ? boardFormHtml(b) : ''}
+                    <div class="space-y-2">${revs.map(m => `
+                        <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 space-y-1.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <button onclick="showProfile('${esc(m.uid)}')" class="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 min-w-0">${avatarHtml(m, 'w-6 h-6', 'text-xs')}<span class="truncate">${esc(displayName(m.uid, m.nick))}${m.uid === COMM_UID ? ' (나)' : ''}</span></button>
+                                <span class="flex items-center gap-1.5 shrink-0">${starsHtml(m.rating || 0, 'text-sm')}<span class="text-[0.625rem] text-slate-400">${timeAgo(m.ts)}</span></span>
+                            </div>
+                            ${m.text ? `<p class="text-sm text-slate-800 dark:text-slate-100 break-words" style="white-space: pre-line;">${esc(m.text)}</p>` : ''}
+                            ${m.img && IMG_DATA_RE.test(m.img) ? `<img src="${m.img}" onclick="openMedia(this.src)" class="rounded-lg max-h-48 cursor-zoom-in">` : ''}
+                            ${m.uid === COMM_UID ? `<button onclick="boardDelete('${b}', '${esc(m.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}
+                        </div>`).join('')}</div>
+                </div>`;
+                if (!ui.form) box.scrollTop = keepTop;
+                return;
+            }
+            // 목록 화면
+            const chip = (k, label, on, fn) => `<button onclick="${fn}" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold whitespace-nowrap border ${on ? B.btn.split(' ')[0] + ' text-white border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
+            box.innerHTML = `<div class="p-3 space-y-2.5">
+                <div class="flex items-center gap-2">
+                    <input id="bdSearch" value="${esc(ui.q)}" oninput="boardSet('${b}', 'q', this.value)" placeholder="🔎 ${B.nameLabel}·위치로 찾기" class="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400">
+                    <button onclick="boardOpenForm('${b}', ${!ui.form})" class="shrink-0 px-3 py-1.5 rounded-lg ${B.btn} text-white text-xs font-bold shadow">${ui.form ? '✕ 닫기' : '✍ ' + B.write}</button>
+                </div>
+                ${ui.form ? boardFormHtml(b) : ''}
+                <div class="hscroll gap-1">${chip('', '⭐ 별점순', ui.sort === 'rating', `boardSet('${b}', 'sort', 'rating')`)}${chip('', '💬 후기 많은 순', ui.sort === 'count', `boardSet('${b}', 'sort', 'count')`)}${chip('', '🕒 최신순', ui.sort === 'recent', `boardSet('${b}', 'sort', 'recent')`)}
+                    <span class="mx-1 border-l border-slate-300 dark:border-slate-600"></span>${['전체'].concat(B.kinds).map(k => chip('', k, ui.kind === k, `boardSet('${b}', 'kind', '${k}')`)).join('')}</div>
+                <div id="boardList" class="grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));"></div>
+            </div>`;
+            renderBoardList(b);
+            box.scrollTop = ui.form ? 0 : keepTop;
+        }
+        function renderBoardList(b) {
+            const el = document.getElementById('boardList');
+            if (!el) return;
+            const B = BOARDS[b], ui = boardUi[b], q = placeKey(ui.q);
+            let list = boardPlaces(b).filter(p => (ui.kind === '전체' || p.kind === ui.kind) && (!q || placeKey(p.name + p.place).includes(q)));
+            list.sort(ui.sort === 'recent' ? (x, y) => y.last - x.last : ui.sort === 'count' ? (x, y) => (y.reviews.length - x.reviews.length) || (y.avg - x.avg)
+                : (x, y) => (y.avg - x.avg) || (y.reviews.length - x.reviews.length));
+            el.innerHTML = list.length ? list.map(p => {
+                const latest = p.reviews.slice().sort((a, c) => c.ts - a.ts)[0];
+                return `<div class="rounded-xl border ${B.ring} bg-white dark:bg-slate-900 overflow-hidden shadow-sm flex">
+                    ${p.img ? `<img src="${p.img}" onclick="boardOpenPlace('${b}', '${esc(p.key)}')" class="w-24 h-auto min-h-[6rem] object-cover shrink-0 cursor-pointer">` : `<button onclick="boardOpenPlace('${b}', '${esc(p.key)}')" class="w-16 shrink-0 flex items-center justify-center text-3xl bg-slate-50 dark:bg-slate-800">${B.icon}</button>`}
+                    <div class="p-2.5 min-w-0 flex-1 space-y-1">
+                        <button onclick="boardOpenPlace('${b}', '${esc(p.key)}')" title="눌러서 후기 모음·지도 보기" class="block max-w-full text-left text-sm font-extrabold text-slate-900 dark:text-white hover:underline truncate">${esc(p.name)}</button>
+                        <div class="flex items-center gap-1">${starsHtml(p.avg, 'text-xs')}<b class="text-xs text-amber-600">${p.avg.toFixed(1)}</b><span class="text-[0.625rem] text-slate-500">(${p.reviews.length})</span>${p.kind ? `<span class="ml-auto text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full ${B.chip} whitespace-nowrap">${esc(p.kind)}</span>` : ''}</div>
+                        ${p.place ? `<div class="text-[0.6875rem] text-slate-500 truncate">📍 ${esc(p.place)}</div>` : ''}
+                        ${latest && latest.text ? `<div class="text-[0.6875rem] text-slate-700 dark:text-slate-300 line-clamp-2" style="white-space: normal;">“${esc(latest.text)}”</div>` : ''}
+                    </div>
+                </div>`;
+            }).join('') : `<div class="col-span-full text-center py-14 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${boardPlaces(b).length ? '조건에 맞는 곳이 없습니다.' : `아직 등록된 ${b === 'food' ? '맛집' : '명소'}이 없습니다.<br>[${B.write}]를 눌러 첫 ${b === 'food' ? '후기' : '추천'}를 남겨 보세요.`}</div>`;
+        }
+        function renderHelloHtml() {
+            const B = BOARDS.hello, ui = boardUi.hello;
+            const all = boardData.hello.filter(m => !isBlocked(m.uid));
+            const posts = all.filter(m => m.type !== 'reply').sort((a, c) => c.ts - a.ts);
+            const reps = {}; all.filter(m => m.type === 'reply').forEach(r => { (reps[r.parent] = reps[r.parent] || []).push(r); });
+            const seen = Number(lsGet('hello_seen_prev')) || 0;
+            return `<div class="p-3 space-y-3">
+                <div class="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 text-white p-4 flex items-center gap-3 shadow">
+                    <div class="text-4xl">🏡</div>
+                    <div class="flex-1 min-w-0" style="white-space: normal;"><div class="font-extrabold">${esc(myTown ? myTown.dong : '우리 동네')}에 새로 오신 걸 환영해요!</div><div class="text-xs opacity-90">이사 왔다면 이웃에게 인사를 남겨 보세요. 먼저 살던 이웃은 👋 환영해요로 반겨 주세요.</div></div>
+                    ${ui.form ? '' : `<button onclick="boardOpenForm('hello', true)" class="shrink-0 px-3 py-2 rounded-xl bg-white text-sky-700 text-xs font-extrabold shadow">👋 인사 남기기</button>`}
+                </div>
+                ${ui.form ? boardFormHtml('hello') : ''}
+                ${posts.length ? posts.map(p => {
+                    const mine = p.uid === COMM_UID, rs = (reps[p.id] || []).sort((a, c) => a.ts - c.ts), open = boardOpen.has(p.id);
+                    const w = (p.welcome || []).length, iw = (p.welcome || []).includes(COMM_UID);
+                    return `<article class="rounded-2xl border ${B.ring} bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+                        <div class="p-3 flex gap-3">
+                            <button onclick="showProfile('${esc(p.uid)}')" class="shrink-0 self-start">${avatarHtml(p, 'w-11 h-11', 'text-2xl')}</button>
+                            <div class="min-w-0 flex-1 space-y-1">
+                                <div class="flex items-center justify-between gap-2"><span class="text-sm font-extrabold text-slate-900 dark:text-white truncate">👋 ${esc(displayName(p.uid, p.nick))}${mine ? ' (나)' : ''}님이 이사 왔어요</span><span class="text-[0.625rem] text-slate-400 shrink-0">${timeAgo(p.ts)}</span></div>
+                                ${p.text ? `<p class="text-sm text-slate-800 dark:text-slate-100 break-words" style="white-space: pre-line;">${esc(p.text)}</p>` : ''}
+                                ${p.img && IMG_DATA_RE.test(p.img) ? `<img src="${p.img}" onclick="openMedia(this.src)" class="rounded-lg max-h-48 cursor-zoom-in">` : ''}
+                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                    <button onclick="helloWelcome('${esc(p.id)}')" ${mine ? 'disabled title="내 글에는 누를 수 없어요"' : ''} class="px-3 py-1 rounded-full text-xs font-bold border ${iw ? 'bg-sky-600 text-white border-sky-700' : 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800'} ${mine ? 'opacity-60 cursor-default' : ''}">👋 환영해요${w ? ' ' + w : ''}</button>
+                                    <button onclick="toggleHelloReplies('${esc(p.id)}')" class="px-2.5 py-1 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">💬 댓글 ${rs.length}</button>
+                                    ${mine ? `<button onclick="boardDelete('hello', '${esc(p.id)}')" class="ml-auto text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        ${open ? `<div class="border-t border-sky-100 dark:border-sky-900/60 bg-sky-50/60 dark:bg-sky-950/20 px-3 py-2 space-y-1.5">
+                            ${rs.map(r => `<div class="flex items-start gap-1.5 text-xs"><button onclick="showProfile('${esc(r.uid)}')" class="shrink-0">${avatarHtml(r, 'w-5 h-5', 'text-[0.625rem]')}</button><div class="min-w-0 flex-1"><b class="text-slate-700 dark:text-slate-200">${esc(displayName(r.uid, r.nick))}</b> <span class="text-slate-700 dark:text-slate-200 break-words">${esc(r.text)}</span><span class="text-[0.625rem] text-slate-400"> · ${timeAgo(r.ts)}</span>${r.uid === COMM_UID ? ` <button onclick="boardDelete('hello', '${esc(r.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}</div></div>`).join('') || '<div class="text-[0.6875rem] text-slate-400">첫 환영 댓글을 남겨 보세요.</div>'}
+                            <div class="flex gap-1.5"><input id="hr_${esc(p.id)}" maxlength="${BOARD_REPLY_MAX}" onkeydown="if (event.key === 'Enter' && !event.isComposing) helloReply('${esc(p.id)}')" placeholder="예) 반가워요! 앞으로 잘 지내요 🙂" class="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"><button onclick="helloReply('${esc(p.id)}')" class="px-3 rounded-lg ${B.btn} text-white text-xs font-bold">댓글</button></div>
+                        </div>` : ''}
+                    </article>`;
+                }).join('') : '<div class="text-center py-12 text-xs text-slate-400">아직 이사 인사가 없습니다. 새로 오셨다면 첫 인사를 남겨 보세요!</div>'}
+            </div>`;
         }
 
         // ---- 커뮤니티 탭 순서 (끌어다 놓아서 바꾸기, 저장됨) ----
@@ -5552,8 +5958,8 @@
         function pressFromComposer() {
             const v = id => ((document.getElementById(id) || {}).value || '').trim();
             const text = v('commText');
-            const d = text ? { kind: commType === 'sos' ? 'SOS(긴급)' : (v('commKind') || '기타'), place: v('commPlace'), text: text, ts: Date.now(), hasMedia: !!commAttach }
-                : (lastMyReport || { kind: v('commKind') || '사건·사고', place: v('commPlace'), text: '', ts: Date.now() });
+            const d = text ? { kind: commType === 'sos' ? 'SOS(긴급)' : guessReportKind(text), place: '', text: text, ts: Date.now(), hasMedia: !!commAttach }
+                : (lastMyReport || { kind: '사건·사고', place: '', text: '', ts: Date.now() });
             showReportGuide(d);
         }
         function showReportGuide(pressDraftIn) {
