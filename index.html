@@ -515,6 +515,7 @@
             renderCategoryBar();
             loadIncidentsFromJSON().then(initAlerts);
             setInterval(() => loadIncidentsFromJSON(false), 120000);   // 2분마다 새 기사 확인
+            setInterval(dateTick, 30000);   // 자정이 지나면 날짜 표시를 자동으로 넘김
             initCommunity();
 
             // 가운데 창 크기가 바뀌면 기사 원문 크기도 다시 맞춤
@@ -640,6 +641,12 @@
         const ARTICLE_BASE_WIDTH = 1100;   // 기사 원문을 이 폭(px) 기준으로 그린 뒤 가운데 창 폭에 맞게 축소
         let localReports = [];        // 이 화면에서 직접 등록한 제보
         let lastSig = '';
+        let dateFollowToday = true;   // 날짜를 직접 고르지 않았으면 항상 '오늘'을 따라감
+        let hotspotArticleOpen = false;   // 다발 지역 화면에서 기사를 보고 있는 중인지
+        const expandedEvents = new Set();  // '관련 기사'를 펼친 사건
+        const READ_WIDTH = 820;            // 기사 원문을 가운데에 놓을 때의 폭(px)
+        let articleWide = false;           // true: 넓게 보기(PC 화면 그대로) / false: 가운데 좁게 보기
+        try { articleWide = localStorage.getItem('article_wide') === '1'; } catch (e) {}
 
         // ================= 공통 도우미 =================
         function esc(s) {
@@ -656,6 +663,24 @@
         }
         function getCategoryBadgeClass(news) {
             return CATEGORY_GROUPS[groupOf(news)].badge;
+        }
+        // 같은 사건을 다룬 기사는 scraper.py 가 같은 사건번호(event)를 붙여 줍니다.
+        function evOf(n) { return n.event || n.id; }
+        // 기사 목록 → 사건 목록 [{ lead: 대표(가장 최근) 기사, items: 그 사건의 기사들 }]
+        function groupEvents(list) {
+            const map = new Map();
+            list.forEach(n => {
+                const k = evOf(n);
+                if (!map.has(k)) map.set(k, { key: k, lead: n, items: [] });
+                map.get(k).items.push(n);
+            });
+            return Array.from(map.values());
+        }
+        function todayKey() { return dateKey(Date.now() / 1000); }
+        function sigunguOf(loc) {
+            const w = (loc || '').split(' ');
+            if (w.length >= 3 && w[1].endsWith('시') && w[2].endsWith('구')) return w.slice(0, 3).join(' ');
+            return w.slice(0, 2).join(' ');
         }
         function hasCoords(n) { return Number.isFinite(n.lat) && Number.isFinite(n.lng); }
 
@@ -718,10 +743,7 @@
                 changed = true;
             }
             if (!changed && !isManualRefresh) return;   // 새 기사가 없으면 화면을 건드리지 않음
-            if (!selectedDate) {
-                const newest = newsData.find(n => n.timestamp && inLast7(n));
-                selectedDate = newest ? dateKey(newest.timestamp) : dateKey(Date.now() / 1000);
-            }
+            if (!selectedDate) { selectedDate = todayKey(); dateFollowToday = true; }
 
             renderCategoryBar();
             renderNewsList();
@@ -729,7 +751,7 @@
             const filtered = getFilteredNews();
             const stillThere = filtered.some(n => n.id === selectedNewsId);
             if (currentCategory === '범죄 다발 지역') {
-                renderCrimeHotspotsView();
+                if (!hotspotArticleOpen) renderCrimeHotspotsView();
             } else if ((isManualRefresh || !selectedNewsId || !stillThere) && filtered.length > 0) {
                 selectedNewsId = filtered[0].id;
                 renderNewsList();
@@ -766,10 +788,12 @@
                 return;
             }
 
-            getFilteredNews().filter(hasCoords).slice(0, 800).forEach(news => {
-                const g = groupOf(news);
+            groupEvents(getFilteredNews()).slice(0, 800).forEach(ev => {
+                const news = ev.items.find(hasCoords);
+                if (!news) return;
+                const g = groupOf(ev.lead);
                 const color = CATEGORY_GROUPS[g].color;
-                const selected = news.id === selectedNewsId;
+                const selected = ev.items.some(n => n.id === selectedNewsId);
                 const size = selected ? 20 : 14;
                 const icon = L.divIcon({
                     className: 'custom-icon',
@@ -779,19 +803,19 @@
                 const marker = L.marker([news.lat, news.lng], { icon, zIndexOffset: selected ? 1000 : 0 });
                 marker.bindPopup(`
                     <div style="font-family: sans-serif; max-width: 220px;">
-                        <span style="font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight:bold;">${esc(news.category)}</span>
-                        <h4 style="font-size: 12px; font-weight: bold; margin: 5px 0;">${esc(news.title)}</h4>
-                        <p style="font-size: 11px; color: #475569; margin: 0;"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}</p>
+                        <span style="font-size: 10px; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-weight:bold;">${esc(ev.lead.category)}</span>
+                        <h4 style="font-size: 12px; font-weight: bold; margin: 5px 0;">${esc(ev.lead.title)}</h4>
+                        <p style="font-size: 11px; color: #475569; margin: 0;"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}${ev.items.length > 1 ? ' · 관련 기사 ' + ev.items.length + '개' : ''}</p>
                     </div>
                 `);
-                marker.on('click', () => selectNews(news.id));
+                marker.on('click', () => selectNews(ev.lead.id));
                 markersLayer.addLayer(marker);
             });
         }
 
         // ================= 중앙 상단: 카테고리 버튼 =================
         function renderCategoryBar() {
-            const base = getFilteredNews(true);
+            const base = groupEvents(getFilteredNews(true)).map(ev => ev.lead);   // 사건 1건 = 1개로 셈
             const gCount = {}, sCount = {};
             base.forEach(n => {
                 const g = groupOf(n);
@@ -828,17 +852,28 @@
             const btn = document.getElementById('dateButton');
             const menu = document.getElementById('dateMenu');
             if (!btn || !menu) return;
-            const days = last7Days();
+            const days = last7Days();            // 항상 '지금' 기준으로 오늘 포함 7일
             const cur = days.find(d => d.key === selectedDate);
             btn.innerHTML = `<i class="fa-regular fa-calendar"></i> ${cur ? dateLabel(cur.ts) : '최근 7일 전체'} <i class="fa-solid fa-caret-down"></i>`;
 
-            const counts = {};
-            const base = getFilteredNews(false, true);
-            base.forEach(n => { const k = dateKey(n.timestamp || Date.now() / 1000); counts[k] = (counts[k] || 0) + 1; });
+            const perDay = {}, all = new Set();
+            getFilteredNews(false, true).forEach(n => {
+                const k = dateKey(n.timestamp || Date.now() / 1000);
+                (perDay[k] = perDay[k] || new Set()).add(evOf(n));
+                all.add(evOf(n));
+            });
             const row = (key, label, n, on) => `<button onclick="setDate('${key}')" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition ${on ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}"><span>${label}</span><span class="font-mono opacity-70">${n}건</span></button>`;
-            menu.innerHTML = days.map(d => row(d.key, dateLabel(d.ts), counts[d.key] || 0, d.key === selectedDate)).join('')
+            menu.innerHTML = days.map(d => row(d.key, dateLabel(d.ts), perDay[d.key] ? perDay[d.key].size : 0, d.key === selectedDate)).join('')
                 + '<div class="my-1 border-t border-slate-200 dark:border-slate-700"></div>'
-                + row('all', '최근 7일 전체', base.length, selectedDate === 'all');
+                + row('all', '최근 7일 전체', all.size, selectedDate === 'all');
+        }
+
+        // 30초마다: 자정이 지나 날짜가 바뀌었으면 날짜 표시를 새 날짜로 넘김
+        function dateTick() {
+            const today = todayKey();
+            if (selectedDate !== 'all' && !last7Days().some(d => d.key === selectedDate)) { selectedDate = today; dateFollowToday = true; refreshAll(); return; }
+            if (dateFollowToday && selectedDate !== today) { selectedDate = today; refreshAll(); return; }
+            renderDateBar();
         }
 
         function toggleDateMenu(show) {
@@ -850,6 +885,7 @@
 
         function setDate(key) {
             selectedDate = key;
+            dateFollowToday = (key === todayKey());
             renderLimit = 100;
             toggleDateMenu(false);
             const list = document.getElementById('newsListContainer');
@@ -869,50 +905,73 @@
             renderCategoryBar();
             renderNewsList();
             updateMapMarkers();
-            if (currentCategory === '범죄 다발 지역') { renderCrimeHotspotsView(); return; }
+            if (currentCategory === '범죄 다발 지역') { if (!hotspotArticleOpen) renderCrimeHotspotsView(); return; }
             const f = getFilteredNews();
             if (f.length > 0) selectNews(f[0].id, true);
             else setDetailHTML('<div class="text-center py-20 text-slate-400 text-xs">조건에 맞는 기사가 없습니다.</div>');
         }
 
-        // ================= 왼쪽: 기사 목록 =================
+        // ================= 왼쪽: 사건 목록 (같은 사건 기사는 1건으로 묶음) =================
         function showMoreNews() { renderLimit += 100; renderNewsList(); }
+        function toggleEvent(key) {
+            if (expandedEvents.has(key)) expandedEvents.delete(key); else expandedEvents.add(key);
+            renderNewsList();
+        }
 
         function renderNewsList() {
             const container = document.getElementById('newsListContainer');
             const prevScroll = container.scrollTop;
             const filtered = getFilteredNews();
-            document.getElementById('listCount').textContent = '총 ' + filtered.length + '건';
+            const events = groupEvents(filtered);
+            document.getElementById('listCount').textContent = '사건 ' + events.length + '건' + (filtered.length > events.length ? ' · 기사 ' + filtered.length + '개' : '');
             container.innerHTML = '';
 
-            if (filtered.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-xs text-slate-500">선택한 날짜/지역/카테고리에 해당하는 사건이 없습니다.</div>`;
+            // 다발 지역에서 지역을 고른 상태: 맨 위에 어느 지역인지와 돌아가기 버튼
+            if (currentCategory === '범죄 다발 지역' && selectedHotspotRegion) {
+                const bar = document.createElement('div');
+                bar.className = 'sticky top-0 z-20 -mx-3 -mt-3 px-3 py-2 bg-rose-600 text-white text-xs font-bold flex items-center justify-between gap-2';
+                bar.innerHTML = `<span class="truncate">🚨 ${esc(selectedHotspotRegion)} · 최근 7일</span><button class="shrink-0 px-2 py-0.5 rounded bg-white/20 hover:bg-white/30">← 다발 지역 순위</button>`;
+                bar.querySelector ? (bar.querySelector('button').onclick = backToHotspots) : (bar.onclick = backToHotspots);
+                container.appendChild(bar);
+            }
+
+            if (events.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'text-center py-10 text-xs text-slate-500 space-y-3';
+                const isToday = selectedDate === todayKey();
+                empty.innerHTML = `<div>${isToday ? '오늘은 아직 조건에 맞는 사건이 없습니다.' : '선택한 날짜/지역/카테고리에 해당하는 사건이 없습니다.'}</div>`
+                    + (isToday ? '<button onclick="stepDate(1)" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold">← 어제 사건 보기</button>' : '');
+                container.appendChild(empty);
                 return;
             }
 
+            const showHeaders = selectedDate === 'all' || (currentCategory === '범죄 다발 지역' && !!selectedHotspotRegion);
             const perDay = {};
-            filtered.forEach(n => { const k = dateKey(n.timestamp || Date.now() / 1000); perDay[k] = (perDay[k] || 0) + 1; });
+            events.forEach(ev => { const k = dateKey(ev.lead.timestamp || Date.now() / 1000); perDay[k] = (perDay[k] || 0) + 1; });
 
             let lastKey = null;
-            filtered.slice(0, renderLimit).forEach(news => {
+            events.slice(0, renderLimit).forEach(ev => {
+                const news = ev.lead;
                 const ts = news.timestamp || Date.now() / 1000;
                 const k = dateKey(ts);
-                if (selectedDate === 'all' && k !== lastKey) {
+                if (showHeaders && k !== lastKey) {
                     lastKey = k;
                     const h = document.createElement('div');
-                    h.className = 'sticky top-0 z-10 -mx-3 px-3 py-1 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-y border-slate-200 dark:border-slate-700 flex justify-between cursor-pointer hover:text-red-500';
-                    h.title = '누르면 이 날짜만 봅니다';
-                    h.innerHTML = `<span>${dateLabel(ts)}</span><span class="font-mono text-slate-400">${perDay[k]}건 ›</span>`;
-                    h.onclick = () => setDate(k);
+                    h.className = 'sticky top-0 z-10 -mx-3 px-3 py-1 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-y border-slate-200 dark:border-slate-700 flex justify-between';
+                    h.innerHTML = `<span>${dateLabel(ts)}</span><span class="font-mono text-slate-400">${perDay[k]}건</span>`;
                     container.appendChild(h);
                 }
 
-                const isSelected = news.id === selectedNewsId && currentCategory !== '범죄 다발 지역';
+                const hasSelected = ev.items.some(n => n.id === selectedNewsId);
+                const open = expandedEvents.has(ev.key);
                 const badgeClass = getCategoryBadgeClass(news);
                 const card = document.createElement('div');
-                card.className = `p-3 rounded-xl border transition cursor-pointer text-left ${isSelected ? 'bg-slate-100 dark:bg-slate-800/90 border-red-500/60 shadow-md' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600'}`;
-                card.onclick = () => selectNews(news.id);
-                card.innerHTML = `
+                card.className = `rounded-xl border transition text-left overflow-hidden ${hasSelected ? 'bg-slate-100 dark:bg-slate-800/90 border-red-500/60 shadow-md' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600'}`;
+
+                const main = document.createElement('div');
+                main.className = 'p-3 cursor-pointer';
+                main.onclick = () => selectNews(news.id);
+                main.innerHTML = `
                     <div class="flex items-center justify-between mb-1.5 gap-1">
                         <span class="text-[0.625rem] px-2 py-0.5 rounded border ${badgeClass} font-bold shrink-0">${esc(news.category)}</span>
                         <span class="text-[0.625rem] text-slate-500 truncate">${esc(news.time)}</span>
@@ -922,40 +981,55 @@
                     <div class="flex items-center justify-between gap-2 text-[0.625rem] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
                         <span class="truncate"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}</span>
                         <span class="font-medium shrink-0">${esc(news.source)}</span>
-                    </div>
-                `;
+                    </div>`;
+                card.appendChild(main);
+
+                if (ev.items.length > 1) {
+                    const tog = document.createElement('button');
+                    tog.className = 'w-full px-3 py-1.5 text-[0.6875rem] font-bold text-blue-600 dark:text-blue-400 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800';
+                    tog.innerHTML = `<span><i class="fa-regular fa-newspaper"></i> 같은 사건 관련 기사 ${ev.items.length}개</span><span>${open ? '접기 ▲' : '펼치기 ▼'}</span>`;
+                    tog.onclick = () => toggleEvent(ev.key);
+                    card.appendChild(tog);
+                    if (open) {
+                        ev.items.forEach(n => {
+                            const row = document.createElement('div');
+                            row.className = `px-3 py-1.5 text-[0.6875rem] cursor-pointer border-t border-slate-100 dark:border-slate-800 ${n.id === selectedNewsId ? 'bg-red-50 dark:bg-red-950/30 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`;
+                            row.onclick = () => selectNews(n.id);
+                            row.innerHTML = `<div class="text-slate-800 dark:text-slate-100 line-clamp-2">${esc(n.title)}</div><div class="text-[0.625rem] text-slate-500">${esc(n.source)} · ${esc(n.time)}</div>`;
+                            card.appendChild(row);
+                        });
+                    }
+                }
                 container.appendChild(card);
             });
 
-            if (filtered.length > renderLimit) {
+            if (events.length > renderLimit) {
                 const more = document.createElement('button');
                 more.className = 'w-full py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-slate-100 dark:bg-slate-800 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700';
-                more.textContent = `더 보기 (${renderLimit} / ${filtered.length}건)`;
+                more.textContent = `더 보기 (${renderLimit} / ${events.length}건)`;
                 more.onclick = showMoreNews;
                 container.appendChild(more);
             }
             container.scrollTop = prevScroll;
         }
 
-        // ================= 다발 지역 =================
+        // ================= 다발 지역 (사건 수 기준, 같은 사건의 기사 여러 개는 1건) =================
         function getCrimeHotspotsData() {
-            const counts = {}, coordsMap = {};
+            const stats = {};
             newsData.filter(n => inLast7(n) && hasCoords(n) && groupOf(n) !== '해외·안보' && (n.location || '').includes(' ') && !(n.location || '').includes('세부 위치 미상')).forEach(news => {
-                const loc = news.location;
-                if (!counts[loc]) { counts[loc] = 0; coordsMap[loc] = { lat: news.lat, lng: news.lng }; }
-                counts[loc]++;
+                const reg = sigunguOf(news.location);
+                if (!stats[reg]) stats[reg] = { region: reg, events: new Set(), articles: 0, lat: news.lat, lng: news.lng };
+                stats[reg].events.add(evOf(news));
+                stats[reg].articles++;
             });
-
-            let sorted = Object.keys(counts).map(reg => ({
-                region: reg, count: counts[reg], lat: coordsMap[reg].lat, lng: coordsMap[reg].lng
-            })).sort((a, b) => b.count - a.count).slice(0, 30);
-            return sorted;
+            return Object.values(stats).map(s => ({ region: s.region, count: s.events.size, articles: s.articles, lat: s.lat, lng: s.lng }))
+                .sort((a, b) => (b.count - a.count) || (b.articles - a.articles)).slice(0, 30);
         }
 
         function renderCrimeHotspotsView() {
+            hotspotArticleOpen = false;
             const container = document.getElementById('detailViewContainer');
             let listHTML = '';
-            const periodText = '최근 7일간';
             getCrimeHotspotsData().forEach((item, index) => {
                 let isSelected = selectedHotspotRegion === item.region;
                 listHTML += `
@@ -964,10 +1038,10 @@
                             <span class="w-7 h-7 rounded-full bg-rose-600 text-white flex items-center justify-center text-xs font-extrabold shrink-0">${index + 1}</span>
                             <div>
                                 <h4 class="text-sm font-bold text-slate-900 dark:text-white">${esc(item.region)}</h4>
-                                <p class="text-xs text-slate-500">클릭 시 해당 지역 기사 리스트업</p>
+                                <p class="text-xs text-slate-500">관련 기사 ${item.articles}개 · 누르면 왼쪽에 사건 목록이 나옵니다</p>
                             </div>
                         </div>
-                        <span class="text-base font-extrabold text-red-500">${item.count}건</span>
+                        <span class="text-base font-extrabold text-red-500 shrink-0">사건 ${item.count}건</span>
                     </div>
                 `;
             });
@@ -976,8 +1050,8 @@
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/25">
-                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 ${periodText} 전국 사건사고 다발 지역</h2>
-                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">지역을 누르면 왼쪽 리스트에 해당 지역의 사건들이 정렬됩니다.</p>
+                        <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 전국 사건사고 다발 지역</h2>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">같은 사건을 다룬 기사 여러 개는 사건 1건으로 셉니다. 지역을 누르면 왼쪽에 그 지역 사건이 정리됩니다.</p>
                     </div>
                     <div class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
                 </div>
@@ -986,12 +1060,19 @@
 
         function selectHotspotRegion(region, lat, lng) {
             selectedHotspotRegion = region;
+            renderLimit = 100;
             renderCrimeHotspotsView();
             renderNewsList();
-            if (map) map.flyTo([lat, lng], 14, { duration: 1.2 });
+            const list = document.getElementById('newsListContainer');
+            if (list) list.scrollTop = 0;
+            if (map) map.flyTo([lat, lng], 12, { duration: 1.2 });
+        }
+        function backToHotspots() {
+            renderCrimeHotspotsView();
+            renderNewsList();
         }
 
-        // ================= 가운데: 기사 상세 (원문 직접 표시) =================
+        // ================= 가운데: 기사 원문 (가운데 정렬, 양옆 여백) =================
         function setDetailHTML(html) {
             const container = document.getElementById('detailViewContainer');
             container.style.padding = '';
@@ -1010,17 +1091,18 @@
             const isGoogle = /news\.google\.com/.test(link);
 
             if (link && !isGoogle) {
-                // 기사 원문만 가운데 창에 꽉 차게 표시
                 const embedUrl = link.replace(/^http:\/\//, 'https://');   // https 사이트 안에서는 http 페이지를 열 수 없어서 https로 시도
+                const fab = 'inline-flex items-center gap-1 text-[0.6875rem] font-bold text-white bg-slate-900/80 hover:bg-blue-600 px-2.5 py-1.5 rounded-full shadow-lg';
                 container.style.padding = '0';
                 container.innerHTML = `
-                    <div id="articleWrap" style="position:relative; flex:1 1 auto; min-height:0; overflow:hidden; background:#fff;">
+                    <div id="articleWrap" class="bg-slate-200 dark:bg-slate-950" style="position:relative; flex:1 1 auto; min-height:0; overflow:hidden;">
                         <iframe id="articleFrame" src="${esc(embedUrl)}" referrerpolicy="no-referrer"
                             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                            style="position:absolute; top:0; left:0; border:0; transform-origin:0 0;"></iframe>
-                        <a href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="기사가 보이지 않으면 눌러서 새 창으로 여세요"
-                            style="position:absolute; right:14px; bottom:14px; z-index:5; opacity:.85;"
-                            class="inline-flex items-center gap-1 text-[0.6875rem] font-bold text-white bg-slate-900/80 hover:bg-blue-600 px-2.5 py-1.5 rounded-full shadow-lg"><i class="fa-solid fa-arrow-up-right-from-square"></i> 새 창</a>
+                            style="position:absolute; top:0; left:0; border:0; background:#fff; transform-origin:0 0; box-shadow:0 0 24px rgba(0,0,0,.25);"></iframe>
+                        <div style="position:absolute; right:14px; bottom:14px; z-index:5; opacity:.9;" class="flex items-center gap-1.5">
+                            <button onclick="toggleArticleWide()" title="기사 폭 바꾸기" class="${fab}"><i class="fa-solid fa-arrows-left-right"></i> ${articleWide ? '가운데로 좁게' : '넓게 보기'}</button>
+                            <a href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="기사가 보이지 않으면 눌러서 새 창으로 여세요" class="${fab}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 새 창</a>
+                        </div>
                     </div>`;
                 fitArticleFrame();
                 return;
@@ -1038,7 +1120,15 @@
                 </div>`);
         }
 
-        // 기사 원문을 가운데 창 폭에 맞게 축소/확대 (창 크기나 글씨 크기가 바뀔 때마다 다시 계산)
+        function toggleArticleWide() {
+            articleWide = !articleWide;
+            try { localStorage.setItem('article_wide', articleWide ? '1' : '0'); } catch (e) {}
+            if (selectedNewsId) renderDetailView(selectedNewsId);
+        }
+
+        // 기사 원문 배치. 기본은 '가운데 좁게': 기사를 가운데에 두고 양옆에 여백을 줍니다.
+        // 좁은 폭으로 열면 대부분의 언론사 페이지가 모바일형으로 바뀌어 양옆 광고·랭킹 뉴스가 빠집니다.
+        // (다른 사이트 페이지의 내용 자체를 지우는 것은 브라우저 보안상 불가능합니다)
         function fitArticleFrame() {
             const wrap = document.getElementById('articleWrap');
             const frame = document.getElementById('articleFrame');
@@ -1046,8 +1136,16 @@
             const w = wrap.clientWidth, h = wrap.clientHeight;
             if (!w || !h) return;
             const fontFactor = currentFontSizePx / 16;
-            const virtualWidth = Math.max(w, ARTICLE_BASE_WIDTH) / fontFactor;
-            const scale = w / virtualWidth;
+            let shown, virtualWidth;
+            if (articleWide) {
+                shown = Math.max(200, w - 32);
+                virtualWidth = Math.max(shown, ARTICLE_BASE_WIDTH) / fontFactor;
+            } else {
+                shown = Math.max(200, Math.min(READ_WIDTH, w - 48));
+                virtualWidth = Math.max(shown, 360) / fontFactor;
+            }
+            const scale = shown / virtualWidth;
+            frame.style.left = Math.round((w - shown) / 2) + 'px';
             frame.style.width = virtualWidth + 'px';
             frame.style.height = (h / scale) + 'px';
             frame.style.transform = 'scale(' + scale + ')';
@@ -1055,10 +1153,19 @@
 
         function selectNews(id, silent) {
             selectedNewsId = id;
-            if (currentCategory === '범죄 다발 지역') { currentCategory = 'all'; currentSub = null; selectedHotspotRegion = null; renderCategoryBar(); updateMapMarkers(); }
+            const news = newsData.find(n => n.id === id);
+            if (currentCategory === '범죄 다발 지역') {
+                if (selectedHotspotRegion) {
+                    // 다발 지역에서 고른 지역의 기사: 목록은 그대로 두고 가운데에 기사만 엶
+                    hotspotArticleOpen = true;
+                } else {
+                    currentCategory = 'all'; currentSub = null;
+                    renderCategoryBar();
+                }
+                updateMapMarkers();
+            }
             renderNewsList();
             renderDetailView(id);
-            const news = newsData.find(n => n.id === id);
             if (news && map && hasCoords(news)) {
                 map.flyTo([news.lat, news.lng], silent ? Math.min(map.getZoom(), 11) : 14, { duration: 1.2 });
             }
@@ -1069,6 +1176,7 @@
             currentCategory = cat;
             currentSub = null;
             selectedHotspotRegion = null;
+            hotspotArticleOpen = false;
             renderLimit = 100;
             renderCategoryBar();
             updateMapMarkers();
@@ -1143,6 +1251,7 @@
         })();
         let alertSeenIds = null;      // 이미 본 기사 번호 (처음 불러올 때는 알림을 띄우지 않음)
         let alertAudioCtx = null;
+        let alertSeenEvents = new Set();
         let alertHere = null;         // 현재 위치 { lat, lng, sido, sigungu, ts }
         let alertHereMsg = '';
         let alertHereTimer = null, alertSummaryArea = '';
@@ -1220,7 +1329,7 @@
             if (area === alertSummaryArea) return;
             alertSummaryArea = area;
             const since = Date.now() / 1000 - 6 * 3600;
-            const recent = newsData.filter(n => n.timestamp >= since && matchHere(n));
+            const recent = groupEvents(newsData.filter(n => n.timestamp >= since && matchHere(n))).map(ev => ev.lead);
             if (recent.length === 0) return;
             showAlertToast({
                 head: '📍 현재 계신 지역에서 사건사고가 발생했어요', badge: area + ' · 최근 6시간 ' + recent.length + '건',
@@ -1238,9 +1347,11 @@
 
         // 새로 들어온 기사 확인 (loadIncidentsFromJSON 에서 호출)
         function checkNewIncidents(list) {
-            if (alertSeenIds === null) { alertSeenIds = new Set(list.map(n => n.id)); return; }
-            const fresh = list.filter(n => !alertSeenIds.has(n.id));
-            fresh.forEach(n => alertSeenIds.add(n.id));
+            if (alertSeenIds === null) { alertSeenIds = new Set(list.map(n => n.id)); alertSeenEvents = new Set(list.map(evOf)); return; }
+            const newArticles = list.filter(n => !alertSeenIds.has(n.id));
+            newArticles.forEach(n => alertSeenIds.add(n.id));
+            const fresh = [];                      // 같은 사건의 후속 기사는 다시 알리지 않음
+            newArticles.forEach(n => { if (!alertSeenEvents.has(evOf(n))) { alertSeenEvents.add(evOf(n)); fresh.push(n); } });
             if (!alertCfg.enabled) return;
             const here = fresh.filter(matchHere);
             const mine = fresh.filter(n => !here.includes(n) && matchAlertRegion(n));
@@ -1277,7 +1388,7 @@
                 if (e && e.target && e.target.classList && e.target.classList.contains('alert-x')) { close(); return; }
                 if (o.newsId) {
                     const n = newsData.find(x => x.id === o.newsId);
-                    if (n) { currentCategory = 'all'; currentSub = null; selectedHotspotRegion = null; selectedDate = dateKey(n.timestamp); renderCategoryBar(); updateMapMarkers(); selectNews(n.id); }
+                    if (n) { currentCategory = 'all'; currentSub = null; selectedHotspotRegion = null; hotspotArticleOpen = false; selectedDate = dateKey(n.timestamp); dateFollowToday = (selectedDate === todayKey()); renderCategoryBar(); updateMapMarkers(); selectNews(n.id); }
                 } else if (o.openCommunity) { openCommunity(); }
                 close();
             };
@@ -1699,13 +1810,15 @@
                 <div class="px-3 pt-2 flex items-end gap-1 border-b border-slate-200 dark:border-slate-800 shrink-0">
                     <button onclick="setCommTab('talk')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 ${commTab === 'talk' ? 'bg-white dark:bg-slate-900 text-red-600 border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">🚨 사건사고·이야기</button>
                     <button onclick="setCommTab('market')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 ${commTab === 'market' ? 'bg-white dark:bg-slate-900 text-emerald-600 border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">🛒 장터</button>
+                    <button onclick="setCommTab('meet')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 ${commTab === 'meet' ? 'bg-white dark:bg-slate-900 text-pink-600 border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">💞 동네 친구</button>
                 </div>
                 <div class="flex-1 min-h-0 flex">
                     <div id="commMain" class="flex-1 min-w-0 flex flex-col"></div>
-                    <aside id="commMembers" class="w-44 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hidden sm:block bg-slate-50 dark:bg-slate-900/60"></aside>
+                    ${commTab === 'talk' ? `<aside id="commMembers" class="w-44 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hidden sm:block bg-slate-50 dark:bg-slate-900/60"></aside>` : ''}
                 </div>`;
             renderCommMembers();
             if (commTab === 'market') { renderCommBg(); renderMarket(); return; }
+            if (commTab === 'meet') { renderCommBg(); renderMeet(); return; }
             document.getElementById('commMain').innerHTML = `
                 <div id="commPinned" class="shrink-0"></div>
                 <div id="commList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
@@ -1921,8 +2034,10 @@
         function stopMarketChat() { if (marketChatUnsub) { marketChatUnsub(); marketChatUnsub = null; } }
         function setCommTab(tab) {
             commTab = tab; marketOpen = null; marketForm = false; stopMarketChat();
+            meetChatWith = null; meetMsg = '';
             renderCommunity();
             if (tab === 'market') subscribeMarket();
+            if (tab === 'meet') subscribeMeet();
         }
         function setMarketFilter(f) { marketFilter = f; renderMarket(); }
         function openMarketForm(show) { marketForm = show; marketAttach = null; renderMarket(); }
@@ -2102,6 +2217,239 @@
                 </div>`;
         }
 
+        // ---- 동네 친구 (같은 시·군·구 이웃과 서로 '좋아요'를 누르면 1:1 대화) ----
+        const MEET_AGES = ['20대', '30대', '40대', '50대', '60대 이상'];
+        const MEET_SAMPLES = [
+            { uid: 'sample1', sample: true, nick: '예시 · 산책메이트', emoji: '🐶', age: '30대', intro: '저녁에 강아지 산책 같이 하실 분 찾아요.', tags: '산책, 반려견, 커피' },
+            { uid: 'sample2', sample: true, nick: '예시 · 주말러너', emoji: '🌳', age: '20대', intro: '주말 아침 러닝 크루 만들고 싶어요.', tags: '러닝, 등산, 맛집' },
+            { uid: 'sample3', sample: true, nick: '예시 · 동네책방', emoji: '⭐', age: '40대', intro: '한 달에 한 번 책 읽고 이야기 나눠요.', tags: '독서, 영화, 보드게임' }
+        ];
+        let meetProfile = (() => { try { return JSON.parse(lsGet('meet_profile') || 'null'); } catch (e) { return null; } })();
+        let meetView = 'browse';      // 'browse'(둘러보기) / 'matches'(매칭·대화) / 'edit'(내 카드)
+        let meetProfiles = [], meetLikesOut = new Set(), meetLikesIn = new Set(), meetUnsubs = [];
+        let meetSeen = new Set((() => { try { return JSON.parse(lsGet('meet_seen') || '[]'); } catch (e) { return []; } })());
+        let meetChatWith = null, meetChat = [], meetChatUnsub = null, meetPhoto = null, meetMsg = '';
+
+        function meetKey() { return [myTown.sido, myTown.sigungu].join('_').replace(/[\s\/.#$\[\]]/g, ''); }
+        function meetArea() { return myTown.sido + ' ' + myTown.sigungu; }
+        function meetDoc() { return commDb.collection('meet').doc(meetKey()); }
+        function pairId(a, b) { return [a, b].sort().join('__'); }
+        function meetMatches() { return meetProfiles.filter(p => meetLikesOut.has(p.uid) && meetLikesIn.has(p.uid)); }
+        function stopMeet() { meetUnsubs.forEach(u => u()); meetUnsubs = []; if (meetChatUnsub) { meetChatUnsub(); meetChatUnsub = null; } }
+
+        async function subscribeMeet() {
+            stopMeet();
+            if (!myTown || !meetProfile) { if (commTab === 'meet') renderMeet(); return; }
+            const db = await commInit();
+            if (!db) { meetProfiles = MEET_SAMPLES.slice(); if (commTab === 'meet') renderMeet(); return; }
+            meetUnsubs.push(meetDoc().collection('profiles').orderBy('ts', 'desc').limit(200).onSnapshot(snap => {
+                meetProfiles = snap.docs.map(d => d.data()).filter(p => p.uid !== COMM_UID);
+                if (commTab === 'meet' && !meetChatWith) renderMeet();
+            }, err => console.error(err)));
+            meetUnsubs.push(meetDoc().collection('likes').where('from', '==', COMM_UID).onSnapshot(snap => {
+                meetLikesOut = new Set(snap.docs.map(d => d.data().to));
+                if (commTab === 'meet' && !meetChatWith) renderMeet();
+            }, err => console.error(err)));
+            let first = true;
+            meetUnsubs.push(meetDoc().collection('likes').where('to', '==', COMM_UID).onSnapshot(snap => {
+                if (!first) snap.docChanges().forEach(ch => {      // 내가 좋아요 한 사람이 나를 좋아요 → 매칭 알림
+                    const from = ch.doc.data().from;
+                    if (ch.type === 'added' && meetLikesOut.has(from)) meetNotifyMatch(from);
+                });
+                first = false;
+                meetLikesIn = new Set(snap.docs.map(d => d.data().from));
+                if (commTab === 'meet' && !meetChatWith) renderMeet();
+            }, err => console.error(err)));
+        }
+        function meetNotifyMatch(uid) {
+            const p = meetProfiles.find(x => x.uid === uid);
+            showAlertToast({ head: '💞 동네 친구 매칭', title: (p ? p.nick : '이웃') + '님과 서로 좋아요를 눌렀어요. 대화를 시작해 보세요.', foot: meetArea(), openCommunity: true });
+            playAlertSound();
+        }
+
+        async function meetPickPhoto(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if (!f || f.type.indexOf('image/') !== 0) return;
+            try { meetPhoto = await compressImage(f, 640, 200 * 1024); } catch (e) { return; }
+            const p = document.getElementById('mtPreview');
+            if (p) p.innerHTML = `<img src="${meetPhoto}" class="h-16 w-16 object-cover rounded-full border border-slate-300">`;
+        }
+        async function meetSaveProfile() {
+            const v = id => ((document.getElementById(id) || {}).value || '').trim();
+            const adult = (document.getElementById('mtAdult') || {}).checked;
+            if (!adult) { meetMsg = '만 19세 이상만 이용할 수 있습니다. 확인란에 체크해 주세요.'; renderMeet(); return; }
+            if (!v('mtIntro')) { meetMsg = '한 줄 소개를 적어 주세요.'; renderMeet(); return; }
+            meetProfile = {
+                uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂', age: v('mtAge') || '30대', intro: v('mtIntro').slice(0, 80),
+                tags: v('mtTags').slice(0, 60), photo: meetPhoto || (meetProfile && meetProfile.photo) || '', adult: true, ts: Date.now()
+            };
+            lsSet('meet_profile', JSON.stringify(meetProfile));
+            meetPhoto = null; meetMsg = ''; meetView = 'browse';
+            try { const db = await commInit(); if (db) await meetDoc().collection('profiles').doc(COMM_UID).set(meetProfile); } catch (e) { console.error(e); }
+            subscribeMeet();
+            renderMeet();
+        }
+        async function meetLeave() {
+            if (!confirm('동네 친구에서 내 카드를 내릴까요? 다른 이웃에게 더 이상 보이지 않습니다.')) return;
+            try { const db = await commInit(); if (db) await meetDoc().collection('profiles').doc(COMM_UID).delete(); } catch (e) { console.error(e); }
+            meetProfile = null; lsSet('meet_profile', 'null'); stopMeet(); meetProfiles = [];
+            renderMeet();
+        }
+        function meetQueue() { return meetProfiles.filter(p => !meetSeen.has(p.uid) && !meetLikesOut.has(p.uid)); }
+        function meetMarkSeen(uid) { meetSeen.add(uid); lsSet('meet_seen', JSON.stringify(Array.from(meetSeen).slice(-500))); }
+        function meetPass(uid) { meetMarkSeen(uid); renderMeet(); }
+        async function meetLike(uid) {
+            meetMarkSeen(uid);
+            const p = meetProfiles.find(x => x.uid === uid);
+            if (p && p.sample) { meetMsg = '예시 카드입니다. 체험 모드에서는 실제 매칭이 되지 않습니다.'; renderMeet(); return; }
+            meetLikesOut.add(uid);
+            try {
+                const db = await commInit();
+                if (db) await meetDoc().collection('likes').doc(COMM_UID + '__' + uid).set({ from: COMM_UID, to: uid, ts: Date.now() });
+            } catch (e) { console.error(e); }
+            if (meetLikesIn.has(uid)) meetNotifyMatch(uid);
+            renderMeet();
+        }
+        function meetResetSeen() { meetSeen = new Set(); lsSet('meet_seen', '[]'); meetMsg = ''; renderMeet(); }
+        function setMeetView(v) { meetView = v; meetMsg = ''; meetChatWith = null; if (meetChatUnsub) { meetChatUnsub(); meetChatUnsub = null; } renderMeet(); }
+
+        async function openMeetChat(uid) {
+            meetChatWith = uid; meetChat = [];
+            if (meetChatUnsub) { meetChatUnsub(); meetChatUnsub = null; }
+            const db = await commInit();
+            if (db) {
+                meetChatUnsub = meetDoc().collection('chats').doc(pairId(COMM_UID, uid)).collection('messages').orderBy('ts', 'asc').limit(300).onSnapshot(snap => {
+                    meetChat = snap.docs.map(d => d.data());
+                    renderMeetChat();
+                }, err => console.error(err));
+            }
+            renderMeet();
+        }
+        async function meetChatSend() {
+            const input = document.getElementById('mtChatText');
+            const text = ((input && input.value) || '').trim();
+            if (!text || !meetChatWith) return;
+            const msg = { uid: COMM_UID, text: text.slice(0, 300), ts: Date.now() };
+            try {
+                const db = await commInit();
+                if (db) await meetDoc().collection('chats').doc(pairId(COMM_UID, meetChatWith)).collection('messages').add(msg);
+                else { meetChat.push(msg); renderMeetChat(); }
+                input.value = '';
+            } catch (e) { console.error(e); }
+        }
+        function renderMeetChat() {
+            const box = document.getElementById('mtChat');
+            if (!box) return;
+            box.innerHTML = meetChat.length ? meetChat.map(m => {
+                const mine = m.uid === COMM_UID;
+                return `<div class="flex ${mine ? 'justify-end' : 'justify-start'}"><div style="max-width:78%;" class="rounded-2xl border px-3 py-1.5 text-sm ${mine ? 'bg-pink-100 dark:bg-pink-900/70 border-pink-300 dark:border-pink-700 text-slate-900 dark:text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}"><span class="whitespace-pre-line break-words">${esc(m.text)}</span><div class="text-[0.625rem] text-slate-400 mt-0.5">${timeAgo(m.ts)}</div></div></div>`;
+            }).join('') : '<div class="text-center py-10 text-xs text-slate-400">첫 인사를 건네 보세요.</div>';
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function meetAvatar(p, size) {
+            return p.photo && IMG_DATA_RE.test(p.photo)
+                ? `<img src="${p.photo}" class="${size} object-cover rounded-full border border-slate-300 dark:border-slate-600">`
+                : `<div class="${size} rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center" style="font-size:2.2em;">${esc(p.emoji || '🙂')}</div>`;
+        }
+
+        function renderMeet() {
+            const main = document.getElementById('commMain');
+            if (!main) return;
+            const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
+            const msg = meetMsg ? `<p class="text-xs text-amber-600 dark:text-amber-400 text-center">${esc(meetMsg)}</p>` : '';
+
+            // 1) 내 카드 만들기 / 수정
+            if (!meetProfile || meetView === 'edit') {
+                const p = meetProfile || {};
+                main.innerHTML = `
+                    <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                        <div class="flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white">💞 동네 친구 · 내 카드 ${meetProfile ? '수정' : '만들기'}</b>${meetProfile ? '<button onclick="setMeetView(\'browse\')" class="text-xs text-blue-500 hover:underline">← 돌아가기</button>' : ''}</div>
+                        <div class="rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800 p-3 text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
+                            <b>${esc(meetArea())}</b> 이웃의 카드를 넘겨 보다가 서로 <b>좋아요</b>를 누르면 1:1 대화가 열립니다. 닉네임과 아이콘은 커뮤니티 프로필을 그대로 씁니다.
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <select id="mtAge" class="${inp}">${MEET_AGES.map(a => `<option value="${a}" ${p.age === a ? 'selected' : ''}>${a}</option>`).join('')}</select>
+                            <input id="mtTags" type="text" maxlength="60" placeholder="관심사 (예: 산책, 러닝, 커피)" class="col-span-2 ${inp}">
+                        </div>
+                        <input id="mtIntro" type="text" maxlength="80" placeholder="한 줄 소개 (최대 80자)" class="${inp}">
+                        <div class="flex items-center gap-3">
+                            <input id="mtFile" type="file" accept="image/*" class="hidden" onchange="meetPickPhoto(this)">
+                            <button onclick="document.getElementById('mtFile').click()" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-camera"></i> 사진 (선택)</button>
+                            <span id="mtPreview">${p.photo && IMG_DATA_RE.test(p.photo) ? `<img src="${p.photo}" class="h-16 w-16 object-cover rounded-full border border-slate-300">` : ''}</span>
+                        </div>
+                        <label class="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-200"><input id="mtAdult" type="checkbox" class="mt-0.5" ${p.adult ? 'checked' : ''}><span>저는 <b>만 19세 이상</b>입니다. (미성년자는 이용할 수 없습니다)</span></label>
+                        ${msg}
+                        <button onclick="meetSaveProfile()" class="w-full py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-sm font-bold">${meetProfile ? '저장' : '내 카드 올리고 시작하기'}</button>
+                        ${meetProfile ? '<button onclick="meetLeave()" class="w-full py-2 rounded-xl text-xs text-red-500 hover:underline">내 카드 내리기 (그만 이용하기)</button>' : ''}
+                        <p class="text-[0.6875rem] text-slate-400 leading-relaxed">처음 만날 때는 사람이 많은 공개된 장소에서 만나고, 돈을 요구하거나 개인정보를 캐묻는 상대는 조심하세요.</p>
+                    </div>`;
+                document.getElementById('mtTags').value = p.tags || '';
+                document.getElementById('mtIntro').value = p.intro || '';
+                return;
+            }
+
+            // 2) 1:1 대화
+            if (meetChatWith) {
+                const p = meetProfiles.find(x => x.uid === meetChatWith) || { nick: '이웃' };
+                main.innerHTML = `
+                    <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                        <button onclick="setMeetView('matches')" class="text-xs text-blue-500 hover:underline">← 매칭 목록</button>
+                        <b class="text-xs text-slate-800 dark:text-slate-100">${esc(p.emoji || '🙂')} ${esc(p.nick)} · ${esc(p.age || '')}</b>
+                    </div>
+                    <div id="mtChat" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
+                    <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
+                        <textarea id="mtChatText" rows="1" maxlength="300" placeholder="메시지를 입력하세요" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
+                        <button onclick="meetChatSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-pink-600 hover:bg-pink-500 whitespace-nowrap">보내기</button>
+                    </div>`;
+                renderMeetChat();
+                return;
+            }
+
+            const matches = meetMatches();
+            const tab = (v, label) => `<button onclick="setMeetView('${v}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${meetView === v ? 'bg-pink-600 text-white border-pink-700' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
+            const head = `
+                <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                    <div class="flex items-center gap-1.5">${tab('browse', '카드 둘러보기')}${tab('matches', '매칭·대화 ' + matches.length)}</div>
+                    <button onclick="setMeetView('edit')" class="text-xs text-blue-500 hover:underline">내 카드 수정</button>
+                </div>`;
+
+            // 3) 매칭 목록
+            if (meetView === 'matches') {
+                main.innerHTML = head + `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2">${matches.length ? matches.map(p => `
+                    <button onclick="openMeetChat('${esc(p.uid)}')" class="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-pink-500 text-left">
+                        ${meetAvatar(p, 'w-12 h-12 text-xs')}
+                        <div class="min-w-0"><div class="text-sm font-bold text-slate-900 dark:text-white truncate">${esc(p.nick)} <span class="text-xs font-normal text-slate-500">${esc(p.age || '')}</span></div><div class="text-xs text-slate-500 truncate">${esc(p.intro || '')}</div></div>
+                        <span class="ml-auto text-xs font-bold text-pink-600 shrink-0">대화하기 ›</span>
+                    </button>`).join('') : '<div class="text-center py-16 text-xs text-slate-400">아직 매칭된 이웃이 없습니다. 서로 좋아요를 누르면 여기에 나타납니다.</div>'}</div>`;
+                return;
+            }
+
+            // 4) 카드 둘러보기 (한 장씩)
+            const queue = meetQueue();
+            const p = queue[0];
+            main.innerHTML = head + `
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 flex flex-col items-center justify-center gap-3">
+                    ${FIREBASE_CONFIG ? '' : '<div class="text-[0.6875rem] text-amber-700 dark:text-amber-300 text-center">체험 모드: 아래는 화면을 보여 주기 위한 <b>예시 카드</b>입니다. 서버를 연결하면 실제 이웃 카드가 나옵니다.</div>'}
+                    ${p ? `
+                    <div class="w-full max-w-xs rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl p-6 text-center">
+                        <div class="flex justify-center">${meetAvatar(p, 'w-28 h-28 text-base')}</div>
+                        <div class="mt-3 text-lg font-extrabold text-slate-900 dark:text-white break-words">${esc(p.nick)}</div>
+                        <div class="text-xs text-slate-500">${esc(p.age || '')} · ${esc(myTown.sigungu)}</div>
+                        <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words">${esc(p.intro || '')}</p>
+                        <div class="mt-2 flex flex-wrap justify-center gap-1">${(p.tags || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 6).map(s => `<span class="text-[0.6875rem] px-2 py-0.5 rounded-full bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800">${esc(s)}</span>`).join('')}</div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <button onclick="meetPass('${esc(p.uid)}')" title="넘기기" class="w-14 h-14 rounded-full border-2 border-slate-300 dark:border-slate-600 text-slate-500 text-xl bg-white dark:bg-slate-800 hover:border-slate-500">✕</button>
+                        <button onclick="meetLike('${esc(p.uid)}')" title="좋아요" class="w-16 h-16 rounded-full bg-pink-600 hover:bg-pink-500 text-white text-2xl shadow-lg">♥</button>
+                    </div>
+                    <div class="text-[0.6875rem] text-slate-400">남은 카드 ${queue.length}장</div>` : `
+                    <div class="text-center text-xs text-slate-400 space-y-3"><div>지금 볼 수 있는 카드를 모두 봤습니다.</div><button onclick="meetResetSeen()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold">넘긴 카드 다시 보기</button></div>`}
+                    ${msg}
+                </div>`;
+        }
+
         // ---- 동네 인증 ----
         function nearestSigungu(lat, lng, n) {
             const arr = [];
@@ -2211,6 +2559,7 @@
             if (commUnsub) { commUnsub(); commUnsub = null; }
             if (commUnsubMembers) { commUnsubMembers(); commUnsubMembers = null; }
             if (marketUnsub) { marketUnsub(); marketUnsub = null; }
+            stopMeet(); meetProfiles = []; meetChatWith = null;
             stopMarketChat(); marketItems = []; marketOpen = null;
             myTown = null; commMessages = []; commMembers = []; commType = 'talk'; commAttach = null;
             lsSet('my_town', 'null');
