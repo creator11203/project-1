@@ -55,7 +55,8 @@ jobs:
             if git diff --staged --quiet; then
               echo "변경된 뉴스가 없어 저장을 건너뜁니다."
             else
-              git commit -m "Auto-update latest news dataset [skip ci]"
+              # 주의: 커밋 메시지에 [skip ci] 를 넣으면 GitHub Pages 배포까지 건너뛰어 웹사이트가 안 바뀔 수 있어서 넣지 않습니다.
+              git commit -m "Auto-update latest news dataset ($(TZ=Asia/Seoul date '+%m-%d %H:%M'))"
               git pull --rebase origin ${{ github.ref_name }} || git rebase --abort
               git push || echo "[경고] 올리기 실패 — 다음 회차에 다시 시도합니다."
             fi
