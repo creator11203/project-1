@@ -81,7 +81,9 @@
         .pin.sel { animation: pin-pulse 1.4s ease-out infinite; }
         @keyframes pin-pulse { 0% { box-shadow: 0 0 0 0 rgba(239,68,68,.75); } 100% { box-shadow: 0 0 0 16px rgba(239,68,68,0); } }
         .cluster-bubble { border-radius: 50%; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; border: 3px solid rgba(255,255,255,.9); box-shadow: 0 2px 8px rgba(0,0,0,.35); font-family: system-ui, sans-serif; }
-        .safety-pin { width: 26px; height: 26px; border-radius: 8px; background: #fff; border: 2px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+        .safety-pin { position: relative; border-radius: 10px; background: #fff; border: 3px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1; }
+        .safety-pin > i { position: absolute; left: 50%; bottom: -9px; width: 8px; height: 8px; margin-left: -4px; transform: rotate(45deg); border-radius: 1px; }
+        .safety-pin > span { position: relative; z-index: 1; }
         .dark .leaflet-container { background: #0b1220; }
         .leaflet-popup-content { margin: 10px 12px; }
         /* 커뮤니티 버튼 */
@@ -152,6 +154,15 @@
         .cat-btn:active { transform: scale(.94); }
         .cat-on { box-shadow: 0 0 0 2px #1e293b, 0 3px 10px rgba(15,23,42,.22); }
         .dark .cat-on { box-shadow: 0 0 0 2px #e2e8f0, 0 3px 10px rgba(0,0,0,.4); }
+        .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: live-blink 1s ease-in-out infinite; }
+        @keyframes live-blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+        .float-grip { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 30; }
+        .float-grip::after { content: ''; position: absolute; top: 50%; width: 4px; height: 48px; margin-top: -24px; border-radius: 4px; background: rgba(100,116,139,.45); }
+        .float-grip:hover::after { background: #10b981; }
+        .float-grip-left { left: 0; } .float-grip-left::after { left: 3px; }
+        .float-grip-right { right: 0; } .float-grip-right::after { right: 3px; }
+        .cat-ex { text-decoration: line-through; opacity: .55; box-shadow: 0 0 0 2px #dc2626; }
+        .cat-check.cat-check-ex { background: #dc2626; }
         .cat-dim { opacity: .62; }
         .cat-dim:hover { opacity: 1; }
         .cat-check { position: absolute; top: -7px; right: -6px; width: 16px; height: 16px; border-radius: 50%; background: #4f46e5; color: #fff; font-size: 10px; font-weight: 900; line-height: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.35); animation: cat-check .3s ease-out 1; pointer-events: none; }
@@ -223,7 +234,7 @@
                 <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
             </div>
             <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-mobile-screen-button"></i> 앱 다운로드</button>
-            <button onclick="openBriefing()" title="오늘·이번 주 주요 사건을 비서처럼 요약해 드립니다" class="relative bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold px-2.5 py-1.5 rounded-lg border border-indigo-300 dark:border-indigo-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-clipboard-list"></i> 안전 브리핑<span id="briefDot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border-2 border-white dark:border-slate-900"></span></button>
+            <button onclick="openBriefing()" title="오늘·이번 주 주요 사건을 비서처럼 요약해 드립니다" class="relative bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-clipboard-list"></i> 안전 브리핑<span id="briefDot" class="hidden absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-900 animate-pulse"></span></button>
             <span id="floatBtnWrap"></span>
             <button onclick="openCommunity('report')" title="우리동네 안전망에 실시간 제보 · 언론사 제보도 함께" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow-md shadow-red-600/30 transition flex items-center gap-1.5 whitespace-nowrap">
                 <i class="fa-solid fa-bullhorn"></i> 실시간 제보하기
@@ -317,7 +328,7 @@
                 <select id="mapStyleSelect" onchange="setMapStyle(this.value)" title="지도 모양" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-600 text-xs font-bold px-2 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200"></select>
             </div>
             <div id="map" class="flex-1 w-full h-full z-10"></div>
-            <div id="mapLegend" class="absolute bottom-6 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-700 rounded-lg shadow px-2.5 py-1.5 text-[0.625rem] text-slate-600 dark:text-slate-300 leading-relaxed" style="z-index: 500;"></div>
+            <div id="mapLegend" class="absolute bottom-7 left-3 max-w-[17rem] bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-600 rounded-xl shadow-lg px-3 py-2 text-slate-600 dark:text-slate-300 leading-relaxed" style="z-index: 500;"></div>
             <div id="safetyPanel" class="hidden absolute top-14 left-3 w-72 max-h-[80%] overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3" style="z-index: 1100;"></div>
             <div id="alertPanel" class="hidden absolute top-14 right-3 w-64 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3" style="z-index: 1100;"></div>
         </div>
@@ -335,6 +346,17 @@
             </div>
             <div id="commBody" class="flex-1 min-h-0 flex flex-col select-text"></div>
             <div id="commProfileCard" onclick="closeProfile()" class="hidden absolute inset-0 z-10 bg-black/50 flex items-center justify-center p-4"></div>
+        </div>
+        <!-- 패널 5: 오늘의 안전 브리핑 (화면 설정에서 칸에 넣으면 창 대신 칸 안에 항상 보임) -->
+        <div id="panel-briefing" class="panel bg-white dark:bg-slate-900">
+            <div class="px-3 py-2 shrink-0 bg-gradient-to-r from-indigo-600 to-violet-600 text-white flex items-center justify-between gap-2">
+                <div class="min-w-0 leading-tight">
+                    <div class="font-extrabold text-sm"><i class="fa-solid fa-clipboard-list"></i> 오늘의 안전 브리핑</div>
+                    <div id="briefPanelSub" class="text-[0.625rem] opacity-80 truncate"></div>
+                </div>
+                <button onclick="openBriefing()" title="지금 기준으로 다시 만들기" class="shrink-0 px-2 py-1 rounded-lg text-[0.6875rem] font-bold bg-white/15 border border-white/30 hover:bg-white/25"><i class="fa-solid fa-rotate"></i> 새로 고침</button>
+            </div>
+            <div id="briefPanelBody" class="flex-1 min-h-0 flex flex-col select-text wrap-ok"></div>
         </div>
     </div>
 
@@ -362,6 +384,8 @@
             <button onclick="endCall()" class="px-6 py-2 rounded-full bg-red-600 hover:bg-red-500 text-white text-sm font-bold"><i class="fa-solid fa-phone-slash"></i> 통화 종료</button>
         </div>
     </div>
+    <!-- 🔴 실시간 방송 화면 (방송하는 사람 · 시청하는 이웃 공용) -->
+    <div id="liveOverlay" class="hidden fixed inset-0 bg-black flex flex-col md:flex-row select-text" style="z-index: 1240;"></div>
     <div id="callIncoming" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-2xl shadow-2xl px-5 py-3 text-center" style="z-index: 71;"></div>
 
     <!-- 알림 창 (화면 오른쪽 아래. 지도가 어느 칸에 있든 항상 보임) -->
@@ -388,11 +412,20 @@
         let currentCategory = 'all';     // 'all' 또는 '범죄 다발 지역'
         // 보고 싶은 분류(여러 개 선택 가능). 누르면 선택, 다시 누르면 해제. 선택은 저장되어 다음에 접속해도 유지됩니다.
         let selCats = new Set((() => { try { return JSON.parse(localStorage.getItem('sel_cats') || '[]'); } catch (e) { return []; } })());
+        // 빼고 볼 분류 (예: 해외 소식만 빼고 보기). 선택과 따로 저장되어 다음에 접속해도 유지됩니다.
+        let exCats = new Set((() => { try { return JSON.parse(localStorage.getItem('ex_cats') || '[]'); } catch (e) { return []; } })());
+        let catMode = (() => { try { return localStorage.getItem('cat_mode') === 'exclude' ? 'exclude' : 'include'; } catch (e) { return 'include'; } })();
         let lastToggled = null;
-        // 다른 분류의 기사를 열 때(속보 줄·알림): 그 기사가 보이도록 분류 선택을 풀어 줌
-        function showInFilter(n) { if (selCats.size && !groupsOf(n).some(g => selCats.has(g))) { selCats.clear(); saveSelCats(); } }
+        // 다른 분류의 기사를 열 때(속보 줄·알림): 그 기사가 보이도록 분류 선택·제외를 풀어 줌
+        function showInFilter(n) {
+            if (selCats.size && !groupsOf(n).some(g => selCats.has(g))) selCats.clear();
+            groupsOf(n).forEach(g => exCats.delete(g));
+            saveSelCats();
+        }
         function oneCat() { return selCats.size === 1 ? Array.from(selCats)[0] : null; }
-        function saveSelCats() { try { localStorage.setItem('sel_cats', JSON.stringify(Array.from(selCats))); } catch (e) {} }
+        function saveSelCats() {
+            try { localStorage.setItem('sel_cats', JSON.stringify(Array.from(selCats))); localStorage.setItem('ex_cats', JSON.stringify(Array.from(exCats))); localStorage.setItem('cat_mode', catMode); } catch (e) {}
+        }
         let selectedHotspotRegion = null;
         let selectedNewsId = null;
         let map, markersLayer;
@@ -743,7 +776,16 @@
                 if (map) map.invalidateSize();
             });
 
-            document.addEventListener('mouseup', () => { isResizing1 = false; isResizing2 = false; document.body.classList.remove('resizing'); fitArticleFrame(); });
+            document.addEventListener('mouseup', () => {
+                if (isResizing1 || isResizing2) {      // 칸 너비를 바꾸면 기억해 두었다가 다음에 접속해도 그대로
+                    try { localStorage.setItem('pane_w', JSON.stringify([leftPane.style.width, centerPane.style.width])); } catch (e) {}
+                }
+                isResizing1 = false; isResizing2 = false; document.body.classList.remove('resizing'); fitArticleFrame();
+            });
+            try {
+                const pw = JSON.parse(localStorage.getItem('pane_w') || 'null');
+                if (Array.isArray(pw)) { if (/^[\d.]+%$/.test(pw[0] || '')) leftPane.style.width = pw[0]; if (/^[\d.]+%$/.test(pw[1] || '')) centerPane.style.width = pw[1]; }
+            } catch (e) {}
         }
 
         const koSort = (a, b) => String(a).localeCompare(String(b), 'ko');
@@ -829,8 +871,8 @@
                 subs: ['주가조작·불공정거래', '유사수신·불법사금융', '조세·관세포탈', '자금세탁·환치기'] },
             '마약·보건범죄': { label: '마약·보건범죄', color: '#d946ef', badge: badgeOf('fuchsia'), law: '마약류관리법, 보건범죄단속법, 의료법',
                 subs: ['마약류', '무면허의료·부정의약품'] },
-            '사이버범죄': { label: '사이버범죄', color: '#8b5cf6', badge: badgeOf('violet'), law: '정보통신망법, 개인정보보호법',
-                subs: ['해킹·정보통신망침해', '악성코드·랜섬웨어', '디도스·사이버공격', '개인정보 유출'] },
+            '사이버범죄': { label: '💻 사이버·IT 장애', color: '#8b5cf6', badge: badgeOf('violet'), law: '정보통신망법, 개인정보보호법 / 클라우드·서버·통신망 장애로 서비스가 멈춘 일',
+                subs: ['해킹·정보통신망침해', '악성코드·랜섬웨어', '디도스·사이버공격', '개인정보 유출', 'IT·전산 장애'] },
             '기타 특별법 범죄': { label: '기타 특별법 범죄', color: '#78716c', badge: badgeOf('stone'), law: '가정폭력처벌법, 아동학대처벌법, 중대재해처벌법, 동물보호법, 폐기물관리법, 병역법, 집시법, 출입국관리법 등',
                 subs: ['가정폭력·아동학대', '산업안전·중대재해법', '환경·동물 범죄', '병역·집시·출입국', '기타 범죄'] },
             '화재·사고': { label: '🔥 화재·사고', color: '#f59e0b', badge: badgeOf('amber'), law: '범죄가 아닌 사고: 화재, 폭발, 붕괴·추락, 산업재해, 안전사고',
@@ -942,9 +984,11 @@
             const label = (d.getUTCMonth() + 1) + '월 ' + d.getUTCDate() + '일 (' + WD_KR[d.getUTCDay()] + ')';
             return dateKey(ts) === dateKey(Date.now() / 1000) ? '오늘 · ' + label : label;
         }
+        // 최근 7일 = 오늘 포함 7개 날짜 전체 (6일 전 0시부터). 지금 시각에서 7×24시간을 빼면 7일 전 날짜의 앞부분이 잘려서 건수가 적게 보였음
+        function startOfDayTs(ts) { const d = kstDate(ts); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / 1000 - 9 * 3600; }
         function inLast7(news) {
             const ts = Number(news.timestamp) || 0;
-            return !ts || ts >= Date.now() / 1000 - 7 * 86400;
+            return !ts || ts >= startOfDayTs(Date.now() / 1000 - 6 * 86400);
         }
         function inPeriod(news) {
             if (!selectedDate || selectedDate === 'all') return inLast7(news);
@@ -977,15 +1021,25 @@
             const d = new Date(lastCheckAt), p = n => String(n).padStart(2, '0');
             el.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
         }
+        // 웹사이트 화면(index.html) 자체가 바뀌었는지 확인
+        //  ※ 예전에는 서버의 변경 표시(ETag)만 비교했는데, GitHub Pages 는 뉴스(news.json)가 올라올 때마다(약 6분마다) 사이트 전체를 다시 배포해서
+        //    화면 내용이 그대로여도 표시가 바뀌었고, 그때마다 오른쪽 아래에 '새 버전' 안내가 잘못 떴습니다.
+        //    → 이제 표시가 바뀌면 화면 파일 내용을 직접 받아 비교하고, 내용이 정말 달라졌을 때만 한 번 안내합니다.
+        let siteHash = null, siteNotified = false;
+        function textHash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return s.length + ':' + h; }
         async function checkSiteUpdate() {
-            if (location.protocol === 'file:') return;
+            if (location.protocol === 'file:' || siteNotified) return;
             try {
-                const r = await fetch(location.pathname + '?v=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+                const url = location.pathname + '?v=' + Date.now();
+                const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
                 const tag = r.headers.get('etag') || r.headers.get('last-modified') || '';
-                if (!tag) return;
-                if (siteTag === null) { siteTag = tag; return; }
-                if (tag === siteTag) return;
+                if (siteTag !== null && tag && tag === siteTag) return;
+                const body = await (await fetch(url, { cache: 'no-store' })).text();
+                const h = textHash(body.replace(/\s+/g, ' '));
                 siteTag = tag;
+                if (siteHash === null) { siteHash = h; return; }
+                if (h === siteHash) return;          // 배포만 다시 되고 화면 내용은 같음 → 안내하지 않음
+                siteHash = h; siteNotified = true;
                 // 페이지를 강제로 새로고침하지 않음 (보던 기사·지도·대화가 끊기지 않게). 원할 때 눌러서 새로고침
                 showAlertToast({ head: '🔄 새 버전', title: '웹사이트 화면이 새 버전으로 업데이트되었습니다. 편할 때 누르면 새 화면으로 바뀝니다. (기사 목록은 지금도 자동으로 계속 업데이트됩니다)', reload: true });
             } catch (e) {}
@@ -1055,6 +1109,7 @@
             renderNewsList(!firstLoad && !isManualRefresh);
             updateMapMarkersQuietly();
             renderTicker();
+            if (isDocked('briefing') && briefTab !== 'settings') openBriefing('report', true);   // 칸에 넣어 둔 안전 브리핑도 새 기사로 갱신
             if (currentCategory === '범죄 다발 지역') {
                 if (!hotspotArticleOpen) renderCrimeHotspotsView(true);
                 return;
@@ -1190,9 +1245,30 @@
             safetyLayer = L.layerGroup().addTo(map);
             const sel = document.getElementById('mapStyleSelect');
             if (sel) { sel.innerHTML = Object.keys(MAP_STYLES).map(k => `<option value="${k}">${MAP_STYLES[k].name}</option>`).join(''); sel.value = mapStyle; }
-            const lg = document.getElementById('mapLegend');
-            if (lg) lg.innerHTML = '<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px solid #fff;box-shadow:0 0 0 1.5px #334155;vertical-align:-1px;"></span> 동·장소까지 확인된 위치 &nbsp; <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;border:2px dashed #fff;opacity:.75;vertical-align:-1px;"></span> 시·군·구 단위(대략)<br>숫자 = 그 근처 사건 수 (확대하면 하나씩 보입니다)';
+            renderMapLegend();
             updateMapMarkers();
+        }
+        // 지도 안내(범례): 지도에 실제로 그려지는 모양 그대로 보여 줌. 접어 둘 수 있고 상태는 기억됨
+        let legendOpen = (() => { try { return localStorage.getItem('legend_open') !== '0'; } catch (e) { return true; } })();
+        function toggleLegend() { legendOpen = !legendOpen; try { localStorage.setItem('legend_open', legendOpen ? '1' : '0'); } catch (e) {} renderMapLegend(); }
+        function renderMapLegend() {
+            const lg = document.getElementById('mapLegend');
+            if (!lg) return;
+            if (!legendOpen) { lg.innerHTML = safetyLegendHtml() + `<button onclick="toggleLegend()" class="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200"><i class="fa-solid fa-circle-info text-blue-500"></i> 지도 보는 법 <i class="fa-solid fa-chevron-up text-[0.625rem] opacity-60"></i></button>`; return; }
+            const pin = (cls, size, extra) => `<span class="pin ${cls}" style="display:inline-block;width:${size}px;height:${size}px;background:#ef4444;vertical-align:middle;${extra || ''}"></span>`;
+            const bub = (n, size, color) => `<span class="cluster-bubble" style="display:inline-flex;width:${size}px;height:${size}px;background:${color};font-size:10px;border-width:2px;vertical-align:middle;">${n}</span>`;
+            const row = (icon, text) => `<div class="flex items-center gap-2"><span class="w-7 flex justify-center shrink-0">${icon}</span><span>${text}</span></div>`;
+            const cats = Object.keys(CATEGORY_GROUPS).map(g => `<span class="inline-flex items-center gap-1 whitespace-nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${CATEGORY_GROUPS[g].color};"></span>${esc(CATEGORY_GROUPS[g].label.replace(/^[^\s가-힣]+\s/, ''))}</span>`).join('');
+            lg.innerHTML = safetyLegendHtml() + `
+                <div class="flex items-center justify-between gap-3 mb-1.5"><b class="text-xs text-slate-900 dark:text-white"><i class="fa-solid fa-circle-info text-blue-500"></i> 지도 보는 법</b><button onclick="toggleLegend()" title="접기" class="text-slate-400 hover:text-slate-700 dark:hover:text-white"><i class="fa-solid fa-chevron-down"></i></button></div>
+                <div class="space-y-1 text-[0.75rem] text-slate-700 dark:text-slate-200">
+                    ${row(pin('exact', 16), '<b>동·장소까지</b> 확인된 위치 (정확)')}
+                    ${row(pin('', 14, 'box-shadow:0 0 8px #ef4444;'), '<b>시·군·구</b> 단위 위치 (대략)')}
+                    ${row(pin('approx', 12, 'box-shadow:0 0 8px #ef4444;'), '<b>시·도</b> 단위 위치 (점선 · 더 대략)')}
+                    <div class="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-700"><span class="flex items-center gap-0.5 shrink-0">${bub(5, 20, '#f59e0b')}${bub(20, 22, '#f97316')}${bub(90, 24, '#ef4444')}${bub('2백', 26, '#b91c1c')}</span></div>
+                    <div class="text-[0.6875rem] text-slate-500 dark:text-slate-400 leading-snug">동그라미 숫자 = 그 근처 사건 수 <span class="whitespace-nowrap">(노랑 1~9 · 주황 10~49 · 빨강 50~199 · 진빨강 200+)</span><br>확대하면 사건이 하나씩 보입니다.</div>
+                    <details class="pt-1 border-t border-slate-200 dark:border-slate-700"><summary class="cursor-pointer text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300">점 색깔 = 사건 분류 (펼치기)</summary><div class="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[0.6875rem]">${cats}</div></details>
+                </div>`;
         }
 
         // 위치 정밀도: poi(요금소·역 등 장소) > dong(읍·면·동) > sgg(시·군·구) > sido(시·도). scraper.py 가 news.json 에 넣어 줍니다.
@@ -1296,15 +1372,24 @@
             order.sort((a, b) => ((gCount[b] || 0) - (gCount[a] || 0)) || (idx[a] - idx[b]));
             const btn = g => {
                 const c = CATEGORY_GROUPS[g];
-                const on = selCats.has(g);
-                // 선택 표시(✓)는 버튼 모서리에 겹쳐서 띄움 → 버튼 너비가 바뀌지 않아 옆 버튼들이 흔들리지 않음
-                return `<button onclick="setCategoryFilter('${g}')" data-cat="${g}" aria-pressed="${on}" title="${esc(c.law || '')}${'\n'}누르면 선택 · 여러 개 함께 선택 가능 · 다시 누르면 해제" class="cat-btn relative px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap font-medium ${c.badge}${on ? ' cat-on' : ''}${on && g === lastToggled ? ' cat-pop' : ''}${!on && g === lastToggled ? ' cat-unpop' : ''} ${(gCount[g] || 0) === 0 && !on ? 'opacity-50' : ''} ${selCats.size && !on ? 'cat-dim' : ''}">${on ? '<span class="cat-check">✓</span>' : ''}${c.label} <span class="opacity-70 font-mono">${gCount[g] || 0}</span></button>`;
+                const on = selCats.has(g), ex = exCats.has(g);
+                // 선택 표시(✓)·제외 표시(⊘)는 버튼 모서리에 겹쳐서 띄움 → 버튼 너비가 바뀌지 않아 옆 버튼들이 흔들리지 않음
+                const tip = catMode === 'exclude' ? '누르면 이 분류를 빼고 보기 · 다시 누르면 다시 보기' : '누르면 선택 · 여러 개 함께 선택 가능 · 다시 누르면 해제';
+                return `<button onclick="setCategoryFilter('${g}')" oncontextmenu="toggleExclude('${g}', event)" data-cat="${g}" aria-pressed="${on}" title="${esc(c.law || '')}${'\n'}${tip}${'\n'}(오른쪽 클릭: 바로 빼고 보기)" class="cat-btn relative px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap font-medium ${c.badge}${on ? ' cat-on' : ''}${ex ? ' cat-ex' : ''}${(on || ex) && g === lastToggled ? ' cat-pop' : ''}${!on && !ex && g === lastToggled ? ' cat-unpop' : ''} ${(gCount[g] || 0) === 0 && !on && !ex ? 'opacity-50' : ''} ${selCats.size && !on && !ex ? 'cat-dim' : ''}">${on ? '<span class="cat-check">✓</span>' : ''}${ex ? '<span class="cat-check cat-check-ex">⊘</span>' : ''}${c.label} <span class="opacity-70 font-mono">${gCount[g] || 0}</span></button>`;
             };
             html += order.map(btn).join('');
             html += `<span class="flex items-center pl-2 ml-1 border-l-2 border-dashed border-slate-400 dark:border-slate-500">${btn(OVERSEAS)}</span>`;
-            // 선택 안내문: '다발 지역' 버튼 왼쪽 빈 공간에 고정 폭으로 (내용이 바뀌어도 분류 버튼들이 움직이지 않음)
-            const hint = selCats.size ? `✓ ${selCats.size}개 분류 선택됨 · 다시 누르면 해제` : '분류를 누르면 선택 · 여러 개 함께 선택 가능';
-            html += `<span class="ml-auto flex items-center gap-1.5 pl-2 border-l-2 border-slate-300 dark:border-slate-600"><span class="cat-hint w-44 text-right text-[0.625rem] leading-tight ${selCats.size ? 'font-bold text-indigo-600 dark:text-indigo-300' : 'text-slate-400'}" style="white-space: normal;">${hint}</span><button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
+            // 선택 안내문: 한 줄로 짧게 + '골라 보기 / 빼고 보기' 전환 버튼
+            const exMode = catMode === 'exclude';
+            const hint = exMode
+                ? (exCats.size ? `⊘ ${exCats.size}개 빼고 보는 중` : '누르면 그 분류만 빼고 보기')
+                : (selCats.size ? `✓ ${selCats.size}개 선택됨 · 다시 누르면 해제` : '여러 개 함께 선택 가능');
+            const modeBtn = (m, label) => `<button onclick="setCatMode('${m}')" class="px-1.5 py-0.5 text-[0.625rem] font-bold whitespace-nowrap ${catMode === m ? (m === 'exclude' ? 'bg-red-600 text-white' : 'bg-indigo-600 text-white') : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}">${label}</button>`;
+            html += `<span class="ml-auto flex items-center gap-1.5 pl-2 border-l-2 border-slate-300 dark:border-slate-600">
+                <span class="flex items-center rounded-md border border-slate-300 dark:border-slate-600 overflow-hidden" title="분류 버튼을 누를 때: 골라 보기(선택) 또는 빼고 보기(제외)">${modeBtn('include', '✓ 골라 보기')}${modeBtn('exclude', '⊘ 빼고 보기')}</span>
+                <span class="cat-hint whitespace-nowrap text-[0.625rem] ${(exMode ? exCats.size : selCats.size) ? 'font-bold ' + (exMode ? 'text-red-600 dark:text-red-300' : 'text-indigo-600 dark:text-indigo-300') : 'text-slate-400'}">${hint}</span>
+                ${exCats.size ? `<button onclick="clearExcluded()" title="빼 둔 분류를 모두 다시 보기" class="whitespace-nowrap text-[0.625rem] font-bold text-red-600 dark:text-red-300 border border-red-300 dark:border-red-700 rounded px-1.5 py-0.5 hover:bg-red-50 dark:hover:bg-red-950/40">⊘ 제외 ${exCats.size}개 해제</button>` : ''}
+                <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
             document.getElementById('groupButtons').innerHTML = html;
 
             lastToggled = null;
@@ -1587,7 +1672,7 @@
             container.innerHTML = html;
         }
 
-        function renderDetailView(id) {
+        function renderDetailView(id, forceCard) {
             const news = newsData.find(n => n.id === id);
             const container = document.getElementById('detailViewContainer');
             if (!news) {
@@ -1598,11 +1683,20 @@
             const link = safeUrl(news.link);
             const isGoogle = /news\.google\.com/.test(link);
 
-            if (link && !isGoogle && news.embed !== false) {
+            // 해외 언론은 다른 사이트 안에서 여는 것을 막아 둔 곳이 많아('연결을 거부했습니다'), 확인된 곳만 화면 안에 띄우고 나머지는 번역 요약 + 원문 버튼으로 보여 줌
+            const tryEmbed = news.orig ? news.embed === true : news.embed !== false;
+            if (link && !isGoogle && tryEmbed && !forceCard) {
                 const embedUrl = link.replace(/^http:\/\//, 'https://');   // https 사이트 안에서는 http 페이지를 열 수 없어서 https로 시도
                 const fab = 'inline-flex items-center gap-1 text-[0.6875rem] font-bold text-white bg-slate-900/80 hover:bg-blue-600 px-2.5 py-1.5 rounded-full shadow-lg';
+                let host = ''; try { host = new URL(link).hostname.replace(/^www\./, ''); } catch (e) {}
                 container.style.padding = '0';
                 container.innerHTML = `
+                    <div class="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900 text-[0.6875rem] text-slate-600 dark:text-slate-300">
+                        <i class="fa-solid fa-circle-info text-blue-500"></i>
+                        <span class="flex-1 min-w-0 truncate">기사가 안 보이거나 <b>'${esc(host || '언론사')}에서 연결을 거부했습니다'</b>가 뜨면 → 오른쪽 버튼으로 원문을 여세요</span>
+                        <a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold whitespace-nowrap"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문으로 이동</a>
+                        <button onclick="renderDetailView(${news.id}, true)" title="이 화면에서 기사 요약으로 보기" class="shrink-0 px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-800 font-bold whitespace-nowrap">요약 보기</button>
+                    </div>
                     <div id="articleWrap" class="bg-slate-200 dark:bg-slate-950" style="position:relative; flex:1 1 auto; min-height:0; overflow:hidden;">
                         <iframe id="articleFrame" src="${esc(embedUrl)}" referrerpolicy="no-referrer"
                             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
@@ -1618,8 +1712,10 @@
 
             // 원문을 이 화면에 띄울 수 없는 기사 (언론사가 막아 둠 / 구글 뉴스 중계 주소 / 주소 없음)
             const notice = !link ? '이 기사는 원문 주소가 없습니다.'
-                : (news.embed === false ? '이 언론사(' + esc(news.source || '') + ')는 다른 사이트 화면 안에서 기사를 여는 것을 막아 두었습니다. 아래 버튼으로 원문을 열어 주세요.'
-                : '이 기사는 아직 구글 뉴스 중계 주소라서 이 화면에 바로 띄울 수 없습니다. 아래 버튼으로 원문을 열어 주세요.');
+                : forceCard ? '기사 요약입니다. 아래 버튼으로 원문을 새 창에서 열 수 있습니다.'
+                : isGoogle ? '이 기사는 아직 구글 뉴스 중계 주소라서 이 화면에 바로 띄울 수 없습니다. 아래 버튼으로 원문을 열어 주세요.'
+                : news.orig ? '해외 언론(' + esc(news.source || '') + ') 기사는 다른 사이트 화면 안에서 여는 것을 막아 둔 곳이 많아 번역한 제목으로 보여 드립니다. 아래 버튼으로 원문(영문)을 열어 주세요.'
+                : '이 언론사(' + esc(news.source || '') + ')는 다른 사이트 화면 안에서 기사를 여는 것을 막아 두었습니다. 아래 버튼으로 원문을 열어 주세요.';
             setDetailHTML(`
                 <div class="m-auto w-full max-w-2xl space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
                     <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
@@ -1628,12 +1724,22 @@
                     </div>
                     <h2 class="text-2xl font-black text-slate-900 dark:text-white leading-snug">${esc(news.title)}</h2>
                     <p class="text-sm text-red-500 font-semibold"><i class="fa-solid fa-location-dot"></i> ${esc(news.location || '')}</p>
+                    ${news.orig ? `<p class="text-sm text-slate-500 dark:text-slate-400 italic">원문 제목: ${esc(news.orig)}</p>` : ''}
                     ${news.summary && news.summary !== news.title ? `<p class="text-lg text-slate-700 dark:text-slate-200 leading-relaxed">${esc(news.content && news.content.length > news.summary.length ? news.content : news.summary)}</p>` : ''}
                     <p class="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">${notice}</p>
                     ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-1.5 text-base font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-3 rounded-lg shadow"><i class="fa-solid fa-arrow-up-right-from-square"></i> 기사 원문 새 창으로 열기</a>` : ''}
+                    ${link && !isGoogle && (forceCard || news.orig) ? `<button onclick="tryEmbedArticle(${news.id})" class="w-full text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800">이 화면 안에서 원문 열어 보기 (언론사가 막아 두면 빈 화면이 뜹니다)</button>` : ''}
                 </div>`);
         }
 
+        function tryEmbedArticle(id) {
+            const n = newsData.find(x => x.id === id);
+            if (!n) return;
+            const saved = n.embed; n.embed = true;      // 한 번만 화면 안에 띄워 봄
+            const savedOrig = n.orig; n.orig = null;
+            renderDetailView(id);
+            n.embed = saved; n.orig = savedOrig;
+        }
         function toggleArticleMode() {
             articleMode = articleMode === 'fit' ? 'mobile' : (articleMode === 'mobile' ? 'whole' : 'fit');
             try { localStorage.setItem('article_mode', articleMode); } catch (e) {}
@@ -1692,16 +1798,21 @@
                 const same = newsData.filter(n => evOf(n) === evOf(news));
                 focusMap(bestLocated(same) || news, silent);
             }
-            if (!silent && hiddenPanel() === 'article') openFloat();   // 기사 원문 패널을 칸에 넣지 않은 경우: 창으로 띄움
+            if (!silent && !isDocked('article')) openFloat('article');   // 기사 원문 패널을 칸에 넣지 않은 경우: 창으로 띄움
         }
 
         // ================= 필터 =================
         function setCategoryFilter(cat) {
             if (cat === 'all') { selCats.clear(); currentCategory = 'all'; }
             else if (cat === '범죄 다발 지역') { currentCategory = cat; }
+            else if (catMode === 'exclude') {        // '빼고 보기' 모드: 누르면 그 분류를 숨김, 다시 누르면 다시 보임
+                currentCategory = 'all';
+                if (exCats.has(cat)) exCats.delete(cat); else { exCats.add(cat); selCats.delete(cat); }
+                lastToggled = cat;
+            }
             else {                                   // 분류 버튼: 누르면 선택, 다시 누르면 해제 (여러 개 함께 선택 가능)
                 currentCategory = 'all';
-                if (selCats.has(cat)) selCats.delete(cat); else selCats.add(cat);
+                if (selCats.has(cat)) selCats.delete(cat); else { selCats.add(cat); exCats.delete(cat); }
                 lastToggled = cat;
             }
             saveSelCats();
@@ -1722,6 +1833,16 @@
             }
         }
 
+        // 분류 버튼을 누를 때 '골라 보기'(선택) 할지 '빼고 보기'(제외) 할지
+        function setCatMode(m) { catMode = m === 'exclude' ? 'exclude' : 'include'; saveSelCats(); renderCategoryBar(); }
+        function clearExcluded() { exCats.clear(); saveSelCats(); refreshAll(); }
+        // 오른쪽 클릭: 모드와 상관없이 그 분류만 바로 빼고 보기/다시 보기
+        function toggleExclude(cat, ev) {
+            if (ev) ev.preventDefault();
+            const prev = catMode; catMode = 'exclude';
+            setCategoryFilter(cat);
+            catMode = prev; saveSelCats(); renderCategoryBar();
+        }
         function setSubFilter(sub) {
             currentSub = sub;
             selectedHotspotRegion = null;
@@ -1752,6 +1873,9 @@
                 if (selectedHotspotRegion && !ignoreCategory) return inLast7(news) && hotspotRegionOf(news) === selectedHotspotRegion;   // 순위 집계와 같은 기준
                 if (ignoreDate ? !inLast7(news) : !inPeriod(news)) return false;
 
+                if (!ignoreCategory && currentCategory !== '범죄 다발 지역' && exCats.size) {
+                    if (groupsOf(news).some(g => exCats.has(g))) return false;                // 빼고 보기로 고른 분류의 기사는 숨김
+                }
                 if (!ignoreCategory && currentCategory !== '범죄 다발 지역' && selCats.size) {
                     if (!groupsOf(news).some(g => selCats.has(g))) return false;              // 화재+추돌 기사는 '화재·사고'와 '교통사고' 양쪽에 모두 나옴
                     if (currentSub && !tagsOf(news).includes(currentSub)) return false;
@@ -1779,7 +1903,8 @@
             list: { label: '사건 목록(요약 기사)', short: '사건 목록', icon: 'fa-list-ul' },
             article: { label: '기사 원문', short: '기사 원문', icon: 'fa-newspaper' },
             map: { label: '사건 발생 지도', short: '사건 발생 지도', icon: 'fa-map-location-dot' },
-            community: { label: '우리동네 커뮤니티', short: '우리동네 커뮤니티', icon: 'fa-people-group' }
+            community: { label: '우리동네 커뮤니티', short: '우리동네 커뮤니티', icon: 'fa-people-group' },
+            briefing: { label: '오늘의 안전 브리핑', short: '안전 브리핑', icon: 'fa-clipboard-list' }
         };
         const SLOT_IDS = ['leftPane', 'centerPane', 'rightPane'];
         const SLOT_NAMES = ['왼쪽 칸', '가운데 칸', '오른쪽 칸'];
@@ -1788,7 +1913,9 @@
             ['기본 (목록 · 원문 · 지도)', ['list', 'article', 'map']],
             ['커뮤니티를 오른쪽에 (목록 · 원문 · 커뮤니티)', ['list', 'article', 'community']],
             ['커뮤니티를 가운데에 (목록 · 커뮤니티 · 지도)', ['list', 'community', 'map']],
-            ['지도를 크게 (목록 · 지도 · 원문)', ['list', 'map', 'article']]
+            ['지도를 크게 (목록 · 지도 · 원문)', ['list', 'map', 'article']],
+            ['안전 브리핑을 오른쪽에 (목록 · 원문 · 브리핑)', ['list', 'article', 'briefing']],
+            ['안전 브리핑 + 지도 (목록 · 브리핑 · 지도)', ['list', 'briefing', 'map']]
         ];
         let layout = (() => {
             try {
@@ -1797,17 +1924,31 @@
             } catch (e) {}
             return DEFAULT_LAYOUT.slice();
         })();
-        let floatWide = false;
-        try { floatWide = localStorage.getItem('float_wide') === '1'; } catch (e) {}
+        // 창으로 뜨는 화면(커뮤니티 등)의 가로 너비: 화면 폭의 몇 %인지 (0 = 기본 크기). 한 번 바꾸면 기억해서 다음에도 그 크기로 엽니다.
+        let floatW = 0;
+        try { floatW = Number(localStorage.getItem('float_w')) || (localStorage.getItem('float_wide') === '1' ? 96 : 0); } catch (e) {}
+        let floatWide = floatW > 0;
+        const FLOAT_MIN = 35, FLOAT_MAX = 98;
 
-        function hiddenPanel() { return Object.keys(PANELS).find(k => !layout.includes(k)); }
+        // 칸에 넣지 않은 화면들. 안전 브리핑은 칸에 없으면 기존처럼 상단 [안전 브리핑] 버튼으로 창을 엽니다.
+        let floatKey = null;          // 지금 창(floatModal)에 띄운 화면
+        function hiddenPanels() { return Object.keys(PANELS).filter(k => !layout.includes(k) && k !== 'briefing'); }
+        function hiddenPanel() { const hs = hiddenPanels(); return (floatKey && hs.includes(floatKey)) ? floatKey : hs[0]; }
         function panelEl(k) { return document.getElementById('panel-' + k); }
         function isDocked(k) { return layout.includes(k); }
+        function placeFloatPanel(k) {
+            const store = document.getElementById('panelStore'), body = document.getElementById('floatBody');
+            Array.from(body.children).forEach(c => { if (c.id !== 'panel-' + k) store.appendChild(c); });
+            if (k) body.appendChild(panelEl(k));
+        }
 
         function applyLayout(first) {
             SLOT_IDS.forEach((id, i) => document.getElementById(id).appendChild(panelEl(layout[i])));
-            const h = hiddenPanel();
-            document.getElementById('floatBody').appendChild(panelEl(h));
+            const store = document.getElementById('panelStore');
+            Object.keys(PANELS).forEach(k => { if (!isDocked(k)) store.appendChild(panelEl(k)); });
+            if (!hiddenPanels().includes(floatKey)) floatKey = null;
+            placeFloatPanel(hiddenPanel());
+            if (isDocked('briefing')) openBriefing(briefTab === 'settings' ? 'settings' : 'report', true);
             renderFloatButton();
             renderFloatHead();
             renderCommHead();
@@ -1822,26 +1963,70 @@
         // 상단 버튼: 칸에 없는 패널을 여는 버튼 (커뮤니티일 때는 커뮤니티 전용 디자인)
         function renderFloatButton() {
             const wrap = document.getElementById('floatBtnWrap');
-            const h = hiddenPanel();
-            if (h === 'community') {
-                wrap.innerHTML = `<button onclick="openCommunity()" title="이웃과 사건사고를 나누는 우리 동네 게시판" class="comm-btn relative text-white pl-2 pr-3.5 py-1.5 rounded-full shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5 whitespace-nowrap">
+            // 칸에 넣지 않은 화면마다 버튼 하나씩 (안전 브리핑을 칸에 넣으면 두 화면이 버튼으로 빠질 수 있음)
+            wrap.className = 'flex items-center gap-1.5';
+            wrap.innerHTML = hiddenPanels().map(h => h === 'community'
+                ? `<button onclick="openCommunity()" title="이웃과 사건사고를 나누는 우리 동네 게시판" class="comm-btn relative text-white pl-2 pr-3.5 py-1.5 rounded-full shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5 whitespace-nowrap">
                     <span class="comm-faces flex items-center" style="transform: scale(.9); transform-origin: left center; margin-right: -4px;"><span>🙂</span><span>🐶</span><span>🌸</span></span>
                     <span class="text-[0.8125rem] font-extrabold">우리동네 커뮤니티</span>
                     <span id="commBadge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full animate-pulse">SOS</span>
-                </button>`;
-            } else {
-                wrap.innerHTML = `<button onclick="openFloat()" class="bg-sky-600 hover:bg-sky-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow shadow-sky-600/20 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid ${PANELS[h].icon}"></i> ${PANELS[h].short}</button>`;
-            }
+                </button>`
+                : `<button onclick="openFloat('${h}')" class="bg-sky-600 hover:bg-sky-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow shadow-sky-600/20 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid ${PANELS[h].icon}"></i> ${PANELS[h].short}</button>`).join('');
             if (typeof updateCommBadge === 'function') updateCommBadge();
         }
-        function wideBtnHtml() {
-            return `<button onclick="toggleFloatWide()" title="창 가로 길이 바꾸기" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 whitespace-nowrap"><i class="fa-solid fa-left-right"></i> ${floatWide ? '보통 크기로' : '가로로 길게 보기'}</button>`;
+        // 창 너비 조절 막대 (끌면 바로 넓어지고 좁아짐, 값은 저장됨)
+        function curFloatW() { if (floatW) return floatW; const b = document.getElementById('floatBox'); return b && b.offsetWidth ? Math.round(b.offsetWidth / window.innerWidth * 100) : 60; }
+        function wideBtnHtml(dark) {
+            return `<label title="창 가로 너비 (끌어서 조절 · 창 양쪽 가장자리를 끌어도 됩니다)" class="${dark ? 'comm-head-btn' : 'border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200'} flex items-center gap-1 px-2 py-1 rounded-lg text-[0.6875rem] font-bold whitespace-nowrap cursor-pointer">
+                <i class="fa-solid fa-left-right"></i><span class="hide-narrow">너비</span>
+                <input type="range" min="${FLOAT_MIN}" max="${FLOAT_MAX}" step="1" value="${curFloatW()}" oninput="setFloatW(this.value, true)" onchange="setFloatW(this.value)" class="w-20 accent-emerald-500" style="height:14px;">
+                <span class="float-w-val font-mono w-8 text-right">${floatW ? floatW + '%' : '기본'}</span></label>
+                ${floatW ? `<button onclick="setFloatW(0)" title="기본 너비로" class="${dark ? 'comm-head-btn' : 'border border-slate-300 dark:border-slate-600 text-slate-500'} px-1.5 py-1 rounded-lg text-[0.625rem] font-bold">기본</button>` : ''}`;
+        }
+        function applyFloatW() {
+            const box = document.getElementById('floatBox');
+            if (!box) return;
+            box.classList.toggle('max-w-4xl', !floatW);
+            box.style.maxWidth = floatW ? floatW + 'vw' : '';
+            box.style.width = floatW ? floatW + 'vw' : '';
+        }
+        function setFloatW(v, live) {
+            v = Math.round(Number(v) || 0);
+            floatW = v ? Math.max(FLOAT_MIN, Math.min(FLOAT_MAX, v)) : 0;
+            floatWide = floatW > 0;
+            applyFloatW();
+            document.querySelectorAll('.float-w-val').forEach(el => { el.textContent = floatW ? floatW + '%' : '기본'; });
+            if (live) return;                 // 끄는 중에는 화면만 바꾸고, 손을 떼면 저장
+            try { localStorage.setItem('float_w', String(floatW)); localStorage.setItem('float_wide', floatW ? '1' : '0'); } catch (e) {}
+            renderFloatHead(); renderCommHead();
+            setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
+        }
+        // 창 양쪽 가장자리를 마우스로 끌어서 너비 조절
+        function initFloatGrips() {
+            const box = document.getElementById('floatBox');
+            if (!box || box.dataset.grips) return;
+            box.dataset.grips = '1';
+            ['left', 'right'].forEach(side => {
+                const g = document.createElement('div');
+                g.className = 'float-grip float-grip-' + side;
+                g.title = '끌어서 창 너비 조절';
+                g.addEventListener('mousedown', e => {
+                    e.preventDefault();
+                    const startX = e.clientX, startW = box.offsetWidth;
+                    document.body.classList.add('resizing');
+                    const move = ev => { const dx = (ev.clientX - startX) * (side === 'right' ? 2 : -2); setFloatW((startW + dx) / window.innerWidth * 100, true); };
+                    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); document.body.classList.remove('resizing'); setFloatW(floatW || curFloatW()); };
+                    document.addEventListener('mousemove', move);
+                    document.addEventListener('mouseup', up);
+                });
+                box.appendChild(g);
+            });
         }
         function renderFloatHead() {
-            const head = document.getElementById('floatHead'), box = document.getElementById('floatBox');
+            const head = document.getElementById('floatHead');
             const h = hiddenPanel();
-            box.classList.toggle('max-w-4xl', !floatWide);
-            box.style.maxWidth = floatWide ? '96vw' : '';
+            applyFloatW();
+            initFloatGrips();
             if (h === 'community') { head.style.display = 'none'; return; }     // 커뮤니티는 자체 제목 줄을 씀
             head.style.display = '';
             head.innerHTML = `<b class="text-sm text-slate-900 dark:text-white flex items-center gap-2"><i class="fa-solid ${PANELS[h].icon} text-sky-500"></i> ${PANELS[h].label}</b>
@@ -1858,7 +2043,7 @@
             if (isDocked('community')) {
                 box.innerHTML = modeChip + menu;
             } else {
-                const wide = `<button onclick="toggleFloatWide()" title="창 가로 길이 바꾸기" class="comm-head-btn px-2 py-1 rounded-lg text-[0.6875rem] font-bold"><i class="fa-solid fa-left-right"></i> <span class="hide-narrow">${floatWide ? '보통 크기로' : '가로로 길게 보기'}</span></button>`;
+                const wide = wideBtnHtml(true);
                 box.innerHTML = modeChip + menu + wide + `<button onclick="closeFloat()" title="닫기" class="comm-head-btn px-2 py-1 rounded-lg"><i class="fa-solid fa-xmark"></i></button>`;
             }
         }
@@ -1880,13 +2065,10 @@
             m.classList.remove('hidden');
             renderCommBg();
         }
-        function toggleFloatWide() {
-            floatWide = !floatWide;
-            try { localStorage.setItem('float_wide', floatWide ? '1' : '0'); } catch (e) {}
-            renderFloatHead(); renderCommHead();
-            setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
-        }
-        function openFloat() {
+        function toggleFloatWide() { setFloatW(floatW ? 0 : 96); }
+        function openFloat(k) {
+            if (k && hiddenPanels().includes(k) && k !== floatKey) { floatKey = k; placeFloatPanel(k); renderFloatHead(); renderCommHead(); }
+            else if (!floatKey) { floatKey = hiddenPanel(); placeFloatPanel(floatKey); renderFloatHead(); }
             document.getElementById('floatModal').classList.remove('hidden');
             const h = hiddenPanel();
             if (h === 'community') { renderCommunity(); commTouch(); }
@@ -1913,10 +2095,10 @@
                 ${layout.map((k, i) => `
                     <label class="block text-[0.6875rem] text-slate-500 mb-0.5">${SLOT_NAMES[i]}</label>
                     <select onchange="setSlot(${i}, this.value)" class="${inp} mb-2">${Object.keys(PANELS).map(x => `<option value="${x}" ${x === k ? 'selected' : ''}>${PANELS[x].label}</option>`).join('')}</select>`).join('')}
-                <div class="text-[0.6875rem] text-slate-500 mb-2">버튼으로 여는 화면: <b class="text-slate-800 dark:text-slate-100">${PANELS[h].label}</b> <span class="text-slate-400">(상단 오른쪽 버튼)</span></div>
+                <div class="text-[0.6875rem] text-slate-500 mb-2">버튼으로 여는 화면: <b class="text-slate-800 dark:text-slate-100">${hiddenPanels().map(x => PANELS[x].label).concat(isDocked('briefing') ? [] : [PANELS.briefing.label]).join(', ')}</b> <span class="text-slate-400">(상단 오른쪽 버튼)</span></div>
                 <div class="text-[0.6875rem] text-slate-500 mb-1">빠른 배치</div>
                 <div class="space-y-1 mb-2">${LAYOUT_PRESETS.map((x, i) => `<button onclick="setLayoutPreset(${i})" class="w-full text-left px-2 py-1 rounded text-[0.6875rem] border ${JSON.stringify(x[1]) === JSON.stringify(layout) ? 'border-emerald-500 text-emerald-600 font-bold' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200'} hover:bg-slate-100 dark:hover:bg-slate-700">${x[0]}</button>`).join('')}</div>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 border-t border-slate-200 dark:border-slate-700 pt-2"><span>창으로 뜨는 화면을 가로로 길게</span><input type="checkbox" ${floatWide ? 'checked' : ''} onchange="toggleFloatWide()"></label>
+                <div class="flex items-center justify-between gap-2 text-xs text-slate-700 dark:text-slate-200 border-t border-slate-200 dark:border-slate-700 pt-2"><span>창(커뮤니티 등) 가로 너비</span>${wideBtnHtml()}</div>
                 <p class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">칸 사이의 세로 막대(⇄)를 끌면 칸 너비를 바꿀 수 있습니다.</p>`;
         }
         function setSlot(i, key) {
@@ -1966,16 +2148,17 @@
         // ================= 내 주변 안전시설 (응급실·AED·소화기·경찰서·소방서·대피소·쉼터) =================
         // 공개 지도(OpenStreetMap)에 등록된 시설을 내 위치 주변에서 찾아 지도에 표시합니다. (별도 가입·인증키가 필요 없습니다)
         // 등록이 빠진 시설이 있을 수 있어서, 공식 안내 사이트 링크를 함께 보여 줍니다.
-        const SAFETY_TYPES = [
-            { k: 'er', icon: '🏥', name: '응급실 (응급의료기관)', on: true },
-            { k: 'hospital', icon: '➕', name: '종합병원·병원', on: false },
-            { k: 'aed', icon: '❤️', name: 'AED (자동심장충격기)', on: true },
-            { k: 'ext', icon: '🧯', name: '소화기·소화전', on: true },
-            { k: 'police', icon: '🚓', name: '경찰서·지구대·파출소', on: true },
-            { k: 'fire', icon: '🚒', name: '소방서·119안전센터', on: true },
-            { k: 'shelter', icon: '⛑️', name: '재난 대피소·대피 장소', on: true },
-            { k: 'rest', icon: '🏠', name: '무더위·한파 쉼터로 쓰이는 곳 (주민센터·경로당·도서관)', on: false }
+        const SAFETY_TYPES = [     // color: 지도 핀 테두리·배경 색 (체크 목록과 지도 핀이 같은 색·같은 그림)
+            { k: 'er', icon: '🏥', name: '응급실 (응급의료기관)', on: true, color: '#dc2626' },
+            { k: 'hospital', icon: '➕', name: '종합병원·병원', on: false, color: '#db2777' },
+            { k: 'aed', icon: '❤️', name: 'AED (자동심장충격기)', on: true, color: '#e11d48' },
+            { k: 'ext', icon: '🧯', name: '소화기·소화전', on: true, color: '#ea580c' },
+            { k: 'police', icon: '🚓', name: '경찰서·지구대·파출소', on: true, color: '#2563eb' },
+            { k: 'fire', icon: '🚒', name: '소방서·119안전센터', on: true, color: '#b91c1c' },
+            { k: 'shelter', icon: '⛑️', name: '재난 대피소·대피 장소', on: true, color: '#16a34a' },
+            { k: 'rest', icon: '🏠', name: '무더위·한파 쉼터로 쓰이는 곳 (주민센터·경로당·도서관)', on: false, color: '#7c3aed' }
         ];
+        const SAFETY_BY = {}; SAFETY_TYPES.forEach(t => { SAFETY_BY[t.k] = t; });
         const SAFETY_QUERY = {
             er: ['nwr["amenity"="hospital"]["emergency"="yes"]', 'nwr["healthcare"="hospital"]["emergency"="yes"]'],
             hospital: ['nwr["amenity"="hospital"]'],
@@ -2013,41 +2196,67 @@
         }
         function safetyLocate() {
             return new Promise(res => {
-                const fallback = why => { const c = map.getCenter(); res({ lat: c.lat, lng: c.lng, text: '지도 가운데 기준' + (why ? ' (' + why + ')' : '') }); };
+                let done = false;
+                const finish = v => { if (!done) { done = true; res(v); } };
+                const fallback = why => { const c = map.getCenter(); finish({ lat: c.lat, lng: c.lng, text: '지도 가운데 기준' + (why ? ' (' + why + ')' : '') }); };
                 if (!navigator.geolocation) return fallback('이 기기는 위치 확인을 지원하지 않음');
+                // 위치 권한 창에 답하지 않고 두면 브라우저가 끝없이 기다려서 '찾는 중'에 멈춰 있던 문제 → 15초 지나면 지도 가운데로 찾음
+                setTimeout(() => fallback('현재 위치 확인이 늦어짐'), 15000);
                 navigator.geolocation.getCurrentPosition(
-                    pos => res({ lat: pos.coords.latitude, lng: pos.coords.longitude, text: '내 현재 위치 기준', mine: true }),
+                    pos => finish({ lat: pos.coords.latitude, lng: pos.coords.longitude, text: '내 현재 위치 기준', mine: true }),
                     err => fallback(err && err.code === 1 ? '위치 권한이 꺼져 있음' : '현재 위치를 확인하지 못함'),
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
             });
         }
-        async function safetySearch(useMapCenter) {
-            if (safety.busy) return;
+        // mode: 'gps'(내 위치) / 'center'(지도 가운데) / 'same'(방금 찾은 곳에서 체크 항목만 바꿔 다시 찾기)
+        //  ※ 예전에는 '내 위치에서 찾기'가 위치 권한을 기다리는 동안 다른 버튼이 아무 반응을 하지 않아 '지도 가운데에서 찾기'가 고장 난 것처럼 보였습니다.
+        //    이제는 마지막에 누른 찾기가 항상 이깁니다.
+        let safetySeq = 0;
+        async function safetySearch(mode) {
+            if (mode === true) mode = 'center';
+            if (mode === false || !mode) mode = 'gps';
+            if (!map) return;
             const kinds = SAFETY_TYPES.filter(t => safety.on[t.k]).map(t => t.k);
-            if (kinds.length === 0) { safety.msg = '찾을 시설을 하나 이상 골라 주세요.'; renderSafetyPanel(); return; }
-            try { localStorage.setItem('safety_cfg', JSON.stringify({ on: safety.on, radius: safety.radius })); } catch (e) {}
-            safety.busy = true; safety.msg = '주변 시설을 찾는 중입니다...'; renderSafetyPanel();
-            const o = useMapCenter ? (() => { const c = map.getCenter(); return { lat: c.lat, lng: c.lng, text: '지도 가운데 기준' }; })() : await safetyLocate();
+            saveSafetyCfg();
+            if (kinds.length === 0) { safety.msg = '찾을 시설을 하나 이상 골라 주세요.'; safety.results = []; drawSafety(true); renderSafetyPanel(); return; }
+            const seq = ++safetySeq;
+            safety.busy = true; safety.msg = mode === 'gps' ? '내 위치를 확인하는 중입니다... (위치 권한 창이 뜨면 "허용"을 눌러 주세요)' : '주변 시설을 찾는 중입니다...'; renderSafetyPanel();
+            let o;
+            if (mode === 'center') { map.invalidateSize(); const c = map.getCenter(); o = { lat: c.lat, lng: c.lng, text: '지도 가운데 기준' }; }
+            else if (mode === 'same' && safety.origin) o = safety.origin;
+            else o = await safetyLocate();
+            if (seq !== safetySeq) return;                  // 그 사이에 다른 찾기를 눌렀음
             safety.origin = o; safety.originText = o.text;
+            safety.msg = '주변 시설을 찾는 중입니다...'; renderSafetyPanel();
+            drawSafety(true);                               // 찾는 동안에도 기준 위치·반경 원을 먼저 보여 줌
             const r = Math.round(safety.radius * 1000);
             const parts = [];
             kinds.forEach(k => SAFETY_QUERY[k].forEach(q => parts.push(q + '(around:' + r + ',' + o.lat.toFixed(5) + ',' + o.lng.toFixed(5) + ');')));
-            const query = '[out:json][timeout:25];(' + parts.join('') + ');out center tags 400;';
-            const servers = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+            const query = '[out:json][timeout:25];(' + parts.join('') + ');out center tags 500;';
+            // 공개 지도 서버는 자주 붐벼서(응답 없음·502) 하나씩 차례로 물으면 오래 걸리거나 실패함 → 여러 서버에 동시에 묻고 가장 먼저 온 답을 씀
+            const servers = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+            const ctls = [];
+            const ask = url => new Promise((ok, no) => {
+                const ctl = window.AbortController ? new AbortController() : null;
+                if (ctl) { ctls.push(ctl); setTimeout(() => ctl.abort(), 30000); }
+                fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl ? ctl.signal : undefined })
+                    .then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => (j && Array.isArray(j.elements)) ? ok(j) : no('bad')).catch(no);
+            });
             let data = null;
-            for (const url of servers) {
-                try {
-                    const res = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-                    if (res.ok) { data = await res.json(); break; }
-                } catch (e) {}
-            }
+            try {
+                data = await new Promise((ok, no) => { let fails = 0; servers.forEach(u => ask(u).then(ok, () => { if (++fails === servers.length) no('all failed'); })); });
+            } catch (e) {}
+            ctls.forEach(c => { try { c.abort(); } catch (e) {} });   // 먼저 답이 오면 나머지 요청은 취소
+            if (seq !== safetySeq) return;
             safety.busy = false;
             if (!data) { safety.msg = '시설 정보를 불러오지 못했습니다. 잠시 후 다시 시도하거나 아래 공식 사이트를 이용해 주세요.'; renderSafetyPanel(); return; }
             const seen = new Set();
             safety.results = (data.elements || []).map(el => {
                 const lat = el.lat != null ? el.lat : (el.center && el.center.lat), lng = el.lon != null ? el.lon : (el.center && el.center.lon);
                 if (lat == null || lng == null) return null;
-                const kind = safetyKind(el.tags || {});
+                let kind = safetyKind(el.tags || {});
+                // '병원'만 고르고 '응급실'은 안 골랐을 때 응급실 있는 병원이 빠지지 않게
+                if (kind === 'er' && !safety.on.er && safety.on.hospital) kind = 'hospital';
                 if (!safety.on[kind]) return null;
                 const name = safetyName(el.tags || {}, kind);
                 const key = kind + '|' + name + '|' + lat.toFixed(3) + '|' + lng.toFixed(3);
@@ -2055,29 +2264,54 @@
                 seen.add(key);
                 return { kind: kind, name: name, lat: lat, lng: lng, dist: distKm(lat, lng, o.lat, o.lng), phone: (el.tags || {}).phone || (el.tags || {})['contact:phone'] || '', addr: (el.tags || {})['addr:full'] || (el.tags || {})['addr:street'] || '' };
             }).filter(Boolean).sort((a, b) => a.dist - b.dist);
-            safety.msg = safety.results.length ? '' : '반경 ' + safety.radius + 'km 안에서 등록된 시설을 찾지 못했습니다. 반경을 넓혀 보세요.';
+            const missing = kinds.filter(k => !safety.results.some(f => f.kind === k)).map(k => SAFETY_BY[k].icon + ' ' + SAFETY_BY[k].name.split(' (')[0]);
+            safety.msg = !safety.results.length ? '반경 ' + safety.radius + 'km 안에서 등록된 시설을 찾지 못했습니다. 반경을 넓혀 보세요.'
+                : (missing.length ? '이 반경에서 찾지 못한 시설: ' + missing.join(', ') + ' (반경을 넓히거나 아래 공식 사이트를 확인하세요)' : '');
             drawSafety();
             renderSafetyPanel();
         }
-        function drawSafety() {
+        function saveSafetyCfg() { try { localStorage.setItem('safety_cfg', JSON.stringify({ on: safety.on, radius: safety.radius })); } catch (e) {} }
+        // 체크를 바꾸면: 이미 찾아 둔 곳이 있으면 같은 자리에서 바로 다시 찾아 지도에 반영
+        function safetyToggle(k, on) {
+            safety.on[k] = on; saveSafetyCfg();
+            if (safety.origin) { if (!on) { safety.results = safety.results.filter(f => f.kind !== k); drawSafety(true); renderSafetyPanel(); } else safetySearch('same'); }
+        }
+        function safetySetRadius(v) { safety.radius = Number(v) || 2; saveSafetyCfg(); if (safety.origin) safetySearch('same'); }
+        function safetyIcon(kind, big) {
+            const t = SAFETY_BY[kind] || SAFETY_TYPES[0], s = big ? 40 : 34;
+            return L.divIcon({ className: '', html: `<div class="safety-pin" style="width:${s}px;height:${s}px;border-color:${t.color};box-shadow:0 0 0 3px ${t.color}55, 0 3px 8px rgba(0,0,0,.45);"><span>${t.icon}</span><i style="background:${t.color};"></i></div>`, iconSize: [s, s + 8], iconAnchor: [s / 2, s + 8], popupAnchor: [0, -s] });
+        }
+        function drawSafety(keepView) {
             if (!safetyLayer) return;
             safetyLayer.clearLayers();
             const o = safety.origin;
-            if (!o) return;
-            L.circle([o.lat, o.lng], { radius: safety.radius * 1000, color: '#ef4444', weight: 1.5, fillColor: '#ef4444', fillOpacity: 0.04, dashArray: '6 6' }).addTo(safetyLayer);
-            L.marker([o.lat, o.lng], { zIndexOffset: 2000, icon: L.divIcon({ className: '', html: '<div style="width:18px;height:18px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 4px rgba(37,99,235,.3);"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }) })
-                .bindPopup('<b>' + esc(o.text) + '</b>').addTo(safetyLayer);
-            const icons = {}; SAFETY_TYPES.forEach(t => { icons[t.k] = t.icon; });
-            safety.results.slice(0, 300).forEach((f, i) => {
-                const m = L.marker([f.lat, f.lng], { zIndexOffset: 1500, icon: L.divIcon({ className: '', html: `<div class="safety-pin">${icons[f.kind]}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }) });
-                m.bindPopup(`<div style="font-family:sans-serif;max-width:220px;"><b style="font-size:12px;">${icons[f.kind]} ${esc(f.name)}</b><br><span style="font-size:11px;color:#475569;">여기서 약 ${f.dist < 1 ? Math.round(f.dist * 1000) + 'm' : f.dist.toFixed(1) + 'km'}${f.addr ? ' · ' + esc(f.addr) : ''}</span>${f.phone ? '<br><a style="font-size:11px;" href="tel:' + esc(f.phone.replace(/[^0-9+]/g, '')) + '">☎ ' + esc(f.phone) + '</a>' : ''}<br><a style="font-size:11px;" target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/link/to/${encodeURIComponent(f.name)},${f.lat},${f.lng}">길찾기(카카오맵) ↗</a></div>`);
+            if (!o) { renderSafetyLegend(); return; }
+            L.circle([o.lat, o.lng], { radius: safety.radius * 1000, color: '#2563eb', weight: 2, fillColor: '#2563eb', fillOpacity: 0.05, dashArray: '6 6' }).addTo(safetyLayer);
+            L.marker([o.lat, o.lng], { zIndexOffset: 3000, icon: L.divIcon({ className: '', html: '<div style="width:20px;height:20px;border-radius:50%;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 5px rgba(37,99,235,.3);"></div>', iconSize: [20, 20], iconAnchor: [10, 10] }) })
+                .bindPopup('<b>' + esc(o.text) + '</b><br><span style="font-size:11px;">반경 ' + safety.radius + 'km 안의 시설을 표시합니다</span>').addTo(safetyLayer);
+            safety.results.slice(0, 400).forEach(f => {
+                const t = SAFETY_BY[f.kind];
+                const m = L.marker([f.lat, f.lng], { zIndexOffset: 2500, icon: safetyIcon(f.kind) });
+                m.bindPopup(`<div style="font-family:sans-serif;max-width:230px;"><span style="font-size:10px;background:${t.color};color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold;">${t.icon} ${esc(t.name.split(' (')[0])}</span><br><b style="font-size:12px;">${esc(f.name)}</b><br><span style="font-size:11px;color:#475569;">여기서 약 ${f.dist < 1 ? Math.round(f.dist * 1000) + 'm' : f.dist.toFixed(1) + 'km'}${f.addr ? ' · ' + esc(f.addr) : ''}</span>${f.phone ? '<br><a style="font-size:11px;" href="tel:' + esc(f.phone.replace(/[^0-9+]/g, '')) + '">☎ ' + esc(f.phone) + '</a>' : ''}<br><a style="font-size:11px;" target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/link/to/${encodeURIComponent(f.name)},${f.lat},${f.lng}">길찾기(카카오맵) ↗</a></div>`);
                 f._m = m;
                 safetyLayer.addLayer(m);
             });
-            map.flyTo([o.lat, o.lng], safety.radius <= 1 ? 15 : (safety.radius <= 2 ? 14 : (safety.radius <= 5 ? 13 : 12)), { duration: 1.0 });
+            renderSafetyLegend();
+            if (!keepView) map.flyTo([o.lat, o.lng], safety.radius <= 1 ? 15 : (safety.radius <= 2 ? 14 : (safety.radius <= 5 ? 13 : 12)), { duration: 1.0 });
+        }
+        // 지도 위 오른쪽 아래: 지금 표시 중인 안전시설 종류별 개수 (체크한 그림·색 그대로)
+        // (지도 안내 상자 맨 위에 함께 표시 → 좁은 칸에서도 겹치지 않음)
+        function renderSafetyLegend() { renderMapLegend(); }
+        function safetyLegendHtml() {
+            if (typeof safety === 'undefined' || !safety.origin) return '';
+            const kinds = SAFETY_TYPES.filter(t => safety.on[t.k]);
+            return `<div class="mb-2 pb-2 border-b-2 border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-200">
+                <div class="flex items-center justify-between gap-3 mb-1"><b>🆘 안전시설 표시 중</b><button onclick="safetyClear()" class="text-[0.6875rem] text-slate-400 hover:text-red-500">지우기 ✕</button></div>
+                <div class="grid grid-cols-2 gap-x-2">${kinds.map(t => { const n = safety.results.filter(f => f.kind === t.k).length; return `<div class="flex items-center gap-1.5 py-0.5 ${n ? '' : 'opacity-50'}"><span class="inline-flex items-center justify-center w-5 h-5 rounded bg-white border-2 text-[0.75rem] shrink-0" style="border-color:${t.color};">${t.icon}</span><span class="flex-1 truncate">${esc(t.name.split(' (')[0].split('·')[0])}</span><b class="font-mono" style="color:${t.color};">${n}</b></div>`; }).join('')}</div>
+                <div class="text-[0.625rem] text-slate-400 mt-0.5">${esc(safety.originText || '')} · 반경 ${safety.radius}km${safety.busy ? ' · 찾는 중…' : ''}</div></div>`;
         }
         function safetyGo(i) { const f = safety.results[i]; if (!f) return; map.flyTo([f.lat, f.lng], 17, { duration: 0.8 }); if (f._m) setTimeout(() => f._m.openPopup(), 850); }
-        function safetyClear() { safety.results = []; safety.origin = null; safety.msg = ''; if (safetyLayer) safetyLayer.clearLayers(); renderSafetyPanel(); }
+        function safetyClear() { safetySeq++; safety.busy = false; safety.results = []; safety.origin = null; safety.originText = ''; safety.msg = ''; if (safetyLayer) safetyLayer.clearLayers(); renderSafetyLegend(); renderSafetyPanel(); }
         function renderSafetyPanel() {
             const p = document.getElementById('safetyPanel');
             if (!p) return;
@@ -2096,13 +2330,13 @@
                     <a href="tel:119" class="text-center py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold">🚒 119 화재·구급</a>
                     <a href="tel:112" class="text-center py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">🚓 112 범죄 신고</a>
                 </div>
-                <div class="space-y-1 mb-2">${SAFETY_TYPES.map(t => `<label class="flex items-center gap-2 text-[0.6875rem] text-slate-700 dark:text-slate-200"><input type="checkbox" ${safety.on[t.k] ? 'checked' : ''} onchange="safety.on['${t.k}'] = this.checked"><span>${t.icon} ${t.name}</span></label>`).join('')}</div>
+                <div class="space-y-1 mb-2">${SAFETY_TYPES.map(t => { const n = safety.origin ? safety.results.filter(f => f.kind === t.k).length : null; return `<label class="flex items-center gap-2 text-[0.6875rem] text-slate-700 dark:text-slate-200 cursor-pointer"><input type="checkbox" ${safety.on[t.k] ? 'checked' : ''} onchange="safetyToggle('${t.k}', this.checked)"><span class="inline-flex items-center justify-center w-5 h-5 rounded bg-white border-2 text-[0.75rem] shrink-0" style="border-color:${t.color};">${t.icon}</span><span class="flex-1">${t.name}</span>${n !== null && safety.on[t.k] ? `<b class="font-mono shrink-0" style="color:${t.color};">${n}</b>` : ''}</label>`; }).join('')}</div>
                 <div class="flex items-center gap-1.5 mb-2">
-                    <select onchange="safety.radius = Number(this.value)" class="${inp}">${[0.5, 1, 2, 5, 10].map(k => `<option value="${k}" ${safety.radius === k ? 'selected' : ''}>반경 ${k < 1 ? k * 1000 + 'm' : k + 'km'}</option>`).join('')}</select>
-                    <button onclick="safetySearch(false)" class="flex-1 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white text-xs font-bold whitespace-nowrap"><i class="fa-solid fa-location-crosshairs"></i> 내 위치에서 찾기</button>
+                    <select onchange="safetySetRadius(this.value)" class="${inp}">${[0.5, 1, 2, 5, 10].map(k => `<option value="${k}" ${safety.radius === k ? 'selected' : ''}>반경 ${k < 1 ? k * 1000 + 'm' : k + 'km'}</option>`).join('')}</select>
+                    <button onclick="safetySearch('gps')" class="flex-1 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white text-xs font-bold whitespace-nowrap"><i class="fa-solid fa-location-crosshairs"></i> 내 위치에서 찾기</button>
                 </div>
                 <div class="flex items-center gap-1.5 mb-1">
-                    <button onclick="safetySearch(true)" class="flex-1 py-1 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">지도 가운데에서 찾기</button>
+                    <button onclick="safetySearch('center')" class="flex-1 py-1.5 rounded border-2 border-blue-500 text-[0.6875rem] font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-slate-800"><i class="fa-solid fa-crosshairs"></i> 지도 가운데에서 찾기</button>
                     <button onclick="safetyClear()" class="py-1 px-2 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">지우기</button>
                 </div>
                 ${safety.originText && safety.results.length ? `<div class="text-[0.625rem] text-slate-500">${esc(safety.originText)} · 가까운 순</div>` : ''}
@@ -2264,6 +2498,7 @@
                     const n = newsData.find(x => x.id === o.newsId);
                     if (n) { currentCategory = 'all'; currentSub = null; showInFilter(n); selectedHotspotRegion = null; hotspotArticleOpen = false; selectedDate = dateKey(n.timestamp); dateFollowToday = (selectedDate === todayKey()); renderCategoryBar(); selectNews(n.id); }
                 } else if (o.openCommunity) { openCommunity(); }
+                else if (o.live) { watchLive(o.live); }
                 else if (o.briefing) { openBriefing('report'); }
                 else if (o.reload) { location.reload(); }
                 close();
@@ -2411,7 +2646,7 @@
             '전라남도': ['전남'], '경상북도': ['경북'], '경상남도': ['경남'], '제주특별자치도': ['제주도', '제주']
         };
         const TOWN_VALID_DAYS = 30;
-        const COMM_EMOJIS = ['🙂', '😀', '😎', '🐶', '🐱', '🐻', '🦊', '🐰', '🌳', '🌸', '⭐', '🏠'];
+        const COMM_EMOJIS = ['🙂', '😀', '😎', '🐶', '🐱', '🐻', '🦊', '🐰', '🌳', '🌸', '⭐', '🏠', '🐼', '🐯', '🐧', '🦄', '🍀', '☕'];
         const COMM_BGS = [['기본', ''], ['하늘', '#e0f2fe'], ['연두', '#dcfce7'], ['노랑', '#fef9c3'], ['분홍', '#fce7f3'], ['보라', '#ede9fe'], ['밤', '#0f172a']];
         const REPORT_KINDS = ['화재', '교통사고', '범죄 의심', '수상한 사람', '실종', '안전사고', '기타'];
         const VIDEO_MAX_MB = 50;
@@ -2419,7 +2654,7 @@
         let myTown = null;            // { sido, sigungu, dong, verifiedAt }
         let commUnsub = null, commUnsubMembers = null, commMessages = [], commMembers = [];
         let commType = 'report';      // 우리동네 안전망: 'report'(실시간 제보) / 'sos'  (예전 'talk' 글은 그대로 보임)
-        let pressDefault = lsGet('press_default') === '1';   // '언론사에도 제보' 체크 상태 기억
+        let lastMyReport = null;      // 방금 올린 내 제보 (언론사 제보 글에 자동으로 채움)
         let commDb = null, commReady = null, commAttach = null, commLoadedOnce = false, commHeartbeat = null;
         let commCands = [], commFound = null, commEditEmoji = null;
 
@@ -2753,6 +2988,7 @@
                 commMessages = commLocalRead(key);
                 renderCommMessages();
             }
+            subscribeLives();          // 우리 동네 실시간 방송
             commTouch();
             if (!commHeartbeat) commHeartbeat = setInterval(() => { commTouch(); renderCommMembers(); }, 60000);
         }
@@ -2834,7 +3070,6 @@
             if (!text && !commAttach) { commStatus('내용을 입력하거나 사진·동영상을 첨부해 주세요.'); return; }
             if (text.length > 500) { commStatus('500자 이내로 적어 주세요.'); return; }
             if (commType !== 'sos') commType = 'report';      // 안전망에는 제보·SOS만 올라감
-            const toPress = !!(document.getElementById('commPress') || {}).checked;
             const msg = Object.assign({ text: text, type: commType, ts: Date.now(), uid: COMM_UID, town: myTown.dong }, meFields());
             if (replyTo.talk) msg.replyTo = replyTo.talk;
             if (commType === 'report') {
@@ -2859,14 +3094,13 @@
                     commLocalWrite(key, commMessages);
                 }
                 input.value = '';
-                const hadMedia = !!commAttach;
+                lastMyReport = { kind: msg.type === 'sos' ? 'SOS(긴급)' : (msg.kind || '기타'), place: msg.place || '', text: msg.text, ts: msg.ts, hasMedia: !!commAttach };
                 commAttach = null;
                 delete replyTo.talk;
                 if (commType === 'sos') commType = 'report';
                 renderCommComposer();
                 renderCommMessages(true);
                 commStatus('');
-                if (toPress) openPressTip({ kind: msg.type === 'sos' ? 'SOS(긴급)' : (msg.kind || '기타'), place: msg.place || '', text: msg.text, ts: msg.ts, hasMedia: hadMedia });
             } catch (e) { console.error(e); commStatus('등록에 실패했습니다. 잠시 후 다시 시도해 주세요.'); }
         }
 
@@ -2889,7 +3123,7 @@
                 const el = panelEl('community');
                 el.classList.remove('panel-flash'); void el.offsetWidth; el.classList.add('panel-flash');
                 commTouch();
-            } else openFloat();
+            } else openFloat('community');
         }
         function closeCommunity() { closeFloat(); }
 
@@ -2988,12 +3222,14 @@
             if (commTab === 'dm') { renderCommBg(); renderDM(); return; }
             if (commTab === 'random') { renderCommBg(); renderRandom(); return; }
             document.getElementById('commMain').innerHTML = `
+                <div id="commLiveBar" class="shrink-0"></div>
                 <div id="commPinned" class="shrink-0"></div>
                 <div id="commList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
                 <div id="commComposer" class="border-t border-slate-200 dark:border-slate-800 p-2 space-y-1.5 shrink-0 bg-white dark:bg-slate-900"></div>`;
             renderCommBg();
             renderCommComposer();
             renderCommMembers();
+            renderLiveBar();
             renderCommMessages(true);
         }
 
@@ -3031,10 +3267,10 @@
                 <div class="hscroll items-center gap-1.5">
                     ${chip('report', '📢 실시간 제보', rep, 'bg-amber-500 text-white border-amber-600')}
                     ${chip('sos', '🚨 SOS 긴급 도움 요청', sos, 'bg-red-600 text-white border-red-700')}
+                    <button onclick="openLiveStart()" title="현장을 카메라로 생중계하고 이웃과 함께 보기" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border border-rose-700 bg-gradient-to-r from-rose-600 to-red-600 text-white whitespace-nowrap shadow-sm"><span class="live-dot"></span> ${live ? '내 방송 보기' : '실시간 방송'}</button>
                     ${rep ? `<select id="commKind" class="${inp} py-1">${REPORT_KINDS.map(k => `<option value="${k}">${k}</option>`).join('')}</select>
                     <input id="commPlace" type="text" maxlength="60" placeholder="장소 (예: ○○사거리)" class="w-40 ${inp} py-1">` : ''}
-                    <label class="flex items-center gap-1 px-2 py-1 rounded-full border border-indigo-300 dark:border-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 text-[0.6875rem] font-bold text-indigo-700 dark:text-indigo-300 cursor-pointer whitespace-nowrap" title="등록과 동시에 언론사·방송사 제보 창이 열립니다">
-                        <input id="commPress" type="checkbox" ${pressDefault ? 'checked' : ''} onchange="pressDefault = this.checked; lsSet('press_default', this.checked ? '1' : '0')"> 📺 언론사에도 제보</label>
+                    <button onclick="pressFromComposer()" class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-[0.6875rem] font-bold text-white whitespace-nowrap shadow-sm" title="제보 가이드라인·신뢰 지수를 확인한 뒤, 원하면 언론사·방송사 제보 창을 엽니다">📺 언론사 제보하기</button>
                     <button onclick="showReportGuide()" class="text-[0.6875rem] text-slate-500 hover:text-slate-800 dark:hover:text-white underline whitespace-nowrap">가이드라인</button>
                 </div>
                 <div class="text-[0.625rem] leading-snug ${sos ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'}" style="white-space: normal;">${sos
@@ -3056,8 +3292,10 @@
         // 글 목록 (대화창 형태: 오래된 글이 위, 새 글이 아래)
         function renderCommMsg(m, delFn) {
             const ctx = delFn === 'freeDelete' ? 'free' : 'talk';
-            const mine = m.uid === COMM_UID, sos = m.type === 'sos', rep = m.type === 'report';
-            const bubble = sos ? 'bg-red-50 dark:bg-red-950/70 border-red-400 text-slate-900 dark:text-red-50'
+            const mine = m.uid === COMM_UID, sos = m.type === 'sos', rep = m.type === 'report', lv = m.type === 'live';
+            const lvOn = lv && liveIsOn(m.liveId);
+            const bubble = lv ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-500 text-slate-900 dark:text-rose-50'
+                : sos ? 'bg-red-50 dark:bg-red-950/70 border-red-400 text-slate-900 dark:text-red-50'
                 : rep ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-400 text-slate-900 dark:text-amber-50'
                 : mine ? 'bg-emerald-100 dark:bg-emerald-900/80 border-emerald-300 dark:border-emerald-700 text-slate-900 dark:text-white'
                 : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100';
@@ -3075,7 +3313,9 @@
                             ${replyQuote(m, ctx)}
                             ${sos ? '<div class="text-[0.6875rem] font-extrabold text-red-600 dark:text-red-300 mb-0.5">🚨 SOS 긴급 도움 요청</div>' : ''}
                             ${rep ? `<div class="text-[0.6875rem] font-extrabold text-amber-700 dark:text-amber-300 mb-0.5">📢 실시간 제보 · ${esc(m.kind || '기타')}${m.place ? ' · ' + esc(m.place) : ''}</div>` : ''}
+                            ${lv ? `<div class="text-[0.6875rem] font-extrabold text-rose-600 dark:text-rose-300 mb-0.5">🔴 실시간 방송 ${lvOn ? '중' : '(종료됨)'}${m.place ? ' · 📍' + esc(m.place) : ''}</div>` : ''}
                             ${m.text ? `<p class="whitespace-pre-line break-words">${esc(m.text)}</p>` : ''}
+                            ${lv && lvOn ? `<button onclick="${mine ? 'openLiveView()' : `watchLive('${esc(m.liveId || '')}')`}" class="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-bold"><span class="live-dot"></span> ${mine ? '내 방송 보기' : '지금 시청하기'}</button>` : ''}
                             ${media}
                         </div>
                         ${factRow(ctx, m, mine)}
@@ -3139,7 +3379,7 @@
                     <div class="text-[0.6875rem] text-slate-500">${area && myTown && area !== myArea() ? '다른 동네 이웃' : (myTown ? esc(myTown.dong) + ' 이웃' : '')}${on || mine ? ' · <span class="text-emerald-500">접속 중</span>' : (m.lastSeen ? ' · ' + timeAgo(m.lastSeen) + ' 접속' : '')}</div>
                     <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words">${esc(m.intro || '아직 소개가 없습니다.')}</p>
                     <div class="mt-2 text-[0.6875rem] text-slate-500">작성한 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}</div>
-                    <div id="pfTrust" class="mt-1 text-[0.6875rem] font-bold text-amber-600 dark:text-amber-400">${trustHtml(trustCache[uid])}</div>
+                    <div id="pfTrust" class="mt-2">${trustHtml(trustCache[uid])}</div>
                     ${mine ? '' : `<div class="mt-2 flex items-center justify-center gap-1.5 text-[0.6875rem] text-slate-500"><span>대화 매너 평가</span><span id="mannerStars">${mannerStars(uid)}</span></div>
                     <div class="mt-3 flex flex-wrap gap-1.5 justify-center">${chatButton(uid)}${friendButtons(uid)}</div>
                     <div class="mt-1 text-[0.625rem] text-slate-400">익명 커뮤니티라 대화·친구는 상대가 수락해야 시작됩니다</div>`}
@@ -4279,6 +4519,305 @@
             if (dmWith) { renderReplyBar('dm'); renderDMChat(); }
         }
 
+        // ================= 🔴 실시간 방송 (제보자가 현장을 생중계 → 같은 동네 이웃이 함께 시청·채팅) =================
+        // 제보자가 휴대폰 카메라로 현장을 보내면, 같은 동네 커뮤니티 이웃이 [시청하기]를 눌러 함께 보고 채팅할 수 있습니다.
+        // 영상은 서버를 거치지 않고 방송하는 기기 → 시청자 기기로 바로 전달(WebRTC)되고, 연결 정보·채팅만 Firebase 로 주고받습니다.
+        // 방송하는 기기가 시청자마다 영상을 따로 보내므로 한 방송에 최대 LIVE_MAX_VIEWERS 명까지 볼 수 있습니다.
+        // (서버 연결 전 '체험 모드'에서는 내 기기에서 방송 화면·채팅만 미리 볼 수 있습니다)
+        const LIVE_MAX_VIEWERS = 15;
+        let commLives = [], commLivesUnsub = null, livesLoadedOnce = false;
+        let live = null;    // 내가 하는 방송 { id, ref, stream, pcs, unsubs, beat, startedAt, facing, title, place, local, viewers }
+        let watch = null;   // 내가 보고 있는 방송 { id, ref, pc, meRef, unsubs, info, stream, ended }
+        let liveChat = [], liveChatUnsub = null, liveChatFor = null, liveHudTimer = null;
+        function liveCol() { return commDoc(townKey(myTown)).collection('lives'); }
+        function liveActive(l) { return !!l && l.active && Date.now() - (l.lastBeat || l.ts || 0) < 90000; }
+        function liveIsOn(id) { return (live && live.id === id) || commLives.some(l => l.id === id); }
+        function subscribeLives() {
+            if (commLivesUnsub) { commLivesUnsub(); commLivesUnsub = null; }
+            commLives = []; livesLoadedOnce = false;
+            if (!commDb || !myTown) { renderLiveBar(); return; }
+            commLivesUnsub = liveCol().where('active', '==', true).onSnapshot(snap => {
+                const prev = new Set(commLives.map(l => l.id));
+                commLives = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(l => liveActive(l) && !isBlocked(l.uid));
+                if (livesLoadedOnce) commLives.forEach(l => {
+                    if (!prev.has(l.id) && l.uid !== COMM_UID) { showAlertToast({ head: '🔴 우리 동네 실시간 방송', title: (l.nick || '이웃') + '님: ' + (l.title || '현장 생중계'), foot: '누르면 바로 시청합니다', live: l.id, danger: true }); playAlertSound('bell'); }
+                });
+                livesLoadedOnce = true;
+                renderLiveBar(); renderCommMessages();
+            }, err => console.error(err));
+        }
+        // 안전망 맨 위: 지금 방송 중인 목록
+        function renderLiveBar() {
+            const box = document.getElementById('commLiveBar');
+            if (!box) return;
+            const list = commLives.slice();
+            if (live && !list.some(l => l.id === live.id)) list.unshift({ id: live.id, uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji, title: live.title, place: live.place, ts: live.startedAt, viewers: live.viewers });
+            box.innerHTML = list.map(l => { const mine = l.uid === COMM_UID; return `
+                <button onclick="${mine ? 'openLiveView()' : `watchLive('${esc(l.id)}')`}" class="w-full flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs border-b border-red-700 text-left">
+                    <span class="live-dot shrink-0"></span><b class="shrink-0">LIVE</b>
+                    <span class="flex-1 min-w-0 truncate">${esc(l.emoji || '🙂')} ${esc(displayName(l.uid, l.nick))}${mine ? ' (나)' : ''} · ${esc(l.title || '현장 생중계')}${l.place ? ' · 📍' + esc(l.place) : ''}</span>
+                    <span class="shrink-0 opacity-90">👁 ${l.viewers || 0} · ${timeAgo(l.ts)}</span>
+                    <span class="shrink-0 px-2 py-0.5 rounded bg-white text-red-600 font-extrabold">${mine ? '내 방송 보기' : '▶ 시청하기'}</span>
+                </button>`; }).join('');
+        }
+        function openLiveStart() {
+            if (!myTown) return;
+            if (live) { openLiveView(); return; }
+            const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
+            openSheet(sheetHead('🔴', '실시간 방송 시작하기', '지금 보고 있는 현장을 카메라로 생중계하면 ' + esc(myTown.dong) + ' 이웃들이 들어와 함께 보고 채팅할 수 있습니다.') + `
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5 space-y-3 text-sm text-slate-700 dark:text-slate-200">
+                    <label class="block"><span class="text-xs font-bold">방송 제목</span><input id="liveTitle" maxlength="40" placeholder="예) ○○사거리 차량 화재 현장" class="${inp} mt-1"></label>
+                    <label class="block"><span class="text-xs font-bold">장소 (선택)</span><input id="livePlace" maxlength="40" placeholder="예) ○○초등학교 앞" class="${inp} mt-1"></label>
+                    <div><span class="text-xs font-bold">카메라</span>
+                        <div class="mt-1 flex gap-3 text-sm"><label class="flex items-center gap-1.5"><input type="radio" name="liveCam" value="environment" checked> 후면 (현장 촬영)</label><label class="flex items-center gap-1.5"><input type="radio" name="liveCam" value="user"> 전면 (셀카)</label></div></div>
+                    <div class="rounded-xl border-2 border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-3 text-xs text-red-800 dark:text-red-200 leading-relaxed">
+                        <b>⚠️ 방송 전 꼭 지켜 주세요</b><br>
+                        • 내 안전이 먼저입니다. 불·연기·싸움 현장에는 가까이 가지 말고, <b>운전 중에는 절대 방송하지 마세요.</b><br>
+                        • 생명이 위급하면 방송보다 먼저 <b>112·119</b>에 신고하세요.<br>
+                        • 피해자·행인의 얼굴, 차량 번호, 집 주소가 오래 비치지 않게 해 주세요.<br>
+                        • 허위·연출 방송은 이웃 평가로 신뢰 지수가 크게 내려가고 법적 책임을 질 수 있습니다.
+                    </div>
+                    <button onclick="startLive()" class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-base font-extrabold shadow-lg shadow-red-600/30"><span class="live-dot"></span> 방송 시작</button>
+                    ${commDb ? '' : '<p class="text-[0.6875rem] text-amber-600 dark:text-amber-400">지금은 커뮤니티 서버가 연결되지 않은 체험 모드라, 방송 화면은 이 기기에서만 보입니다. 이웃에게 실제로 송출하려면 Firebase 서버 연결(index.html 맨 위 FIREBASE_CONFIG)이 필요합니다.</p>'}
+                </div>`);
+        }
+        async function startLive() {
+            const v = id => ((document.getElementById(id) || {}).value || '').trim();
+            const title = v('liveTitle').slice(0, 40) || '현장 생중계', place = v('livePlace').slice(0, 40);
+            const facing = (document.querySelector('input[name="liveCam"]:checked') || {}).value || 'environment';
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { showAlertToast({ head: '🔴 실시간 방송', title: '이 브라우저는 카메라 방송을 지원하지 않습니다.' }); return; }
+            let stream;
+            try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true }); }
+            catch (e) { showAlertToast({ head: '🔴 실시간 방송', title: '카메라·마이크 사용을 허용해야 방송할 수 있습니다.', foot: (e && e.message) || '' }); return; }
+            closeSheet();
+            if (watch) leaveLive(true);
+            const db = await commInit();
+            live = { id: null, ref: null, stream: stream, pcs: {}, unsubs: [], startedAt: Date.now(), facing: facing, title: title, place: place, local: !db, viewers: 0 };
+            if (db) {
+                const ref = liveCol().doc();
+                live.id = ref.id; live.ref = ref;
+                try {
+                    await ref.set(Object.assign({ title: title, place: place, ts: Date.now(), lastBeat: Date.now(), active: true, viewers: 0, uid: COMM_UID }, meFields()));
+                } catch (e) { console.error(e); showAlertToast({ head: '🔴 실시간 방송', title: '방송을 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.' }); stream.getTracks().forEach(t => t.stop()); live = null; return; }
+                live.beat = setInterval(() => { if (live && live.ref) live.ref.update({ lastBeat: Date.now() }).catch(() => {}); }, 20000);
+                live.unsubs.push(ref.collection('viewers').onSnapshot(liveOnViewers, err => console.error(err)));
+                // 안전망 글 목록에도 '방송 시작' 글을 남겨서, 나중에 들어온 이웃도 눌러서 볼 수 있게
+                commCol(townKey(myTown)).add(Object.assign({ type: 'live', liveId: ref.id, text: title, place: place, ts: Date.now(), uid: COMM_UID, town: myTown.dong }, meFields())).catch(() => {});
+            } else {
+                live.id = 'local' + Date.now();
+            }
+            openLiveView();
+            renderLiveBar();
+        }
+        function liveOnViewers(snap) {
+            if (!live) return;
+            snap.docChanges().forEach(ch => {
+                const vid = ch.doc.id, d = ch.doc.data();
+                if (ch.type === 'removed') { liveDropViewer(vid); return; }
+                if (d.offer && !d.answer && !live.pcs[vid]) liveAnswer(vid, d).catch(e => console.error(e));
+            });
+            live.viewers = Object.keys(live.pcs).length;
+            if (live.ref) live.ref.update({ viewers: live.viewers }).catch(() => {});
+            renderLiveHud(); renderLiveBar();
+        }
+        async function liveAnswer(vid, d) {
+            const vref = live.ref.collection('viewers').doc(vid);
+            if (Object.keys(live.pcs).length >= LIVE_MAX_VIEWERS || isBlocked(vid)) { vref.update({ full: true }).catch(() => {}); return; }
+            const pc = new RTCPeerConnection(RTC_CFG);
+            live.pcs[vid] = { pc: pc, unsubs: [] };
+            live.stream.getTracks().forEach(tr => pc.addTrack(tr, live.stream));
+            pc.onicecandidate = e => { if (e.candidate) vref.collection('bc').add(e.candidate.toJSON()).catch(() => {}); };
+            pc.onconnectionstatechange = () => { if (['failed', 'closed'].includes(pc.connectionState)) { liveDropViewer(vid); if (live) { live.viewers = Object.keys(live.pcs).length; renderLiveHud(); } } };
+            await pc.setRemoteDescription(new RTCSessionDescription(d.offer));
+            const ans = await pc.createAnswer();
+            await pc.setLocalDescription(ans);
+            await vref.update({ answer: { type: ans.type, sdp: ans.sdp } });
+            live.pcs[vid].unsubs.push(vref.collection('vc').onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); })));
+        }
+        function liveDropViewer(vid) {
+            const x = live && live.pcs[vid];
+            if (!x) return;
+            x.unsubs.forEach(u => { try { u(); } catch (e) {} });
+            try { x.pc.close(); } catch (e) {}
+            delete live.pcs[vid];
+        }
+        async function liveSwitchCam() {
+            if (!live) return;
+            const facing = live.facing === 'environment' ? 'user' : 'environment';
+            try {
+                const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing }, audio: false });
+                const nt = s.getVideoTracks()[0], old = live.stream.getVideoTracks()[0];
+                Object.values(live.pcs).forEach(x => { const snd = x.pc.getSenders().find(y => y.track && y.track.kind === 'video'); if (snd) snd.replaceTrack(nt).catch(() => {}); });
+                if (old) { live.stream.removeTrack(old); old.stop(); }
+                live.stream.addTrack(nt); live.facing = facing;
+                const vEl = document.getElementById('liveVideo'); if (vEl) vEl.srcObject = live.stream;
+            } catch (e) { showAlertToast({ head: '🔴 실시간 방송', title: '카메라를 바꾸지 못했습니다. (카메라가 하나뿐인 기기일 수 있습니다)' }); }
+        }
+        function liveToggleMic() {
+            if (!live) return;
+            const tr = live.stream.getAudioTracks()[0];
+            if (tr) tr.enabled = !tr.enabled;
+            renderLiveHud();
+        }
+        function stopLive(ask) {
+            if (!live) return;
+            if (ask && !confirm('방송을 끝낼까요? 시청 중인 이웃의 화면도 함께 꺼집니다.')) return;
+            const l = live; live = null;
+            if (l.beat) clearInterval(l.beat);
+            l.unsubs.forEach(u => { try { u(); } catch (e) {} });
+            Object.keys(l.pcs).forEach(vid => { const x = l.pcs[vid]; x.unsubs.forEach(u => { try { u(); } catch (e) {} }); try { x.pc.close(); } catch (e) {} });
+            try { l.stream.getTracks().forEach(t => t.stop()); } catch (e) {}
+            if (l.ref) l.ref.update({ active: false, endedAt: Date.now() }).catch(() => {});
+            stopLiveChat();
+            closeLiveView(true);
+            renderLiveBar(); renderCommMessages();
+        }
+        async function watchLive(id) {
+            if (live && live.id === id) { openLiveView(); return; }
+            if (watch && watch.id === id) { openLiveView(); return; }
+            const db = await commInit();
+            if (!db || !myTown) { needServer('실시간 방송 시청'); return; }
+            if (watch) leaveLive(true);
+            const ref = liveCol().doc(id);
+            let info = null;
+            try { info = (await ref.get()).data(); } catch (e) {}
+            if (!liveActive(info)) { showAlertToast({ head: '🔴 실시간 방송', title: '이미 끝난 방송입니다.' }); return; }
+            const pc = new RTCPeerConnection(RTC_CFG);
+            pc.addTransceiver('video', { direction: 'recvonly' });
+            pc.addTransceiver('audio', { direction: 'recvonly' });
+            const meRef = ref.collection('viewers').doc(COMM_UID);
+            watch = { id: id, ref: ref, pc: pc, meRef: meRef, unsubs: [], info: info, stream: null, ended: false };
+            pc.ontrack = e => { if (!watch) return; watch.stream = e.streams[0]; const vEl = document.getElementById('liveVideo'); if (vEl && vEl.srcObject !== e.streams[0]) { vEl.srcObject = e.streams[0]; livePlay(vEl); } renderLiveHud(); };
+            pc.onicecandidate = e => { if (e.candidate) meRef.collection('vc').add(e.candidate.toJSON()).catch(() => {}); };
+            pc.onconnectionstatechange = () => { if (watch && pc.connectionState === 'failed') { watch.failed = true; renderLiveHud(); } };
+            openLiveView();
+            try {
+                await meRef.delete().catch(() => {});
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                await meRef.set(Object.assign({ offer: { type: offer.type, sdp: offer.sdp }, ts: Date.now() }, meFields()));
+            } catch (e) { console.error(e); if (watch) { watch.failed = true; renderLiveHud(); } return; }
+            watch.unsubs.push(meRef.onSnapshot(s => {
+                const d = s.data();
+                if (!d || !watch) return;
+                if (d.full) { showAlertToast({ head: '🔴 실시간 방송', title: '시청 인원이 가득 찼습니다 (최대 ' + LIVE_MAX_VIEWERS + '명). 잠시 후 다시 들어와 주세요.' }); leaveLive(); return; }
+                if (d.answer && !pc.currentRemoteDescription) pc.setRemoteDescription(new RTCSessionDescription(d.answer)).catch(() => {});
+            }));
+            watch.unsubs.push(meRef.collection('bc').onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); })));
+            watch.unsubs.push(ref.onSnapshot(s => { if (!watch) return; const d = s.data(); if (d) watch.info = d; if (!d || !d.active) watch.ended = true; renderLiveHud(); }));
+        }
+        function leaveLive(silent) {
+            if (!watch) return;
+            const w = watch; watch = null;
+            w.unsubs.forEach(u => { try { u(); } catch (e) {} });
+            try { w.pc.close(); } catch (e) {}
+            w.meRef.delete().catch(() => {});
+            stopLiveChat();
+            if (!silent) closeLiveView(true);
+        }
+        // 자동 재생이 막히면(소리 있는 영상) 소리를 끄고 재생한 뒤 '소리 켜기' 버튼을 보여 줌
+        function livePlay(vEl) { const p = vEl.play(); if (p && p.catch) p.catch(() => { vEl.muted = true; vEl.play().catch(() => {}); renderLiveHud(); }); }
+        function liveToPress() {
+            const i = live ? { title: live.title, place: live.place } : ((watch && watch.info) || {});
+            showReportGuide({ kind: '실시간 방송으로 본 현장', place: i.place || '', text: (i.title || '') + ' (우리동네 커뮤니티 실시간 방송으로 확인한 현장입니다)', ts: Date.now(), hasMedia: true });
+        }
+        function liveUnmute() { const vEl = document.getElementById('liveVideo'); if (vEl) { vEl.muted = false; vEl.play().catch(() => {}); } renderLiveHud(); }
+        function startLiveChat(id, ref) {
+            if (liveChatFor === id) return;
+            stopLiveChat();
+            liveChatFor = id; liveChat = [];
+            if (ref) liveChatUnsub = ref.collection('chat').orderBy('ts', 'asc').limitToLast(150).onSnapshot(s => { liveChat = s.docs.map(d => d.data()).filter(m => !isBlocked(m.uid)); renderLiveChat(); }, err => console.error(err));
+        }
+        function stopLiveChat() { if (liveChatUnsub) { liveChatUnsub(); liveChatUnsub = null; } liveChatFor = null; liveChat = []; }
+        async function liveChatSend() {
+            const inp = document.getElementById('liveChatInput');
+            const text = ((inp && inp.value) || '').trim().slice(0, 150);
+            if (!text) return;
+            const m = { text: text, ts: Date.now(), uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂' };
+            const ref = live ? live.ref : (watch ? watch.ref : null);
+            inp.value = '';
+            if (ref) { try { await ref.collection('chat').add(m); } catch (e) { console.error(e); } }
+            else { liveChat.push(m); renderLiveChat(); }
+        }
+        function renderLiveChat() {
+            const box = document.getElementById('liveChatList');
+            if (!box) return;
+            const host = live ? COMM_UID : (watch && watch.info ? watch.info.uid : '');
+            box.innerHTML = liveChat.length ? liveChat.map(m => `<div class="break-words"><b class="${m.uid === host ? 'text-red-400' : 'text-sky-300'}">${esc(m.emoji || '🙂')} ${esc(displayName(m.uid, m.nick))}${m.uid === host ? ' (방송자)' : ''}</b> <span class="text-slate-100">${esc(m.text)}</span></div>`).join('')
+                : '<div class="text-slate-400 text-center py-6">아직 채팅이 없습니다. 현장 상황을 함께 나눠 주세요.</div>';
+            box.scrollTop = box.scrollHeight;
+        }
+        function openLiveView() {
+            const o = document.getElementById('liveOverlay');
+            if (!o || (!live && !watch)) return;
+            const mine = !!live && !watch;
+            o.innerHTML = `
+                <div class="flex-1 min-w-0 min-h-0 relative bg-black flex items-center justify-center">
+                    <video id="liveVideo" autoplay playsinline ${mine ? 'muted' : ''} class="w-full h-full object-contain ${mine && live.facing === 'user' ? '-scale-x-100' : ''}"></video>
+                    <div id="liveHud" class="absolute top-0 left-0 right-0 p-3 flex items-start gap-2 bg-gradient-to-b from-black/75 to-transparent text-white"></div>
+                    <div id="liveWait" class="absolute inset-0 flex items-center justify-center text-white text-sm font-bold pointer-events-none"></div>
+                    <div id="liveCtl" class="absolute bottom-4 left-0 right-0 flex justify-center gap-2 flex-wrap px-3"></div>
+                </div>
+                <aside class="w-full md:w-80 h-[38%] md:h-auto shrink-0 bg-slate-900 text-white flex flex-col border-t md:border-t-0 md:border-l border-slate-700">
+                    <div class="px-3 py-2 border-b border-slate-700 text-xs font-bold flex items-center justify-between"><span>💬 함께 보는 이웃 채팅</span><span class="text-[0.625rem] text-slate-400">${esc(myTown ? myTown.dong : '')}</span></div>
+                    <div id="liveChatList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-2 space-y-1.5 text-xs"></div>
+                    <div class="p-2 border-t border-slate-700 flex gap-1.5">
+                        <input id="liveChatInput" maxlength="150" onkeydown="if (event.key === 'Enter' && !event.isComposing) liveChatSend()" placeholder="채팅 (예: 지금 소방차 도착했어요)" class="flex-1 min-w-0 bg-slate-800 border border-slate-600 rounded-lg px-2 py-1.5 text-xs text-white">
+                        <button onclick="liveChatSend()" class="px-3 rounded-lg bg-red-600 hover:bg-red-500 font-bold text-xs">보내기</button>
+                    </div>
+                </aside>`;
+            o.classList.remove('hidden');
+            const vEl = document.getElementById('liveVideo');
+            if (mine) { vEl.srcObject = live.stream; livePlay(vEl); }
+            else if (watch.stream) { vEl.srcObject = watch.stream; livePlay(vEl); }
+            startLiveChat(mine ? live.id : watch.id, mine ? live.ref : watch.ref);
+            renderLiveHud(); renderLiveChat();
+            if (liveHudTimer) clearInterval(liveHudTimer);
+            liveHudTimer = setInterval(renderLiveHud, 1000);
+        }
+        // closeLiveView(true): 화면만 닫음.  방송자는 화면을 닫아도 방송이 계속되고, 안전망 맨 위 [내 방송 보기]로 다시 열 수 있음
+        function closeLiveView(force) {
+            if (!force && watch) { leaveLive(); return; }
+            const o = document.getElementById('liveOverlay');
+            if (o) { o.classList.add('hidden'); o.innerHTML = ''; }
+            if (liveHudTimer) { clearInterval(liveHudTimer); liveHudTimer = null; }
+        }
+        function renderLiveHud() {
+            const hud = document.getElementById('liveHud');
+            if (!hud) return;
+            const mine = !!live && !watch;
+            const info = mine ? { nick: myNick(), emoji: commProfile.emoji, title: live.title, place: live.place, ts: live.startedAt, viewers: live.viewers } : ((watch && watch.info) || {});
+            const sec = Math.max(0, Math.floor((Date.now() - (info.ts || Date.now())) / 1000)), p2 = n => String(n).padStart(2, '0');
+            const el = (sec >= 3600 ? Math.floor(sec / 3600) + ':' : '') + p2(Math.floor(sec / 60) % 60) + ':' + p2(sec % 60);
+            hud.innerHTML = `<span class="px-2 py-1 rounded bg-red-600 text-xs font-extrabold flex items-center gap-1.5 shrink-0"><span class="live-dot"></span> LIVE</span>
+                <span class="px-2 py-1 rounded bg-black/55 text-xs shrink-0">👁 ${info.viewers || 0}명</span>
+                <span class="px-2 py-1 rounded bg-black/55 text-xs font-mono shrink-0">${el}</span>
+                <div class="flex-1 min-w-0 leading-tight"><div class="text-sm font-bold truncate">${esc(info.title || '현장 생중계')}</div>
+                    <div class="text-[0.6875rem] opacity-85 truncate">${esc(info.emoji || '🙂')} ${esc(mine ? myNick() + ' (나)' : displayName(info.uid, info.nick))}${info.place ? ' · 📍' + esc(info.place) : ''}${mine && live.local ? ' · 체험 모드 (이 기기에서만 보임)' : ''}</div></div>
+                <button onclick="closeLiveView()" title="${mine ? '화면 닫기 (방송은 계속됩니다)' : '나가기'}" class="shrink-0 w-8 h-8 rounded-full bg-black/55 hover:bg-black/80 text-lg leading-none">✕</button>`;
+            const vEl = document.getElementById('liveVideo');
+            const btn = (fn, label, cls) => `<button onclick="${fn}" class="px-4 py-2 rounded-full text-sm font-bold shadow-lg ${cls || 'bg-white/20 hover:bg-white/30 text-white backdrop-blur'}">${label}</button>`;
+            const ctl = document.getElementById('liveCtl');
+            if (ctl) {
+                if (mine) {
+                    const mic = live.stream.getAudioTracks()[0];
+                    ctl.innerHTML = btn('liveSwitchCam()', '🔄 카메라 전환') + btn('liveToggleMic()', mic && !mic.enabled ? '🎤 마이크 켜기' : '🔇 마이크 끄기')
+                        + btn('closeLiveView(true)', '⤡ 화면 닫기 (방송 계속)') + btn('stopLive(true)', '■ 방송 종료', 'bg-red-600 hover:bg-red-500 text-white');
+                } else {
+                    ctl.innerHTML = (vEl && vEl.muted ? btn('liveUnmute()', '🔊 소리 켜기', 'bg-amber-500 hover:bg-amber-400 text-white') : '')
+                        + btn('liveToPress()', '📺 언론사 제보') + btn('leaveLive()', '나가기', 'bg-red-600 hover:bg-red-500 text-white');
+                }
+            }
+            const wait = document.getElementById('liveWait');
+            if (wait) wait.innerHTML = (!mine && watch) ? (watch.ended ? '<div class="px-4 py-3 rounded-xl bg-black/70">📴 방송이 끝났습니다.</div>'
+                : watch.failed ? '<div class="px-4 py-3 rounded-xl bg-black/70 text-center">연결하지 못했습니다.<br><span class="text-xs font-normal opacity-80">네트워크 환경(회사·학교 방화벽 등)에 따라 연결이 안 될 수 있습니다.</span></div>'
+                : !watch.stream ? '<div class="px-4 py-3 rounded-xl bg-black/70">📡 방송에 연결하는 중...</div>' : '') : '';
+        }
+        window.addEventListener('beforeunload', () => {
+            if (live && live.ref) live.ref.update({ active: false, endedAt: Date.now() }).catch(() => {});
+            if (watch) watch.meRef.delete().catch(() => {});
+        });
+
         // ---- 음성·영상 통화 (WebRTC) ----
         const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
         let call = null, callsUnsub = null, autoAcceptFrom = null;
@@ -4438,13 +4977,24 @@
             return '신뢰 지수 ' + t.score + '점 · ' + trustLevel(t.score)[1] + ' (' + t.count + '건 평가)';
         }
         // 프로필 카드에 들어가는 신뢰 지수 (점수 막대 + 마우스를 올리면 기준 설명)
+        // 점수별 색 (등급표와 같은 구간): 매우 높음 초록 · 높음 청록 · 보통 파랑 · 낮음 주황 · 매우 낮음 빨강
+        const TRUST_COLORS = [[80, '#059669', '#d1fae5'], [65, '#0d9488', '#ccfbf1'], [45, '#2563eb', '#dbeafe'], [30, '#d97706', '#fef3c7'], [0, '#dc2626', '#fee2e2']];
+        function trustColor(score) { return TRUST_COLORS.find(c => score >= c[0]) || TRUST_COLORS[TRUST_COLORS.length - 1]; }
         function trustHtml(t) {
             const score = t && t.count ? t.score : TRUST_BASE;
-            const lv = t && t.count >= TRUST_MIN_VOTES ? trustLevel(score) : [0, '', 'text-slate-500'];
+            const enough = t && t.count >= TRUST_MIN_VOTES;
+            const col = trustColor(score);
+            const grade = enough ? trustLevel(score)[1] : (t && t.count ? '평가 부족 (' + t.count + '건)' : '아직 평가 없음');
             const part = (label, p) => p && p.n ? `${label} ★${p.avg.toFixed(1)}(${p.n})` : `${label} -`;
-            const detail = t && t.count ? `<div class="text-[0.625rem] font-medium text-slate-500 mt-0.5">${part('거래', t.trade)} · ${part('대화', t.manner)} · ${part('제보', t.report)}</div>` : '';
-            const bar = `<div class="mx-auto mt-1 w-40 h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden"><div class="h-full rounded-full" style="width:${score}%; background:${score >= 65 ? '#10b981' : (score >= 45 ? '#94a3b8' : (score >= 30 ? '#f59e0b' : '#ef4444'))};"></div></div>`;
-            return `<span class="tip ${lv[2]}" tabindex="0">${esc(trustText(t))} <i class="fa-regular fa-circle-question opacity-70"></i><span class="tip-box">${esc(TRUST_HELP)}</span></span>${bar}${detail}`;
+            const detail = t && t.count ? `<div class="text-[0.6875rem] font-medium text-slate-500 mt-1">${part('거래', t.trade)} · ${part('대화', t.manner)} · ${part('제보', t.report)}${enough ? ' · ' + t.count + '건 평가' : ''}</div>` : '';
+            // 점수를 색깔 배지로 크게 + 색 막대 (어느 구간인지 한눈에)
+            const badge = `<span class="tip inline-flex items-center gap-2 rounded-full pl-1.5 pr-3 py-1 border-2" tabindex="0" style="border-color:${col[1]}; background:${col[2]}; color:${col[1]};">
+                <span class="inline-flex items-center justify-center rounded-full text-white font-black" style="background:${col[1]}; min-width:2.6rem; height:2.1rem; font-size:1.05rem; padding:0 .4rem;">${score}</span>
+                <span class="text-left leading-tight"><span class="block text-[0.625rem] font-bold opacity-80">신뢰 지수</span><span class="block text-sm font-extrabold">${esc(grade)}</span></span>
+                <i class="fa-regular fa-circle-question opacity-70"></i><span class="tip-box">${esc(TRUST_HELP)}</span></span>`;
+            const bar = `<div class="mx-auto mt-2 w-48 h-2.5 rounded-full overflow-hidden relative" style="background:linear-gradient(90deg,#dc2626 0%,#dc2626 30%,#d97706 30%,#d97706 45%,#2563eb 45%,#2563eb 65%,#0d9488 65%,#0d9488 80%,#059669 80%); opacity:.25;"></div>
+                <div class="mx-auto -mt-2.5 w-48 h-2.5 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:${score}%; background:${col[1]};"></div></div>`;
+            return `<div class="flex justify-center">${badge}</div>${bar}${detail}`;
         }
         async function saveTrustVote(targetUid, key, score, kind) {
             if (!targetUid || targetUid === COMM_UID) return;
@@ -4998,10 +5548,26 @@
         }
 
         // ================= 제보 가이드라인 · 신뢰 지수 안내 =================
-        function showReportGuide() {
+        // [📺 언론사 제보하기] 버튼: 먼저 가이드라인·신뢰 지수를 보여 주고, 언론사 제보 창을 열지는 사용자가 고름
+        function pressFromComposer() {
+            const v = id => ((document.getElementById(id) || {}).value || '').trim();
+            const text = v('commText');
+            const d = text ? { kind: commType === 'sos' ? 'SOS(긴급)' : (v('commKind') || '기타'), place: v('commPlace'), text: text, ts: Date.now(), hasMedia: !!commAttach }
+                : (lastMyReport || { kind: v('commKind') || '사건·사고', place: v('commPlace'), text: '', ts: Date.now() });
+            showReportGuide(d);
+        }
+        function showReportGuide(pressDraftIn) {
             toggleCommMenu(false);
+            const forPress = !!pressDraftIn;
+            if (forPress) pressDraft = Object.assign({}, pressDraftIn);
             const li = (t, d) => `<li class="flex gap-2"><span class="shrink-0">•</span><span><b>${t}</b> ${d}</span></li>`;
-            openSheet(sheetHead('⚖️', '제보 가이드라인 · 신뢰 지수', '팩트와 신뢰가 가장 중요합니다. 모두가 믿고 쓰는 우리동네 안전망을 함께 만들어 주세요.') + `
+            const choice = forPress ? `<div class="shrink-0 border-t border-slate-200 dark:border-slate-700 px-5 py-3 bg-indigo-50 dark:bg-indigo-950/40">
+                    <div class="text-sm font-bold text-slate-900 dark:text-white mb-2">위 가이드라인을 확인했나요? 언론사·방송사에 제보하시겠어요?</div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="openPressTip(pressDraft)" class="flex-1 min-w-[10rem] px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow">📺 네, 언론사 제보 창 열기</button>
+                        <button onclick="closeSheet()" class="px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold hover:bg-white dark:hover:bg-slate-800">아니요, 닫기</button>
+                    </div></div>` : '';
+            openSheet(sheetHead('⚖️', forPress ? '언론사 제보 전 확인: 가이드라인 · 신뢰 지수' : '제보 가이드라인 · 신뢰 지수', '팩트와 신뢰가 가장 중요합니다. 모두가 믿고 쓰는 우리동네 안전망을 함께 만들어 주세요.') + `
                 <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5 space-y-4 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                     <section><h4 class="font-extrabold text-slate-900 dark:text-white mb-1">✅ 좋은 제보 6원칙</h4><ul class="space-y-1">
                         ${li('직접 본 사실만', '— 들은 이야기·추측은 "~라고 들었다"처럼 구분해서 적습니다.')}
@@ -5037,9 +5603,9 @@
                         </div>
                         <p class="text-[0.6875rem] text-slate-500 mt-1">예) 처음 50점인 이웃이 정확한 제보로 "사실이에요"를 5번 받으면 65점(높음), "사실과 달라요"를 4번 받으면 30점(낮음)이 됩니다.</p></section>
                     <section><h4 class="font-extrabold text-slate-900 dark:text-white mb-1">📺 언론사 제보</h4>
-                        <p class="text-xs">제보를 올릴 때 <b>📺 언론사에도 제보</b>를 체크하면, 등록과 동시에 KBS·MBC·SBS·YTN·연합뉴스 등 원하는 언론사에 보낼 수 있는 창이 열립니다. 보도된 기사는 이 사이트의 기사 목록에 자동으로 올라옵니다.</p>
-                        <button onclick="openPressTip()" class="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">📺 언론사 제보 창 열기</button></section>
-                </div>`);
+                        <p class="text-xs">제보 쓰는 곳의 <b>📺 언론사 제보하기</b> 버튼을 누르면 이 안내를 확인한 뒤 KBS·MBC·SBS·YTN·연합뉴스 등 원하는 언론사에 보낼 수 있는 창을 열 수 있습니다. 쓰고 있던 글(또는 방금 올린 제보)이 자동으로 채워집니다. 실제로 보내는 것은 내 메일·카카오톡에서 직접 하며, 보도된 기사는 이 사이트의 기사 목록에 자동으로 올라옵니다.</p>
+                        ${forPress ? '' : '<button onclick="openPressTip()" class="mt-2 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold">📺 언론사 제보 창 열기</button>'}</section>
+                </div>${choice}`);
         }
 
         // ================= 오늘의 안전 브리핑 (개인 비서처럼 일간·주간 주요 사건 요약) =================
@@ -5148,9 +5714,11 @@
                 ${a.scams.length ? `<div class="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3"><div class="text-xs font-bold text-amber-700 dark:text-amber-300 mb-1">📵 요즘 유행하는 피싱·사기 수법 (전국 보도 기준)</div><ul class="text-xs text-slate-700 dark:text-slate-200 space-y-1">${a.scams.map(s => `<li>• <b>${esc(s.name)}</b> <span class="text-slate-400">기사 ${s.n}건</span><br><span class="text-amber-800 dark:text-amber-200">주의: ${esc(s.tip)}</span></li>`).join('')}</ul></div>` : ''}
             </section>`;
         }
-        function openBriefing(tab) {
+        // 안전 브리핑: [화면 설정]에서 칸에 넣었으면 그 칸에 그리고, 아니면 창(sheet)으로 띄움
+        function openBriefing(tab, quiet) {
             if (tab) briefTab = tab;
-            const dot = document.getElementById('briefDot'); if (dot) dot.classList.add('hidden');
+            const docked = isDocked('briefing');
+            if (!quiet || !docked) { const dot = document.getElementById('briefDot'); if (dot) dot.classList.add('hidden'); }
             const c = briefCenter();
             const now = new Date(), p = n => String(n).padStart(2, '0');
             const tabBtn = (k, label) => `<button onclick="openBriefing('${k}')" class="px-3 py-1.5 rounded-full text-xs font-bold ${briefTab === k ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">${label}</button>`;
@@ -5183,7 +5751,20 @@
                     <p class="text-[0.6875rem] text-slate-400">이 보고서는 언론 보도를 자동으로 모아 요약한 것으로, 실제 상황과 다를 수 있습니다. 기사 제목을 누르면 원문으로 이동합니다.</p>
                 </div>`;
             }
-            openSheet(sheetHead('📋', '오늘의 안전 브리핑', `보고 시간 ${briefCfg.times.join(', ') || '없음'} · 범위: ${esc((BRIEF_SCOPES.find(s => s[0] === briefCfg.scope) || [, ''])[1])}`) + `
+            const sub = `보고 시간 ${briefCfg.times.join(', ') || '없음'} · 범위: ${esc((BRIEF_SCOPES.find(s => s[0] === briefCfg.scope) || [, ''])[1])}`;
+            if (docked) {
+                const pb = document.getElementById('briefPanelBody'), ps = document.getElementById('briefPanelSub');
+                if (ps) ps.innerHTML = sub + ' · ' + p(now.getHours()) + ':' + p(now.getMinutes()) + ' 기준';
+                if (pb) {
+                    const keep = pb.querySelector('.brief-scroll'), top = keep ? keep.scrollTop : 0;
+                    pb.innerHTML = `<div class="px-3 pt-2 flex flex-wrap gap-1.5 shrink-0">${tabBtn('report', '📋 보고서')}${tabBtn('settings', '⚙ 시간·범위 설정')}</div>
+                        <div class="brief-scroll flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">${body}</div>`;
+                    if (quiet) { const s2 = pb.querySelector('.brief-scroll'); if (s2) s2.scrollTop = top; }
+                }
+                if (!quiet) { const el = panelEl('briefing'); el.classList.remove('panel-flash'); void el.offsetWidth; el.classList.add('panel-flash'); }
+                return;
+            }
+            openSheet(sheetHead('📋', '오늘의 안전 브리핑', sub) + `
                 <div class="px-5 pt-3 flex flex-wrap gap-1.5 shrink-0">${tabBtn('report', '📋 보고서 (지금 기준 예시)')}${tabBtn('settings', '⚙ 보고 시간·범위 설정')}</div>
                 <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5">${body}</div>`);
         }
@@ -5206,7 +5787,8 @@
             if (briefCfg.notify && window.Notification && Notification.permission === 'granted') {
                 try { new Notification('우리동네 안전 브리핑 (' + due + ')', { body: '오늘 ' + (d.c ? d.c.label : '전국') + ' 사건사고 ' + d.total + '건' + (d.attention[0] ? ' · ' + d.attention[0].lead.title : '') }); } catch (e) {}
             }
-            if (briefCfg.autoOpen && document.getElementById('sheetModal').classList.contains('hidden')) openBriefing('report');
+            if (isDocked('briefing')) openBriefing('report');
+            else if (briefCfg.autoOpen && document.getElementById('sheetModal').classList.contains('hidden')) openBriefing('report');
         }
 
         function manualRefreshData() {
