@@ -148,8 +148,7 @@
             background: #0f172a; color: #f8fafc; font-size: 11px; font-weight: 500; line-height: 1.5; text-align: left; white-space: normal; box-shadow: 0 8px 24px rgba(0,0,0,.35); transition: opacity .15s; z-index: 50; pointer-events: none; }
         .tip:hover .tip-box, .tip:focus .tip-box { visibility: visible; opacity: 1; }
         /* 새 기사가 들어왔을 때 목록 맨 위 카드 강조 */
-        .news-new { animation: news-new 2.4s ease-out 1; }
-        @keyframes news-new { 0% { box-shadow: 0 0 0 3px rgba(16,185,129,.9); } 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } }
+        /* 새 기사: 'NEW' 표시만 (초록 테두리 깜빡임은 뺌) */
         /* 어두운 지도: 한글 지명이 나오는 기본 지도를 어둡게 바꿔서 사용 */
         .tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.55); }
         .tiles-light { filter: saturate(.55) brightness(1.04); }
@@ -163,6 +162,8 @@
         .comm-split:hover > span { background: #10b981; width: 80px; }
         .dark .comm-split > span { background: #475569; }
         body.resizing-v, body.resizing-v * { cursor: ns-resize !important; user-select: none !important; }
+        .btn-nudge { animation: btn-nudge 1.2s ease-out 1; }
+        @keyframes btn-nudge { 0%, 100% { transform: none; box-shadow: none; } 20% { transform: scale(1.08); box-shadow: 0 0 0 4px rgba(14,165,233,.45); } 45% { transform: scale(1); } 65% { transform: scale(1.05); box-shadow: 0 0 0 3px rgba(14,165,233,.3); } }
         .live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: live-blink 1s ease-in-out infinite; }
         @keyframes live-blink { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
         .float-grip { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; z-index: 30; }
@@ -172,8 +173,10 @@
         .float-grip-right { right: 0; } .float-grip-right::after { right: 3px; }
         .cat-ex { text-decoration: line-through; opacity: .55; box-shadow: 0 0 0 2px #dc2626; }
         .cat-check.cat-check-ex { background: #dc2626; }
-        .cat-dim { opacity: .62; }
-        .cat-dim:hover { opacity: 1; }
+        .cat-dim { opacity: .8; }
+        /* 분류 버튼 글씨를 더 진하게 (가시성) */
+        #groupButtons .cat-btn, #listCatBar .cat-btn { font-weight: 700; }
+        #groupButtons .cat-btn .font-mono, #listCatBar .cat-btn .font-mono { opacity: .95 !important; }        .cat-dim:hover { opacity: 1; }
         .cat-check { position: absolute; top: -7px; right: -6px; width: 16px; height: 16px; border-radius: 50%; background: #4f46e5; color: #fff; font-size: 10px; font-weight: 900; line-height: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.35); animation: cat-check .3s ease-out 1; pointer-events: none; }
         .cat-pop { animation: cat-pop .32s cubic-bezier(.3,1.6,.5,1) 1; }
         .cat-unpop { animation: cat-unpop .25s ease-out 1; }
@@ -182,7 +185,9 @@
         @keyframes cat-check { 0% { transform: scale(0) rotate(-45deg); opacity: 0; } 100% { transform: scale(1) rotate(0); opacity: 1; } }
         /* 커뮤니티 탭 끌어서 순서 바꾸기 */
         .comm-tab[draggable="true"] { cursor: grab; }
-        .comm-tab.dragging { opacity: .4; }
+        .comm-tab.dragging, .ord-item.dragging { opacity: .4; }
+        .ord-item.drop-before { box-shadow: -3px 0 0 0 #6366f1; }
+        .ord-item.drop-after { box-shadow: 3px 0 0 0 #6366f1; }
         .comm-tab.drop-before { box-shadow: -3px 0 0 0 #6366f1; }
         .comm-tab.drop-after { box-shadow: 3px 0 0 0 #6366f1; }
         .safety-tab { background: linear-gradient(135deg, #dc2626, #ea580c) !important; color: #fff !important; border-color: transparent !important; }
@@ -225,7 +230,7 @@
             </div>
         </div>
 
-        <div id="tickerWrap" class="hidden md:block flex-1 min-w-[12rem] mx-3 h-8 relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700" title="가장 많이 보도되고 있는 사건 순서입니다. 누르면 해당 기사로 이동합니다.">
+        <div id="tickerWrap" class="hidden md:block flex-1 min-w-0 mx-3 h-8 relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700" title="가장 많이 보도되고 있는 사건 순서입니다. 누르면 해당 기사로 이동합니다.">
             <div id="tickerTrack" class="absolute top-0 left-0 h-8 flex items-center whitespace-nowrap"></div>
         </div>
         
@@ -236,13 +241,13 @@
                 <button onclick="adjustFontSize(1)" class="px-1.5 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A+</button>
             </div>
             <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-yellow-400 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap">
-                <i id="themeIcon" class="fa-solid fa-moon"></i> <span id="themeText">다크모드</span>
+                <i id="themeIcon" class="fa-solid fa-moon"></i> <span id="themeText" class="hidden 2xl:inline">다크모드</span>
             </button>
             <div class="relative">
-                <button onclick="toggleLayoutPanel()" title="화면 배치 바꾸기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-table-columns"></i> 화면 설정</button>
+                <button onclick="toggleLayoutPanel()" title="화면 배치 바꾸기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-table-columns"></i> <span class="hidden xl:inline">화면 설정</span></button>
                 <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
             </div>
-            <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-mobile-screen-button"></i> 앱 다운로드</button>
+            <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-mobile-screen-button"></i> <span class="hidden 2xl:inline">앱 다운로드</span></button>
             <button onclick="openBriefing()" title="오늘·이번 주 주요 사건을 비서처럼 요약해 드립니다" class="relative bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-clipboard-list"></i> 안전 브리핑<span id="briefDot" class="hidden absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-900 animate-pulse"></span></button>
             <span id="floatBtnWrap"></span>
             <button onclick="openCommunity('report')" title="우리동네 안전망에 실시간 제보 · 언론사 제보도 함께" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow-md shadow-red-600/30 transition flex items-center gap-1.5 whitespace-nowrap">
@@ -307,6 +312,8 @@
                 </div>
             </div>
 
+            <!-- 기사 원문 화면을 칸에 넣지 않았을 때만 보이는 분류 버튼 (한 줄로 줄인 모양) -->
+            <div id="listCatBar" class="hidden relative z-20 px-2 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"></div>
             <div id="dateBarWrap" class="relative px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 flex items-center justify-between gap-2">
                 <div class="flex items-center gap-1">
                     <button onclick="stepDate(1)" title="이전 날짜" class="px-1.5 py-1 rounded text-xs text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700"><i class="fa-solid fa-chevron-left"></i></button>
@@ -343,9 +350,9 @@
         </div>
         <!-- 패널 4: 우리동네 커뮤니티 -->
         <div id="panel-community" class="panel bg-white dark:bg-slate-900">
-            <div class="comm-head px-3 py-2 flex items-center justify-between gap-2 shrink-0 nowrap-kids">
+            <div class="comm-head px-3 py-1 flex items-center justify-between gap-2 shrink-0 nowrap-kids">
                 <h3 class="font-extrabold text-sm flex items-center gap-2 min-w-0">
-                    <span class="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center shrink-0"><i class="fa-solid fa-people-group"></i></span>
+                    <span class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 text-xs"><i class="fa-solid fa-people-group"></i></span>
                     <span class="min-w-0 flex flex-col leading-tight">
                         <span class="text-[0.625rem] font-semibold opacity-80">이웃과 함께하는 동네 소통방</span>
                         <span id="commTitle" class="truncate">우리동네 커뮤니티</span>
@@ -776,7 +783,7 @@
                 const total = rect.width;
                 if (isResizing1) {
                     const w = e.clientX - rect.left;
-                    if (w >= 230 && w <= total * 0.5) leftPane.style.width = `${(w / total) * 100}%`;
+                    if (w >= 230 && w <= total * (paneCount === 2 ? 0.78 : 0.5)) leftPane.style.width = `${(w / total) * 100}%`;
                 } else if (isResizing2) {
                     const lw = leftPane.getBoundingClientRect().width;
                     const cw = e.clientX - rect.left - lw - 6;
@@ -787,14 +794,11 @@
 
             document.addEventListener('mouseup', () => {
                 if (isResizing1 || isResizing2) {      // 칸 너비를 바꾸면 기억해 두었다가 다음에 접속해도 그대로
-                    try { localStorage.setItem('pane_w', JSON.stringify([leftPane.style.width, centerPane.style.width])); } catch (e) {}
+                    try { localStorage.setItem(paneCount === 2 ? 'pane_w2' : 'pane_w', JSON.stringify([leftPane.style.width, centerPane.style.width])); } catch (e) {}
                 }
                 isResizing1 = false; isResizing2 = false; document.body.classList.remove('resizing'); fitArticleFrame();
             });
-            try {
-                const pw = JSON.parse(localStorage.getItem('pane_w') || 'null');
-                if (Array.isArray(pw)) { if (/^[\d.]+%$/.test(pw[0] || '')) leftPane.style.width = pw[0]; if (/^[\d.]+%$/.test(pw[1] || '')) centerPane.style.width = pw[1]; }
-            } catch (e) {}
+            applyPaneWidths();
         }
 
         const koSort = (a, b) => String(a).localeCompare(String(b), 'ko');
@@ -857,7 +861,7 @@
 
         // ================= 카테고리(대분류 → 소분류) 설정 =================
         // ※ scraper.py 의 GROUPS 와 이름이 같아야 합니다. 색상/문구를 바꾸고 싶으면 여기만 고치면 됩니다.
-        const badgeOf = c => `bg-${c}-100 text-${c}-700 border-${c}-300 dark:bg-${c}-950/60 dark:text-${c}-300 dark:border-${c}-800`;
+        const badgeOf = c => `bg-${c}-100 text-${c}-800 border-${c}-400 dark:bg-${c}-950/60 dark:text-${c}-200 dark:border-${c}-700`;   // 글씨를 진하게 (가시성)
         // 범죄는 형법 각칙 체계(개인적·사회적·국가적 법익)와 주요 특별법 기준으로 묶었습니다. law = 근거 법률(버튼에 마우스를 올리면 보입니다)
         const CATEGORY_GROUPS = {
             '생명·신체 범죄': { label: '생명·신체 범죄', color: '#ef4444', badge: badgeOf('rose'), law: '형법 제24~28장: 살인, 상해·폭행, 과실치사상, 유기·학대',
@@ -1374,7 +1378,8 @@
             const allOn = currentCategory === 'all' && selCats.size === 0;
             const selN = Array.from(selCats).reduce((a, g) => a + (gCount[g] || 0), 0);
 
-            let html = `<button onclick="setCategoryFilter('all')" data-cat="all" title="모든 분류 보기 (선택 모두 해제)" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition ${allOn ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold shadow-sm' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700 font-bold'}">전체 <span class="opacity-70 font-mono">${base.length}</span></button>`;
+            const allBtn = `<button onclick="setCategoryFilter('all')" data-cat="all" title="모든 분류 보기 (선택 모두 해제)" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition ${allOn ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold shadow-sm' : 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 font-bold'}">전체 <span class="opacity-70 font-mono">${base.length}</span></button>`;
+            let html = allBtn;
             // 사건이 많은 순서대로 앞에 놓고, 해외는 항상 맨 뒤에 따로 구분해서 놓음
             const order = Object.keys(CATEGORY_GROUPS).filter(g => g !== OVERSEAS);
             const idx = {}; order.forEach((g, i) => { idx[g] = i; });
@@ -1405,6 +1410,19 @@
                 ${exCats.size ? `<button onclick="clearExcluded()" title="빼 둔 분류를 모두 다시 보기" class="whitespace-nowrap text-[0.625rem] font-bold text-red-600 dark:text-red-300 border border-red-300 dark:border-red-700 rounded px-1.5 py-0.5 hover:bg-red-50 dark:hover:bg-red-950/40">⊘ 제외 ${exCats.size}개 해제</button>` : ''}
                 <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
             document.getElementById('groupButtons').innerHTML = html;
+            // 기사 원문 화면을 3칸에 넣지 않았을 때: 사건 목록(요약) 위에 분류 버튼을 한 줄로 줄여서 보여 줌
+            const lcb = document.getElementById('listCatBar');
+            if (lcb) {
+                const show = !isDocked('article');
+                lcb.classList.toggle('hidden', !show);
+                lcb.innerHTML = show ? `<div class="hscroll gap-1 items-center pt-2 pb-0.5" title="옆으로 밀어서 더 보기">${allBtn}${order.map(btn).join('')}<span class="flex items-center pl-1 ml-0.5 border-l-2 border-dashed border-slate-400 dark:border-slate-500">${btn(OVERSEAS)}</span></div>
+                    <div class="flex items-center gap-1.5 mt-1">
+                        <span class="flex items-center rounded-md border border-slate-300 dark:border-slate-600 shrink-0">${modeBtn('include', '✓ 골라 보기')}${modeBtn('exclude', '⊘ 빼고 보기').replace('tip-right', '')}</span>
+                        <span class="cat-hint truncate text-[0.625rem] ${(exMode ? exCats.size : selCats.size) ? 'font-bold ' + (exMode ? 'text-red-600 dark:text-red-300' : 'text-indigo-600 dark:text-indigo-300') : 'text-slate-400'}">${hint}</span>
+                        ${exCats.size ? `<button onclick="clearExcluded()" class="shrink-0 whitespace-nowrap text-[0.625rem] font-bold text-red-600 dark:text-red-300 border border-red-300 dark:border-red-700 rounded px-1.5 py-0.5">⊘ 해제</button>` : ''}
+                        <button onclick="setCategoryFilter('범죄 다발 지역')" title="7일간 전국 사건사고 다발 지역 (기사 원문 창으로 열림)" class="cat-btn ml-auto shrink-0 px-2 py-0.5 rounded-md text-[0.625rem] border whitespace-nowrap bg-rose-600 text-white border-rose-700 font-bold">🚨 다발 지역</button>
+                    </div>` : '';
+            }
 
             lastToggled = null;
             let sub = '';
@@ -1420,6 +1438,7 @@
             const subBox = document.getElementById('subButtons');
             subBox.innerHTML = sub;
             subBox.style.display = sub ? 'flex' : 'none';
+            if (lcb && sub && !isDocked('article')) lcb.insertAdjacentHTML('beforeend', `<div class="hscroll gap-1 items-center mt-1">${sub}</div>`);
             renderDateBar();
         }
 
@@ -1707,7 +1726,11 @@
             container.innerHTML = html;
         }
 
+        let pendingDetail = null;     // 기사 원문 화면이 숨어 있을 때 골라 둔 기사 (창을 열 때 그림)
+        function articleVisible() { return isDocked('article') || (floatKey === 'article' && !document.getElementById('floatModal').classList.contains('hidden')); }
         function renderDetailView(id, forceCard) {
+            if (!articleVisible()) { pendingDetail = { id: id, forceCard: forceCard }; return; }   // 안 보이는 곳에 언론사 페이지를 미리 불러오지 않음
+            pendingDetail = null;
             const news = newsData.find(n => n.id === id);
             const container = document.getElementById('detailViewContainer');
             if (!news) {
@@ -1833,7 +1856,12 @@
                 const same = newsData.filter(n => evOf(n) === evOf(news));
                 focusMap(bestLocated(same) || news, silent);
             }
-            if (!silent && !isDocked('article')) openFloat('article');   // 기사 원문 패널을 칸에 넣지 않은 경우: 창으로 띄움
+            // 기사 원문 화면을 칸에 넣지 않은 경우: 원문을 저절로 띄우지 않음 (보고 싶을 때 상단 [기사 원문] 버튼을 눌러서 엶)
+            //  → 대신 그 버튼을 잠깐 반짝여서 '여기를 누르면 원문이 열린다'고 알려 줌
+            if (!silent && !isDocked('article')) {
+                const b = document.querySelector('#floatBtnWrap [data-panel="article"]');
+                if (b) { b.classList.remove('btn-nudge'); void b.offsetWidth; b.classList.add('btn-nudge'); }
+            }
         }
 
         // ================= 필터 =================
@@ -1860,6 +1888,7 @@
             if (cat === '범죄 다발 지역') {
                 renderNewsList();
                 renderCrimeHotspotsView();
+                if (!isDocked('article')) openFloat('article');   // 다발 지역 순위는 기사 원문 화면에 나오므로, 칸에 없으면 창으로 보여 줌
             } else {
                 renderNewsList();
                 const f = getFilteredNews();
@@ -1976,10 +2005,32 @@
 
         // 칸에 넣지 않은 화면들. 안전 브리핑은 칸에 없으면 기존처럼 상단 [안전 브리핑] 버튼으로 창을 엽니다.
         let floatKey = null;          // 지금 창(floatModal)에 띄운 화면
-        function hiddenPanels() { return Object.keys(PANELS).filter(k => !layout.includes(k) && k !== 'briefing'); }
+        // 화면 나누기: 3칸(왼쪽·가운데·오른쪽) 또는 2칸(왼쪽·오른쪽). 2칸일 때는 가운데 칸을 쓰지 않음
+        let paneCount = (() => { try { return localStorage.getItem('pane_count') === '2' ? 2 : 3; } catch (e) { return 3; } })();
+        function usedSlots() { return paneCount === 2 ? [0, 2] : [0, 1, 2]; }
+        function hiddenPanels() { return Object.keys(PANELS).filter(k => !isDocked(k) && k !== 'briefing'); }
         function hiddenPanel() { const hs = hiddenPanels(); return (floatKey && hs.includes(floatKey)) ? floatKey : hs[0]; }
         function panelEl(k) { return document.getElementById('panel-' + k); }
-        function isDocked(k) { return layout.includes(k); }
+        function isDocked(k) { return usedSlots().some(i => layout[i] === k); }
+        function setPaneCount(n) {
+            paneCount = n === 2 ? 2 : 3;
+            try { localStorage.setItem('pane_count', String(paneCount)); } catch (e) {}
+            applyPaneWidths();
+            applyLayout();
+            renderLayoutPanel();
+        }
+        // 칸 너비: 3칸·2칸 따로 기억 (2칸은 기본 반반)
+        function applyPaneWidths() {
+            const left = document.getElementById('leftPane'), center = document.getElementById('centerPane');
+            const two = paneCount === 2;
+            center.style.display = two ? 'none' : '';
+            document.getElementById('resizer2').style.display = two ? 'none' : '';
+            let pw = null;
+            try { pw = JSON.parse(localStorage.getItem(two ? 'pane_w2' : 'pane_w') || 'null'); } catch (e) {}
+            const ok = v => typeof v === 'string' && /^[\d.]+%$/.test(v);
+            left.style.width = pw && ok(pw[0]) ? pw[0] : (two ? '50%' : '28%');
+            if (!two) center.style.width = pw && ok(pw[1]) ? pw[1] : '40%';
+        }
         function placeFloatPanel(k) {
             const store = document.getElementById('panelStore'), body = document.getElementById('floatBody');
             Array.from(body.children).forEach(c => { if (c.id !== 'panel-' + k) store.appendChild(c); });
@@ -1987,12 +2038,13 @@
         }
 
         function applyLayout(first) {
-            SLOT_IDS.forEach((id, i) => document.getElementById(id).appendChild(panelEl(layout[i])));
+            usedSlots().forEach(i => document.getElementById(SLOT_IDS[i]).appendChild(panelEl(layout[i])));
             const store = document.getElementById('panelStore');
             Object.keys(PANELS).forEach(k => { if (!isDocked(k)) store.appendChild(panelEl(k)); });
             if (!hiddenPanels().includes(floatKey)) floatKey = null;
             placeFloatPanel(hiddenPanel());
             if (isDocked('briefing')) openBriefing(briefTab === 'settings' ? 'settings' : 'report', true);
+            if (!first) renderCategoryBar();      // 기사 원문 칸이 빠지면 목록 위에 분류 버튼을 보여 줌
             renderFloatButton();
             renderFloatHead();
             renderCommHead();
@@ -2015,7 +2067,7 @@
                     <span class="text-[0.8125rem] font-extrabold">우리동네 커뮤니티</span>
                     <span id="commBadge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full animate-pulse">SOS</span>
                 </button>`
-                : `<button onclick="openFloat('${h}')" class="bg-sky-600 hover:bg-sky-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow shadow-sky-600/20 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid ${PANELS[h].icon}"></i> ${PANELS[h].short}</button>`).join('');
+                : `<button onclick="openFloat('${h}')" data-panel="${h}" title="${h === 'article' ? '고른 기사의 원문을 창으로 엽니다' : PANELS[h].label + ' 창 열기'}" class="bg-sky-600 hover:bg-sky-500 text-white ${hiddenPanels().length > 1 ? 'text-xs px-2.5 py-1.5' : 'text-[0.8125rem] px-3.5 py-2'} font-extrabold rounded-lg shadow shadow-sky-600/20 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid ${PANELS[h].icon}"></i> ${PANELS[h].short}</button>`).join('');
             if (typeof updateCommBadge === 'function') updateCommBadge();
         }
         // 창 너비 조절 막대 (끌면 바로 넓어지고 좁아짐, 값은 저장됨)
@@ -2115,6 +2167,10 @@
             if (k && hiddenPanels().includes(k) && k !== floatKey) { floatKey = k; placeFloatPanel(k); renderFloatHead(); renderCommHead(); }
             else if (!floatKey) { floatKey = hiddenPanel(); placeFloatPanel(floatKey); renderFloatHead(); }
             document.getElementById('floatModal').classList.remove('hidden');
+            if (floatKey === 'article') {      // 숨어 있는 동안 고른 기사를 이제 그림 (다발 지역 순위를 보고 있으면 그대로)
+                if (pendingDetail) { const p = pendingDetail; renderDetailView(p.id, p.forceCard); }
+                else if (selectedNewsId && currentCategory !== '범죄 다발 지역' && !document.getElementById('articleFrame') && !document.getElementById('detailViewContainer').innerHTML.trim()) renderDetailView(selectedNewsId);
+            }
             const h = hiddenPanel();
             if (h === 'community') { renderCommunity(); commTouch(); }
             setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
@@ -2132,24 +2188,25 @@
         function renderLayoutPanel() {
             const p = document.getElementById('layoutPanel');
             const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1.5 text-xs text-slate-800 dark:text-slate-100';
-            const h = hiddenPanel();
+            const slots = usedSlots();
+            const names = paneCount === 2 ? { 0: '왼쪽 칸', 2: '오른쪽 칸' } : { 0: '왼쪽 칸', 1: '가운데 칸', 2: '오른쪽 칸' };
+            const cnt = n => `<button onclick="setPaneCount(${n})" class="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-xs font-bold border ${paneCount === n ? 'bg-emerald-600 text-white border-emerald-700' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'}">
+                <span class="flex gap-0.5">${'<span class="inline-block w-2.5 h-3.5 rounded-sm border border-current"></span>'.repeat(n)}</span> ${n}칸으로 나누기</button>`;
             p.innerHTML = `
                 <div class="flex items-center justify-between mb-2"><b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-columns"></i> 화면 설정</b><button onclick="toggleLayoutPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button></div>
-                <p class="text-[0.6875rem] text-slate-500 mb-2 leading-relaxed">화면 3칸에 어떤 화면을 놓을지 고르세요. 같은 화면을 고르면 두 칸이 서로 자리를 바꿉니다.</p>
-                <div class="grid grid-cols-3 gap-1 mb-2">${layout.map((k, i) => `<div class="rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-1.5 text-center"><div class="text-[0.625rem] text-slate-400">${SLOT_NAMES[i]}</div><i class="fa-solid ${PANELS[k].icon} text-emerald-500"></i><div class="text-[0.625rem] font-bold text-slate-700 dark:text-slate-200 leading-tight">${PANELS[k].short}</div></div>`).join('')}</div>
-                ${layout.map((k, i) => `
-                    <label class="block text-[0.6875rem] text-slate-500 mb-0.5">${SLOT_NAMES[i]}</label>
-                    <select onchange="setSlot(${i}, this.value)" class="${inp} mb-2">${Object.keys(PANELS).map(x => `<option value="${x}" ${x === k ? 'selected' : ''}>${PANELS[x].label}</option>`).join('')}</select>`).join('')}
+                <div class="flex gap-1.5 mb-2">${cnt(2)}${cnt(3)}</div>
+                <p class="text-[0.6875rem] text-slate-500 mb-2 leading-relaxed">화면 ${paneCount}칸에 어떤 화면을 놓을지 고르세요. 같은 화면을 고르면 두 칸이 서로 자리를 바꿉니다.</p>
+                <div class="grid gap-1 mb-2" style="grid-template-columns: repeat(${slots.length}, 1fr);">${slots.map(i => `<div class="rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-1.5 text-center"><div class="text-[0.625rem] text-slate-400">${names[i]}</div><i class="fa-solid ${PANELS[layout[i]].icon} text-emerald-500"></i><div class="text-[0.625rem] font-bold text-slate-700 dark:text-slate-200 leading-tight">${PANELS[layout[i]].short}</div></div>`).join('')}</div>
+                ${slots.map(i => `
+                    <label class="block text-[0.6875rem] text-slate-500 mb-0.5">${names[i]}</label>
+                    <select onchange="setSlot(${i}, this.value)" class="${inp} mb-2">${Object.keys(PANELS).map(x => `<option value="${x}" ${x === layout[i] ? 'selected' : ''}>${PANELS[x].label}</option>`).join('')}</select>`).join('')}
                 <div class="text-[0.6875rem] text-slate-500 mb-2">버튼으로 여는 화면: <b class="text-slate-800 dark:text-slate-100">${hiddenPanels().map(x => PANELS[x].label).concat(isDocked('briefing') ? [] : [PANELS.briefing.label]).join(', ')}</b> <span class="text-slate-400">(상단 오른쪽 버튼)</span></div>
-                <div class="text-[0.6875rem] text-slate-500 mb-1">빠른 배치</div>
-                <div class="space-y-1 mb-2">${LAYOUT_PRESETS.map((x, i) => `<button onclick="setLayoutPreset(${i})" class="w-full text-left px-2 py-1 rounded text-[0.6875rem] border ${JSON.stringify(x[1]) === JSON.stringify(layout) ? 'border-emerald-500 text-emerald-600 font-bold' : 'border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200'} hover:bg-slate-100 dark:hover:bg-slate-700">${x[0]}</button>`).join('')}</div>
-                <div class="flex items-center justify-between gap-2 text-xs text-slate-700 dark:text-slate-200 border-t border-slate-200 dark:border-slate-700 pt-2"><span>창(커뮤니티 등) 가로 너비</span>${wideBtnHtml()}</div>
-                <p class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">칸 사이의 세로 막대(⇄)를 끌면 칸 너비를 바꿀 수 있습니다.</p>`;
+                <p class="text-[0.625rem] text-slate-400 leading-relaxed">칸 사이의 세로 막대(⇄)를 끌면 칸 너비를 바꿀 수 있습니다.</p>`;
         }
         function setSlot(i, key) {
             if (!PANELS[key] || layout[i] === key) return;
             const j = layout.indexOf(key);
-            if (j >= 0) layout[j] = layout[i];      // 이미 다른 칸에 있으면 서로 자리 바꿈
+            if (j >= 0) layout[j] = layout[i];      // 이미 다른 칸(2칸일 때 쉬고 있는 가운데 자리 포함)에 있으면 서로 자리 바꿈
             layout[i] = key;
             applyLayout();
             renderLayoutPanel();
@@ -3224,6 +3281,8 @@
                 text: '직접 가 본 동네 맛집을 상호명·위치·별점(5점 만점)·짧은 후기·사진으로 소개하는 곳입니다. 같은 가게 후기는 하나로 모여 평균 별점이 보이고, 상호명을 누르면 후기 모음과 지도(네이버·카카오)로 바로 이어집니다. 광고·협찬 후기는 올리지 말아 주세요.' },
             spot: { title: '우리동네 명소', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900',
                 text: '산책길·공원·쉼터·전시·아이와 가기 좋은 곳 등 동네에서 가 볼 만한 곳을 추천하는 곳입니다. 장소 이름을 누르면 추천 모음과 지도로 이어집니다.' },
+            wish: { title: '아쉬워요', cls: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-900',
+                text: '가로등·도로·쓰레기·소음·시설처럼 동네에서 개선됐으면 하는 점을 이야기하는 곳입니다. 이웃의 🙋 공감이 많은 글이 위로 올라옵니다. 특정인 비방은 삼가 주세요.' },
             hello: { title: '이사왔어요', cls: 'bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-200 border-sky-200 dark:border-sky-900',
                 text: '새로 이사 온 이웃이 인사를 남기는 곳입니다. 먼저 살던 이웃은 👋 환영해요와 짧은 댓글로 반겨 주세요. 집 주소·동호수 같은 개인정보는 적지 마세요.' },
             dm: { title: '1:1 대화', cls: 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
@@ -3261,7 +3320,7 @@
             body.innerHTML = `
                 <div id="commTabBar" class="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60"></div>
                 ${commTab === 'free' && helloN ? `<button onclick="setCommTab('hello')" class="w-full shrink-0 px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold flex items-center gap-2 text-left"><span class="text-base">👋</span><span class="flex-1">새로 이사 온 이웃 ${helloN}명이 인사를 남겼어요 · 환영해 주세요!</span><span>보러 가기 →</span></button>` : ''}
-                ${nt ? `<button onclick="toggleTabNotice()" title="눌러서 안내문 펼치기/접기" class="w-full text-left px-3 py-1.5 border-b shrink-0 flex items-start gap-1.5 text-[0.6875rem] ${nt.cls}" style="white-space: normal;">
+                ${nt ? `<button onclick="toggleTabNotice()" title="눌러서 안내문 펼치기/접기" class="w-full text-left px-3 py-1 border-b shrink-0 flex items-start gap-1.5 text-[0.6875rem] ${nt.cls}" style="white-space: normal;">
                     <b class="shrink-0">📌 ${nt.title}</b>
                     <span id="tabNoticeText" class="flex-1 min-w-0 ${noticeOpen ? '' : 'truncate'}">${nt.text}</span>
                     <i id="tabNoticeIcon" class="fa-solid ${noticeOpen ? 'fa-chevron-up' : 'fa-chevron-down'} shrink-0 opacity-60 mt-0.5"></i>
@@ -3284,7 +3343,7 @@
                 <div id="commLiveBar" class="shrink-0"></div>
                 <div id="commPinned" class="shrink-0"></div>
                 <div id="commList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
-                <div id="commComposer" class="border-t border-slate-200 dark:border-slate-800 p-2 space-y-1.5 shrink-0 bg-white dark:bg-slate-900"></div>`;
+                <div id="commComposer" class="border-t border-slate-200 dark:border-slate-800 px-2 py-1.5 space-y-1 shrink-0 bg-white dark:bg-slate-900"></div>`;
             renderCommBg();
             renderCommComposer();
             renderCommMembers();
@@ -3304,12 +3363,19 @@
 
         // 글 쓰는 곳
         function setCommType(t) { commType = t; renderCommComposer(); }
+        // 안전망 글쓰기 버튼(실시간 제보 · SOS · 실시간 방송) 순서 — 끌어서 바꾸고 저장
+        function composerChipOrder() {
+            const all = ['report', 'sos', 'live'];
+            let o = []; try { o = JSON.parse(lsGet('comm_chip_order') || '[]'); } catch (e) {}
+            o = o.filter(k => all.includes(k)); all.forEach(k => { if (!o.includes(k)) o.push(k); });
+            return o;
+        }
         function renderCommComposer() {
             const box = document.getElementById('commComposer');
             if (!box) return;
             const val = id => (document.getElementById(id) || {}).value || '';
             const prevText = val('commText'), prevPlace = val('commPlace'), prevKind = val('commKind');
-            const chip = (t, label, on, color) => `<button onclick="setCommType('${t}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${on ? color : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
+            const chip = (t, label, on, color) => `<button onclick="setCommType('${t}')" ${ordAttrs('comm_chip_order', t, 'composerChipOrder()', 'renderCommComposer()')} title="누르면 선택 · 끌어서 순서 바꾸기" class="ord-item cursor-grab px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${on ? color : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
             const inp = 'bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1.5 text-xs text-slate-900 dark:text-white';
             if (commType !== 'sos') commType = 'report';
             const sos = commType === 'sos', rep = commType === 'report';
@@ -3324,19 +3390,19 @@
             // 우리동네 안전망: 실시간 제보 · SOS 만 올릴 수 있음 (잡담은 '이런저런')
             box.innerHTML = `
                 <div class="hscroll items-center gap-1.5">
-                    ${chip('report', '📢 실시간 제보', rep, 'bg-amber-500 text-white border-amber-600')}
-                    ${chip('sos', '🚨 SOS 긴급 도움 요청', sos, 'bg-red-600 text-white border-red-700')}
-                    <button onclick="openLiveStart()" title="현장을 카메라로 생중계하고 이웃과 함께 보기" class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border border-rose-700 bg-gradient-to-r from-rose-600 to-red-600 text-white whitespace-nowrap shadow-sm"><span class="live-dot"></span> ${live ? '내 방송 보기' : '실시간 방송'}</button>
+                    ${composerChipOrder().map(k => k === 'report' ? chip('report', '📢 실시간 제보', rep, 'bg-amber-500 text-white border-amber-600')
+                        : k === 'sos' ? chip('sos', '🚨 SOS 긴급 도움 요청', sos, 'bg-red-600 text-white border-red-700')
+                        : `<button onclick="openLiveStart()" ${ordAttrs('comm_chip_order', 'live', 'composerChipOrder()', 'renderCommComposer()')} title="현장을 카메라로 생중계하고 이웃과 함께 보기 · 끌어서 순서 바꾸기" class="ord-item cursor-grab flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border border-rose-700 bg-gradient-to-r from-rose-600 to-red-600 text-white whitespace-nowrap shadow-sm"><span class="live-dot"></span> ${live ? '내 방송 보기' : '실시간 방송'}</button>`).join('')}
                     <button onclick="pressFromComposer()" class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-indigo-500 bg-indigo-600 hover:bg-indigo-500 text-[0.6875rem] font-bold text-white whitespace-nowrap shadow-sm" title="제보 가이드라인·신뢰 지수를 확인한 뒤, 원하면 언론사·방송사 제보 창을 엽니다">📺 언론사 제보하기</button>
                     <button onclick="showReportGuide()" class="text-[0.6875rem] text-slate-500 hover:text-slate-800 dark:hover:text-white underline whitespace-nowrap">가이드라인</button>
                 </div>
-                <div class="text-[0.625rem] leading-snug ${sos ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'}" style="white-space: normal;">${sos
-                    ? '🚨 SOS 글은 맨 위에 24시간 고정되고 이웃에게 경보음 알림이 갑니다. 인상착의, 마지막으로 본 장소·시간, 연락 방법을 적어 주세요. 생명이 위급하면 먼저 112·119에 신고하세요.'
-                    : '⚠️ 직접 보고 확인한 사실만 적어 주세요. 허위·과장 제보는 이웃 평가로 신뢰 지수가 내려가고, 명예훼손·허위신고 등으로 법적 책임을 질 수 있습니다.'}</div>
+                <div class="text-[0.625rem] leading-snug truncate ${sos ? 'text-red-600 dark:text-red-400 font-semibold' : 'text-slate-500 dark:text-slate-400'}" title="${sos ? 'SOS 글은 맨 위에 24시간 고정되고 이웃에게 경보음 알림이 갑니다. 생명이 위급하면 먼저 112·119에 신고하세요.' : '허위·과장 제보는 이웃 평가로 신뢰 지수가 내려가고, 명예훼손·허위신고 등으로 법적 책임을 질 수 있습니다.'}">${sos
+                    ? '🚨 SOS 글은 24시간 맨 위 고정 + 이웃 경보음 알림 · 위급하면 먼저 112·119'
+                    : '⚠️ 직접 보고 확인한 사실만 · 허위 제보는 신뢰 지수 하락·법적 책임'}</div>
                 <span id="commStatus" class="block text-[0.6875rem] text-amber-600 dark:text-amber-400"></span>
                 ${attach}
                 <div id="replyBar_talk"></div>
-                ${chatInputRow({ id: 'commText', send: 'commPost()', label: sos ? 'SOS' : '제보',
+                ${chatInputRow({ id: 'commText', send: 'commPost()', label: sos ? 'SOS' : '제보', rows: 2, minH: '3.25rem',
                     attach: attachBtn('commFile', 'image/*,video/*', 'commPickFile(this)', '사진·동영상 첨부'),
                     placeholder: sos ? '예) 7살 남자아이, 파란 점퍼, 오후 3시쯤 ○○놀이터에서 마지막으로 봤어요' : '예) 오후 3시쯤 ○○사거리에서 차량 화재가 났어요. 연기가 많이 나고 소방차가 오고 있어요. (무슨 일인지 · 장소 · 시간을 함께 적어 주세요)',
                     border: sos ? 'border-red-500' : 'border-amber-500',
@@ -3366,10 +3432,10 @@
             else if (m.videoLocal) media += '<div class="mt-1 text-[0.6875rem] text-slate-400">🎬 (체험 모드에서는 동영상이 새로고침 후 남지 않습니다)</div>';
             return `
                 <div id="msg_${ctx}_${esc(m.id)}" class="msg-row flex gap-2 ${mine ? 'flex-row-reverse' : ''}">
-                    <button onclick="showProfile('${esc(m.uid)}')" title="프로필 보기" class="shrink-0 self-start shadow-sm rounded-full">${avatarHtml(mine ? Object.assign({}, m, { photo: myPhoto() || m.photo, emoji: commProfile.emoji || m.emoji }) : m, 'w-8 h-8')}</button>
-                    <div class="flex flex-col min-w-0 ${mine ? 'items-end' : 'items-start'}" style="max-width:80%;">
+                    <button onclick="showProfile('${esc(m.uid)}')" title="프로필 보기" class="shrink-0 self-start shadow-sm rounded-full">${avatarHtml(mine ? Object.assign({}, m, { photo: myPhoto() || m.photo, emoji: commProfile.emoji || m.emoji }) : m, 'w-7 h-7')}</button>
+                    <div class="flex flex-col min-w-0 ${mine ? 'items-end' : 'items-start'}" style="max-width:74%;">
                         <div class="text-[0.625rem] mb-0.5 px-1.5 rounded bg-white/70 dark:bg-slate-900/70 text-slate-600 dark:text-slate-300 whitespace-nowrap"><b>${esc(displayName(m.uid, m.nick))}</b>${mine ? ' (나)' : (isFriend(m.uid) ? ' <span class="text-teal-600">👥</span>' : '')} · ${timeAgo(m.ts)}</div>
-                        <div class="msg-bubble rounded-2xl border px-3 py-2 text-sm shadow-sm ${bubble}" style="max-width:100%;">
+                        <div class="msg-bubble rounded-2xl border px-2.5 py-1.5 text-[0.8125rem] leading-snug shadow-sm ${bubble}" style="max-width:100%;">
                             ${replyQuote(m, ctx)}
                             ${sos ? '<div class="text-[0.6875rem] font-extrabold text-red-600 dark:text-red-300 mb-0.5">🚨 SOS 긴급 도움 요청</div>' : ''}
                             ${rep ? `<div class="text-[0.6875rem] font-extrabold text-amber-700 dark:text-amber-300 mb-0.5">📢 실시간 제보 · ${esc(m.kind || '기타')}${m.place ? ' · ' + esc(m.place) : ''}</div>` : ''}
@@ -4271,19 +4337,52 @@
         // 탭이 11개로 늘어나 한 줄에 다 보이지 않던 문제 → 5개 묶음(큰 버튼)으로 나누고, 묶음 안의 탭은 그 아래 작은 줄에 보여 줌.
         // 안전망은 가장 중요해서 혼자 따로(빨간색), 맛집·명소처럼 성격이 같은 것은 한 묶음으로.
         const COMM_GROUPS = [
-            { k: 'safe', label: '안전망', icon: '🆘', tabs: ['talk'], on: 'bg-gradient-to-br from-red-600 to-rose-600 text-white border-red-700', off: 'text-red-600 dark:text-red-400 border-red-300 dark:border-red-800' },
-            { k: 'life', label: '동네 이야기', icon: '🏘️', tabs: ['free', 'hello', 'praise'], on: 'bg-sky-600 text-white border-sky-700', off: '' },
+            // 안전망은 고르지 않았을 때도 빨간색으로 칠해서 항상 눈에 띄게
+            { k: 'safe', label: '안전망', icon: '🆘', tabs: ['talk'], on: 'bg-gradient-to-br from-red-600 to-rose-600 text-white border-red-800 ring-2 ring-red-300', off: '!bg-red-500 hover:!bg-red-600 !text-white !border-red-600' },
+            { k: 'life', label: '동네 이야기', icon: '🏘️', tabs: ['free', 'hello', 'wish', 'praise'], on: 'bg-sky-600 text-white border-sky-700', off: '' },
             { k: 'local', label: '맛집·명소', icon: '📍', tabs: ['food', 'spot'], on: 'bg-orange-500 text-white border-orange-600', off: '' },
             { k: 'market', label: '동네 장터', icon: '🛒', tabs: ['market'], on: 'bg-emerald-600 text-white border-emerald-700', off: '' },
             { k: 'people', label: '이웃·대화', icon: '💬', tabs: ['meet', 'friends', 'random', 'dm'], on: 'bg-violet-600 text-white border-violet-700', off: '' }
         ];
-        const COMM_TAB_LABEL = { talk: '🆘 우리동네 안전망', free: '💬 이런저런', hello: '👋 이사왔어요', praise: '👏 칭찬해요', food: '🍜 우리동네 맛집', spot: '🌳 우리동네 명소',
+        const COMM_TAB_LABEL = { talk: '🆘 우리동네 안전망', free: '💬 이런저런', hello: '👋 이사왔어요', wish: '🙏 아쉬워요', praise: '👏 칭찬해요', food: '🍜 우리동네 맛집', spot: '🌳 우리동네 명소',
             market: '🛒 동네 장터', meet: '💞 동네 친구', friends: '👥 친구', random: '🎲 랜덤 채팅', dm: '✉ 1:1 대화' };
         function commGroupOf(tab) { return COMM_GROUPS.find(g => g.tabs.includes(tab)) || COMM_GROUPS[0]; }
+        // 묶음 안의 작은 탭 순서: 마우스로 끌어서 바꾸고 저장 (새로 생긴 탭은 맨 뒤에 붙음)
+        function groupTabs(g) {
+            let o = [];
+            try { o = JSON.parse(lsGet('comm_order_' + g.k) || '[]'); } catch (e) {}
+            o = o.filter(t => g.tabs.includes(t));
+            g.tabs.forEach(t => { if (!o.includes(t)) o.push(t); });
+            return o;
+        }
         function setCommGroup(k) {
             const g = COMM_GROUPS.find(x => x.k === k) || COMM_GROUPS[0];
             const last = lsGet('comm_last_' + g.k);
-            setCommTab(g.tabs.includes(last) ? last : g.tabs[0]);
+            setCommTab(g.tabs.includes(last) ? last : groupTabs(g)[0]);
+        }
+        // 공용 '끌어서 순서 바꾸기' (가로로 놓인 버튼들). key: 저장 이름, onDone: 다시 그리기
+        let dragOrd = null;
+        function ordDragStart(e, key, item) { dragOrd = { key: key, item: item }; e.currentTarget.classList.add('dragging'); try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', item); } catch (err) {} }
+        function ordDragOver(e, key) {
+            if (!dragOrd || dragOrd.key !== key) return;
+            e.preventDefault();
+            const el = e.currentTarget, r = el.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+            el.classList.toggle('drop-after', after); el.classList.toggle('drop-before', !after);
+        }
+        function ordDragLeave(e) { e.currentTarget.classList.remove('drop-before', 'drop-after'); }
+        function ordDragEnd() { dragOrd = null; document.querySelectorAll('.ord-item').forEach(t => t.classList.remove('dragging', 'drop-before', 'drop-after')); }
+        function ordDrop(e, key, target, list, done) {
+            e.preventDefault();
+            const r = e.currentTarget.getBoundingClientRect(), after = e.clientX > r.left + r.width / 2;
+            if (!dragOrd || dragOrd.key !== key || dragOrd.item === target) { ordDragEnd(); return; }
+            const o = list.filter(x => x !== dragOrd.item);
+            o.splice(o.indexOf(target) + (after ? 1 : 0), 0, dragOrd.item);
+            lsSet(key, JSON.stringify(o));
+            ordDragEnd();
+            done();
+        }
+        function ordAttrs(key, item, listExpr, doneExpr) {
+            return `draggable="true" ondragstart="ordDragStart(event, '${key}', '${item}')" ondragover="ordDragOver(event, '${key}')" ondragleave="ordDragLeave(event)" ondragend="ordDragEnd()" ondrop="ordDrop(event, '${key}', '${item}', ${listExpr}, () => ${doneExpr})"`;
         }
         function tabBadge(tab) {
             if (tab === 'friends') return friendReqs.length;
@@ -4297,17 +4396,21 @@
             if (!bar) return;
             const cur = commGroupOf(commTab);
             const badge = n => n ? `<span class="absolute -top-1.5 -right-1 min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-red-500 text-white text-[0.625rem] font-bold leading-[1.1rem] text-center shadow">${n === '●' ? '' : n}</span>` : '';
+            // 대화창을 넓게 쓰도록 묶음 버튼은 한 줄(아이콘+이름)로 낮게
+            const sos = activeSosCount();
             const groups = COMM_GROUPS.map(g => {
                 const on = g === cur;
-                const n = g.tabs.reduce((a, t) => { const b = tabBadge(t); return a + (typeof b === 'number' ? b : (b ? 1 : 0)); }, 0);
-                return `<button onclick="setCommGroup('${g.k}')" title="${g.tabs.map(t => COMM_TAB_LABEL[t]).join(' · ')}" class="relative flex flex-col items-center justify-center gap-0.5 rounded-xl border py-1.5 px-1 min-w-0 transition ${on ? g.on + ' shadow-md' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 ' + g.off}">
-                    <span class="text-base leading-none">${g.icon}</span><span class="text-[0.6875rem] font-bold truncate max-w-full">${g.label}</span>${badge(n)}</button>`;
+                const n = g.k === 'safe' ? 0 : g.tabs.reduce((a, t) => { const b = tabBadge(t); return a + (typeof b === 'number' ? b : (b ? 1 : 0)); }, 0);
+                const sosTag = g.k === 'safe' ? `<span class="ml-0.5 px-1 rounded text-[0.5625rem] font-black leading-[0.95rem] ${sos ? 'bg-yellow-300 text-red-700 animate-pulse' : 'bg-white/90 text-red-600'}">SOS${sos ? ' ' + sos : ''}</span>` : '';
+                return `<button onclick="setCommGroup('${g.k}')" title="${g.tabs.map(t => COMM_TAB_LABEL[t]).join(' · ')}" class="relative flex items-center justify-center gap-1 rounded-lg border py-1 px-1 min-w-0 transition ${on ? g.on + ' shadow' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 ' + g.off}">
+                    <span class="text-sm leading-none shrink-0">${g.icon}</span><span class="text-[0.6875rem] font-bold truncate">${g.label}</span>${sosTag}${badge(n)}</button>`;
             }).join('');
-            const subs = cur.tabs.length > 1 ? `<div class="hscroll gap-1 px-2 pb-1.5">${cur.tabs.map(t => {
+            const order = groupTabs(cur), okey = 'comm_order_' + cur.k;
+            const subs = cur.tabs.length > 1 ? `<div class="hscroll gap-1 px-2 pb-1" title="탭을 마우스로 끌어서 순서를 바꿀 수 있습니다">${order.map(t => {
                 const on = t === commTab, b = tabBadge(t);
-                return `<button onclick="setCommTab('${t}')" class="relative px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap border ${on ? cur.on : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}">${COMM_TAB_LABEL[t]}${b ? ` <span class="ml-0.5 text-[0.625rem] bg-red-500 text-white rounded-full px-1">${b === '●' ? '●' : b}</span>` : ''}</button>`;
+                return `<button onclick="setCommTab('${t}')" ${ordAttrs(okey, t, 'groupTabs(commGroupOf(commTab))', 'renderCommTabBar()')} class="ord-item comm-tab relative px-2.5 py-0.5 rounded-full text-[0.6875rem] font-bold whitespace-nowrap border cursor-grab ${on ? cur.on : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'}">${COMM_TAB_LABEL[t]}${b ? ` <span class="ml-0.5 text-[0.625rem] bg-red-500 text-white rounded-full px-1">${b === '●' ? '●' : b}</span>` : ''}</button>`;
             }).join('')}</div>` : '';
-            bar.innerHTML = `<div class="grid grid-cols-5 gap-1 px-2 pt-1.5 ${subs ? 'pb-1' : 'pb-1.5'}">${groups}</div>${subs}`;
+            bar.innerHTML = `<div class="grid grid-cols-5 gap-1 px-2 pt-1 ${subs ? 'pb-1' : 'pb-1'}">${groups}</div>${subs}`;
         }
 
         // ================= 우리동네 맛집 · 명소 · 이사왔어요 =================
@@ -4318,11 +4421,18 @@
                 nameLabel: '상호명', namePh: '예) ○○칼국수', textPh: '예) 바지락이 듬뿍, 국물이 시원해요. 점심엔 줄을 서요.', ratingLabel: '별점', btn: 'bg-orange-500 hover:bg-orange-400', ring: 'border-orange-300 dark:border-orange-800', chip: 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-200', write: '맛집 후기 쓰기' },
             spot: { col: 'spots', name: '우리동네 명소', icon: '🌳', place: true, kinds: ['공원·산책길', '카페·쉼터', '문화·전시', '아이와 함께', '운동·체육', '야경·풍경', '기타'],
                 nameLabel: '장소 이름', namePh: '예) ○○천 벚꽃길', textPh: '예) 저녁 산책하기 좋아요. 4월엔 벚꽃이 장관이에요.', ratingLabel: '추천도', btn: 'bg-emerald-600 hover:bg-emerald-500', ring: 'border-emerald-300 dark:border-emerald-800', chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200', write: '명소 추천하기' },
-            hello: { col: 'hello', name: '이사왔어요', icon: '👋', place: false, btn: 'bg-sky-600 hover:bg-sky-500', ring: 'border-sky-300 dark:border-sky-800', chip: 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-200', write: '이사 인사 남기기' }
+            hello: { col: 'hello', name: '이사왔어요', icon: '👋', place: false, btn: 'bg-sky-600 hover:bg-sky-500', ring: 'border-sky-300 dark:border-sky-800', chip: 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-200', write: '이사 인사 남기기',
+                agree: '👋 환영해요', head: n => `👋 ${n}님이 이사 왔어요`, ph: '안녕하세요! ○○동에 새로 이사 왔어요. 잘 부탁드립니다 🙂', replyPh: '예) 반가워요! 앞으로 잘 지내요 🙂',
+                tip: '예) 지난주 ○○아파트로 이사 왔어요. 아이 둘 키우고 있고, 동네 산책 코스 추천 부탁드려요! (동·호수 같은 자세한 주소는 적지 마세요)', empty: '아직 이사 인사가 없습니다. 새로 오셨다면 첫 인사를 남겨 보세요!' },
+            // 아쉬워요: 동네에서 개선됐으면 하는 점 (가로등·도로·쓰레기·소음 등). 공감이 많은 글이 위로
+            wish: { col: 'wish', name: '아쉬워요', icon: '🙏', place: false, btn: 'bg-rose-500 hover:bg-rose-400', ring: 'border-rose-300 dark:border-rose-800', chip: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-200', write: '아쉬운 점 남기기',
+                kinds: ['도로·교통', '안전·치안', '쓰레기·청결', '시설·편의', '소음·냄새', '공원·환경', '기타'],
+                agree: '🙋 나도 아쉬워요', head: () => '', ph: '예) ○○초 앞 횡단보도 가로등이 꺼져 있어 밤에 너무 어두워요. 고쳐졌으면 좋겠어요.', replyPh: '예) 저도 지나갈 때마다 불편했어요 / 구청에 민원 넣었어요',
+                tip: '동네에서 불편하거나 개선됐으면 하는 점을 적어 주세요. 이웃의 공감이 많은 글은 위로 올라옵니다. 특정인 비방 대신 상황과 바라는 점을 적어 주세요. (구청·주민센터 민원은 국민신문고·120 다산콜 등으로 함께 넣으면 더 빨리 해결돼요)', empty: '아직 올라온 아쉬운 점이 없습니다. 동네에서 개선됐으면 하는 점을 남겨 보세요.' }
         };
         const BOARD_TEXT_MAX = 150, BOARD_REPLY_MAX = 80;
-        const boardData = { food: [], spot: [], hello: [] }, boardUnsub = {};
-        const boardUi = { food: { place: null, form: false, sort: 'rating', kind: '전체', q: '' }, spot: { place: null, form: false, sort: 'rating', kind: '전체', q: '' }, hello: { form: false } };
+        const boardData = { food: [], spot: [], hello: [], wish: [] }, boardUnsub = {};
+        const boardUi = { food: { place: null, form: false, sort: 'rating', kind: '전체', q: '' }, spot: { place: null, form: false, sort: 'rating', kind: '전체', q: '' }, hello: { form: false }, wish: { form: false, sort: 'agree', kind: '전체' } };
         let boardDraft = { rating: 0, img: null };
         const boardOpen = new Set();     // 댓글을 펼친 인사 글
         function boardCol(b) { return commDoc(townKey(myTown)).collection(BOARDS[b].col); }
@@ -4418,7 +4528,10 @@
                 if (!msg.name) { boardMsg(B.nameLabel + '을 적어 주세요.'); return; }
                 if (!msg.rating) { boardMsg(B.ratingLabel + '을 별로 매겨 주세요.'); return; }
                 if (!text) { boardMsg('짧은 평가를 한 줄 적어 주세요.'); return; }
-            } else if (!text && !boardDraft.img) { boardMsg('인사말을 적어 주세요.'); return; }
+            } else {
+                if (!text && !boardDraft.img) { boardMsg(b === 'hello' ? '인사말을 적어 주세요.' : '내용을 적어 주세요.'); return; }
+                if (B.kinds) msg.kind = v('bdKind') || '기타';
+            }
             if (text.length > BOARD_TEXT_MAX) { boardMsg(BOARD_TEXT_MAX + '자 이내로 짧게 적어 주세요.'); return; }
             if (boardDraft.img) msg.img = boardDraft.img;
             try {
@@ -4428,6 +4541,7 @@
                 boardDraft = { rating: 0, img: null };
                 boardUi[b].form = false;
                 if (B.place) boardUi[b].place = placeKey(msg.name);      // 올리면 그 가게(장소) 후기 모음으로 이동
+                if (b === 'wish') boardUi.wish.sort = 'recent';            // 방금 쓴 글이 맨 위에 보이게
                 renderBoardBody(b);
                 if (b === 'hello') renderCommTabBar();
             } catch (e) { console.error(e); boardMsg('올리지 못했습니다. 잠시 후 다시 시도해 주세요.'); }
@@ -4440,29 +4554,30 @@
                 else { boardData[b] = boardData[b].filter(m => m.id !== id && m.parent !== id); boardLocalSave(b); renderBoardBody(b); }
             } catch (e) { console.error(e); }
         }
-        async function helloWelcome(id) {
-            const m = boardData.hello.find(x => x.id === id);
+        // 이사왔어요(👋 환영해요) · 아쉬워요(🙋 나도 아쉬워요) 공감 버튼 — 글마다 이웃 한 명당 한 번
+        async function boardAgree(b, id) {
+            const m = boardData[b].find(x => x.id === id);
             if (!m || m.uid === COMM_UID) return;
             const has = (m.welcome || []).includes(COMM_UID);
             try {
                 const db = await commInit();
-                if (db) { const FV = firebase.firestore.FieldValue; await boardCol('hello').doc(id).update({ welcome: has ? FV.arrayRemove(COMM_UID) : FV.arrayUnion(COMM_UID) }); }
-                else { m.welcome = has ? (m.welcome || []).filter(u => u !== COMM_UID) : (m.welcome || []).concat(COMM_UID); boardLocalSave('hello'); renderBoardBody('hello'); }
+                if (db) { const FV = firebase.firestore.FieldValue; await boardCol(b).doc(id).update({ welcome: has ? FV.arrayRemove(COMM_UID) : FV.arrayUnion(COMM_UID) }); }
+                else { m.welcome = has ? (m.welcome || []).filter(u => u !== COMM_UID) : (m.welcome || []).concat(COMM_UID); boardLocalSave(b); renderBoardBody(b); }
             } catch (e) { console.error(e); }
         }
-        async function helloReply(id) {
+        async function boardReply(b, id) {
             const inp = document.getElementById('hr_' + id);
             const text = ((inp && inp.value) || '').trim().slice(0, BOARD_REPLY_MAX);
             if (!text || !myTown) return;
             const msg = Object.assign({ type: 'reply', parent: id, text: text, ts: Date.now(), uid: COMM_UID }, meFields());
             try {
                 const db = await commInit();
-                if (db) await boardCol('hello').add(msg);
-                else { msg.id = 'r' + Date.now() + Math.random().toString(36).slice(2, 7); boardData.hello.unshift(msg); boardLocalSave('hello'); renderBoardBody('hello'); }
+                if (db) await boardCol(b).add(msg);
+                else { msg.id = 'r' + Date.now() + Math.random().toString(36).slice(2, 7); boardData[b].unshift(msg); boardLocalSave(b); renderBoardBody(b); }
                 boardOpen.add(id);
             } catch (e) { console.error(e); }
         }
-        function toggleHelloReplies(id) { if (boardOpen.has(id)) boardOpen.delete(id); else boardOpen.add(id); renderBoardBody('hello'); }
+        function toggleBoardReplies(b, id) { if (boardOpen.has(id)) boardOpen.delete(id); else boardOpen.add(id); renderBoardBody(b); }
 
         function renderBoard(b) {
             const main = document.getElementById('commMain');
@@ -4486,8 +4601,9 @@
                 <div class="flex flex-wrap items-center gap-2">
                     <select id="bdKind" class="${inp} !w-auto py-1.5">${B.kinds.map(k => `<option ${pre.kind === k ? 'selected' : ''}>${k}</option>`).join('')}</select>
                     <div id="bdStars" class="flex items-center">${starPickerInner()}</div>
-                </div>` : `<div class="text-xs text-slate-500" style="white-space:normal;">예) 지난주 ○○아파트로 이사 왔어요. 아이 둘 키우고 있고, 동네 산책 코스 추천 부탁드려요! (동·호수 같은 자세한 주소는 적지 마세요)</div>`}
-                <textarea id="bdText" rows="2" maxlength="${BOARD_TEXT_MAX}" placeholder="${B.place ? B.textPh : '안녕하세요! ○○동에 새로 이사 왔어요. 잘 부탁드립니다 🙂'}" class="${inp} resize-none leading-relaxed" oninput="document.getElementById('bdCount').textContent = this.value.length + ' / ${BOARD_TEXT_MAX}자'"></textarea>
+                </div>` : `<div class="text-xs text-slate-500" style="white-space:normal;">${B.tip}</div>
+                ${B.kinds ? `<select id="bdKind" class="${inp} !w-auto py-1.5">${B.kinds.map(k => `<option>${k}</option>`).join('')}</select>` : ''}`}
+                <textarea id="bdText" rows="2" maxlength="${BOARD_TEXT_MAX}" placeholder="${B.place ? B.textPh : B.ph}" class="${inp} resize-none leading-relaxed" oninput="document.getElementById('bdCount').textContent = this.value.length + ' / ${BOARD_TEXT_MAX}자'"></textarea>
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <input id="bdFile" type="file" accept="image/*" class="hidden" onchange="boardPickFile(this)">
                     <div id="bdPhoto" class="flex items-center gap-2">${boardPhotoInner()}</div>
@@ -4502,7 +4618,7 @@
             if (!box || commTab !== b) return;
             const B = BOARDS[b], ui = boardUi[b];
             const keepTop = box.scrollTop;
-            if (b === 'hello') { box.innerHTML = renderHelloHtml(); box.scrollTop = keepTop; return; }
+            if (!B.place) { box.innerHTML = renderSocialHtml(b); box.scrollTop = keepTop; return; }
             // 가게(장소) 하나의 후기 모음
             if (ui.place) {
                 const p = boardPlaces(b).find(x => x.key === ui.place);
@@ -4571,42 +4687,54 @@
                 </div>`;
             }).join('') : `<div class="col-span-full text-center py-14 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${boardPlaces(b).length ? '조건에 맞는 곳이 없습니다.' : `아직 등록된 ${b === 'food' ? '맛집' : '명소'}이 없습니다.<br>[${B.write}]를 눌러 첫 ${b === 'food' ? '후기' : '추천'}를 남겨 보세요.`}</div>`;
         }
-        function renderHelloHtml() {
-            const B = BOARDS.hello, ui = boardUi.hello;
-            const all = boardData.hello.filter(m => !isBlocked(m.uid));
-            const posts = all.filter(m => m.type !== 'reply').sort((a, c) => c.ts - a.ts);
+        // 이사왔어요 · 아쉬워요 (글 + 공감 버튼 + 짧은 댓글) 공용 화면
+        function renderSocialHtml(b) {
+            const B = BOARDS[b], ui = boardUi[b], wish = b === 'wish';
+            const all = boardData[b].filter(m => !isBlocked(m.uid));
+            let posts = all.filter(m => m.type !== 'reply');
+            if (wish && ui.kind !== '전체') posts = posts.filter(p => p.kind === ui.kind);
+            posts.sort(wish && ui.sort === 'agree' ? (a, c) => ((c.welcome || []).length - (a.welcome || []).length) || (c.ts - a.ts) : (a, c) => c.ts - a.ts);
             const reps = {}; all.filter(m => m.type === 'reply').forEach(r => { (reps[r.parent] = reps[r.parent] || []).push(r); });
-            const seen = Number(lsGet('hello_seen_prev')) || 0;
-            return `<div class="p-3 space-y-3">
-                <div class="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 text-white p-4 flex items-center gap-3 shadow">
-                    <div class="text-4xl">🏡</div>
+            const banner = wish
+                ? `<div class="rounded-2xl bg-gradient-to-r from-rose-500 to-orange-400 text-white p-3 flex items-center gap-3 shadow">
+                    <div class="text-3xl">🙏</div>
+                    <div class="flex-1 min-w-0" style="white-space: normal;"><div class="font-extrabold">${esc(myTown ? myTown.dong : '우리 동네')}, 이런 점이 아쉬워요</div><div class="text-xs opacity-90">개선됐으면 하는 점을 남기면 이웃이 🙋 공감으로 힘을 보태요. 공감이 많은 글이 위로 올라옵니다.</div></div>
+                    ${ui.form ? '' : `<button onclick="boardOpenForm('wish', true)" class="shrink-0 px-3 py-2 rounded-xl bg-white text-rose-600 text-xs font-extrabold shadow">✍ 남기기</button>`}</div>`
+                : `<div class="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 text-white p-3 flex items-center gap-3 shadow">
+                    <div class="text-3xl">🏡</div>
                     <div class="flex-1 min-w-0" style="white-space: normal;"><div class="font-extrabold">${esc(myTown ? myTown.dong : '우리 동네')}에 새로 오신 걸 환영해요!</div><div class="text-xs opacity-90">이사 왔다면 이웃에게 인사를 남겨 보세요. 먼저 살던 이웃은 👋 환영해요로 반겨 주세요.</div></div>
-                    ${ui.form ? '' : `<button onclick="boardOpenForm('hello', true)" class="shrink-0 px-3 py-2 rounded-xl bg-white text-sky-700 text-xs font-extrabold shadow">👋 인사 남기기</button>`}
-                </div>
-                ${ui.form ? boardFormHtml('hello') : ''}
+                    ${ui.form ? '' : `<button onclick="boardOpenForm('hello', true)" class="shrink-0 px-3 py-2 rounded-xl bg-white text-sky-700 text-xs font-extrabold shadow">👋 인사 남기기</button>`}</div>`;
+            const chip = (label, on, fn) => `<button onclick="${fn}" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold whitespace-nowrap border ${on ? 'bg-rose-500 text-white border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
+            const filters = wish ? `<div class="hscroll gap-1">${chip('🙋 공감 많은 순', ui.sort === 'agree', "boardSet('wish', 'sort', 'agree')")}${chip('🕒 최신순', ui.sort === 'recent', "boardSet('wish', 'sort', 'recent')")}<span class="mx-1 border-l border-slate-300 dark:border-slate-600"></span>${['전체'].concat(B.kinds).map(k => chip(k, ui.kind === k, `boardSet('wish', 'kind', '${k}')`)).join('')}</div>` : '';
+            return `<div class="p-3 space-y-2.5">
+                ${banner}
+                ${ui.form ? boardFormHtml(b) : ''}
+                ${filters}
                 ${posts.length ? posts.map(p => {
                     const mine = p.uid === COMM_UID, rs = (reps[p.id] || []).sort((a, c) => a.ts - c.ts), open = boardOpen.has(p.id);
                     const w = (p.welcome || []).length, iw = (p.welcome || []).includes(COMM_UID);
+                    const head = wish ? `<span class="flex items-center gap-1.5 min-w-0"><span class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${esc(displayName(p.uid, p.nick))}${mine ? ' (나)' : ''}</span>${p.kind ? `<span class="shrink-0 text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full ${B.chip}">${esc(p.kind)}</span>` : ''}</span>`
+                        : `<span class="text-sm font-extrabold text-slate-900 dark:text-white truncate">${esc(B.head(displayName(p.uid, p.nick) + (mine ? ' (나)' : '')))}</span>`;
                     return `<article class="rounded-2xl border ${B.ring} bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
-                        <div class="p-3 flex gap-3">
-                            <button onclick="showProfile('${esc(p.uid)}')" class="shrink-0 self-start">${avatarHtml(p, 'w-11 h-11', 'text-2xl')}</button>
+                        <div class="p-2.5 flex gap-2.5">
+                            <button onclick="showProfile('${esc(p.uid)}')" class="shrink-0 self-start">${avatarHtml(p, wish ? 'w-8 h-8' : 'w-10 h-10', wish ? 'text-lg' : 'text-2xl')}</button>
                             <div class="min-w-0 flex-1 space-y-1">
-                                <div class="flex items-center justify-between gap-2"><span class="text-sm font-extrabold text-slate-900 dark:text-white truncate">👋 ${esc(displayName(p.uid, p.nick))}${mine ? ' (나)' : ''}님이 이사 왔어요</span><span class="text-[0.625rem] text-slate-400 shrink-0">${timeAgo(p.ts)}</span></div>
+                                <div class="flex items-center justify-between gap-2">${head}<span class="text-[0.625rem] text-slate-400 shrink-0">${timeAgo(p.ts)}</span></div>
                                 ${p.text ? `<p class="text-sm text-slate-800 dark:text-slate-100 break-words" style="white-space: pre-line;">${esc(p.text)}</p>` : ''}
                                 ${p.img && IMG_DATA_RE.test(p.img) ? `<img src="${p.img}" onclick="openMedia(this.src)" class="rounded-lg max-h-48 cursor-zoom-in">` : ''}
-                                <div class="flex flex-wrap items-center gap-1.5 pt-1">
-                                    <button onclick="helloWelcome('${esc(p.id)}')" ${mine ? 'disabled title="내 글에는 누를 수 없어요"' : ''} class="px-3 py-1 rounded-full text-xs font-bold border ${iw ? 'bg-sky-600 text-white border-sky-700' : 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-300 dark:border-sky-800'} ${mine ? 'opacity-60 cursor-default' : ''}">👋 환영해요${w ? ' ' + w : ''}</button>
-                                    <button onclick="toggleHelloReplies('${esc(p.id)}')" class="px-2.5 py-1 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">💬 댓글 ${rs.length}</button>
-                                    ${mine ? `<button onclick="boardDelete('hello', '${esc(p.id)}')" class="ml-auto text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}
+                                <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                    <button onclick="boardAgree('${b}', '${esc(p.id)}')" ${mine ? 'disabled title="내 글에는 누를 수 없어요"' : ''} class="px-3 py-1 rounded-full text-xs font-bold border ${iw ? B.btn.split(' ')[0] + ' text-white border-transparent' : B.chip + ' ' + B.ring} ${mine ? 'opacity-60 cursor-default' : ''}">${B.agree}${w ? ' ' + w : ''}</button>
+                                    <button onclick="toggleBoardReplies('${b}', '${esc(p.id)}')" class="px-2.5 py-1 rounded-full text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">💬 댓글 ${rs.length}</button>
+                                    ${mine ? `<button onclick="boardDelete('${b}', '${esc(p.id)}')" class="ml-auto text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}
                                 </div>
                             </div>
                         </div>
-                        ${open ? `<div class="border-t border-sky-100 dark:border-sky-900/60 bg-sky-50/60 dark:bg-sky-950/20 px-3 py-2 space-y-1.5">
-                            ${rs.map(r => `<div class="flex items-start gap-1.5 text-xs"><button onclick="showProfile('${esc(r.uid)}')" class="shrink-0">${avatarHtml(r, 'w-5 h-5', 'text-[0.625rem]')}</button><div class="min-w-0 flex-1"><b class="text-slate-700 dark:text-slate-200">${esc(displayName(r.uid, r.nick))}</b> <span class="text-slate-700 dark:text-slate-200 break-words">${esc(r.text)}</span><span class="text-[0.625rem] text-slate-400"> · ${timeAgo(r.ts)}</span>${r.uid === COMM_UID ? ` <button onclick="boardDelete('hello', '${esc(r.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}</div></div>`).join('') || '<div class="text-[0.6875rem] text-slate-400">첫 환영 댓글을 남겨 보세요.</div>'}
-                            <div class="flex gap-1.5"><input id="hr_${esc(p.id)}" maxlength="${BOARD_REPLY_MAX}" onkeydown="if (event.key === 'Enter' && !event.isComposing) helloReply('${esc(p.id)}')" placeholder="예) 반가워요! 앞으로 잘 지내요 🙂" class="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"><button onclick="helloReply('${esc(p.id)}')" class="px-3 rounded-lg ${B.btn} text-white text-xs font-bold">댓글</button></div>
+                        ${open ? `<div class="border-t border-slate-100 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-800/30 px-3 py-2 space-y-1.5">
+                            ${rs.map(r => `<div class="flex items-start gap-1.5 text-xs"><button onclick="showProfile('${esc(r.uid)}')" class="shrink-0">${avatarHtml(r, 'w-5 h-5', 'text-[0.625rem]')}</button><div class="min-w-0 flex-1"><b class="text-slate-700 dark:text-slate-200">${esc(displayName(r.uid, r.nick))}</b> <span class="text-slate-700 dark:text-slate-200 break-words">${esc(r.text)}</span><span class="text-[0.625rem] text-slate-400"> · ${timeAgo(r.ts)}</span>${r.uid === COMM_UID ? ` <button onclick="boardDelete('${b}', '${esc(r.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}</div></div>`).join('') || '<div class="text-[0.6875rem] text-slate-400">첫 댓글을 남겨 보세요.</div>'}
+                            <div class="flex gap-1.5"><input id="hr_${esc(p.id)}" maxlength="${BOARD_REPLY_MAX}" onkeydown="if (event.key === 'Enter' && !event.isComposing) boardReply('${b}', '${esc(p.id)}')" placeholder="${esc(B.replyPh)}" class="flex-1 min-w-0 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-xs text-slate-900 dark:text-white placeholder:text-slate-400"><button onclick="boardReply('${b}', '${esc(p.id)}')" class="px-3 rounded-lg ${B.btn} text-white text-xs font-bold">댓글</button></div>
                         </div>` : ''}
                     </article>`;
-                }).join('') : '<div class="text-center py-12 text-xs text-slate-400">아직 이사 인사가 없습니다. 새로 오셨다면 첫 인사를 남겨 보세요!</div>'}
+                }).join('') : `<div class="text-center py-12 text-xs text-slate-400" style="white-space: normal;">${B.empty}</div>`}
             </div>`;
         }
 
@@ -4854,8 +4982,8 @@
         function chatBubbles(list, color, ctx) {
             return list.map(m => {
                 const mine = m.uid === COMM_UID;
-                return `<div ${ctx && m.id ? `id="msg_${ctx}_${esc(m.id)}"` : ''} class="msg-row flex ${mine ? 'justify-end' : 'justify-start'}"><div class="flex flex-col min-w-0 ${mine ? 'items-end' : 'items-start'}" style="max-width:80%;">
-                    <div class="msg-bubble rounded-2xl border px-3 py-1.5 text-sm ${mine ? color : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}">${ctx ? replyQuote(m, ctx) : ''}<span class="whitespace-pre-line break-words">${esc(m.text)}</span><div class="text-[0.625rem] text-slate-400 mt-0.5">${timeAgo(m.ts)}</div></div>
+                return `<div ${ctx && m.id ? `id="msg_${ctx}_${esc(m.id)}"` : ''} class="msg-row flex ${mine ? 'justify-end' : 'justify-start'}"><div class="flex flex-col min-w-0 ${mine ? 'items-end' : 'items-start'}" style="max-width:74%;">
+                    <div class="msg-bubble rounded-2xl border px-2.5 py-1 text-[0.8125rem] leading-snug ${mine ? color : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}">${ctx ? replyQuote(m, ctx) : ''}<span class="whitespace-pre-line break-words">${esc(m.text)}</span><div class="text-[0.625rem] text-slate-400 mt-0.5">${timeAgo(m.ts)}</div></div>
                     ${ctx ? reactRow(ctx, m, mine) : ''}</div></div>`;
             }).join('');
         }
