@@ -146,6 +146,8 @@ TOPIC_QUERIES = [
     "침수 OR 산사태 OR 싱크홀 OR 정전 OR 지진 OR 폭설",
     "북한 도발 OR 간첩 OR 무인기",
     "전쟁 OR 교전 OR 공습 OR 미사일 OR 휴전",
+    "휴전 협상 OR 종전 협상 OR 평화 협상 OR 평화 회담 OR 휴전 합의 OR 휴전 파기",
+    "전후 재건 OR 재건 지원 OR 포로 교환 OR 인질 석방 OR 정전 협정",
     "공습 OR 폭격 OR 타격 OR 격침 OR 격추 OR 피격",
     "우크라이나 OR 러시아 공습 OR 드론 OR 미사일",
     "이스라엘 OR 이란 OR 가자 OR 레바논 공습 OR 타격",
@@ -229,6 +231,8 @@ FOREIGN_QUERIES = [
     "Hormuz tanker attack OR seized OR drone",
     "\"prisoner swap\" OR surrender OR landmine OR artillery OR \"car bomb\"",
     "intercepted missile OR \"fighter jets scrambled\" OR \"spy arrested\"",
+    "ceasefire OR truce OR \"peace talks\" Ukraine OR Gaza OR Israel OR Russia OR Sudan",
+    "reconstruction OR \"peace deal\" OR \"prisoner exchange\" OR \"hostage deal\" Ukraine OR Gaza OR Lebanon",
 ]
 MAX_TRANSLATE_PER_RUN = 60     # 한 번 실행에 번역할 최대 건수 (번역 서버 부담을 줄이기 위해)
 
@@ -335,7 +339,7 @@ GROUPS = {
     "실종·변사": ["실종·수색", "변사·시신발견"],
     "생활안전·소동": ["혼잡·인파", "경찰·소방 출동", "소동·해프닝", "생활 사고", "시민제보"],
     # ── 해외 (나라 밖에서 일어난 일은 모두 여기로) ──
-    "해외": ["해외 전쟁·분쟁", "해외 테러·피격", "해외 사고·재난", "해외 자연재해", "해외 범죄", "해외 기타"],
+    "해외": ["해외 전쟁·분쟁", "해외 휴전·협상·재건", "해외 테러·피격", "해외 사고·재난", "해외 자연재해", "해외 범죄", "해외 기타"],
 }
 SUB_TO_GROUP = {sub: g for g, subs in GROUPS.items() for sub in subs}
 OVERSEAS_GROUP = "해외"
@@ -444,7 +448,8 @@ RULES_SRC = [
     ("철도·항공·선박 사고", r"탈선\s*사고|(?:열차|지하철|전동차|KTX|SRT|무궁화호)[^.…]{0,8}(?:사고|충돌|추돌|멈춰|멈춤|고장|탈선|운행\s*중단)|"
                     r"(?:여객기|항공기|비행기|헬기|경비행기|전투기)[^.…]{0,8}(?:추락|사고|비상\s*착륙|회항|불시착)|비상\s*착륙|"
                     r"(?:어선|선박|여객선|화물선|낚싯배|요트|유람선|바지선)[^.…]{0,8}(?:전복|침몰|좌초|충돌|화재|사고|표류)"),
-    ("화재", r"화재|불이\s*나|(?<![가-힣])불(?:…|\.{2,}|\s*나|\s*붙)|불길|화마|전소|잿더미"),
+    # ※ '전소'는 사람 이름(전소영·전소민 등)에 자주 들어가서 '전소됐다·전소된' 처럼 쓰인 경우만 인정. '화제(話題)'는 화재가 아님
+    ("화재", r"화재(?!\s*의\s*인물)|불이\s*나|(?<![가-힣])불(?:…|\.{2,}|\s*나|\s*붙)|불길|화마|(?:건물|주택|공장|차량|창고|점포|가옥|[0-9]+\s*(?:채|동|곳|대))?\s*전소(?=됐|돼|된|되|했|해|\s*피해|[\s.,…'\"]|$)|잿더미"),
     ("폭발·가스누출", r"폭발(?!적)|가스\s*누출|폭발음|유독\s*가스|화학\s*물질\s*누출|암모니아\s*누출|염소\s*누출"),
     ("산업재해", r"끼임|끼여|질식|감전|중대\s*재해|산업\s*재해|산재|작업\s*중\s*(?:사망|숨|추락)|(?:노동자|근로자|작업자|인부)[^.…]{0,10}(?:사망|숨져|숨졌|숨진|추락|깔려|끼여)|크레인|지게차"),
     ("붕괴·추락", r"붕괴|무너|매몰|추락|낙하|깔려|깔림|압사"),
@@ -617,7 +622,14 @@ FINANCE_OK_SUBS = {"살인"}
 ENT_SPORT_RE = re.compile(r"열애|결혼|이혼|스캔들|아이돌|드라마|영화|앨범|콘서트|시청률|리그|토너먼트|골프|배우|예능|출연|방송|주연|조연|작가|감독|웹툰|소설|뮤지컬|연극|OTT|넷플릭스|디즈니|티빙|웨이브|"
                           r"쿠팡플레이|유튜버|걸그룹|보이그룹|컴백|데뷔|고백|토로|털어놔|방송인|개그맨|개그우먼|코미디언|아나운서|트로트|가수|래퍼|MC|멘트|팬미팅|화보|근황|"
                           r"나혼산|나\s*혼자\s*산다|런닝맨|놀면\s*뭐하니|놀뭐|전참시|미우새|라디오\s*스타|라스|아는\s*형님|아형|유퀴즈|1박\s*2일|슈돌|동상이몽|금쪽|나는\s*솔로|나솔|돌싱|환승\s*연애|"
-                          r"솔로\s*지옥|흑백\s*요리사|복면\s*가왕|불후의\s*명곡|뭉쳐야|골\s*때리는|최강\s*야구|신서유기|살림남|편스토랑|옥문아|백반\s*기행|인간\s*극장|핑계고")
+                          r"솔로\s*지옥|흑백\s*요리사|복면\s*가왕|불후의\s*명곡|뭉쳐야|골\s*때리는|최강\s*야구|신서유기|살림남|편스토랑|옥문아|백반\s*기행|인간\s*극장|핑계고|"
+                          # 연예 화보·행사 기사 (예: '…미모로 화제', '레드카펫 드레스')
+                          r"미모|자태|비주얼|각선미|몸매|볼륨|노출\s*(?:패션|드레스|의상)|과감한?\s*(?:패션|노출|드레스|의상)|레드\s*카펫|드레스\s*자태|(?:공항|사복|하객|시사회)\s*패션|패셔니스타|"
+                          r"영화제|부국제|부산국제영화제|청룡\s*(?:영화상|시리즈)|백상\s*예술|대종상|시상식|무대\s*인사|쇼케이스|팬\s*사인회|웃음꽃|훈훈|러블리|청순|섹시|여신|"
+                          r"소속사|매니지먼트|연예계|연예인|셀럽|인플루언서|SNS\s*(?:근황|게시물|사진)|인스타그램|틱톡커|BJ|스트리머")
+# 지금 일어난 일이 아니라 '과거의 논란·사건'을 다시 이야기하는 기사 (예: '학력 위조 논란 트라우마 타파→웃음꽃')
+PAST_TALK_RE = re.compile(r"(?:논란|사건|사고|루머|의혹|오명|구설)\s*(?:트라우마|딛고|극복|이겨|이후|그\s*후|\d+\s*년\s*만|재조명|회상|고백|언급|해명|털어놓|심경)|"
+                          r"트라우마|타파|재조명|회상|떠올리|추억|심경\s*고백|과거\s*(?:논란|사건|사고|발언)|\d+\s*년\s*전")
 # 연예·스포츠 전문 매체 표시 (본문 맨 앞의 [OSEN=…] 등)
 ENT_SOURCE_RE = re.compile(r"\[\s*(?:OSEN|스포츠조선|스포츠서울|스포츠동아|스포츠경향|스포츠한국|엑스포츠뉴스|마이데일리|스타뉴스|텐아시아|뉴스엔|TV리포트|스포티비뉴스|일간스포츠|헤럴드POP|티브이데일리|셀럽미디어|iMBC연예)\s*[=\]]")
 # 드라마·예능 줄거리 기사 (무조건 제외)
@@ -641,6 +653,9 @@ WAR_RE = re.compile(MIL_RE.pattern + r"|내전|대리전|반군|휴전|점령|�
 # 말·전망·분석 (실제 사건이 아닌 문제 제기)
 KO_TALK_RE = re.compile(r"경고|우려|촉구|규탄|회담|논의|전망|분석|가능성|시사|검토|주장|비판|제안|협상|관측|해석|입장|발언|강조|평가|인터뷰|속내|셈법|의미는|배경은|왜\s|할까|일까|하나\?|으름장|엄포|위협")
 KO_CASUALTY_RE = re.compile(r"사망|숨져|숨졌|사상|부상|격침|격추|침몰|폭발|피격|나포|명\s*(죽|숨)")
+# 분쟁의 휴전·협상·재건 국면 (분쟁 지역 낱말과 함께 나올 때만 해외 기사로 올림)
+KO_PEACE_RE = re.compile(r"휴전|종전|정전\s*(?:협정|협상|합의|회담)|평화\s*(?:협상|회담|협정|합의|안|계획|구상)|전후\s*재건|재건(?:\s*(?:사업|지원|회의|비용|기금|계획|협력))?|포로\s*(?:교환|송환)|인질\s*(?:석방|교환|협상)|(?:휴전|종전|평화|분쟁|전쟁)[^.…]{0,10}협상|협상\s*(?:타결|결렬|재개|진전|돌입)")
+EN_PEACE_RE = re.compile(r"cease-?fire|truce|armistice|peace (?:talks?|deal|plan|agreement|negotiations?|summit|process)|reconstruction|rebuild(?:ing)?|prisoner (?:swap|exchange)|hostage (?:deal|release)|negotiat\w+", re.I)
 NK_RE = re.compile(r"북한|북측|김정은|NLL|DMZ|군사분계선|대남|오물\s*풍선|GPS\s*교란|(?<![가-힣])北")
 NK_EVENT_RE = re.compile(r"도발|발사|침투|침범|월북|귀순|간첩|무인기|미사일|풍선|교란|포격|총격|핵실험|ICBM")
 # 해외 기사임을 보여주는 표현 (나라 이름이 다른 뜻으로도 쓰이는 경우의 확인용)
@@ -777,6 +792,8 @@ def find_foreign(title, full=None):
 
 def overseas_sub(text):
     """해외 분쟁 기사의 소분류 (한글 제목 기준)"""
+    if KO_PEACE_RE.search(text) and not KO_CASUALTY_RE.search(text):
+        return "해외 휴전·협상·재건"
     if re.search(r"테러|폭탄|총격|암살|인질|자폭|괴한|피격|스파이|간첩|체포|구금|총기\s*난사", text):
         return "해외 테러·피격"
     return "해외 전쟁·분쟁"
@@ -804,10 +821,13 @@ EN_TALK_RE = re.compile(r"\b(warns?|warning|threatens?|vows?|urges?|calls? for|t
 
 def classify_en(title):
     """해외 언론 영문 제목 → (소분류, 대분류). 실제 사건이 아니면 None."""
-    if not (EN_EVENT_RE.search(title) and EN_PLACE_RE.search(title)):
-        return None
     if re.search(r"football|soccer|\bmatch\b|league|\bgoal\b|tournament|world cup|olympic|\bscore|film|movie|review|book|novel|game\b", title, re.I):
         return None                      # 스포츠·문화 기사
+    # 휴전·평화 협상·재건: 분쟁 지역 기사이면 '해외 휴전·협상·재건'으로 올림 (경고·전망 기사여도 협상 국면은 중요한 소식)
+    if EN_PEACE_RE.search(title) and EN_PLACE_RE.search(title) and not re.search(r"trade|tariff|wage|union|contract|budget|merger|deal with (?:apple|google|microsoft)", title, re.I):
+        return "해외 휴전·협상·재건", OVERSEAS_GROUP
+    if not (EN_EVENT_RE.search(title) and EN_PLACE_RE.search(title)):
+        return None
     if EN_TALK_RE.search(title) and not EN_HARD_RE.search(title):
         return None                      # 경고·전망·분석·회고 등은 제외
     if re.search(r"North Korea|Pyongyang", title, re.I):
@@ -819,6 +839,8 @@ def classify_en(title):
 
 def foreign_talk(title_ko):
     """번역한 해외 기사 제목이 '주장·경고·전망'일 뿐 실제 사건이 아니면 True"""
+    if KO_PEACE_RE.search(title_ko):
+        return False                     # 휴전·협상·재건 소식은 올림
     return bool(KO_TALK_RE.search(title_ko) and not KO_CASUALTY_RE.search(title_ko))
 
 
@@ -859,7 +881,13 @@ def _classify_incident(title, content, t, full):
     if ENT_STRONG_RE.search(t):
         return None
     ent = ENT_SPORT_RE.search(t) or ENT_SOURCE_RE.search(content or "")
-    if ent and (soft or not LEGAL_FACT_RE.search(t)):
+    # 연예 기사: 연예인이 실제로 사고를 내거나(들이받아·추돌·숨져) 입건·구속된 경우만 통과
+    if ent and not (LEGAL_FACT_RE.search(t) or HARD_FACT_RE.search(t)):
+        return None
+    if ent and soft and not HARD_FACT_RE.search(t):
+        return None
+    # 과거 논란·사건을 다시 꺼낸 기사(트라우마·재조명·회상 등)는 지금 일어난 사건이 아님
+    if PAST_TALK_RE.search(t) and not STRICT_FACT_RE.search(t):
         return None
     # 스포츠 기사: 골 '폭발', 순위 '추락' 같은 표현 때문에 잘못 잡히는 것 방지 (선수가 실제로 입건·구속된 경우만 통과)
     if SPORTS_RE.search(t) and (soft or not LEGAL_FACT_RE.search(t)):
@@ -925,6 +953,9 @@ def classify(title, content):
             return None
         if (HISTORY_RE.search(t) or SCIENCE_RE.search(t) or TECH_RE.search(t)) and not HARD_FACT_RE.search(t):
             return None
+        # 휴전·평화 협상·재건 국면: 분쟁 지역 소식이면 올림
+        if KO_PEACE_RE.search(t) and (FOREIGN_RE.search(t) or WAR_RE.search(t)) and not re.search(r"무역|관세|임금|노조|노사|예산|인수|합병", t):
+            return overseas_sub(t), OVERSEAS_GROUP
         # 전쟁·분쟁: 실제 벌어진 일만 (경고·전망·분석은 제외)
         if WAR_RE.search(t) or (FOREIGN_RE.search(t) and CONFLICT_RE.search(t) and not re.search(r"교통사고|추돌|화재|지진|홍수|산불|태풍|폭우|붕괴", t)):
             if KO_TALK_RE.search(t) and not KO_CASUALTY_RE.search(t):
@@ -1405,7 +1436,15 @@ def _has_domestic_place(text):
 #   예) "고잔요금소 인근에서…" → 고잔요금소.  찾은 장소는 아래 지오코딩으로 실제 좌표를 구해 지도에 그 지점을 찍습니다.
 _POI_SUFFIX = (r"(?:요금소|톨게이트|나들목|분기점|휴게소|터널|대교|교차로|사거리|오거리|삼거리|네거리|지하차도|고가도로|고가차도|지하상가|터미널|공항|부두|선착장|"
                r"해수욕장|해변|공원|시장|백화점|아울렛|아파트|오피스텔|초등학교|초교|중학교|고등학교|대학교|병원|의료원|산업단지|산단|공단|물류센터|발전소|제철소|저수지|"
-               r"휴양림|스키장|골프장|경기장|체육관|캠핑장|주유소|지구대|파출소|유원지|수목원|방파제|등대|국립공원|IC|JC|JCT|TG)")
+               r"휴양림|스키장|골프장|경기장|체육관|캠핑장|주유소|지구대|파출소|유원지|수목원|방파제|등대|국립공원|IC|JC|JCT|TG|"
+               # 더 작은 범위의 장소 (건물·생활시설)
+               r"빌딩|빌라|상가|타워|센터|호텔|모텔|여관|교회|성당|사찰|도서관|주민센터|행정복지센터|경찰서|소방서|우체국|마트|편의점|PC방|노래방|노래연습장|찜질방|사우나|목욕탕|"
+               r"어린이집|유치원|요양원|요양병원|초등|광장|운동장|놀이터|주차장|정류장|버스정류장|환승센터|육교|지하보도|횡단보도|공영주차장|아이파크|자이|푸르지오|래미안|힐스테이트|e편한세상)")
+# 도로명 주소 (예: '중앙로 123', '테헤란로 45길 6')  → 건물 단위로 가장 정확한 위치
+_ROAD_RX = re.compile(r"(?<![가-힣0-9])([가-힣0-9]{1,10}(?:대로|로|길)(?:\s*\d{1,3}(?:번?길))?\s*\d{1,4}(?:-\d{1,4})?)(?=[^0-9가-힣]|$|(?:에서|의|번지|일대|인근|앞|소재|에)(?:[^가-힣]|$))")
+_ROAD_STOP = re.compile(r"^(?:경로|진로|항로|활로|통로|선로|해로|수로|도로|차로|철로|대로|하로|무로|육로|노로|위로|기로|미로|회로|전로|퇴로|귀로|오로지|그길|이길|저길|한길|외길|지름길|오솔길|산길|들길|물길|뱃길|하늘길|빗길|눈길|밤길|귀갓길|출근길|퇴근길|등굣길|하굣길)")
+# 읍·면 아래 마을 '리' (예: '화도읍 묵현리', '양서면 용담리')
+_RI_RX = re.compile(r"(?<![가-힣])([가-힣]{1,4}(?:읍|면))\s*([가-힣]{1,4}리)(?![가-힣])")
 _POI_END = r"(?=[^가-힣]|$|(?:에서|에선|에도|에|서|의|은|는|이|가|도|를|을|과|와|로|으로|앞|옆|안|내|쪽|행)(?:[^가-힣]|$))"
 _POI_RX = re.compile(r"(?<![가-힣A-Za-z0-9])([가-힣A-Za-z0-9]{2,12}?" + _POI_SUFFIX + r")" + _POI_END)
 _POI_SINGLE_RX = re.compile(r"(?<![가-힣])([가-힣]{2,6}(?:역|항|산|천|교|봉|댐|섬))(?=\s*(?:에서|인근|부근|앞|근처|방향|방면|일대|주변|입구|정상|승강장|선로|해상|앞바다))")
@@ -1423,8 +1462,16 @@ _NOT_POI = {"부산", "울산", "마산", "군산", "서산", "아산", "익산"
 
 
 def find_poi(text):
-    """기사에서 구체적인 장소 이름 하나를 찾아 돌려줌 (없으면 None)"""
-    for m in _POI_RX.finditer(text):
+    """기사에서 구체적인 장소 이름 하나를 찾아 돌려줌 (없으면 None). 작은 범위(주소·건물)부터 찾음"""
+    for m in _ROAD_RX.finditer(text):                 # 1) 도로명 주소
+        name = re.sub(r"\s+", " ", m.group(1)).strip()
+        road = re.match(r"[가-힣0-9]+(?:대로|로|길)", name)
+        if road and not _ROAD_STOP.match(road.group(0)) and len(road.group(0)) >= 3:
+            return name
+    for m in _RI_RX.finditer(text):                   # 2) 읍·면 아래 마을(리)
+        if m.group(2) not in ("관리", "처리", "거리", "우리", "무리", "요리", "자리", "소리", "마리", "머리", "논리", "진리", "수리", "정리", "유리", "의리", "비리", "총리"):
+            return m.group(1) + " " + m.group(2)
+    for m in _POI_RX.finditer(text):                  # 3) 건물·시설 이름
         name = m.group(1)
         stem = re.sub(_POI_SUFFIX + r"$", "", name)
         if len(stem) < 2 or _POI_STOP_RX.match(stem) or stem.isdigit():
@@ -1455,7 +1502,7 @@ def nearest_region(lat, lng):
 # ── 지오코딩: 동(洞)·장소 이름 → 실제 좌표 ──
 #   OpenStreetMap 의 무료 검색(Nominatim)을 씁니다. 1초에 1번만 요청할 수 있어서, 한 번 찾은 결과는 geocache.json 에 저장해 두고 다시 묻지 않습니다.
 GEOCACHE_JSON = "geocache.json"
-MAX_GEOCODE_PER_RUN = 45      # 한 번 실행에 새로 물어볼 최대 건수
+MAX_GEOCODE_PER_RUN = 40      # 한 번 실행(약 6분마다)에 새로 물어볼 최대 건수 (Nominatim 이용 규칙: 1초에 1번 이하)
 GEO_UA = "woori-dongne-incident-map/1.0 (github actions news scraper)"
 _geo = {"cache": None, "used": 0, "dirty": False, "fail": 0}
 
@@ -1546,7 +1593,7 @@ def refine_locations(items, started=None):
 def locate(title, content, hint_sido=None, overseas=False):
     """(위치이름, 위도, 경도, 정밀도정보) 반환. 모르면 (미상, None, None, …)"""
     key = title
-    full = title + " | " + (content or "")[:300]
+    full = title + " | " + (content or "")[:400]
     if overseas:
         hit = find_foreign(title, full) or find_foreign(full, full)
         if hit:
