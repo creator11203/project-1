@@ -49,6 +49,13 @@
         .live-dots i { width: 3px; height: 3px; border-radius: 50%; background: #10b981; animation: live-bounce 1.2s infinite ease-in-out; }
         .live-dots i:nth-child(2) { animation-delay: .2s; }
         .live-dots i:nth-child(3) { animation-delay: .4s; }
+        /* 새로고침 화살표 회전 */
+        .refresh-spin { display: inline-block; animation: refresh-rotate 2.4s linear infinite; }
+        .refresh-spin.fast { animation-duration: .5s; }
+        @keyframes refresh-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* 속보 헤드라인: 왼쪽(로고 쪽)에서 나와 오른쪽(글씨 크기 버튼 쪽)으로 사라짐 */
+        @keyframes ticker-ltr { from { transform: translateX(-100%); } to { transform: translateX(var(--ticker-end, 100vw)); } }
+        #tickerWrap:hover #tickerTrack { animation-play-state: paused; }
         @keyframes live-bounce { 0%, 80%, 100% { transform: translateY(0); opacity: .35; } 40% { transform: translateY(-5px); opacity: 1; } }
     </style>
 </head>
@@ -56,11 +63,18 @@
 
     <!-- 상단 헤더 -->
     <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3 flex items-center justify-between shrink-0 shadow-sm">
-        <div class="flex items-center space-x-3">
-            <div class="relative w-10 h-10 bg-slate-950 rounded-xl border border-red-500/50 flex items-center justify-center overflow-hidden shadow-lg shadow-red-500/20">
-                <div class="absolute inset-1 rounded-full border border-red-500/30"></div>
-                <div class="absolute top-1/2 left-1/2 w-5 h-5 origin-top-left animate-radar-sweep bg-gradient-to-tr from-red-500/60 to-transparent rounded-tr-full"></div>
-                <div class="absolute w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+        <div class="flex items-center space-x-3 shrink-0">
+            <div class="relative w-11 h-11 shrink-0 bg-slate-950 rounded-xl border border-red-500/50 flex items-center justify-center overflow-hidden shadow-lg shadow-red-500/20">
+                <div class="absolute top-1/2 left-1/2 w-5 h-5 origin-top-left animate-radar-sweep bg-gradient-to-tr from-red-500/50 to-transparent rounded-tr-full"></div>
+                <svg viewBox="0 0 48 48" class="absolute inset-0 w-full h-full" fill="none" stroke="#f87171" stroke-width="1.1" stroke-linejoin="round" stroke-linecap="round" aria-label="대한민국 지도">
+                    <path d="M10.5 8.8 L13.0 6.1 L17.3 5.9 L20.7 3.8 L22.3 7.3 L24.9 11.0 L26.8 15.2 L27.4 18.9 L27.0 22.5 L28.1 23.3 L27.3 27.2 L25.8 29.8 L24.3 30.6 L22.2 31.7 L21.3 33.1 L18.8 32.1 L17.0 33.1 L15.2 34.3 L13.7 34.7 L11.8 35.6 L9.5 36.2 L8.1 34.1 L8.7 31.0 L8.9 27.6 L9.5 26.1 L10.7 23.8 L9.4 21.2 L8.3 18.9 L7.3 17.6 L9.3 16.3 L11.5 15.9 L10.1 12.9 L9.5 10.5 Z" fill="rgba(239,68,68,0.18)"/>
+                    <ellipse cx="9.7" cy="43.1" rx="2.6" ry="1.4" fill="rgba(239,68,68,0.18)"/>
+                    <circle cx="8.0" cy="34.9" r="0.9" fill="#f87171" stroke="none"/>
+                    <circle cx="22.3" cy="32.1" r="0.9" fill="#f87171" stroke="none"/>
+                    <circle cx="9.1" cy="10.6" r="0.8" fill="#f87171" stroke="none"/>
+                    <circle cx="36.0" cy="12.2" r="1.2" fill="#f87171" stroke="none"/>
+                    <circle cx="42.1" cy="14.1" r="0.8" fill="#f87171" stroke="none"/>
+                </svg>
             </div>
             <div>
                 <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
@@ -70,8 +84,12 @@
                 <p class="text-xs text-slate-500 dark:text-slate-400">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</p>
             </div>
         </div>
+
+        <div id="tickerWrap" class="hidden md:block flex-1 min-w-0 mx-4 h-8 relative overflow-hidden rounded-lg bg-slate-100 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700" title="가장 많이 보도되고 있는 사건 순서입니다. 누르면 해당 기사로 이동합니다.">
+            <div id="tickerTrack" class="absolute top-0 left-0 h-8 flex items-center whitespace-nowrap"></div>
+        </div>
         
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-3 shrink-0">
             <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-0.5">
                 <button onclick="adjustFontSize(-1)" class="px-2 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A-</button>
                 <span id="fontSizeIndicator" class="px-2 text-xs font-mono text-slate-500 dark:text-slate-400">100%</span>
@@ -87,9 +105,7 @@
             <button onclick="openCommunity('report')" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs md:text-sm font-semibold px-4 py-2 rounded-lg shadow-lg shadow-red-600/20 transition flex items-center gap-2">
                 <i class="fa-solid fa-bullhorn"></i> 실시간 제보하기
             </button>
-            <button onclick="manualRefreshData()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs md:text-sm font-medium px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-2">
-                <i class="fa-solid fa-rotate text-emerald-500"></i> 뉴스 새로고침
-            </button>
+            
         </div>
     </header>
 
@@ -103,10 +119,9 @@
                     <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 전국 지역별 상세 필터
                     </span>
-                    <span class="live-badge flex items-center gap-1.5 text-[0.6875rem] font-bold text-emerald-500" title="2분마다 새 기사를 자동으로 확인합니다">
-                        <span class="relative flex h-2.5 w-2.5"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span>
-                        <span>실시간 업데이트 중</span><span class="live-dots"><i></i><i></i><i></i></span>
-                    </span>
+                    <button onclick="manualRefreshData()" title="지금 바로 새 기사를 확인합니다 (기사는 이 버튼과 상관없이 자동으로 계속 갱신됩니다)" class="flex items-center gap-1.5 text-[0.6875rem] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 px-2 py-1 rounded-md">
+                        <i id="refreshIcon" class="fa-solid fa-rotate refresh-spin"></i> 뉴스 새로고침
+                    </button>
                 </div>
 
                 <div class="grid grid-cols-3 gap-1.5">
@@ -185,6 +200,19 @@
             <div id="alertToasts" class="absolute bottom-7 right-3 flex flex-col gap-2 items-end" style="z-index: 1100;"></div>
         </section>
     </main>
+
+    <!-- 음성·영상 통화 화면 -->
+    <div id="callOverlay" class="hidden fixed inset-0 bg-black/95 flex flex-col items-center justify-center" style="z-index: 70;">
+        <div id="callInfo" class="absolute top-6 left-0 right-0 text-center text-white text-sm font-bold"></div>
+        <div id="callAvatar" class="text-7xl" style="display:none;">📞</div>
+        <video id="callRemote" autoplay playsinline class="max-w-full max-h-full"></video>
+        <video id="callLocal" autoplay playsinline muted class="absolute bottom-24 right-4 w-32 rounded-lg border border-white/40 bg-black"></video>
+        <div class="absolute bottom-6 flex gap-3">
+            <button id="callMute" onclick="toggleMute()" class="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white text-sm font-bold">마이크 끄기</button>
+            <button onclick="endCall()" class="px-6 py-2 rounded-full bg-red-600 hover:bg-red-500 text-white text-sm font-bold"><i class="fa-solid fa-phone-slash"></i> 통화 종료</button>
+        </div>
+    </div>
+    <div id="callIncoming" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-2xl shadow-2xl px-5 py-3 text-center" style="z-index: 71;"></div>
 
     <!-- 우리동네 커뮤니티 창 -->
     <div id="communityModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
@@ -514,7 +542,8 @@
             initResizers();
             renderCategoryBar();
             loadIncidentsFromJSON().then(initAlerts);
-            setInterval(() => loadIncidentsFromJSON(false), 120000);   // 2분마다 새 기사 확인
+            setInterval(() => loadIncidentsFromJSON(false), 10000);   // 10초마다 새 기사가 올라왔는지 확인 (바뀐 경우에만 내려받음)
+            window.addEventListener('resize', renderTicker);
             setInterval(dateTick, 30000);   // 자정이 지나면 날짜 표시를 자동으로 넘김
             initCommunity();
 
@@ -614,26 +643,34 @@
         // ================= 카테고리(대분류 → 소분류) 설정 =================
         // ※ scraper.py 의 GROUPS 와 이름이 같아야 합니다. 색상/문구를 바꾸고 싶으면 여기만 고치면 됩니다.
         const CATEGORY_GROUPS = {
-            '강력범죄':   { label: '살인·폭행·흉기',     color: '#ef4444', badge: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
-                           subs: ['살인·살해', '흉기·난동', '폭행·상해', '방화·납치·감금'] },
+            '강력범죄': { label: '살인·폭행·흉기', color: '#ef4444', badge: 'bg-rose-100 text-rose-700 border-rose-300 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+                subs: ['살인·살해', '흉기·난동', '폭행·상해', '방화·납치·감금'] },
             '성범죄·마약': { label: '성범죄·마약·스토킹', color: '#a855f7', badge: 'bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
-                           subs: ['성범죄', '불법촬영·딥페이크', '스토킹·교제폭력', '마약'] },
-            '사기·금융':   { label: '사기·절도·해킹',     color: '#3b82f6', badge: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
-                           subs: ['사기·보이스피싱', '금융·횡령·도박', '절도·강도', '해킹·개인정보'] },
-            '공직·기타':   { label: '공직비리·기타범죄',   color: '#0891b2', badge: 'bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-950/60 dark:text-cyan-300 dark:border-cyan-800',
-                           subs: ['공직자 비리', '기타 범죄'] },
-            '재난·사고':   { label: '화재·붕괴·안전',     color: '#f59e0b', badge: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
-                           subs: ['화재·폭발', '붕괴·산업재해', '자연재해', '구조·안전사고'] },
-            '교통사고':   { label: '교통사고·뺑소니',     color: '#10b981', badge: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
-                           subs: ['교통사고', '뺑소니', '음주·무면허'] },
-            '실종·제보':   { label: '실종·변사·제보',     color: '#64748b', badge: 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
-                           subs: ['실종·수색', '변사·시신발견', '시민제보'] },
-            '해외·안보':   { label: '🌍 해외·안보',       color: '#f97316', badge: 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800',
-                           subs: ['전쟁·교전', '공습·타격', '해상·격침', '테러·피격', '국가 안보', '해외 분쟁'] }
+                subs: ['성범죄', '불법촬영·딥페이크', '스토킹·교제폭력', '마약'] },
+            '사기·금융': { label: '사기·절도·금융', color: '#3b82f6', badge: 'bg-blue-100 text-blue-700 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+                subs: ['사기·보이스피싱', '금융·횡령·도박', '절도·강도'] },
+            '사이버범죄': { label: '💻 사이버 범죄', color: '#6366f1', badge: 'bg-indigo-100 text-indigo-700 border-indigo-300 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800',
+                subs: ['해킹·랜섬웨어', '계정·암호 탈취', '디도스·사이버공격', '개인정보 유출'] },
+            '공직·기타': { label: '공직비리·기타범죄', color: '#0891b2', badge: 'bg-cyan-100 text-cyan-700 border-cyan-300 dark:bg-cyan-950/60 dark:text-cyan-300 dark:border-cyan-800',
+                subs: ['공직자 비리', '기타 범죄'] },
+            '재난·사고': { label: '화재·붕괴·안전', color: '#f59e0b', badge: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+                subs: ['화재·폭발', '붕괴·산업재해', '구조·안전사고'] },
+            '자연재해': { label: '🌧 자연재해·날씨', color: '#0ea5e9', badge: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800',
+                subs: ['호우·태풍·침수', '폭설·한파·빙판', '지진·산불·산사태'] },
+            '공공보건': { label: '🦠 공공보건·감염병', color: '#14b8a6', badge: 'bg-teal-100 text-teal-700 border-teal-300 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800',
+                subs: ['감염병·확진', '식중독·위생'] },
+            '교통사고': { label: '교통사고·뺑소니', color: '#10b981', badge: 'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+                subs: ['교통사고', '뺑소니', '음주·무면허'] },
+            '기타 사건사고': { label: '기타 사건사고', color: '#78716c', badge: 'bg-stone-200 text-stone-700 border-stone-300 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-700',
+                subs: ['소동·혼잡', '생활 사고', '기타 사건사고'] },
+            '실종·제보': { label: '실종·변사·제보', color: '#64748b', badge: 'bg-slate-200 text-slate-700 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700',
+                subs: ['실종·수색', '변사·시신발견', '시민제보'] },
+            '해외·안보': { label: '🌍 해외·안보', color: '#f97316', badge: 'bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/60 dark:text-orange-300 dark:border-orange-800',
+                subs: ['전쟁·교전', '공습·타격', '해상·격침', '테러·피격', '국가 안보', '해외 분쟁'] }
         };
         const SUB_TO_GROUP = {};
         Object.keys(CATEGORY_GROUPS).forEach(g => CATEGORY_GROUPS[g].subs.forEach(s => { SUB_TO_GROUP[s] = g; }));
-        const LEGACY_GROUP = { '강력·치안': '강력범죄', '사건·수사': '공직·기타' };   // 예전 news.json 에 있던 이름
+        const LEGACY_GROUP = { '강력·치안': '강력범죄', '사건·수사': '공직·기타', '해킹·개인정보': '사이버범죄' };   // 예전 news.json 에 있던 이름
 
         let currentSub = null;        // 선택된 소분류
         let selectedDate = null;      // 날짜 필터: null=자동(가장 최근 날짜), 'all'=7일 전체, 그 외=특정 날짜
@@ -641,6 +678,7 @@
         const ARTICLE_BASE_WIDTH = 1100;   // 기사 원문을 이 폭(px) 기준으로 그린 뒤 가운데 창 폭에 맞게 축소
         let localReports = [];        // 이 화면에서 직접 등록한 제보
         let lastSig = '';
+        let lastTag = '', pendingTag = '';   // news.json 이 바뀌었는지 확인하는 표식
         let dateFollowToday = true;   // 날짜를 직접 고르지 않았으면 항상 '오늘'을 따라감
         let hotspotArticleOpen = false;   // 다발 지역 화면에서 기사를 보고 있는 중인지
         const expandedEvents = new Set();  // '관련 기사'를 펼친 사건
@@ -656,10 +694,11 @@
             try { const x = new URL(u); return (x.protocol === 'http:' || x.protocol === 'https:') ? x.href : ''; } catch (e) { return ''; }
         }
         function groupOf(news) {
-            if (news.group && CATEGORY_GROUPS[news.group]) return news.group;
             const c = news.category;
+            if (SUB_TO_GROUP[c]) return SUB_TO_GROUP[c];
+            if (news.group && CATEGORY_GROUPS[news.group]) return news.group;
             if (CATEGORY_GROUPS[c]) return c;
-            return SUB_TO_GROUP[c] || LEGACY_GROUP[c] || '실종·제보';
+            return LEGACY_GROUP[c] || '실종·제보';
         }
         function getCategoryBadgeClass(news) {
             return CATEGORY_GROUPS[groupOf(news)].badge;
@@ -714,8 +753,17 @@
         // ================= 데이터 불러오기 =================
         async function loadIncidentsFromJSON(isManualRefresh = false) {
             let changed = false;
+            if (!isManualRefresh && lastSig) {
+                try {
+                    const head = await fetch('news.json?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
+                    const tag = head.headers.get('etag') || head.headers.get('last-modified') || '';
+                    if (tag && tag === lastTag) return;      // 그대로면 내려받지 않음
+                    pendingTag = tag;
+                } catch (e) {}
+            }
             try {
                 const res = await fetch('news.json?t=' + Date.now(), { cache: 'no-store' });
+                try { lastTag = pendingTag || res.headers.get('etag') || res.headers.get('last-modified') || lastTag; } catch (e) {}
                 if (res.ok) {
                     const data = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
@@ -748,6 +796,7 @@
             renderCategoryBar();
             renderNewsList();
             updateMapMarkers();
+            renderTicker();
             const filtered = getFilteredNews();
             const stillThere = filtered.some(n => n.id === selectedNewsId);
             if (currentCategory === '범죄 다발 지역') {
@@ -758,6 +807,38 @@
                 renderDetailView(selectedNewsId);
                 if (isManualRefresh && map && hasCoords(filtered[0])) map.flyTo([filtered[0].lat, filtered[0].lng], 13, { duration: 1.2 });
             }
+        }
+
+        // ================= 상단 속보 헤드라인 (가장 많이 보도되는 사건 순, 왼쪽 → 오른쪽으로 흐름) =================
+        function renderTicker() {
+            const wrap = document.getElementById('tickerWrap'), track = document.getElementById('tickerTrack');
+            if (!wrap || !track) return;
+            const since = Date.now() / 1000 - 24 * 3600;
+            let evs = groupEvents(newsData.filter(n => n.timestamp >= since));
+            if (evs.length < 5) evs = groupEvents(newsData.filter(inLast7));
+            evs.sort((a, b) => (b.items.length - a.items.length) || (b.lead.timestamp - a.lead.timestamp));
+            const top = evs.slice(0, 10);
+            if (top.length === 0) { track.innerHTML = ''; return; }
+            // 오른쪽으로 흐르므로 1위가 가장 먼저(오른쪽 끝에) 나오도록 거꾸로 놓음
+            track.innerHTML = top.map((ev, i) => `
+                <button onclick="openHeadline(${ev.lead.id})" class="inline-flex items-center gap-1.5 mx-5 text-xs text-slate-800 dark:text-slate-100 hover:text-red-500">
+                    <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[0.625rem] font-extrabold">${i === 0 ? '속보' : (i + 1) + '위'}</span>
+                    <b>${esc(ev.lead.title)}</b>
+                    <span class="text-slate-400">${esc((ev.lead.location || '').replace('대한민국 (세부 위치 미상)', ''))}${ev.items.length > 1 ? ' · 기사 ' + ev.items.length + '개' : ''}</span>
+                </button>`).reverse().join('');
+            const w = wrap.clientWidth || 600, tw = track.scrollWidth || top.length * 320;
+            track.style.setProperty('--ticker-end', w + 'px');
+            track.style.animation = 'none';
+            void track.offsetWidth;
+            track.style.animation = 'ticker-ltr ' + Math.max(20, Math.round((w + tw) / 70)) + 's linear infinite';
+        }
+        function openHeadline(id) {
+            const n = newsData.find(x => x.id === id);
+            if (!n) return;
+            currentCategory = 'all'; currentSub = null; selectedHotspotRegion = null; hotspotArticleOpen = false;
+            selectedDate = dateKey(n.timestamp); dateFollowToday = (selectedDate === todayKey());
+            renderCategoryBar(); updateMapMarkers();
+            selectNews(id);
         }
 
         // ================= 지도 =================
@@ -1090,7 +1171,7 @@
             const link = safeUrl(news.link);
             const isGoogle = /news\.google\.com/.test(link);
 
-            if (link && !isGoogle) {
+            if (link && !isGoogle && news.embed !== false) {
                 const embedUrl = link.replace(/^http:\/\//, 'https://');   // https 사이트 안에서는 http 페이지를 열 수 없어서 https로 시도
                 const fab = 'inline-flex items-center gap-1 text-[0.6875rem] font-bold text-white bg-slate-900/80 hover:bg-blue-600 px-2.5 py-1.5 rounded-full shadow-lg';
                 container.style.padding = '0';
@@ -1108,15 +1189,22 @@
                 return;
             }
 
-            // 원문을 이 화면에 띄울 수 없는 기사 (구글 뉴스 중계 주소이거나 주소 없음)
+            // 원문을 이 화면에 띄울 수 없는 기사 (언론사가 막아 둠 / 구글 뉴스 중계 주소 / 주소 없음)
             const notice = !link ? '이 기사는 원문 주소가 없습니다.'
-                : '이 기사는 아직 구글 뉴스 중계 주소라서 이 화면에 바로 띄울 수 없습니다. 아래 버튼으로 원문을 열어 주세요.';
+                : (news.embed === false ? '이 언론사(' + esc(news.source || '') + ')는 다른 사이트 화면 안에서 기사를 여는 것을 막아 두었습니다. 아래 버튼으로 원문을 열어 주세요.'
+                : '이 기사는 아직 구글 뉴스 중계 주소라서 이 화면에 바로 띄울 수 없습니다. 아래 버튼으로 원문을 열어 주세요.');
+            const g = groupOf(news);
             setDetailHTML(`
-                <div class="m-auto max-w-md text-center space-y-4">
-                    <h2 class="text-base font-bold text-slate-900 dark:text-white leading-snug">${esc(news.title)}</h2>
-                    <p class="text-xs text-slate-500">${esc(news.source || '')} · ${esc(news.time || '')}</p>
-                    <p class="text-xs text-amber-700 dark:text-amber-300">${notice}</p>
-                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg shadow"><i class="fa-solid fa-arrow-up-right-from-square"></i> 기사 원문 새 창으로 열기</a>` : ''}
+                <div class="m-auto w-full max-w-xl space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                    <div class="flex items-center justify-between gap-2 text-xs text-slate-500">
+                        <span class="px-2 py-0.5 rounded border ${CATEGORY_GROUPS[g].badge} font-bold">${esc(news.category || '')}</span>
+                        <span class="truncate">${esc(news.source || '')} · ${esc(news.time || '')}</span>
+                    </div>
+                    <h2 class="text-lg font-black text-slate-900 dark:text-white leading-snug">${esc(news.title)}</h2>
+                    <p class="text-xs text-red-500 font-semibold"><i class="fa-solid fa-location-dot"></i> ${esc(news.location || '')}</p>
+                    ${news.summary && news.summary !== news.title ? `<p class="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">${esc(news.summary)}</p>` : ''}
+                    <p class="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">${notice}</p>
+                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-2.5 rounded-lg shadow"><i class="fa-solid fa-arrow-up-right-from-square"></i> 기사 원문 새 창으로 열기</a>` : ''}
                 </div>`);
         }
 
@@ -1802,23 +1890,26 @@
                     <span><i class="fa-solid fa-circle-check text-emerald-500"></i> ${esc(townName(myTown))} 인증됨</span>
                     <div class="flex items-center gap-2">
                         <span class="flex items-center gap-1" title="배경 색 고르기">배경 <span id="commBgDots" class="flex items-center gap-1"></span></span>
+                        <button onclick="inviteNeighbors()" class="px-2 py-0.5 rounded border border-emerald-500 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-slate-700"><i class="fa-solid fa-user-plus"></i> 초대하기</button>
                         <button onclick="showProfile('${COMM_UID}')" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">내 프로필</button>
                         <button onclick="resetTown()" class="text-blue-500 hover:underline shrink-0">동네 다시 인증</button>
                     </div>
                 </div>
                 ${FIREBASE_CONFIG ? '' : '<div class="px-4 py-1.5 text-[0.6875rem] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-b border-amber-200 dark:border-amber-800 shrink-0">체험 모드입니다. 아직 서버가 연결되지 않아 글이 이 기기에만 저장되고 다른 사람에게는 보이지 않습니다.</div>'}
-                <div class="px-3 pt-2 flex items-end gap-1 border-b border-slate-200 dark:border-slate-800 shrink-0">
-                    <button onclick="setCommTab('talk')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 ${commTab === 'talk' ? 'bg-white dark:bg-slate-900 text-red-600 border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">🚨 사건사고·이야기</button>
-                    <button onclick="setCommTab('market')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 ${commTab === 'market' ? 'bg-white dark:bg-slate-900 text-emerald-600 border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">🛒 장터</button>
-                    <button onclick="setCommTab('meet')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 ${commTab === 'meet' ? 'bg-white dark:bg-slate-900 text-pink-600 border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">💞 동네 친구</button>
+                <div class="px-3 pt-2 flex flex-wrap items-end gap-1 border-b border-slate-200 dark:border-slate-800 shrink-0">
+                    ${[['talk', '🚨 사건사고 이야기', 'text-red-600'], ['free', '💬 이런저런', 'text-sky-600'], ['market', '🛒 동네 장터', 'text-emerald-600'], ['meet', '💞 동네 친구', 'text-pink-600'], ['random', '🎲 랜덤 채팅', 'text-violet-600'], ['dm', '✉ 1:1 대화' + (dmUnread.size ? ' <span class="text-sky-500">●</span>' : ''), 'text-sky-600']].map(x =>
+                        `<button onclick="setCommTab('${x[0]}')" class="px-3 py-1.5 rounded-t-lg text-xs font-bold border border-b-0 whitespace-nowrap ${commTab === x[0] ? 'bg-white dark:bg-slate-900 ' + x[2] + ' border-slate-300 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent'}">${x[1]}</button>`).join('')}
                 </div>
                 <div class="flex-1 min-h-0 flex">
                     <div id="commMain" class="flex-1 min-w-0 flex flex-col"></div>
-                    ${commTab === 'talk' ? `<aside id="commMembers" class="w-44 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hidden sm:block bg-slate-50 dark:bg-slate-900/60"></aside>` : ''}
+                    ${(commTab === 'talk' || commTab === 'free') ? `<aside id="commMembers" class="w-44 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hidden sm:block bg-slate-50 dark:bg-slate-900/60"></aside>` : ''}
                 </div>`;
             renderCommMembers();
             if (commTab === 'market') { renderCommBg(); renderMarket(); return; }
             if (commTab === 'meet') { renderCommBg(); renderMeet(); return; }
+            if (commTab === 'free') { renderCommBg(); renderFree(); return; }
+            if (commTab === 'dm') { renderCommBg(); renderDM(); return; }
+            if (commTab === 'random') { renderCommBg(); renderRandom(); return; }
             document.getElementById('commMain').innerHTML = `
                 <div id="commPinned" class="shrink-0"></div>
                 <div id="commList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
@@ -1881,7 +1972,7 @@
         }
 
         // 글 목록 (대화창 형태: 오래된 글이 위, 새 글이 아래)
-        function renderCommMsg(m) {
+        function renderCommMsg(m, delFn) {
             const mine = m.uid === COMM_UID, sos = m.type === 'sos', rep = m.type === 'report';
             const bubble = sos ? 'bg-red-50 dark:bg-red-950/70 border-red-400 text-slate-900 dark:text-red-50'
                 : rep ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-400 text-slate-900 dark:text-amber-50'
@@ -1903,7 +1994,7 @@
                             ${m.text ? `<p class="whitespace-pre-line break-words">${esc(m.text)}</p>` : ''}
                             ${media}
                         </div>
-                        ${mine ? `<button onclick="commDelete('${esc(m.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500 mt-0.5 px-1 rounded bg-white/70 dark:bg-slate-900/70">삭제</button>` : ''}
+                        ${mine ? `<button onclick="${delFn || 'commDelete'}('${esc(m.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500 mt-0.5 px-1 rounded bg-white/70 dark:bg-slate-900/70">삭제</button>` : ''}
                     </div>
                 </div>`;
         }
@@ -1955,13 +2046,21 @@
                     <div class="text-[0.6875rem] text-slate-500">${myTown ? esc(myTown.dong) + ' 이웃' : ''}${on || mine ? ' · <span class="text-emerald-500">접속 중</span>' : (m.lastSeen ? ' · ' + timeAgo(m.lastSeen) + ' 접속' : '')}</div>
                     <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words">${esc(m.intro || '아직 소개가 없습니다.')}</p>
                     <div class="mt-2 text-[0.6875rem] text-slate-500">작성한 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}</div>
-                    <div class="mt-4 flex gap-2 justify-center">
-                        ${mine ? '<button onclick="editProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">프로필 수정</button>' : ''}
+                    <div id="pfTrust" class="mt-1 text-[0.6875rem] font-bold text-amber-600 dark:text-amber-400">${esc(trustText(trustCache[uid]))}</div>
+                    ${mine ? '' : `<div class="mt-3 flex gap-2 justify-center">
+                        <button onclick="closeProfile(); startCall('${esc(uid)}', profileShown.nick, false)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold"><i class="fa-solid fa-phone"></i> 음성 통화</button>
+                        <button onclick="closeProfile(); startCall('${esc(uid)}', profileShown.nick, true)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold"><i class="fa-solid fa-video"></i> 영상 통화</button>
+                    </div>`}
+                    <div class="mt-3 flex gap-2 justify-center">
+                        ${mine ? '<button onclick="editProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">프로필 수정</button>' : `<button onclick="openDM('${esc(uid)}', profileShown.nick, profileShown.emoji)" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold"><i class="fa-solid fa-comment"></i> 1:1 대화</button>`}
                         <button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">닫기</button>
                     </div>
                 </div>`;
             card.classList.remove('hidden');
+            profileShown = { uid: uid, nick: m.nick || '이웃', emoji: m.emoji || '🙂' };
+            loadTrust(uid).then(tr => { const el = document.getElementById('pfTrust'); if (el && profileShown.uid === uid) el.textContent = trustText(tr); });
         }
+        let profileShown = { uid: '', nick: '', emoji: '' };
         function editProfile(keep) {
             const card = document.getElementById('commProfileCard');
             const val = id => (document.getElementById(id) || {}).value;
@@ -2006,6 +2105,7 @@
 
         // ---- 장터 (물건 사고팔기·교환·나눔) ----
         const MARKET_KINDS = ['판매', '교환', '나눔', '구함'];
+        function kindLabel(k) { return (!k || k === '판매') ? '판매중' : k; }
         const IMG_DATA_RE = /^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+\/=]+$/;
         let commTab = 'talk';         // 'talk'(사건사고·이야기) / 'market'(장터)
         let marketItems = [], marketUnsub = null, marketOpen = null, marketChat = [], marketChatUnsub = null;
@@ -2038,6 +2138,8 @@
             renderCommunity();
             if (tab === 'market') subscribeMarket();
             if (tab === 'meet') subscribeMeet();
+            if (tab === 'free') subscribeFree();
+            if (tab !== 'dm') { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } }
         }
         function setMarketFilter(f) { marketFilter = f; renderMarket(); }
         function openMarketForm(show) { marketForm = show; marketAttach = null; renderMarket(); }
@@ -2128,6 +2230,8 @@
                     </div>`;
             }).join('') : '<div class="text-center py-6 text-xs text-slate-400">아직 문의가 없습니다. 궁금한 점을 남겨 보세요.</div>';
             box.scrollTop = box.scrollHeight;
+            const rating = document.getElementById('mkRating');
+            if (rating && it && it.uid === COMM_UID) rating.innerHTML = tradeRatingHtml(it);   // 문의한 이웃이 생기면 평가 대상에 추가
         }
 
         function renderMarket() {
@@ -2135,7 +2239,7 @@
             if (!main) return;
             const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
             const kindColor = { '판매': 'bg-blue-600', '교환': 'bg-purple-600', '나눔': 'bg-emerald-600', '구함': 'bg-amber-500' };
-            const badge = k => `<span class="text-[0.625rem] font-bold text-white px-1.5 py-0.5 rounded ${kindColor[k] || 'bg-slate-500'}">${esc(k || '판매')}</span>`;
+            const badge = k => `<span class="text-[0.625rem] font-bold text-white px-1.5 py-0.5 rounded ${kindColor[k] || 'bg-slate-500'}">${esc(kindLabel(k))}</span>`;
 
             // 1) 물건 올리기
             if (marketForm) {
@@ -2143,7 +2247,7 @@
                     <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-3">
                         <div class="flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white">🛒 물건 올리기</b><button onclick="openMarketForm(false)" class="text-xs text-blue-500 hover:underline">← 목록으로</button></div>
                         <div class="grid grid-cols-3 gap-2">
-                            <select id="mkKind" class="${inp}">${MARKET_KINDS.map(k => `<option value="${k}">${k}</option>`).join('')}</select>
+                            <select id="mkKind" class="${inp}">${MARKET_KINDS.map(k => `<option value="${k}">${kindLabel(k)}</option>`).join('')}</select>
                             <input id="mkPrice" type="text" maxlength="20" placeholder="가격 (예: 15,000원)" class="col-span-2 ${inp}">
                         </div>
                         <input id="mkTitle" type="text" maxlength="40" placeholder="물건 이름 (예: 유아용 자전거)" class="${inp}">
@@ -2167,7 +2271,7 @@
                 const mine = it.uid === COMM_UID, done = it.status === 'done';
                 main.innerHTML = `
                     <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
-                        <button onclick="closeMarketItem()" class="text-xs text-blue-500 hover:underline">← 장터 목록</button>
+                        <button onclick="closeMarketItem()" class="text-xs text-blue-500 hover:underline">← 동네 장터 목록</button>
                         ${mine ? `<span class="flex items-center gap-2 text-xs">
                             <button onclick="marketSetStatus('${esc(it.id)}', '${done ? 'open' : 'done'}')" class="px-2 py-1 rounded border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">${done ? '다시 거래중으로' : '거래완료 표시'}</button>
                             <button onclick="marketDelete('${esc(it.id)}')" class="text-red-500 hover:underline">삭제</button></span>` : ''}
@@ -2181,6 +2285,7 @@
                             <div class="mt-1 text-[0.6875rem] text-slate-500"><button onclick="showProfile('${esc(it.uid)}')" class="hover:underline">${esc(it.emoji || '🙂')} ${esc(it.nick || '이웃')}</button> · ${timeAgo(it.ts)}</div>
                         </div>
                         ${it.desc ? `<p class="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-line break-words">${esc(it.desc)}</p>` : ''}
+                        <div id="mkRating">${tradeRatingHtml(it)}</div>
                         ${it.contact ? `<div class="text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-lg px-3 py-2">연락 방법: <b class="select-all">${esc(it.contact)}</b></div>` : ''}
                         <div class="pt-2 border-t border-slate-200 dark:border-slate-800">
                             <div class="text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">💬 문의 채팅 <span class="font-normal text-slate-400">(같은 동네 이웃에게 공개됩니다)</span></div>
@@ -2197,7 +2302,7 @@
 
             // 3) 목록
             const list = marketItems.filter(x => marketFilter === '전체' || x.kind === marketFilter);
-            const chip = f => `<button onclick="setMarketFilter('${f}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${marketFilter === f ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${f}</button>`;
+            const chip = f => `<button onclick="setMarketFilter('${f}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${marketFilter === f ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${f === '전체' ? f : kindLabel(f)}</button>`;
             main.innerHTML = `
                 <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
                     <div class="flex flex-wrap items-center gap-1.5">${['전체'].concat(MARKET_KINDS).map(chip).join('')}</div>
@@ -2450,6 +2555,499 @@
                 </div>`;
         }
 
+        // ================= 이런저런(잡담) · 1:1 대화 · 통화 · 신뢰도 · 랜덤 채팅 · 초대 =================
+        // 통화·랜덤 채팅·다른 사람과의 1:1 대화는 서버(Firebase)가 연결되어 있어야 동작합니다.
+        function needServer(what) {
+            showAlertToast({ head: '안내', title: what + '은(는) 서버(Firebase)를 연결한 뒤에 사용할 수 있습니다.', foot: '지금은 체험 모드입니다' });
+        }
+
+        // ---- 이런저런 (잡담 게시판) ----
+        let freeMessages = [], freeUnsub = null, freeAttach = null;
+        function freeLocalKey() { return 'comm_free_' + townKey(myTown); }
+        async function subscribeFree() {
+            if (freeUnsub) { freeUnsub(); freeUnsub = null; }
+            if (!myTown) return;
+            const db = await commInit();
+            if (db) {
+                freeUnsub = commDoc(townKey(myTown)).collection('free').orderBy('ts', 'desc').limit(200).onSnapshot(snap => {
+                    freeMessages = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                    renderFreeMessages();
+                }, err => console.error(err));
+            } else {
+                try { freeMessages = JSON.parse(lsGet(freeLocalKey()) || '[]'); } catch (e) { freeMessages = []; }
+                renderFreeMessages();
+            }
+        }
+        function freeLocalSave() {
+            if (!lsSet(freeLocalKey(), JSON.stringify(freeMessages.slice(0, 200)))) lsSet(freeLocalKey(), JSON.stringify(freeMessages.slice(0, 200).map(m => Object.assign({}, m, { img: '' }))));
+        }
+        async function freePickFile(input) {
+            const f = input.files && input.files[0];
+            input.value = '';
+            if (!f || f.type.indexOf('image/') !== 0) return;
+            try { freeAttach = await compressImage(f, 1280, 550 * 1024); } catch (e) { return; }
+            const p = document.getElementById('freePreview');
+            if (p) p.innerHTML = `<img src="${freeAttach}" class="h-10 rounded border border-slate-300"> <button onclick="freeAttach = null; document.getElementById('freePreview').innerHTML = '';" class="text-[0.6875rem] text-red-500">취소</button>`;
+        }
+        async function freePost() {
+            const input = document.getElementById('freeText');
+            const text = ((input && input.value) || '').trim();
+            if (!myTown || (!text && !freeAttach)) return;
+            const msg = { nick: myNick(), emoji: commProfile.emoji || '🙂', text: text.slice(0, 500), type: 'talk', ts: Date.now(), uid: COMM_UID };
+            if (freeAttach) msg.img = freeAttach;
+            try {
+                const db = await commInit();
+                if (db) await commDoc(townKey(myTown)).collection('free').add(msg);
+                else { msg.id = 'f' + Date.now() + Math.random().toString(36).slice(2, 7); freeMessages.unshift(msg); freeLocalSave(); }
+                input.value = ''; freeAttach = null;
+                const p = document.getElementById('freePreview'); if (p) p.innerHTML = '';
+                renderFreeMessages(true);
+            } catch (e) { console.error(e); }
+        }
+        async function freeDelete(id) {
+            if (!myTown || !confirm('이 글을 삭제할까요?')) return;
+            try {
+                const db = await commInit();
+                if (db) await commDoc(townKey(myTown)).collection('free').doc(id).delete();
+                else { freeMessages = freeMessages.filter(m => m.id !== id); freeLocalSave(); renderFreeMessages(); }
+            } catch (e) { console.error(e); }
+        }
+        function renderFree() {
+            const main = document.getElementById('commMain');
+            if (!main) return;
+            main.innerHTML = `
+                <div id="freeList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3"></div>
+                <div class="border-t border-slate-200 dark:border-slate-800 p-3 space-y-2 shrink-0 bg-white dark:bg-slate-900">
+                    <div id="freePreview" class="flex items-center gap-2"></div>
+                    <div class="flex items-end gap-2">
+                        <input id="freeFile" type="file" accept="image/*" class="hidden" onchange="freePickFile(this)">
+                        <button onclick="document.getElementById('freeFile').click()" title="사진 첨부" class="px-2.5 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid fa-paperclip"></i></button>
+                        <textarea id="freeText" rows="2" maxlength="500" placeholder="맛집, 날씨, 동네 소식… 이웃과 편하게 이야기해 보세요" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
+                        <button onclick="freePost()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-500 whitespace-nowrap">등록</button>
+                    </div>
+                </div>`;
+            const list = document.getElementById('freeList');
+            if (list) list.style.background = commBg;
+            renderFreeMessages(true);
+        }
+        function renderFreeMessages(scrollBottom) {
+            const list = document.getElementById('freeList');
+            if (!list) return;
+            const nearBottom = (list.scrollHeight - list.scrollTop - list.clientHeight) < 150;
+            const sorted = freeMessages.slice().sort((a, b) => a.ts - b.ts);
+            list.innerHTML = sorted.length ? sorted.map(m => renderCommMsg(m, 'freeDelete')).join('')
+                : '<div class="text-center py-16 text-xs text-slate-400">아직 글이 없습니다. 가벼운 이야기로 시작해 보세요.</div>';
+            if (scrollBottom || nearBottom) list.scrollTop = list.scrollHeight;
+        }
+
+        // ---- 초대하기 ----
+        async function inviteNeighbors() {
+            const url = location.origin + location.pathname;
+            const text = '[우리동네 사건사고] ' + (myTown ? myTown.dong + ' 커뮤니티' : '우리동네 커뮤니티') + '에 초대합니다. 동네 사건사고 알림과 이웃 이야기를 함께 봐요.';
+            try {
+                if (navigator.share) { await navigator.share({ title: '우리동네 사건사고', text: text, url: url }); return; }
+                await navigator.clipboard.writeText(text + ' ' + url);
+                showAlertToast({ head: '초대하기', title: '초대 글과 주소를 복사했습니다. 메신저에 붙여 넣어 보내 주세요.', foot: url });
+            } catch (e) {
+                showAlertToast({ head: '초대하기', title: '아래 주소를 복사해서 보내 주세요.', foot: url });
+            }
+        }
+
+        // ---- 1:1 대화 ----
+        let dmThreads = [], dmWith = null, dmChat = [], dmUnsub = null, dmInboxUnsub = null, dmUnread = new Set(), dmInboxReady = false;
+        function dmLocal() { try { return JSON.parse(lsGet('dm_local') || '{}'); } catch (e) { return {}; } }
+        async function subscribeDM() {
+            if (dmInboxUnsub) { dmInboxUnsub(); dmInboxUnsub = null; }
+            const db = await commInit();
+            if (!db) {
+                const l = dmLocal();
+                dmThreads = Object.keys(l).map(uid => ({ uid: uid, nick: l[uid].nick, emoji: l[uid].emoji, last: (l[uid].msgs.slice(-1)[0] || {}).text || '', ts: (l[uid].msgs.slice(-1)[0] || {}).ts || 0 })).sort((a, b) => b.ts - a.ts);
+                return;
+            }
+            dmInboxReady = false;
+            dmInboxUnsub = db.collection('dmThreads').doc(COMM_UID).collection('list').orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
+                if (dmInboxReady) snap.docChanges().forEach(ch => {
+                    const d = ch.doc.data();
+                    if (ch.type !== 'removed' && d.from && d.from !== COMM_UID && d.uid !== dmWith) {
+                        dmUnread.add(d.uid);
+                        showAlertToast({ head: '✉ 1:1 대화', badge: d.nick || '이웃', title: d.last || '', foot: '눌러서 커뮤니티 열기', openCommunity: true });
+                        playAlertSound();
+                    }
+                });
+                dmInboxReady = true;
+                dmThreads = snap.docs.map(d => d.data());
+                if (commTab === 'dm' && !dmWith) renderDM();
+            }, err => console.error(err));
+        }
+        async function openDM(uid, nick, emoji) {
+            if (uid === COMM_UID) return;
+            closeProfile();
+            dmWith = { uid: uid, nick: nick || '이웃', emoji: emoji || '🙂' };
+            dmUnread.delete(uid);
+            dmChat = [];
+            if (dmUnsub) { dmUnsub(); dmUnsub = null; }
+            if (commTab !== 'dm') { commTab = 'dm'; renderCommunity(); }
+            const db = await commInit();
+            if (db) {
+                dmUnsub = db.collection('dm').doc(pairId(COMM_UID, uid)).collection('messages').orderBy('ts', 'asc').limit(300).onSnapshot(snap => {
+                    dmChat = snap.docs.map(d => d.data());
+                    renderDMChat();
+                }, err => console.error(err));
+            } else { dmChat = ((dmLocal()[uid] || {}).msgs) || []; }
+            renderDM();
+        }
+        function closeDM() { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } renderDM(); }
+        async function dmSend() {
+            const input = document.getElementById('dmText');
+            const text = ((input && input.value) || '').trim();
+            if (!text || !dmWith) return;
+            const msg = { uid: COMM_UID, text: text.slice(0, 500), ts: Date.now() };
+            try {
+                const db = await commInit();
+                if (db) {
+                    await db.collection('dm').doc(pairId(COMM_UID, dmWith.uid)).collection('messages').add(msg);
+                    const base = { last: msg.text.slice(0, 60), ts: msg.ts, from: COMM_UID };
+                    await db.collection('dmThreads').doc(COMM_UID).collection('list').doc(dmWith.uid).set(Object.assign({ uid: dmWith.uid, nick: dmWith.nick, emoji: dmWith.emoji }, base));
+                    await db.collection('dmThreads').doc(dmWith.uid).collection('list').doc(COMM_UID).set(Object.assign({ uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂' }, base));
+                } else {
+                    const l = dmLocal();
+                    l[dmWith.uid] = l[dmWith.uid] || { nick: dmWith.nick, emoji: dmWith.emoji, msgs: [] };
+                    l[dmWith.uid].msgs.push(msg);
+                    lsSet('dm_local', JSON.stringify(l));
+                    dmChat = l[dmWith.uid].msgs;
+                    subscribeDM();
+                    renderDMChat();
+                }
+                input.value = '';
+            } catch (e) { console.error(e); }
+        }
+        function chatBubbles(list, color) {
+            return list.map(m => {
+                const mine = m.uid === COMM_UID;
+                return `<div class="flex ${mine ? 'justify-end' : 'justify-start'}"><div style="max-width:78%;" class="rounded-2xl border px-3 py-1.5 text-sm ${mine ? color : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}"><span class="whitespace-pre-line break-words">${esc(m.text)}</span><div class="text-[0.625rem] text-slate-400 mt-0.5">${timeAgo(m.ts)}</div></div></div>`;
+            }).join('');
+        }
+        function renderDMChat() {
+            const box = document.getElementById('dmChat');
+            if (!box) return;
+            box.innerHTML = dmChat.length ? chatBubbles(dmChat, 'bg-sky-100 dark:bg-sky-900/70 border-sky-300 dark:border-sky-700 text-slate-900 dark:text-white')
+                : '<div class="text-center py-10 text-xs text-slate-400">첫 인사를 건네 보세요.</div>';
+            box.scrollTop = box.scrollHeight;
+        }
+        function renderDM() {
+            const main = document.getElementById('commMain');
+            if (!main || commTab !== 'dm') return;
+            const callBtn = 'px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700';
+            if (dmWith) {
+                main.innerHTML = `
+                    <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                        <button onclick="closeDM()" class="text-xs text-blue-500 hover:underline shrink-0">← 대화 목록</button>
+                        <b class="text-xs text-slate-800 dark:text-slate-100 truncate">${esc(dmWith.emoji)} ${esc(dmWith.nick)}</b>
+                        <span class="flex items-center gap-1.5 shrink-0">
+                            <button onclick="startCall('${esc(dmWith.uid)}', dmWith.nick, false)" class="${callBtn}"><i class="fa-solid fa-phone"></i> 음성</button>
+                            <button onclick="startCall('${esc(dmWith.uid)}', dmWith.nick, true)" class="${callBtn}"><i class="fa-solid fa-video"></i> 영상</button>
+                        </span>
+                    </div>
+                    ${FIREBASE_CONFIG ? '' : '<div class="px-3 py-1.5 text-[0.6875rem] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 shrink-0">체험 모드: 보낸 글이 이 기기에만 저장되고 상대에게 전달되지 않습니다.</div>'}
+                    <div id="dmChat" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
+                    <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
+                        <textarea id="dmText" rows="1" maxlength="500" placeholder="메시지를 입력하세요" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
+                        <button onclick="dmSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-sky-600 hover:bg-sky-500 whitespace-nowrap">보내기</button>
+                    </div>`;
+                renderDMChat();
+                return;
+            }
+            main.innerHTML = `
+                <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 text-xs text-slate-500 shrink-0">이웃의 아이콘이나 이름을 누르면 프로필에서 <b>1:1 대화 · 음성 통화 · 영상 통화</b>를 시작할 수 있습니다.</div>
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2">${dmThreads.length ? dmThreads.map(t => `
+                    <button onclick="openDM('${esc(t.uid)}', dmThreads.find(x => x.uid === '${esc(t.uid)}').nick, dmThreads.find(x => x.uid === '${esc(t.uid)}').emoji)" class="w-full flex items-center gap-3 p-3 rounded-xl border ${dmUnread.has(t.uid) ? 'border-sky-500' : 'border-slate-200 dark:border-slate-700'} bg-white dark:bg-slate-900 hover:border-sky-500 text-left">
+                        <span class="w-9 h-9 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-lg">${esc(t.emoji || '🙂')}</span>
+                        <span class="min-w-0 flex-1"><span class="block text-sm font-bold text-slate-900 dark:text-white truncate">${esc(t.nick || '이웃')}${dmUnread.has(t.uid) ? ' <span class="text-[0.625rem] text-sky-500">새 글</span>' : ''}</span><span class="block text-xs text-slate-500 truncate">${esc(t.last || '')}</span></span>
+                        <span class="text-[0.625rem] text-slate-400 shrink-0">${t.ts ? timeAgo(t.ts) : ''}</span>
+                    </button>`).join('') : '<div class="text-center py-16 text-xs text-slate-400">아직 1:1 대화가 없습니다.</div>'}</div>`;
+        }
+
+        // ---- 음성·영상 통화 (WebRTC) ----
+        const RTC_CFG = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+        let call = null, callsUnsub = null, autoAcceptFrom = null;
+        function callUi(show) { const o = document.getElementById('callOverlay'); if (o) { if (show) o.classList.remove('hidden'); else o.classList.add('hidden'); } }
+        function callInfo(t) { const el = document.getElementById('callInfo'); if (el) el.textContent = t; }
+        async function getMedia(video) {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('이 브라우저는 통화를 지원하지 않습니다.');
+            return await navigator.mediaDevices.getUserMedia({ audio: true, video: !!video });
+        }
+        function setupPeer(stream, video, peerNick, ref, myCands) {
+            const pc = new RTCPeerConnection(RTC_CFG);
+            stream.getTracks().forEach(tr => pc.addTrack(tr, stream));
+            pc.onicecandidate = e => { if (e.candidate) ref.collection(myCands).add(e.candidate.toJSON()).catch(() => {}); };
+            pc.ontrack = e => { const r = document.getElementById('callRemote'); if (r && r.srcObject !== e.streams[0]) r.srcObject = e.streams[0]; callInfo(peerNick + '님과 통화 중'); };
+            pc.onconnectionstatechange = () => { if (['failed', 'disconnected', 'closed'].includes(pc.connectionState)) endCall(true); };
+            const loc = document.getElementById('callLocal'), rem = document.getElementById('callRemote'), av = document.getElementById('callAvatar');
+            if (loc) { loc.srcObject = stream; loc.style.display = video ? '' : 'none'; }
+            if (rem) rem.style.display = video ? '' : 'none';
+            if (av) av.style.display = video ? 'none' : '';
+            return pc;
+        }
+        async function startCall(uid, nick, video) {
+            const db = await commInit();
+            if (!db) { needServer(video ? '영상 통화' : '음성 통화'); return; }
+            if (call) return;
+            let stream;
+            try { stream = await getMedia(video); }
+            catch (e) { showAlertToast({ head: '통화', title: '마이크' + (video ? '·카메라' : '') + ' 사용을 허용해야 통화할 수 있습니다.', foot: (e && e.message) || '' }); return; }
+            const ref = db.collection('calls').doc();
+            const pc = setupPeer(stream, video, nick || '이웃', ref, 'callerCandidates');
+            call = { ref: ref, pc: pc, stream: stream, unsubs: [], peer: nick || '이웃' };
+            callUi(true); callInfo((nick || '이웃') + '님에게 거는 중...');
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await ref.set({ from: COMM_UID, fromNick: myNick(), fromEmoji: commProfile.emoji || '🙂', to: uid, video: !!video, status: 'ringing', ts: Date.now(), offer: { type: offer.type, sdp: offer.sdp } });
+            call.unsubs.push(ref.onSnapshot(snap => {
+                const d = snap.data();
+                if (!d || !call) return;
+                if (d.answer && !pc.currentRemoteDescription) pc.setRemoteDescription(new RTCSessionDescription(d.answer)).catch(() => {});
+                if (d.status === 'ended' || d.status === 'declined') { if (d.status === 'declined') showAlertToast({ head: '통화', title: '상대가 통화를 받지 않았습니다.' }); endCall(true); }
+            }));
+            call.unsubs.push(ref.collection('calleeCandidates').onSnapshot(snap => snap.docChanges().forEach(ch => { if (ch.type === 'added') pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {}); })));
+            call.timer = setTimeout(() => { if (call && !pc.currentRemoteDescription) { showAlertToast({ head: '통화', title: '상대가 응답하지 않습니다.' }); endCall(); } }, 45000);
+        }
+        async function answerCall(id) {
+            const box = document.getElementById('callIncoming'); if (box) box.classList.add('hidden');
+            const db = await commInit();
+            if (!db || call) return;
+            const ref = db.collection('calls').doc(id);
+            const d = (await ref.get()).data();
+            if (!d || d.status !== 'ringing') return;
+            let stream;
+            try { stream = await getMedia(d.video); }
+            catch (e) { ref.update({ status: 'declined' }).catch(() => {}); showAlertToast({ head: '통화', title: '마이크' + (d.video ? '·카메라' : '') + ' 사용을 허용해야 통화할 수 있습니다.' }); return; }
+            const pc = setupPeer(stream, d.video, d.fromNick || '이웃', ref, 'calleeCandidates');
+            call = { ref: ref, pc: pc, stream: stream, unsubs: [], peer: d.fromNick || '이웃' };
+            callUi(true); callInfo((d.fromNick || '이웃') + '님과 연결 중...');
+            await pc.setRemoteDescription(new RTCSessionDescription(d.offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await ref.update({ answer: { type: answer.type, sdp: answer.sdp }, status: 'active' });
+            call.unsubs.push(ref.collection('callerCandidates').onSnapshot(snap => snap.docChanges().forEach(ch => { if (ch.type === 'added') pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {}); })));
+            call.unsubs.push(ref.onSnapshot(snap => { const x = snap.data(); if (x && x.status === 'ended') endCall(true); }));
+        }
+        async function declineCall(id) {
+            const box = document.getElementById('callIncoming'); if (box) box.classList.add('hidden');
+            const db = await commInit();
+            if (db) db.collection('calls').doc(id).update({ status: 'declined' }).catch(() => {});
+        }
+        function endCall(remote) {
+            if (!call) { callUi(false); return; }
+            const c = call; call = null;
+            if (c.timer) clearTimeout(c.timer);
+            c.unsubs.forEach(u => { try { u(); } catch (e) {} });
+            try { c.stream.getTracks().forEach(tr => tr.stop()); } catch (e) {}
+            try { c.pc.close(); } catch (e) {}
+            if (remote !== true) c.ref.update({ status: 'ended' }).catch(() => {});
+            ['callLocal', 'callRemote'].forEach(id => { const v = document.getElementById(id); if (v) v.srcObject = null; });
+            callUi(false);
+        }
+        function toggleMute() {
+            if (!call) return;
+            const tr = call.stream.getAudioTracks()[0];
+            if (!tr) return;
+            tr.enabled = !tr.enabled;
+            const b = document.getElementById('callMute'); if (b) b.textContent = tr.enabled ? '마이크 끄기' : '마이크 켜기';
+        }
+        function listenCalls() {
+            if (callsUnsub || !commDb) return;
+            callsUnsub = commDb.collection('calls').where('to', '==', COMM_UID).where('status', '==', 'ringing').onSnapshot(snap => {
+                snap.docChanges().forEach(ch => {
+                    const d = ch.doc.data();
+                    if (ch.type !== 'added' || Date.now() - d.ts > 60000 || call) return;
+                    if (autoAcceptFrom && d.from === autoAcceptFrom) { autoAcceptFrom = null; answerCall(ch.doc.id); return; }   // 랜덤 화상 채팅 상대
+                    const box = document.getElementById('callIncoming');
+                    if (!box) return;
+                    box.innerHTML = `
+                        <div class="text-sm font-bold text-slate-900 dark:text-white">${esc(d.fromEmoji || '🙂')} ${esc(d.fromNick || '이웃')}님의 ${d.video ? '영상' : '음성'} 통화</div>
+                        <div class="mt-2 flex gap-2 justify-center">
+                            <button onclick="answerCall('${esc(ch.doc.id)}')" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">받기</button>
+                            <button onclick="declineCall('${esc(ch.doc.id)}')" class="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold">거절</button>
+                        </div>`;
+                    box.classList.remove('hidden');
+                    playAlertSound('bell');
+                    setTimeout(() => box.classList.add('hidden'), 40000);
+                });
+            }, err => console.error(err));
+        }
+
+        // ---- 거래 신뢰도 ----
+        const trustCache = {};
+        function trustLocal() { try { return JSON.parse(lsGet('trust_local') || '{}'); } catch (e) { return {}; } }
+        async function loadTrust(uid) {
+            const db = await commInit();
+            let scores = [];
+            if (db) {
+                try { const snap = await db.collection('trust').doc(uid).collection('votes').limit(300).get(); scores = snap.docs.map(d => d.data().score).filter(Number.isFinite); } catch (e) { console.error(e); }
+            } else { scores = Object.values(trustLocal()[uid] || {}); }
+            const t = { count: scores.length, avg: scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0 };
+            trustCache[uid] = t;
+            return t;
+        }
+        function trustText(t) {
+            if (!t || !t.count) return '거래 신뢰도: 아직 평가 없음';
+            const full = Math.round(t.avg);
+            return '거래 신뢰도 ' + '★'.repeat(full) + '☆'.repeat(5 - full) + ' ' + t.avg.toFixed(1) + ' (' + t.count + '건 평가)';
+        }
+        async function rateTrade(itemId, targetUid, score) {
+            if (targetUid === COMM_UID) return;
+            try {
+                const db = await commInit();
+                if (db) await db.collection('trust').doc(targetUid).collection('votes').doc(COMM_UID + '_' + itemId).set({ score: score, from: COMM_UID, item: itemId, ts: Date.now() });
+                else { const l = trustLocal(); l[targetUid] = l[targetUid] || {}; l[targetUid][COMM_UID + '_' + itemId] = score; lsSet('trust_local', JSON.stringify(l)); }
+                delete trustCache[targetUid];
+                showAlertToast({ head: '거래 평가', title: '별점 ' + score + '점으로 평가했습니다. 상대 프로필의 거래 신뢰도에 반영됩니다.' });
+                const el = document.getElementById('rate_' + targetUid); if (el) el.innerHTML = starRow(itemId, targetUid, score);
+            } catch (e) { console.error(e); }
+        }
+        function starRow(itemId, targetUid, current) {
+            return [1, 2, 3, 4, 5].map(n => `<button onclick="rateTrade('${esc(itemId)}', '${esc(targetUid)}', ${n})" title="${n}점" class="text-xl leading-none ${n <= (current || 0) ? 'text-amber-400' : 'text-slate-300 dark:text-slate-600'} hover:text-amber-400">★</button>`).join('');
+        }
+        // 물건 상세 화면에 넣는 '거래 평가' 영역
+        function tradeRatingHtml(it) {
+            const mine = it.uid === COMM_UID;
+            const row = (uid, name) => `<div class="flex items-center justify-between gap-2"><span class="text-xs text-slate-700 dark:text-slate-200 truncate">${esc(name)}</span><span id="rate_${esc(uid)}" class="shrink-0">${starRow(it.id, uid, 0)}</span></div>`;
+            let rows = '';
+            if (!mine) rows = row(it.uid, (it.nick || '이웃') + ' (글쓴이)');
+            else {
+                const seen = {};
+                marketChat.forEach(m => { if (m.uid !== COMM_UID && !seen[m.uid]) { seen[m.uid] = 1; rows += row(m.uid, m.nick || '이웃'); } });
+                if (!rows) rows = '<div class="text-[0.6875rem] text-slate-400">문의한 이웃이 생기면 여기서 평가할 수 있습니다.</div>';
+            }
+            return `<div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-1.5"><div class="text-xs font-bold text-slate-700 dark:text-slate-200">🤝 거래 평가 <span class="font-normal text-slate-400">(거래를 마친 뒤 별점을 눌러 주세요. 프로필의 거래 신뢰도에 반영됩니다)</span></div>${rows}</div>`;
+        }
+
+        // ---- 랜덤 채팅 / 랜덤 화상 채팅 ----
+        let rnd = { state: 'idle', mode: 'text', room: null, peer: null, msgs: [], unsubs: [] };   // state: idle / waiting / chatting / ended
+        let rndAdult = lsGet('rnd_adult') === '1';
+        function rndStop() { rnd.unsubs.forEach(u => { try { u(); } catch (e) {} }); rnd.unsubs = []; }
+        function rndListenRoom(db, roomId) {
+            const ref = db.collection('randomRooms').doc(roomId);
+            rnd.unsubs.push(ref.onSnapshot(snap => {
+                const d = snap.data();
+                if (!d) return;
+                if (rnd.state === 'waiting' && d.b) {            // 내가 기다리던 방에 상대가 들어옴
+                    rnd.state = 'chatting'; rnd.peer = d.b;
+                    if (rnd.mode === 'video') autoAcceptFrom = d.b.uid;
+                    renderRandom();
+                }
+                if (d.status === 'closed' && rnd.state === 'chatting') { rnd.state = 'ended'; if (call) endCall(); renderRandom(); }
+            }));
+            rnd.unsubs.push(ref.collection('messages').orderBy('ts', 'asc').limit(300).onSnapshot(snap => { rnd.msgs = snap.docs.map(x => x.data()); renderRandomChat(); }));
+        }
+        async function rndStart(mode) {
+            const chk = document.getElementById('rndAdult');
+            if (chk && chk.checked) { rndAdult = true; lsSet('rnd_adult', '1'); }
+            if (!rndAdult) { showAlertToast({ head: '랜덤 채팅', title: '만 19세 이상 확인란에 체크해 주세요.' }); return; }
+            const db = await commInit();
+            if (!db) { needServer(mode === 'video' ? '랜덤 화상 채팅' : '랜덤 채팅'); return; }
+            rndStop();
+            rnd = { state: 'waiting', mode: mode, room: null, peer: null, msgs: [], unsubs: [] };
+            renderRandom();
+            const me = { uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂' };
+            const lobby = db.collection('randomLobby').doc(mode);
+            try {
+                const res = await db.runTransaction(async tx => {
+                    const snap = await tx.get(lobby);
+                    const w = snap.exists ? snap.data().waiting : null;
+                    if (w && w.uid !== COMM_UID && Date.now() - w.ts < 90000) { tx.set(lobby, { waiting: null }); return { join: w }; }
+                    const room = db.collection('randomRooms').doc().id;
+                    tx.set(lobby, { waiting: Object.assign({ room: room, ts: Date.now() }, me) });
+                    return { wait: room };
+                });
+                if (res.join) {
+                    rnd.room = res.join.room; rnd.peer = { uid: res.join.uid, nick: res.join.nick, emoji: res.join.emoji }; rnd.state = 'chatting';
+                    await db.collection('randomRooms').doc(rnd.room).set({ a: rnd.peer, b: me, status: 'open', mode: mode, ts: Date.now() });
+                    rndListenRoom(db, rnd.room);
+                    renderRandom();
+                    if (mode === 'video') setTimeout(() => startCall(rnd.peer.uid, rnd.peer.nick, true), 1200);
+                } else {
+                    rnd.room = res.wait;
+                    await db.collection('randomRooms').doc(rnd.room).set({ a: me, status: 'open', mode: mode, ts: Date.now() });
+                    rndListenRoom(db, rnd.room);
+                }
+            } catch (e) { console.error(e); rnd.state = 'idle'; renderRandom(); showAlertToast({ head: '랜덤 채팅', title: '연결하지 못했습니다. 잠시 후 다시 시도해 주세요.' }); }
+        }
+        async function rndLeave() {
+            const db = await commInit();
+            const was = rnd;
+            rndStop();
+            if (call) endCall();
+            autoAcceptFrom = null;
+            if (db && was.room) {
+                db.collection('randomRooms').doc(was.room).update({ status: 'closed' }).catch(() => {});
+                if (was.state === 'waiting') {
+                    const lobby = db.collection('randomLobby').doc(was.mode);
+                    db.runTransaction(async tx => { const s = await tx.get(lobby); const w = s.exists ? s.data().waiting : null; if (w && w.uid === COMM_UID) tx.set(lobby, { waiting: null }); }).catch(() => {});
+                }
+            }
+            rnd = { state: 'idle', mode: was.mode, room: null, peer: null, msgs: [], unsubs: [] };
+            renderRandom();
+        }
+        async function rndSend() {
+            const input = document.getElementById('rndText');
+            const text = ((input && input.value) || '').trim();
+            if (!text || rnd.state !== 'chatting') return;
+            const db = await commInit();
+            if (!db) return;
+            try { await db.collection('randomRooms').doc(rnd.room).collection('messages').add({ uid: COMM_UID, text: text.slice(0, 300), ts: Date.now() }); input.value = ''; } catch (e) { console.error(e); }
+        }
+        function renderRandomChat() {
+            const box = document.getElementById('rndChat');
+            if (!box) return;
+            box.innerHTML = rnd.msgs.length ? chatBubbles(rnd.msgs, 'bg-violet-100 dark:bg-violet-900/70 border-violet-300 dark:border-violet-700 text-slate-900 dark:text-white')
+                : '<div class="text-center py-10 text-xs text-slate-400">연결되었습니다. 인사를 건네 보세요.</div>';
+            box.scrollTop = box.scrollHeight;
+        }
+        function renderRandom() {
+            const main = document.getElementById('commMain');
+            if (!main || commTab !== 'random') return;
+            if (rnd.state === 'chatting' || rnd.state === 'ended') {
+                const p = rnd.peer || {};
+                main.innerHTML = `
+                    <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                        <b class="text-xs text-slate-800 dark:text-slate-100 truncate">🎲 ${esc(p.emoji || '🙂')} ${esc(p.nick || '이웃')} ${rnd.state === 'ended' ? '<span class="text-red-500">· 상대가 나갔습니다</span>' : ''}</b>
+                        <span class="flex items-center gap-1.5 shrink-0">
+                            ${rnd.state === 'chatting' && rnd.mode === 'video' ? `<button onclick="startCall('${esc(p.uid)}', rnd.peer.nick, true)" class="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200"><i class="fa-solid fa-video"></i> 영상 다시 걸기</button>` : ''}
+                            <button onclick="rndStart(rnd.mode)" class="px-2.5 py-1 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold">다음 상대</button>
+                            <button onclick="rndLeave()" class="px-2.5 py-1 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">나가기</button>
+                        </span>
+                    </div>
+                    <div id="rndChat" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
+                    <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
+                        <textarea id="rndText" rows="1" maxlength="300" placeholder="메시지를 입력하세요" ${rnd.state === 'ended' ? 'disabled' : ''} class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white"></textarea>
+                        <button onclick="rndSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-violet-600 hover:bg-violet-500 whitespace-nowrap">보내기</button>
+                    </div>`;
+                renderRandomChat();
+                return;
+            }
+            main.innerHTML = `
+                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-6 flex flex-col items-center justify-center gap-4 text-center">
+                    <div class="text-4xl">🎲</div>
+                    <div class="text-base font-extrabold text-slate-900 dark:text-white">랜덤 채팅</div>
+                    <p class="text-xs text-slate-500 max-w-sm">지금 접속해 있는 다른 이용자 한 명과 무작위로 연결됩니다. 서로 닉네임과 아이콘만 보입니다.</p>
+                    ${rnd.state === 'waiting' ? `
+                        <div class="text-sm font-bold text-violet-600 flex items-center gap-2"><i class="fa-solid fa-rotate refresh-spin"></i> 상대를 찾는 중입니다...</div>
+                        <button onclick="rndLeave()" class="px-4 py-2 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">취소</button>` : `
+                        <label class="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-200 text-left"><input id="rndAdult" type="checkbox" class="mt-0.5" ${rndAdult ? 'checked' : ''}><span>저는 <b>만 19세 이상</b>입니다. (미성년자는 이용할 수 없습니다)</span></label>
+                        <div class="flex flex-wrap justify-center gap-3">
+                            <button onclick="rndStart('text')" class="px-5 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold"><i class="fa-solid fa-comments"></i> 랜덤 채팅 시작</button>
+                            <button onclick="rndStart('video')" class="px-5 py-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-sm font-bold"><i class="fa-solid fa-video"></i> 랜덤 화상 채팅 시작</button>
+                        </div>
+                        ${FIREBASE_CONFIG ? '' : '<div class="text-[0.6875rem] text-amber-700 dark:text-amber-300">체험 모드에서는 연결되지 않습니다. 서버(Firebase)를 연결하면 사용할 수 있습니다.</div>'}`}
+                    <p class="text-[0.6875rem] text-slate-400 max-w-sm leading-relaxed">불쾌한 상대는 바로 [나가기]를 누르세요. 개인정보·금전 요구에는 응하지 마세요. 화상 채팅은 카메라와 마이크 허용이 필요합니다.</p>
+                </div>`;
+        }
+
+        function socialInit() {
+            commInit().then(db => { if (db) listenCalls(); subscribeDM(); });
+        }
+
         // ---- 동네 인증 ----
         function nearestSigungu(lat, lng, n) {
             const arr = [];
@@ -2560,6 +3158,7 @@
             if (commUnsubMembers) { commUnsubMembers(); commUnsubMembers = null; }
             if (marketUnsub) { marketUnsub(); marketUnsub = null; }
             stopMeet(); meetProfiles = []; meetChatWith = null;
+            if (freeUnsub) { freeUnsub(); freeUnsub = null; } freeMessages = [];
             stopMarketChat(); marketItems = []; marketOpen = null;
             myTown = null; commMessages = []; commMembers = []; commType = 'talk'; commAttach = null;
             lsSet('my_town', 'null');
@@ -2570,10 +3169,13 @@
         function initCommunity() {
             myTown = loadMyTown();
             if (myTown) commSubscribe();   // 인증된 동네가 있으면 제보·SOS 알림을 받기 위해 바로 연결
+            socialInit();
             updateAlertButton();
         }
 
         function manualRefreshData() {
+            const ri = document.getElementById('refreshIcon');
+            if (ri) { ri.classList.add('fast'); setTimeout(() => ri.classList.remove('fast'), 1500); }
             currentCategory = 'all'; 
             currentSub = null;
             selectedDate = null;
