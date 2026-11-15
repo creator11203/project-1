@@ -721,6 +721,28 @@ ENT_SOURCE_RE = re.compile(r"\[\s*(?:OSEN|스포츠조선|스포츠서울|스포
 # 드라마·예능 줄거리 기사 (무조건 제외)
 ENT_STRONG_RE = re.compile(r"시청률|분당\s*최고|최고\s*\d+(\.\d+)?\s*%|\d+(\.\d+)?\s*%\s*[\(\[]|\d+\s*회\s*(예고|방송)|첫\s*방|첫방|종영|본방|재방|열연|극\s*중|극중|두\s*얼굴|반전\s*엔딩|엔딩|스포일러|명장면|[\(\[]\s*['‘’\"“”][^'‘’\"“”]{1,20}['‘’\"“”]\s*[\)\]]|\[종합\]\s*$|\[TV|\[어게인|\[SC|\[RE:|\[N")
 LEGAL_FACT_RE = re.compile(r"구속|입건|검거|체포|송치|기소|징역|실형|집행\s*유예|벌금형|선고|적발|숨져|숨졌|숨진|사망|부상|다쳐|다쳤")
+
+# ── 기사 단계(stage): 지금 일어난 사건인지, 수사 중인지, 재판·판결 소식인지 ──
+#   incident = 발생 (사고·화재·실종처럼 지금 일어난 일)
+#   police   = 수사 (구속·입건·검거·송치 등. 보통 며칠 안에 일어난 사건이라 실시간 성격이 있음)
+#   court    = 재판·판결 (기소·공판·구형·선고·징역·항소 등. 보통 몇 달~몇 년 전 사건의 후속 소식)
+#   화면(index.html)에서는 court 를 7일 다발 지역 집계와 실시간 알림에서 빼고, 목록에는 ⚖️ 표시로 보여 줍니다.
+#   index.html 의 stageOf() 와 같은 기준이어야 합니다. (news.json 에 "stage" 로 저장)
+STAGE_COURT_STRONG_RE = re.compile(r"선고|징역|실형|집행\s*유예|벌금형|무죄|유죄|항소|상고|판결|재판(?!매)|공판|기소(?!\s*의견)|법정\s*구속|감형|형량|양형|원심|파기|국민참여재판|[123]심(?![가-힣])")
+STAGE_COURT_WEAK_RE = re.compile(r"법원|판사|재판부|대법원|검찰|지검|고검|대검")
+STAGE_NOW_RE = re.compile(r"화재|불이?\s*나|숨져|숨진|숨졌|추락|충돌|추돌|난동|폭발|붕괴|실종|구조|대피|사고|체포|검거|붙잡|덜미|입건|구속|영장|압수\s*수색|발생|신고|출동")
+STAGE_POLICE_RE = re.compile(r"구속|입건|검거|체포|송치|영장|압수\s*수색|수사|조사|붙잡|덜미|지명\s*수배|추적")
+
+
+def stage_of(title):
+    t = title or ""
+    if STAGE_COURT_STRONG_RE.search(t) or (re.search(r"구형", t) and re.search(r"징역|벌금|사형|금고|검찰", t)):
+        return "court"
+    if STAGE_COURT_WEAK_RE.search(t) and not STAGE_NOW_RE.search(t):
+        return "court"             # '법원·검찰' 이야기만 있고 현장 사건 낱말이 없으면 사법 소식
+    if STAGE_POLICE_RE.search(t):
+        return "police"
+    return "incident"
 POLITICS_RE = re.compile(r"대통령|국회|의원|장관|정당|여당|야당|민주당|국민의힘|특검|청문회|탄핵|선거|국정감사|총리|비대위|시장|군수|구청장|도지사|공천|당원")
 METAPHOR_RE = re.compile(r"논란|갈등|파문|후폭풍|반발|공방|파장|감찰|집단행동|비판|압박|이해\s*충돌|국감|의혹")
 # 비유로도 자주 쓰이는 낱말(폭발·붕괴·충돌·한파...)이 들어 있는 분류
@@ -1763,6 +1785,10 @@ def locate(title, content, hint_sido=None, overseas=False):
                     dy, dx = _jitter(key, 0.10)
                     return sido, round(la + dy, 4), round(ln + dx, 4), {"prec": "sido", "sido": sido, "center": (la, ln), "place": place}
                 place = None             # 기관 소재지로 찍은 경우에는 장소 추정을 하지 않음
+                # 법원·검찰·경찰청 같은 기관이 있는 곳으로만 잡은 위치: 사건이 실제로 일어난 곳이 아니므로 prec 를 'inst' 로 따로 표시
+                #   (화면에서 다발 지역 집계와 지도 핀에서 빼고, 본문을 읽어 더 나은 위치를 찾는 대상이 됨)
+                dy, dx = _jitter(key, rad)
+                return label, round(lat + dy, 4), round(lng + dx, 4), {"prec": "inst", "sgg": sgg, "dong": dong, "center": (lat, lng), "place": None, "inst": inst_alias}
             dy, dx = _jitter(key, rad)
             return label, round(lat + dy, 4), round(lng + dx, 4), {"prec": "sgg", "sgg": sgg, "dong": dong, "center": (lat, lng), "place": place}
     for scope in (title, full):
@@ -1873,7 +1899,7 @@ def location_sentences(text, limit=220):
     return " ".join(out)[:limit]
 
 
-_PREC_RANK = {"poi": 4, "dong": 3, "sgg": 2, "sido": 1, "world": 1, None: 0}
+_PREC_RANK = {"poi": 4, "dong": 3, "sgg": 2, "sido": 1, "inst": 1, "world": 1, None: 0}   # inst(기관 소재지)는 시·도 수준으로 약하게 봄
 
 
 def enrich_locations(items, started):
@@ -1881,7 +1907,7 @@ def enrich_locations(items, started):
     from concurrent.futures import ThreadPoolExecutor
     cands = []
     # 지도에 아예 못 찍은 기사(위치 미상) → 시·도까지만 아는 기사 → 시·군·구까지 아는 기사 순서로 먼저 확인
-    order = {None: 0, "sido": 1, "sgg": 2}
+    order = {None: 0, "sido": 1, "inst": 1, "sgg": 2}
     for v in sorted(items, key=lambda x: (order.get(x.get("prec"), 3), -x["timestamp"])):
         if len(cands) >= MAX_ENRICH_PER_RUN:
             break
@@ -1890,7 +1916,7 @@ def enrich_locations(items, started):
         if v.get("group") == OVERSEAS_GROUP or v.get("category") == "북한 도발":
             continue
         # 예전 방식(1)으로 이미 확인한 기사는, 위치를 아직 모르거나 시·도까지만 아는 경우에만 새 방식으로 한 번 더 확인
-        if enr >= ENRICH_VER or (enr and v.get("prec") not in (None, "sido")):
+        if enr >= ENRICH_VER or (enr and v.get("prec") not in (None, "sido", "inst")):
             continue
         if not v.get("link") or v["link"].startswith("https://news.google.com"):
             continue
@@ -2029,8 +2055,9 @@ def make_item(title, content, sub, group, source, link, ts, hint, orig=None, loc
         "hint": hint,
         "orig": orig,       # 해외 언론 기사의 원문(영문) 제목
         "embed": None,      # 이 사이트 안에 원문을 띄울 수 있는지 (False 면 언론사가 막아 둔 것)
-        "prec": geo.get("prec"),   # 위치 정밀도: poi(장소) / dong(읍·면·동) / sgg(시·군·구) / sido(시·도) / world(해외) / None(모름)
+        "prec": geo.get("prec"),   # 위치 정밀도: poi(장소) / dong(읍·면·동) / sgg(시·군·구) / sido(시·도) / inst(법원·검찰 등 기관 소재지) / world(해외) / None(모름)
         "place": None,      # 기사에 나온 구체적인 장소 이름 (좌표를 찾은 경우에만)
+        "stage": stage_of(title),  # 기사 단계: incident(발생) / police(수사) / court(재판·판결 — 집계·알림에서 뺌)
         "_geo": geo,        # 좌표를 더 정밀하게 찾기 위한 임시 정보 (저장 전에 지움)
     }
 
@@ -2443,6 +2470,7 @@ def main():
     print(f"기사 본문에서 더 자세한 위치를 찾은 기사: {n_enr}건")
     for v in final:
         v["id"] = make_id(norm_key(v["title"]))
+        v["stage"] = stage_of(v["title"])              # 예전에 모은 기사에도 단계(발생·수사·재판)를 매번 새 기준으로 다시 매김
     n_poi, n_dong = refine_locations(final, started)   # 동·장소 단위까지 좌표를 정밀하게
     for v in items.values():
         v.pop("_geo", None)
