@@ -133,6 +133,8 @@ jobs:
             git add news.json
             # tips.json: 안전 브리핑에 보여 줄 예방·대처 정보 기사 (사건 목록과 따로 모음)
             if [ -f tips.json ]; then git add tips.json; fi
+            # blocked.json: 본문을 읽어 해외·비사건으로 판명된 기사 목록 (같은 기사가 다시 들어오지 않게)
+            if [ -f blocked.json ]; then git add blocked.json; fi
             # geocache.json: 동(洞)·장소 좌표를 한 번 찾으면 저장해 두는 파일 (scraper.py 가 자동으로 만듭니다)
             if [ -f geocache.json ]; then git add geocache.json; fi
             if git diff --staged --quiet; then
