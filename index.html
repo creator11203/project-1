@@ -30,8 +30,10 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 한글 본문 글꼴 (Pretendard). 못 불러오면 기기 기본 글꼴로 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
     <style>
-        body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
+        body { font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; -webkit-font-smoothing: antialiased; letter-spacing: -0.005em; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: inherit; }
         /* 기사를 많이 불러와도 손잡이가 너무 작아지지 않게 최소 길이를 둠 */
@@ -260,6 +262,133 @@
         @keyframes hint-drag { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(14px); } }
         @keyframes hint-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
         .dark .safety-tab.off { background: linear-gradient(135deg, #450a0a, #431407) !important; color: #fecaca !important; border-color: #7f1d1d !important; }
+
+        /* ===== 알림 토스트 (오른쪽 아래) ===== */
+        #alertToasts { width: min(20rem, calc(100vw - 2rem)); }
+        .toast-card { position: relative; width: 100%; display: flex; gap: .625rem; align-items: flex-start; padding: .7rem .75rem .8rem; border-radius: 14px; overflow: hidden; cursor: pointer; text-align: left;
+            background: rgba(255,255,255,.96); backdrop-filter: blur(10px); border: 1px solid #e2e8f0; box-shadow: 0 12px 32px -8px rgba(15,23,42,.28), 0 2px 6px rgba(15,23,42,.08);
+            animation: toast-in .28s cubic-bezier(.2,.9,.3,1.2) both; transition: transform .15s; }
+        .toast-card:hover { transform: translateY(-1px); }
+        .dark .toast-card { background: rgba(15,23,42,.96); border-color: #334155; }
+        .toast-card.toast-out { animation: toast-out .22s ease-in both; pointer-events: none; }
+        .toast-ico { width: 2rem; height: 2rem; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .875rem; }
+        .toast-head { font-size: .6875rem; font-weight: 800; letter-spacing: -.01em; }
+        .toast-title { font-size: .78rem; font-weight: 700; line-height: 1.35; color: #0f172a; margin-top: .15rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .dark .toast-title { color: #f8fafc; }
+        .toast-x { color: #94a3b8; font-size: .8rem; line-height: 1; padding: .15rem .3rem; border-radius: 6px; }
+        .toast-x:hover { background: rgba(148,163,184,.18); color: #334155; }
+        .toast-bar-time { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; transform-origin: left; animation-name: toast-time; animation-timing-function: linear; animation-fill-mode: both; }
+        .toast-paused .toast-bar-time { animation-play-state: paused; }
+        .toast-info .toast-ico { background: #fef3c7; color: #d97706; } .toast-info .toast-head { color: #b45309; } .toast-info .toast-bar-time { background: #f59e0b; }
+        .toast-here .toast-ico { background: #dbeafe; color: #2563eb; } .toast-here .toast-head { color: #1d4ed8; } .toast-here .toast-bar-time { background: #3b82f6; }
+        .toast-danger { border-color: #fecaca; } .toast-danger .toast-ico { background: #dc2626; color: #fff; } .toast-danger .toast-head { color: #dc2626; } .toast-danger .toast-bar-time { background: #dc2626; }
+        .dark .toast-info .toast-ico { background: rgba(245,158,11,.16); } .dark .toast-here .toast-ico { background: rgba(59,130,246,.18); } .dark .toast-info .toast-head { color: #fbbf24; } .dark .toast-here .toast-head { color: #93c5fd; }
+        .toast-bar { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: .35rem .5rem .35rem .75rem; border-radius: 999px; font-size: .6875rem; font-weight: 800;
+            background: rgba(15,23,42,.88); color: #fff; box-shadow: 0 6px 18px rgba(15,23,42,.25); animation: toast-in .2s ease-out both; }
+        .toast-bar button { background: rgba(255,255,255,.16); border-radius: 999px; padding: .2rem .6rem; font-weight: 800; }
+        .toast-bar button:hover { background: rgba(255,255,255,.28); }
+        @keyframes toast-in { from { opacity: 0; transform: translateX(24px) scale(.97); } to { opacity: 1; transform: none; } }
+        @keyframes toast-out { to { opacity: 0; transform: translateX(28px) scale(.96); } }
+        @keyframes toast-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+        @media (prefers-reduced-motion: reduce) { .toast-card, .toast-card.toast-out, .toast-bar { animation-duration: .01s; } }
+
+        /* ===== 전체 다듬기: 부드러운 모서리·그림자·움직임, 키보드로 고를 때 보이는 테두리 ===== */
+        ::selection { background: rgba(99,102,241,.22); }
+        button, a, select, input, textarea { -webkit-tap-highlight-color: transparent; }
+        :focus-visible { outline: 2px solid #6366f1; outline-offset: 2px; border-radius: 8px; }
+        #appHeader { background: rgba(255,255,255,.86); backdrop-filter: saturate(1.4) blur(12px); box-shadow: 0 1px 0 rgba(15,23,42,.04), 0 6px 20px -12px rgba(15,23,42,.18); }
+        .dark #appHeader { background: rgba(15,23,42,.86); }
+        #appHeader button { transition: transform .12s ease, background-color .15s, box-shadow .15s, border-color .15s; }
+        #appHeader button:active { transform: scale(.96); }
+        .nat-hdr-btn { background: linear-gradient(135deg, #fde68a, #fbbf24 45%, #f59e0b); color: #78350f; box-shadow: 0 4px 14px -4px rgba(245,158,11,.55), inset 0 1px 0 rgba(255,255,255,.5); }
+        .nat-hdr-btn:hover { filter: brightness(1.05); box-shadow: 0 6px 18px -4px rgba(245,158,11,.65), inset 0 1px 0 rgba(255,255,255,.5); }
+        /* 기사 카드: 왼쪽 분류 색 막대 + 올리면 살짝 떠오름 */
+        .news-card { position: relative; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
+        .news-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent, #94a3b8); opacity: .75; }
+        .news-card:hover { transform: translateY(-1px); box-shadow: 0 8px 22px -12px rgba(15,23,42,.35); border-color: #cbd5e1; }
+        .dark .news-card:hover { border-color: #475569; }
+        .news-card.is-sel { box-shadow: 0 0 0 3px rgba(239,68,68,.14), 0 10px 24px -14px rgba(239,68,68,.45); }
+        .news-card.is-sel::before { width: 4px; opacity: 1; }
+        /* 뜨는 창: 부드럽게 나타남 */
+        #sheetModal:not(.hidden) #sheetBox, #floatModal:not(.hidden) #floatBox, #appModal:not(.hidden) #appModalBox { animation: pop-in .22s cubic-bezier(.2,.9,.3,1.1) both; }
+        @keyframes pop-in { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+        .leaflet-popup-content-wrapper { border-radius: 14px; box-shadow: 0 12px 32px -10px rgba(15,23,42,.35); }
+        #mapLegend { border-radius: 14px; }
+        .me-btn img, .me-btn > span:first-child { flex-shrink: 0; }
+
+        /* ===== 이달의 전국 랭킹 ===== */
+        .nat-hero { position: relative; padding: 1.1rem 1.25rem 1rem; color: #fff; overflow: hidden;
+            background: radial-gradient(120% 140% at 100% 0%, rgba(253,224,71,.55) 0%, rgba(253,224,71,0) 45%), linear-gradient(125deg, #f59e0b 0%, #ef4444 48%, #7c3aed 100%); }
+        .nat-hero::after { content: '🏆'; position: absolute; right: -.6rem; bottom: -1.6rem; font-size: 6.5rem; opacity: .16; transform: rotate(-12deg); pointer-events: none; }
+        .nat-eyebrow { font-size: .6875rem; font-weight: 800; opacity: .9; letter-spacing: .02em; }
+        .nat-h { font-size: 1.45rem; font-weight: 900; letter-spacing: -.03em; line-height: 1.15; margin-top: .1rem; }
+        .nat-sub { font-size: .75rem; opacity: .92; margin-top: .3rem; line-height: 1.45; max-width: 34rem; }
+        .nat-x { width: 2rem; height: 2rem; border-radius: 999px; background: rgba(255,255,255,.2); flex-shrink: 0; position: relative; z-index: 1; }
+        .nat-x:hover { background: rgba(255,255,255,.32); }
+        .nat-month { display: inline-flex; align-items: center; gap: .25rem; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3); border-radius: 999px; padding: .15rem; font-size: .8125rem; position: relative; z-index: 1; }
+        .nat-month b { padding: 0 .5rem; }
+        .nat-month button { width: 1.75rem; height: 1.75rem; border-radius: 999px; font-size: .7rem; }
+        .nat-month button:hover:not(:disabled) { background: rgba(255,255,255,.25); }
+        .nat-month button:disabled { opacity: .35; cursor: default; }
+        .nat-stats { display: flex; gap: .4rem; font-size: .6875rem; position: relative; z-index: 1; }
+        .nat-stats span { background: rgba(15,23,42,.22); padding: .2rem .55rem; border-radius: 999px; }
+        .nat-stats b { font-size: .8125rem; font-weight: 900; margin-right: .1rem; }
+        .nat-controls { padding: .6rem .75rem .55rem; border-bottom: 1px solid #e2e8f0; background: #fff; }
+        .dark .nat-controls { background: #0f172a; border-color: #1e293b; }
+        .nat-chip { padding: .38rem .75rem; border-radius: 999px; font-size: .75rem; font-weight: 800; color: #475569; background: #f1f5f9; border: 1px solid transparent; transition: all .15s; }
+        .nat-chip:hover { background: #e2e8f0; color: #0f172a; }
+        .nat-chip.on { color: #fff; background: #0f172a; box-shadow: 0 4px 12px -4px rgba(15,23,42,.5); }
+        .dark .nat-chip { background: #1e293b; color: #cbd5e1; } .dark .nat-chip.on { background: #f8fafc; color: #0f172a; }
+        .nat-input { height: 2.1rem; padding: 0 .65rem; border-radius: 10px; border: 1px solid #e2e8f0; background: #f8fafc; font-size: .75rem; color: #0f172a; }
+        .dark .nat-input { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+        .nat-body { padding: .85rem .85rem 1.25rem; background: #f8fafc; }
+        .dark .nat-body { background: #020617; }
+        .nat-sec { margin-bottom: 1.1rem; }
+        .nat-sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: .5rem; margin: 0 .15rem .5rem; }
+        .nat-sec-head h3 { font-size: .9375rem; font-weight: 900; letter-spacing: -.02em; color: #0f172a; }
+        .dark .nat-sec-head h3 { color: #f8fafc; }
+        .nat-sec-head p { font-size: .6875rem; color: #64748b; margin-top: .05rem; }
+        .nat-more { font-size: .6875rem; font-weight: 800; color: #6366f1; white-space: nowrap; padding: .2rem .4rem; border-radius: 8px; }
+        .nat-more:hover { background: rgba(99,102,241,.1); }
+        .nat-list { display: flex; flex-direction: column; gap: .4rem; }
+        .nat-row { background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; transition: box-shadow .15s, border-color .15s, transform .15s; }
+        .dark .nat-row { background: #0f172a; border-color: #1e293b; }
+        .nat-row:hover { border-color: #cbd5e1; box-shadow: 0 8px 20px -14px rgba(15,23,42,.45); }
+        .nat-row.is-open { border-color: #a5b4fc; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+        .nat-row-btn { width: 100%; display: flex; align-items: center; gap: .65rem; padding: .6rem .7rem; text-align: left; }
+        .nat-title { display: block; font-size: .8125rem; font-weight: 800; color: #0f172a; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: .1rem; }
+        .dark .nat-title { color: #f8fafc; }
+        .nat-medal { width: 1.75rem; height: 1.75rem; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; font-size: .8125rem; color: #fff; flex-shrink: 0; box-shadow: inset 0 -2px 0 rgba(0,0,0,.15); }
+        .nat-m1 { background: linear-gradient(135deg, #fde047, #f59e0b); color: #713f12; } .nat-m2 { background: linear-gradient(135deg, #e2e8f0, #94a3b8); color: #1e293b; } .nat-m3 { background: linear-gradient(135deg, #fdba74, #c2410c); }
+        .nat-rank { width: 1.75rem; text-align: center; font-weight: 900; font-size: .8125rem; color: #94a3b8; flex-shrink: 0; }
+        .nat-board { display: inline-flex; align-items: center; gap: .2rem; font-size: .625rem; font-weight: 800; padding: .1rem .45rem; border-radius: 999px; }
+        .nat-c-red { background: #fee2e2; color: #b91c1c; } .nat-c-sky { background: #e0f2fe; color: #0369a1; } .nat-c-rose { background: #ffe4e6; color: #be123c; }
+        .nat-c-amber { background: #fef3c7; color: #b45309; } .nat-c-orange { background: #ffedd5; color: #c2410c; } .nat-c-emerald { background: #d1fae5; color: #047857; }
+        .dark .nat-board, .dark .nat-place-ico { filter: saturate(.9) brightness(.92); }
+        .nat-area { font-size: .625rem; font-weight: 700; color: #059669; white-space: nowrap; }
+        .dark .nat-area { color: #34d399; }
+        .nat-metrics { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; font-size: .6875rem; color: #64748b; flex-shrink: 0; font-weight: 700; }
+        .nat-like { color: #e11d48; font-weight: 800; }
+        .nat-detail { padding: 0 .9rem .8rem 3.15rem; font-size: .8125rem; line-height: 1.6; color: #334155; white-space: normal; }
+        .dark .nat-detail { color: #cbd5e1; }
+        .nat-btn { display: inline-flex; align-items: center; gap: .35rem; font-size: .6875rem; font-weight: 800; color: #fff; background: #4f46e5; padding: .35rem .7rem; border-radius: 999px; }
+        .nat-btn:hover { background: #6366f1; }
+        .nat-place-ico { width: 2.25rem; height: 2.25rem; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
+        .nat-map { font-size: .5625rem; font-weight: 800; padding: .15rem .45rem; border-radius: 6px; border: 1px solid; text-align: center; }
+        .nat-map-n { color: #15803d; border-color: #86efac; } .nat-map-k { color: #a16207; border-color: #fde047; }
+        .nat-towns { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); }
+        .nat-town { display: flex; flex-direction: column; text-align: left; padding: .65rem .7rem; border-radius: 14px; min-height: 8.25rem; background: linear-gradient(180deg, #fffbeb, #fff 55%); border: 1px solid #fde68a; transition: transform .15s, box-shadow .15s; }
+        .dark .nat-town { background: linear-gradient(180deg, rgba(120,53,15,.35), #0f172a 60%); border-color: #78350f; }
+        .nat-town:hover { transform: translateY(-2px); box-shadow: 0 10px 22px -14px rgba(180,83,9,.6); }
+        .nat-crown { font-size: .5625rem; font-weight: 900; color: #b45309; background: #fef3c7; padding: .05rem .4rem; border-radius: 999px; white-space: nowrap; }
+        .nat-clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+        .nat-duo { display: grid; gap: 0 .85rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+        .nat-empty { text-align: center; padding: 1.6rem 1rem; font-size: .75rem; color: #94a3b8; line-height: 1.6; background: #fff; border: 1px dashed #cbd5e1; border-radius: 14px; }
+        .dark .nat-empty { background: #0f172a; border-color: #334155; }
+        .nat-skel { height: 3.5rem; border-radius: 14px; background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
+        .dark .nat-skel { background: linear-gradient(90deg, #1e293b 0%, #334155 50%, #1e293b 100%); background-size: 200% 100%; }
+        @keyframes skel { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+        #natInComm .nat-hero { padding: .85rem 1rem; } #natInComm .nat-h { font-size: 1.15rem; }
     </style>
 </head>
 <body id="appBody" class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 h-screen flex flex-col overflow-hidden select-none transition-colors duration-200">
@@ -305,6 +434,8 @@
                 <button onclick="toggleLayoutPanel()" title="화면 배치 바꾸기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-table-columns"></i> <span class="hidden xl:inline">화면 설정</span></button>
                 <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
             </div>
+            <button onclick="openNational()" title="이달의 전국 랭킹 · 전국 동네에서 가장 핫했던 글·장소·이웃" class="nat-hdr-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.8125rem] font-extrabold whitespace-nowrap transition"><i class="fa-solid fa-trophy"></i> <span class="hidden xl:inline">전국 랭킹</span></button>
+            <button id="meBtn" onclick="openMyProfile()" title="내 프로필 · 내 일상 바로 가기" class="me-btn flex items-center gap-2 pl-1 pr-1 lg:pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-violet-400 hover:shadow-md hover:shadow-violet-500/10 text-slate-800 dark:text-slate-100 transition whitespace-nowrap"><span class="w-7 h-7 rounded-full bg-slate-100 inline-flex items-center justify-center">🙂</span></button>
             <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-mobile-screen-button"></i> <span class="hidden 2xl:inline">앱 다운로드</span></button>
             <!-- 주요 버튼 3개(안전 브리핑 · 우리동네 커뮤니티 · 실시간 제보하기): 왼쪽 끝에서 오른쪽 끝으로 옅은 빛이 한 줄로 지나감 (.hero-sweep / .sweep-btn) -->
             <div id="heroBtns" class="hero-sweep flex items-center gap-1.5">
@@ -535,9 +666,25 @@
             if (STAGE_COURT_STRONG.test(t) || (/구형/.test(t) && /징역|벌금|사형|금고|검찰/.test(t))) return true;
             return STAGE_COURT_WEAK.test(t) && !STAGE_NOW.test(t) && !STAGE_POLICE.test(t);
         }
+        // 연예 사진·근황·발언 기사, 기관 성과 홍보 기사 (scraper.py 의 NON_NEWS_RE · IDOL_RE · ACHIEVE_RE · PERSON_QUOTE_RE 와 같은 기준)
+        const ENT_TAG = /\[\s*(?:사진|포토|PHOTO|화보|Oh!?\s*쎈|OSEN|★|☆|스타(?!트|벅스)|MD\s*포토|SC\s*[가-힣]|TEN\s*[가-힣]|텐\s*(?:아시아|이슈|포토)|엑['’]?s|N\s*(?:이슈|현장|인터뷰|리뷰|초점|무비)|종합\s*이슈|핫\s*이슈|직캠|움짤|PICK|연예|엔터|셀럽)[^\]]*\]|(?:Oh!?\s*쎈|OSEN)\s*(?:이슈|초점|포토|현장|리뷰|인터뷰|스타)/;
+        const IDOL = /아일릿|ILLIT|뉴진스|에스파|aespa|아이브|IVE|르세라핌|BTS|방탄소년단|블랙핑크|BLACKPINK|세븐틴|스트레이\s*키즈|트와이스|엔시티|NCT|투모로우바이투게더|TXT|엔하이픈|제로베이스원|(?<![가-힣])라이즈|RIIZE|베이비몬스터|키스오브라이프|아일린|ITZY|케플러|프로미스나인|오마이걸|레드벨벳|마마무|보이넥스트도어|QWER|트리플에스|하츠투하츠|걸그룹|보이그룹|아이돌(?!보|봄)|컴백|팬미팅|팬사인회|음악방송|쇼케이스|개념\s*발언|소신\s*발언|(?:발언|과거|어록|명언)\s*(?:이|가)?\s*(?:다시\s*)?(?:재)?소환|안대\s*(?:낀|쓴)|공항\s*패션/i;
+        const REAL_FACT = /구속|입건|검거|체포(?!\s*(?:하겠|할게|해\s*버릴|완료|성공|각))|송치|기소|징역|숨져|숨진|숨졌|사망|부상|다쳐|다친|다쳤|중상|화재|불이\s*나|폭발(?!적)|붕괴|추락|흉기|피습|폭행|들이받|추돌/;
+        const ACHIEVE = /(?<![가-힣])성과(?!급)|실적\s*(?:발표|우수|1위|달성|공개|평가)|우수\s*(?:사례|기관|지자체|시책)|인정\s*받|인정받|효과\s*(?:톡톡|입증|거둬|거뒀|봤|확인)|\d+(?:\.\d+)?\s*%\s*(?:감소|증가|줄|늘|하락|상승|↓|↑)|환경\s*조성|(?:여성|어린이|노인)\s*안심|안심\s*(?:마을|귀갓길|골목|환경|비상벨)|(?:대상|최우수상|우수상|장관상|대통령상)\s*(?:수상|받|선정)/;
+        const STRICT_FACT = /구속|입건|검거|체포|송치|기소|숨져|숨졌|숨진|다쳐|다쳤|붙잡|덜미|불이?\s*나|들이받|추돌|실형|징역/;
+        const PERSON_QUOTE = /[가-힣]{2,4}\s*[“"][^”"]{2,30}[”"]/g;
+        function notIncidentTitle(t) {
+            if (ENT_TAG.test(t)) return true;                                   // [사진] [Oh!쎈 이슈] 같은 연예·사진 기사
+            if (IDOL.test(t) && !REAL_FACT.test(t)) return true;                // 아이돌·연예 근황 (실제 입건·사고가 아니면)
+            const q = (t.match(PERSON_QUOTE) || []).length;
+            if (q >= 2 && !/\[\s*속보\s*\]/.test(t) && !REAL_FACT.test(t.replace(PERSON_QUOTE, ' '))) return true;   // 'A "…"·B "…"' 반응·발언 모음
+            if (ACHIEVE.test(t) && !STRICT_FACT.test(t) && !/적발|검거|체포|입건|송치|붙잡|부상|사망|숨져|숨진|숨졌|다쳐|다쳤|대피|폭행|흉기/.test(t) && !/\[\s*속보\s*\]/.test(t)) return true;   // 기관 성과·통계 감소 홍보
+            return false;
+        }
         function keepOnSite(n) {
             if (!n || n.source === '시민 직접 제보') return true;
             if (isCourtNews(n)) return false;
+            if (groupOf(n) !== '해외' && notIncidentTitle(n.title || '')) return false;
             if (groupOf(n) === '해외') {
                 const t = n.title || '';
                 if (!(KOREA_LINK.test(t) || (n.orig && EN_KOREA.test(n.orig)))) return false;   // 한국과 연결되지 않은 해외 소식
@@ -1204,7 +1351,8 @@
                 if (res.ok) {
                     let data = await res.json();
                     if (Array.isArray(data) && data.length > 0) {
-                        data.forEach(n => { n.timestamp = Number(n.timestamp) || 0; });
+                        await loadHighways();
+                        data.forEach(n => { n.timestamp = Number(n.timestamp) || 0; fixRouteLocation(n); });
                         data.sort((a, b) => b.timestamp - a.timestamp);
                         const sig = data.length + ':' + data[0].id + ':' + data[data.length - 1].id;
                         if (sig !== lastSig || isManualRefresh) {
@@ -1505,9 +1653,82 @@
             return loc.includes(' ') ? 'sgg' : 'sido';
         }
         // inst = 법원·검찰·경찰청 같은 기관이 있는 곳으로만 잡은 위치 (사건이 실제로 일어난 곳이 아니라서 집계·지도 핀에서 뺌)
-        const PREC_RANK = { poi: 4, dong: 3, sgg: 2, sido: 1, inst: 1, world: 1 };
-        const PREC_ZOOM = { poi: 16, dong: 15, sgg: 13, sido: 9, inst: 11, world: 5 };
-        const PREC_TEXT = { poi: '장소까지 확인', dong: '읍·면·동까지 확인', sgg: '시·군·구 단위(대략)', sido: '시·도 단위(대략)', inst: '법원·검찰 등 기관 소재지(사건 장소 아님)', world: '해외(대략)' };
+        const PREC_RANK = { poi: 4, dong: 3, sgg: 2, road: 1.5, sido: 1, inst: 1, world: 1 };
+        const PREC_ZOOM = { poi: 16, dong: 15, sgg: 13, road: 9, sido: 9, inst: 11, world: 5 };
+        const PREC_TEXT = { poi: '장소까지 확인', dong: '읍·면·동까지 확인', sgg: '시·군·구 단위(대략)', road: '고속도로 노선 위(구간 미상)', sido: '시·도 단위(대략)', inst: '법원·검찰 등 기관 소재지(사건 장소 아님)', world: '해외(대략)' };
+
+        // ---- 고속도로 노선 (highways.json · scraper.py 와 같은 파일) ----
+        //  '호남고속도로 추돌사고'처럼 노선 이름이 있는 기사는 지도에 그 노선을 굵은 선으로 그리고, 노선 전체가 보이게 맞춤.
+        //  예전에 모은 기사(route 가 없는 기사)도 제목에서 노선을 찾아, 찍힌 위치가 노선에서 30km 넘게 떨어져 있으면 노선 위로 옮김.
+        let HW = {}, hwRx = [], hwLoaded = null, routeLayer = null;
+        function loadHighways() {
+            if (hwLoaded) return hwLoaded;
+            hwLoaded = fetch('highways.json', { cache: 'no-store' }).then(r => r.ok ? r.json() : {}).then(d => {
+                HW = {};
+                const alts = [];
+                Object.keys(d || {}).forEach(k => {
+                    const v = d[k];
+                    if (k.startsWith('_') || !v || !Array.isArray(v.segs)) return;
+                    HW[k] = v;
+                    (v.alias || [k]).forEach(a => alts.push([a.length, k, a.includes('고속도로') ? a : a + '\\s*(?:고속도로|고속국도|선\\s*고속도로)']));
+                });
+                alts.sort((a, b) => b[0] - a[0]);
+                hwRx = alts.map(x => [x[1], new RegExp('(?<![가-힣0-9])' + x[2])]);
+            }).catch(() => {});
+            return hwLoaded;
+        }
+        function detectRoute(text) {
+            let best = null;
+            hwRx.forEach(([k, rx]) => { const m = rx.exec(text || ''); if (m && (!best || m.index < best[0])) best = [m.index, k]; });
+            return best ? best[1] : null;
+        }
+        function routeOf(n) { return n && (n.route || n._route) && HW[n.route || n._route] ? (n.route || n._route) : null; }
+        function hwNearest(k, lat, lng) {
+            let best = null;
+            (HW[k] ? HW[k].segs : []).forEach(seg => {
+                for (let i = 0; i + 1 < seg.length; i++) {
+                    const ax = seg[i][1] * 88, ay = seg[i][0] * 111, bx = seg[i + 1][1] * 88, by = seg[i + 1][0] * 111, px = lng * 88, py = lat * 111;
+                    const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+                    const t = L2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / L2)) : 0;
+                    const qx = ax + t * dx, qy = ay + t * dy, d = Math.hypot(px - qx, py - qy);
+                    if (!best || d < best.d) best = { d: d, lat: qy / 111, lng: qx / 88 };
+                }
+            });
+            return best;
+        }
+        function hwMiddle(k) {
+            const segs = HW[k] ? HW[k].segs : [];
+            const seg = segs.slice().sort((a, b) => b.length - a.length)[0];
+            return seg ? seg[Math.floor(seg.length / 2)] : null;
+        }
+        // 예전 기사 위치 바로잡기 (scraper.py 가 route 를 넣기 전에 모은 기사)
+        function fixRouteLocation(n) {
+            if (!n || n.route || n.group === '해외') return;
+            const k = detectRoute(n.title || '');
+            if (!k) return;
+            n._route = k;
+            const near = hasCoords(n) ? hwNearest(k, n.lat, n.lng) : null;
+            if (near && near.d <= 30) return;                          // 이미 노선 근처면 그대로
+            const mid = hwMiddle(k);
+            if (!mid) return;
+            n.lat = mid[0]; n.lng = mid[1]; n.prec = 'road'; n.location = HW[k].name || (k + '고속도로');
+        }
+        // 지도에 노선 그리기 (기사를 고를 때). 다른 기사를 고르면 지움
+        function drawRoute(n) {
+            if (!map) return null;
+            if (routeLayer) { map.removeLayer(routeLayer); routeLayer = null; }
+            const k = routeOf(n);
+            if (!k) return null;
+            const segs = HW[k].segs;
+            routeLayer = L.layerGroup([
+                L.polyline(segs, { color: '#ffffff', weight: 9, opacity: .85, interactive: false }),
+                L.polyline(segs, { color: '#2563eb', weight: 5, opacity: .9, dashArray: null, interactive: false }),
+            ]).addTo(map);
+            routeLayer._bounds = L.latLngBounds(segs.flat());
+            const lbl = L.marker(hwMiddle(k), { interactive: false, icon: L.divIcon({ className: '', html: `<div style="transform:translate(-50%,-140%);white-space:nowrap;background:#2563eb;color:#fff;font:700 11px system-ui,sans-serif;padding:3px 8px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.3)">🛣️ ${esc(HW[k].name || k)}</div>` }) });
+            routeLayer.addLayer(lbl);
+            return routeLayer._bounds;
+        }
         // 같은 사건의 기사들 가운데 위치가 가장 자세한 기사
         function bestLocated(items) {
             let best = null;
@@ -1523,8 +1744,11 @@
                 return;
             }
             const p = precOf(n);
+            const rb = drawRoute(n);
+            // 고속도로 노선만 아는 기사: 노선 전체가 보이게 / 노선 위 시·군·구까지 아는 기사: 그 지점으로 가까이
+            if (rb && (p === 'road' || !p) && !silent) { map.flyToBounds(rb, { padding: [40, 40], duration: 1.2, maxZoom: 10 }); return; }
             if (!p) { if (!silent) map.flyTo(KOREA_VIEW.center, KOREA_VIEW.zoom, { duration: 1.0 }); return; }
-            const z = PREC_ZOOM[p] || 11;
+            const z = rb && p === 'sgg' ? 11 : (PREC_ZOOM[p] || 11);
             map.flyTo([n.lat, n.lng], silent ? Math.min(map.getZoom(), Math.min(z, 11)) : z, { duration: 1.2 });
         }
 
@@ -1786,10 +2010,13 @@
                 const hasSelected = ev.items.some(n => n.id === selectedNewsId);
                 const open = expandedEvents.has(ev.key);
                 const card = document.createElement('div');
-                card.className = `${freshEventKeys.has(ev.key) ? 'news-new ' : ''}rounded-xl border transition text-left overflow-hidden ${hasSelected ? 'bg-slate-100 dark:bg-slate-800/90 border-red-500/60 shadow-md' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-400 dark:hover:border-slate-600'}`;
+                card.className = `news-card ${freshEventKeys.has(ev.key) ? 'news-new ' : ''}${hasSelected ? 'is-sel ' : ''}rounded-xl border transition text-left overflow-hidden ${hasSelected ? 'bg-white dark:bg-slate-800/90 border-red-400/70' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`;
+                card.style.setProperty('--accent', (CATEGORY_GROUPS[groupOf(news)] || {}).color || '#94a3b8');
 
                 const main = document.createElement('div');
-                main.className = 'p-3 cursor-pointer';
+                main.className = 'p-3 pl-3.5 cursor-pointer';
+                main.tabIndex = 0;
+                main.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectNews(news.id); } };
                 main.onclick = () => selectNews(news.id);
                 main.innerHTML = `
                     <div class="flex items-start justify-between mb-1.5 gap-1">
@@ -1801,7 +2028,7 @@
                         </span>
                         <span class="text-[0.625rem] text-slate-500 whitespace-nowrap shrink-0 font-mono" title="${esc(news.time)}">${esc(shortTime(news))}</span>
                     </div>
-                    <h3 class="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 mb-1">${esc(news.title)}</h3>
+                    <h3 class="text-[0.8125rem] leading-snug font-bold text-slate-900 dark:text-white line-clamp-2 mb-1 tracking-tight">${esc(news.title)}</h3>
                     <p class="text-[0.6875rem] text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">${esc(news.summary)}</p>
                     <div class="flex items-center justify-between gap-2 text-[0.625rem] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
                         <span class="truncate"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}</span>
@@ -1855,8 +2082,8 @@
         function hotspotRegionOf(n) {
             const loc = n.location || '';
             if (isOverseas(n) || loc.startsWith('북한') || loc.startsWith('해외') || loc.includes('미상') || !loc.includes(' ')) return null;
-            if (precOf(n) === 'inst') return null;
-            return sigunguOf(loc);
+            if (precOf(n) === 'inst' || precOf(n) === 'road') return null;     // 고속도로 노선만 아는 기사는 특정 시·군·구로 세지 않음
+            return sigunguOf(loc.replace(/\s*\([^)]*고속도로[^)]*\)\s*$/, ''));
         }
         // 사건 하나 = 지역 하나: 같은 사건의 기사들이 서로 다른 곳으로 찍혀 있으면(예: 한 기사는 동까지, 다른 기사는 법원 소재지)
         //  예전에는 두 지역에 모두 1건씩 세어졌음 → 이제는 위치가 가장 자세한 기사의 시·군·구 한 곳에만 셉니다.
@@ -2827,23 +3054,63 @@
             playAlertSound();
         }
 
-        // 알림 창 (지도 오른쪽 아래 네모 상자)
+        // 알림 창 (화면 오른쪽 아래)
+        //  · 잠깐 보였다가 저절로 사라짐 (보통 4초, 위험·SOS·내 위치 알림은 8초). 마우스를 올려 두면 멈춤
+        //  · 한 번에 최대 5개: 6번째가 오면 가장 오래된 것부터 밀려나며 새 알림이 아래에 붙음
+        //  · 2개 이상 떠 있으면 위에 '알림 N개 · 모두 닫기' 막대
+        const TOAST_MAX = 5, TOAST_MS = 4000, TOAST_LONG_MS = 8000;
+        function toastStackBar() {
+            const box = document.getElementById('alertToasts');
+            if (!box) return;
+            let bar = document.getElementById('toastBar');
+            const n = box.querySelectorAll('.toast-card:not(.toast-out)').length;
+            if (n < 2) { if (bar) bar.remove(); return; }
+            if (!bar) {
+                bar = document.createElement('div');
+                bar.id = 'toastBar';
+                bar.className = 'toast-bar';
+                box.insertBefore(bar, box.firstChild);
+            }
+            bar.innerHTML = `<span><i class="fa-solid fa-bell"></i> 알림 ${n}개</span><button onclick="clearToasts()">모두 닫기 <i class="fa-solid fa-xmark"></i></button>`;
+        }
+        function clearToasts() {
+            document.querySelectorAll('#alertToasts .toast-card').forEach(el => el._close && el._close());
+        }
         function showAlertToast(o) {
             const box = document.getElementById('alertToasts');
             if (!box) return;
+            const tone = o.danger ? 'danger' : (o.here ? 'here' : 'info');
+            const ms = o.ms || ((o.danger || o.here || o.live) ? TOAST_LONG_MS : TOAST_MS);
+            const icon = o.danger ? 'fa-triangle-exclamation' : (o.here ? 'fa-location-dot' : (o.newsId ? 'fa-bell' : 'fa-circle-check'));
             const el = document.createElement('div');
-            el.className = 'w-72 max-w-[80vw] rounded-xl border-2 ' + (o.danger ? 'border-red-600' : (o.here ? 'border-blue-500' : 'border-amber-500')) + ' bg-white dark:bg-slate-900 shadow-2xl p-3 text-left cursor-pointer';
+            el.className = 'toast-card toast-' + tone;
+            el.setAttribute('role', 'status');
             el.innerHTML = `
-                <div class="flex items-center justify-between gap-2 mb-1">
-                    <span class="text-[0.6875rem] font-extrabold ${o.danger ? 'text-red-600' : (o.here ? 'text-blue-600' : 'text-amber-600')}">${esc(o.head || '알림')}</span>
-                    <button class="alert-x text-slate-400 hover:text-slate-700 dark:hover:text-white text-sm leading-none px-1" title="닫기">✕</button>
+                <span class="toast-ico"><i class="fa-solid ${icon}"></i></span>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="toast-head">${esc(o.head || '알림')}</span>
+                        <button class="alert-x toast-x" title="닫기" aria-label="닫기">✕</button>
+                    </div>
+                    ${o.badge ? `<span class="inline-block text-[0.625rem] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold mt-0.5">${esc(o.badge)}</span>` : ''}
+                    <div class="toast-title">${esc(o.title || '')}</div>
+                    ${o.foot ? `<div class="text-[0.625rem] text-slate-500 dark:text-slate-400 mt-0.5 truncate">${esc(o.foot)}</div>` : ''}
                 </div>
-                ${o.badge ? `<span class="inline-block text-[0.625rem] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold mb-1">${esc(o.badge)}</span>` : ''}
-                <div class="text-xs font-bold text-slate-900 dark:text-white leading-snug" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${esc(o.title || '')}</div>
-                ${o.foot ? `<div class="text-[0.625rem] text-slate-500 mt-1 truncate">${esc(o.foot)}</div>` : ''}`;
-            const close = () => { if (el.parentNode) el.parentNode.removeChild(el); };
+                <span class="toast-bar-time" style="animation-duration:${ms}ms"></span>`;
+            let timer = null, left = ms, startedAt = 0, done = false;
+            const close = () => {
+                if (done) return; done = true;
+                clearTimeout(timer);
+                el.classList.add('toast-out');
+                toastStackBar();
+                setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); toastStackBar(); }, 220);
+            };
+            el._close = close;
+            const run = () => { startedAt = Date.now(); timer = setTimeout(close, left); el.classList.remove('toast-paused'); };
+            el.onmouseenter = () => { clearTimeout(timer); left = Math.max(800, left - (Date.now() - startedAt)); el.classList.add('toast-paused'); };
+            el.onmouseleave = () => { if (!done) run(); };
             el.onclick = (e) => {
-                if (e && e.target && e.target.classList && e.target.classList.contains('alert-x')) { close(); return; }
+                if (e && e.target && e.target.closest && e.target.closest('.alert-x')) { close(); return; }
                 if (o.newsId) {
                     const n = newsData.find(x => x.id === o.newsId);
                     if (n) { currentCategory = 'all'; currentSub = null; showInFilter(n); selectedHotspotRegion = null; hotspotArticleOpen = false; selectedDate = dateKey(n.timestamp); dateFollowToday = (selectedDate === todayKey()); renderCategoryBar(); selectNews(n.id); }
@@ -2854,8 +3121,11 @@
                 close();
             };
             box.appendChild(el);
-            while (box.children && box.children.length > 4) box.removeChild(box.children[0]);
-            setTimeout(close, 60000);
+            // 최대 5개: 넘치면 가장 오래된 알림부터 닫음 (새 알림이 계속 들어오면 순서대로 갱신)
+            const live = Array.from(box.querySelectorAll('.toast-card:not(.toast-out)'));
+            live.slice(0, Math.max(0, live.length - TOAST_MAX)).forEach(x => x._close && x._close());
+            toastStackBar();
+            run();
         }
 
         // 알림 소리 (별도 음원 파일 없이 브라우저가 직접 소리를 만듭니다)
@@ -3587,6 +3857,10 @@
             if (BOARDS[commTab]) { renderCommBg(); renderBoard(commTab); return; }
             if (commTab === 'friends') { renderCommBg(); renderFriends(); return; }
             if (commTab === 'popular') { renderCommBg(); renderPopular(); return; }
+            if (commTab === 'national') {
+                document.getElementById('commMain').innerHTML = '<div id="natInComm" class="flex-1 min-h-0 flex flex-col"></div>';
+                natState.where = 'comm'; renderNational(); natLoad(false); return;
+            }
             if (commTab === 'praise') { renderCommBg(); renderPraise(); return; }
             if (commTab === 'market') { renderCommBg(); renderMarket(); return; }
             if (commTab === 'meet') { renderCommBg(); renderMeet(); return; }
@@ -4148,6 +4422,304 @@
                 <div class="flex justify-center"><button onclick="loadPopular(true)" class="text-[0.6875rem] font-bold text-slate-500 hover:text-violet-600"><i class="fa-solid fa-rotate"></i> 새로 계산</button></div>
             </div>`;
         }
+        // ================= 이달의 전국 랭킹 =================
+        //  전국 모든 동네 커뮤니티에서 '이번 달' 공감을 가장 많이 받은 글·장소·이웃을 한곳에 모아 누구나(동네 인증 없이도) 볼 수 있게 함.
+        //  · 인기 글: 안전망·이런저런·이사왔어요·아쉬워요·칭찬해요 글 (공감×3 + 댓글×2 + 조회×0.1)
+        //  · 좋았던 곳 / 아쉬웠던 곳: 칭찬해요·맛집·명소 ↔ 아쉬워요
+        //  · 맛집·명소: 동네별 후기 평균 별점 × 후기 수
+        //  · 인기 이웃: '내 일상' 게시물로 받은 ❤·감정·댓글 (순위 공개를 켠 이웃만)
+        //  · 동네별 1위: 각 동에서 가장 인기 있었던 글 하나씩
+        //  저장: 서버(Firebase) 연결 시, 글에 공감·댓글이 생기거나 맛집·명소 후기가 올라올 때 전국용 요약(nationalHot)을 함께 기록하고
+        //        여기서는 그 요약을 읽음 (다른 동네 게시판 전체를 읽지 않아 빠르고 가벼움). 체험 모드에서는 이 기기에 저장된 모든 동네 글로 계산.
+        const NAT_BOARDS = {
+            talk: { e: '🚨', n: '안전망', c: 'red' }, free: { e: '☕', n: '이런저런', c: 'sky' }, hello: { e: '👋', n: '이사왔어요', c: 'sky' },
+            wish: { e: '🙏', n: '아쉬워요', c: 'rose' }, praise: { e: '👏', n: '칭찬해요', c: 'amber' }, food: { e: '🍜', n: '맛집', c: 'orange' }, spot: { e: '🌳', n: '명소', c: 'emerald' }
+        };
+        const NAT_TABS = [['all', '🏆 종합'], ['posts', '🔥 인기 글'], ['good', '👍 좋았던 곳'], ['bad', '🙏 아쉬웠던 곳'], ['places', '🍜 맛집·명소'], ['people', '👑 인기 이웃'], ['towns', '🗺️ 동네별 1위']];
+        const NAT_SIDOS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
+        const natState = { month: '', tab: 'all', sido: '', q: '', busy: false, data: null, key: '', open: null, where: 'sheet' };
+        function monthKey(ms) { const d = kstDate(ms / 1000); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'); }
+        function monthRange(mk) { const [y, m] = mk.split('-').map(Number); return [Date.UTC(y, m - 1, 1) - 9 * 3600000, Date.UTC(y, m, 1) - 9 * 3600000]; }
+        function monthShift(mk, d) { const [y, m] = mk.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + d, 1)); return t.getUTCFullYear() + '-' + String(t.getUTCMonth() + 1).padStart(2, '0'); }
+        function monthLabel(mk) { const [y, m] = mk.split('-').map(Number); return `${y}년 ${m}월`; }
+        function sidoShort(s) { return String(s || '').replace(/특별자치도|특별자치시|특별시|광역시|자치도$/, '').replace(/^(충청|전라|경상)(북|남)도$/, (a, b, c) => b[0] + c).replace(/도$/, '') || ''; }
+        // 동네 이름 (townKey 만 있을 때는 글쓴이의 동네 정보로 채움)
+        function natTown(tk, sample) {
+            if (myTown && townKey(myTown) === tk) return { area: townName(myTown), sido: myTown.sido, sigungu: myTown.sigungu, dong: myTown.dong };
+            const w = String((sample && sample.area) || '').split(' ').filter(Boolean);
+            if (w.length >= 3) return { area: w.join(' '), sido: w[0], sigungu: w.slice(1, -1).join(' '), dong: w[w.length - 1] };
+            const p = String(tk || '').split('_');
+            return { area: p.join(' '), sido: p[0] || '', sigungu: p[1] || '', dong: p[2] || '' };
+        }
+        function natLikes(b, p) {
+            if (PB[b]) return pbLikes(b, p);
+            return (p.welcome || []).length + (p.likes || []).length;
+        }
+        // 게시판 글 1개 → 전국 랭킹용 요약
+        function natPost(b, p, tk, list) {
+            const t = natTown(tk, p);
+            return Object.assign({ kind: 'post', id: b + '_' + tk + '_' + p.id, board: b, pid: p.id, town: tk,
+                title: PB[b] ? pbTitle(p) : (BOARDS[b] && BOARDS[b].head && b === 'hello' ? `${p.nick || '이웃'}님의 이사 인사` : String(p.text || '').split('\n')[0].slice(0, 40) || '(사진)'),
+                snippet: String(p.text || '').slice(0, 160), likes: natLikes(b, p), comments: (list || []).filter(m => m.parent === p.id).length, views: p.views || 0,
+                uid: p.uid || '', nick: p.nick || '이웃', emoji: p.emoji || '🙂', ts: p.ts || 0, hasImg: !!p.img, type: p.type || '', tag: p.kind || '' }, t);
+        }
+        // 맛집·명소 후기들 → 장소별 요약 (같은 동네 · 같은 이름)
+        function natPlaces(b, list, tk, range) {
+            const by = {};
+            (list || []).filter(m => m.type !== 'reply' && !m.parent && m.name && (m.ts || 0) >= range[0] && (m.ts || 0) < range[1]).forEach(m => {
+                const k = placeKey(m.name);
+                const o = by[k] = by[k] || Object.assign({ kind: 'place', id: 'place_' + b + '_' + tk + '_' + k, board: b, town: tk, name: m.name, place: '', tag: '', sum: 0, n: 0, last: 0 }, natTown(tk, m));
+                if (m.rating >= 1 && m.rating <= 5) { o.sum += m.rating; o.n++; }
+                if ((m.ts || 0) > o.last) { o.last = m.ts; o.name = m.name; o.place = m.place || o.place; o.tag = m.kind || o.tag; }
+            });
+            return Object.values(by);
+        }
+        // 서버 없이(체험 모드) 이 기기에 저장된 모든 동네 글 읽기
+        function natScanLocal(range) {
+            const out = [];
+            const add = (b, tk, list) => {
+                if (!Array.isArray(list)) return;
+                if (b === 'food' || b === 'spot') { out.push(...natPlaces(b, list, tk, range)); return; }
+                list.filter(m => m && !pbIsComment(m) && (m.ts || 0) >= range[0] && (m.ts || 0) < range[1]).forEach(m => out.push(natPost(b, m, tk, list)));
+            };
+            try {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const k = localStorage.key(i) || '';
+                    let b = null, tk = null, mm;
+                    if ((mm = k.match(/^comm_board_(hello|wish|food|spots)_(.+)$/))) { b = mm[1] === 'spots' ? 'spot' : mm[1]; tk = mm[2]; }
+                    else if ((mm = k.match(/^comm_msgs_(.+)$/))) { b = 'talk'; tk = mm[1]; }
+                    else if ((mm = k.match(/^comm_free_(.+)$/))) { b = 'free'; tk = mm[1]; }
+                    else if ((mm = k.match(/^comm_praise_(.+)$/))) { b = 'praise'; tk = mm[1]; }
+                    if (!b) continue;
+                    let list = [];
+                    try { list = JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) {}
+                    add(b, tk, list);
+                }
+            } catch (e) {}
+            return out;
+        }
+        // 지금 열려 있는 우리 동네 글 (서버에 요약이 아직 없는 예전 글도 바로 순위에 나오게)
+        function natMine(range) {
+            if (!myTown) return [];
+            const tk = townKey(myTown), out = [];
+            const lists = { talk: commMessages, free: freeMessages, praise: praiseMessages, hello: boardData.hello, wish: boardData.wish };
+            Object.keys(lists).forEach(b => (lists[b] || []).filter(m => !pbIsComment(m) && (m.ts || 0) >= range[0] && (m.ts || 0) < range[1]).forEach(m => out.push(natPost(b, m, tk, lists[b]))));
+            out.push(...natPlaces('food', boardData.food, tk, range), ...natPlaces('spot', boardData.spot, tk, range));
+            return out;
+        }
+        async function natLoad(force) {
+            const mk = natState.month || (natState.month = monthKey(Date.now()));
+            if (natState.busy || (!force && natState.key === mk && natState.data)) return;
+            natState.busy = true; renderNational();
+            const range = monthRange(mk);
+            let items = [], feed = [];
+            try {
+                const db = await commInit();
+                if (db) {
+                    const snap = await db.collection('nationalHot').where('month', '==', mk).limit(800).get();
+                    items = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                    try { const fs = await feedCol().where('ts', '>=', range[0]).where('ts', '<', range[1]).limit(1000).get(); feed = fs.docs.map(d => Object.assign({ id: d.id }, d.data())); } catch (e) { console.warn(e); }
+                } else {
+                    items = natScanLocal(range);
+                    feed = feedLocal().filter(p => (p.ts || 0) >= range[0] && (p.ts || 0) < range[1]);
+                }
+            } catch (e) { console.error(e); }
+            const by = {};
+            items.concat(natMine(range)).forEach(x => {
+                if (x.kind === 'place' && by[x.id]) { const o = by[x.id]; if (x.n > o.n) by[x.id] = x; return; }   // 같은 장소: 후기가 더 많이 모인 쪽
+                if (!by[x.id] || (x.likes || 0) + (x.comments || 0) >= (by[x.id].likes || 0) + (by[x.id].comments || 0)) by[x.id] = x;
+            });
+            natState.data = { items: Object.values(by).filter(x => !isBlocked(x.uid)), feed: feed };
+            natState.key = mk; natState.busy = false;
+            renderNational();
+        }
+        // 전국 요약 기록 (서버 연결 시에만). 공감·댓글이 생긴 글, 새 맛집·명소 후기
+        async function hotMirror(b, p, patch) {
+            try {
+                const db = await commInit();
+                if (!db || !myTown || !p || !p.id) return;
+                const tk = townKey(myTown);
+                const h = Object.assign(natPost(b, p, tk, PB[b] ? PB[b].list() : boardData[b]), patch || {});
+                h.month = monthKey(p.ts || Date.now()); h.updatedAt = Date.now();
+                await db.collection('nationalHot').doc(h.id.replace(/\//g, '_')).set(h, { merge: true });
+            } catch (e) { console.warn('전국 랭킹 기록 실패', e); }
+        }
+        async function hotMirrorPlace(b, m) {
+            try {
+                const db = await commInit();
+                if (!db || !myTown || !m || !m.name) return;
+                const tk = townKey(myTown), mk = monthKey(m.ts || Date.now()), FV = firebase.firestore.FieldValue;
+                const id = ('place_' + b + '_' + tk + '_' + placeKey(m.name)).replace(/\//g, '_');
+                await db.collection('nationalHot').doc(id + '_' + mk).set(Object.assign({ kind: 'place', id: id, board: b, town: tk, name: m.name, place: m.place || '', tag: m.kind || '',
+                    month: mk, last: m.ts || Date.now(), sum: FV.increment(m.rating || 0), n: FV.increment(m.rating ? 1 : 0) }, natTown(tk, m)), { merge: true });
+            } catch (e) { console.warn('전국 랭킹 기록 실패', e); }
+        }
+        function natScore(x) { return x.kind === 'place' ? (x.n ? (x.sum / x.n) * Math.log2(1 + x.n) * 2 : 0) : (x.likes || 0) * 3 + (x.comments || 0) * 2 + Math.min(30, (x.views || 0) * 0.1); }
+        function natFiltered() {
+            const d = natState.data || { items: [], feed: [] };
+            const q = natState.q.trim().toLowerCase(), sd = natState.sido;
+            const ok = x => (!sd || sidoShort(x.sido) === sd) && (!q || [x.title, x.snippet, x.name, x.area, x.place, x.nick].join(' ').toLowerCase().includes(q));
+            const items = d.items.filter(ok).map(x => Object.assign(x, { score: natScore(x) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score || b.ts - a.ts);
+            const posts = items.filter(x => x.kind === 'post');
+            const places = items.filter(x => x.kind === 'place');
+            // 인기 이웃 (전국)
+            const who = {};
+            d.feed.forEach(p => {
+                if (!p || isBlocked(p.uid) || p.pub === false) return;
+                if (!(p.uid === COMM_UID ? commProfile.rankPublic : p.rank)) return;
+                const r = who[p.uid] || (who[p.uid] = { uid: p.uid, nick: p.nick, emoji: p.emoji, photo: p.photo, area: p.area || '', posts: 0, hearts: 0, reacts: 0, comments: 0, ts: 0 });
+                if ((p.ts || 0) > r.ts) Object.assign(r, { nick: p.nick, emoji: p.emoji, photo: p.photo, area: p.area || r.area, ts: p.ts || 0 });
+                r.posts++; r.hearts += feedCount(p.hearts); r.reacts += feedCount(p.reacts); r.comments += p.comments || 0;
+            });
+            const people = Object.values(who).map(r => Object.assign(r, { score: r.hearts * 3 + r.reacts * 2 + r.comments * 2 + r.posts, sido: (r.area || '').split(' ')[0] }))
+                .filter(r => (!sd || sidoShort(r.sido) === sd) && (!q || [r.nick, r.area].join(' ').toLowerCase().includes(q)))
+                .sort((a, b) => b.score - a.score || b.hearts - a.hearts);
+            // 동네별 1위 (그 동네에서 점수가 가장 높은 글)
+            const towns = {};
+            posts.forEach(x => { if (!towns[x.town] || x.score > towns[x.town].score) towns[x.town] = x; });
+            const townCount = new Set(items.map(x => x.town)).size;
+            return { posts, places, people, towns: Object.values(towns).sort((a, b) => b.score - a.score),
+                good: items.filter(x => x.board === 'praise' || x.kind === 'place'), bad: posts.filter(x => x.board === 'wish'),
+                stats: { towns: townCount, posts: posts.length, likes: posts.reduce((a, x) => a + (x.likes || 0), 0) } };
+        }
+        function natSet(k, v) { natState[k] = v; if (k === 'month') { natState.data = null; natState.open = null; natLoad(true); return; } renderNational(); }
+        function natToggle(id) { natState.open = natState.open === id ? null : id; renderNational(); }
+        function natGoMine(b, pid) {
+            closeSheet();
+            openCommunity();
+            setTimeout(() => { setCommTab(b); if (PB[b]) setTimeout(() => pbOpen(b, pid), 60); }, 80);
+        }
+        function natMedal(i) {
+            return i < 3 ? `<span class="nat-medal nat-m${i + 1}">${i + 1}</span>` : `<span class="nat-rank">${i + 1}</span>`;
+        }
+        function natAreaChip(x) { return `<span class="nat-area"><i class="fa-solid fa-location-dot"></i> ${esc(sidoShort(x.sido))} ${esc(x.sigungu || '')} ${esc(x.dong || '')}</span>`; }
+        function natPostRow(x, i) {
+            const B = NAT_BOARDS[x.board] || NAT_BOARDS.free, open = natState.open === x.id, mineTown = myTown && x.town === townKey(myTown);
+            return `<li class="nat-row ${open ? 'is-open' : ''}">
+                <button onclick="natToggle('${esc(x.id)}')" class="nat-row-btn">
+                    ${natMedal(i)}
+                    <span class="min-w-0 flex-1">
+                        <span class="flex items-center gap-1.5 flex-wrap"><span class="nat-board nat-c-${B.c}">${B.e} ${B.n}</span>${x.type === 'sos' ? '<span class="nat-board nat-c-red">SOS</span>' : ''}${x.tag ? `<span class="text-[0.625rem] text-slate-400">${esc(x.tag)}</span>` : ''}</span>
+                        <span class="nat-title">${esc(x.title || '(제목 없음)')}${x.hasImg ? ' <i class="fa-regular fa-image text-slate-400 text-[0.7em]"></i>' : ''}</span>
+                        <span class="flex items-center gap-2 flex-wrap mt-0.5">${natAreaChip(x)}<span class="text-[0.625rem] text-slate-400">${esc(x.nick || '이웃')} · ${timeAgo(x.ts)}</span></span>
+                    </span>
+                    <span class="nat-metrics"><span class="nat-like"><i class="fa-solid fa-heart"></i> ${x.likes || 0}</span><span><i class="fa-regular fa-comment"></i> ${x.comments || 0}</span></span>
+                </button>
+                ${open ? `<div class="nat-detail">
+                    ${x.snippet ? `<p>${esc(x.snippet)}${x.snippet.length >= 160 ? '…' : ''}</p>` : '<p class="text-slate-400">(내용 미리보기가 없습니다)</p>'}
+                    <div class="flex flex-wrap items-center gap-2 mt-2">
+                        <span class="text-[0.6875rem] text-slate-500">조회 ${x.views || 0} · 점수 ${Math.round(x.score)}</span>
+                        ${mineTown ? `<button onclick="natGoMine('${x.board}', '${esc(x.pid)}')" class="nat-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i> 우리 동네 게시판에서 보기</button>`
+                            : `<span class="text-[0.6875rem] text-slate-400"><i class="fa-solid fa-lock"></i> 댓글·공감은 ${esc(x.dong || '그 동네')} 주민만 남길 수 있어요</span>`}
+                    </div></div>` : ''}
+            </li>`;
+        }
+        function natPlaceRow(x, i) {
+            const B = NAT_BOARDS[x.board] || NAT_BOARDS.food, avg = x.n ? x.sum / x.n : 0;
+            const q = encodeURIComponent([x.sigungu, (x.dong || '').replace(/\d+동$/, '동'), x.name].filter(Boolean).join(' '));
+            return `<li class="nat-row"><div class="nat-row-btn">
+                ${natMedal(i)}
+                <span class="nat-place-ico nat-c-${B.c}">${B.e}</span>
+                <span class="min-w-0 flex-1">
+                    <span class="nat-title">${esc(x.name)}</span>
+                    <span class="flex items-center gap-2 flex-wrap">${starsHtml(avg, 'text-xs')}<b class="text-[0.6875rem] text-amber-600">${avg.toFixed(1)}</b><span class="text-[0.625rem] text-slate-400">후기 ${x.n}개${x.tag ? ' · ' + esc(x.tag) : ''}</span></span>
+                    <span class="flex items-center gap-2 flex-wrap mt-0.5">${natAreaChip(x)}${x.place ? `<span class="text-[0.625rem] text-slate-400 truncate">📍 ${esc(x.place)}</span>` : ''}</span>
+                </span>
+                <span class="flex flex-col gap-1 shrink-0">
+                    <a target="_blank" rel="noopener noreferrer" href="https://map.naver.com/p/search/${q}" class="nat-map nat-map-n">N 지도</a>
+                    <a target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/?q=${q}" class="nat-map nat-map-k">카카오</a>
+                </span></div></li>`;
+        }
+        function natPersonRow(r, i) {
+            return `<li class="nat-row"><button onclick="closeSheet(); openCommunity(); setTimeout(() => showProfile('${esc(r.uid)}'), 80)" class="nat-row-btn">
+                ${natMedal(i)}
+                <span class="shrink-0 ${i < 3 ? 'p-[2px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600' : ''}"><span class="block rounded-full bg-white dark:bg-slate-900 p-[1px]">${avatarHtml(r, 'w-10 h-10', 'text-xl')}</span></span>
+                <span class="min-w-0 flex-1"><span class="nat-title">${esc(displayName(r.uid, r.nick))}${r.uid === COMM_UID ? ' <span class="text-violet-500 text-[0.75em]">(나)</span>' : ''}</span>
+                    <span class="flex items-center gap-2 flex-wrap">${r.area ? natAreaChip({ sido: r.area.split(' ')[0], sigungu: r.area.split(' ').slice(1, -1).join(' '), dong: r.area.split(' ').slice(-1)[0] }) : ''}<span class="text-[0.625rem] text-slate-400">❤ ${r.hearts} · 감정 ${r.reacts} · 💬 ${r.comments} · 게시물 ${r.posts}</span></span></span>
+                <span class="text-right shrink-0"><b class="block text-base font-black text-violet-600 dark:text-violet-300 leading-none">${r.score}</b><span class="text-[0.5625rem] text-slate-400">점</span></span></button></li>`;
+        }
+        function natTownCard(x) {
+            const B = NAT_BOARDS[x.board] || NAT_BOARDS.free;
+            return `<button onclick="natSet('tab', 'posts'); natToggle('${esc(x.id)}')" class="nat-town">
+                <span class="flex items-center justify-between gap-2"><b class="text-[0.8125rem] text-slate-900 dark:text-white truncate">${esc(x.dong || x.area)}</b><span class="nat-crown">👑 1위</span></span>
+                <span class="text-[0.625rem] text-slate-400 truncate">${esc(sidoShort(x.sido))} ${esc(x.sigungu || '')}</span>
+                <span class="nat-board nat-c-${B.c} self-start mt-1">${B.e} ${B.n}</span>
+                <span class="text-xs font-bold text-slate-700 dark:text-slate-200 leading-snug nat-clamp2 mt-0.5">${esc(x.title)}</span>
+                <span class="mt-auto pt-1 flex items-center gap-2 text-[0.625rem] text-slate-500"><span class="nat-like"><i class="fa-solid fa-heart"></i> ${x.likes || 0}</span><span><i class="fa-regular fa-comment"></i> ${x.comments || 0}</span></span>
+            </button>`;
+        }
+        function natSection(title, sub, more, inner) {
+            return `<section class="nat-sec"><div class="nat-sec-head"><div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div>${more ? `<button onclick="natSet('tab', '${more}')" class="nat-more">전체 보기 <i class="fa-solid fa-chevron-right"></i></button>` : ''}</div>${inner}</section>`;
+        }
+        function natEmpty(text) { return `<div class="nat-empty"><div class="text-3xl mb-2">🌱</div>${text}</div>`; }
+        function openNational() {
+            natState.where = 'sheet';
+            if (!natState.month) natState.month = monthKey(Date.now());
+            openSheet(`<div id="natRoot" class="flex flex-col min-h-0 h-[92vh] max-h-[92vh]"></div>`);
+            renderNational();
+            natLoad(false);
+        }
+        function renderNational() {
+            if (natState.where === 'comm' && (commTab !== 'national' || !document.getElementById('natInComm'))) {
+                if (!document.getElementById('natRoot')) return;
+                natState.where = 'sheet';
+            }
+            const root = document.getElementById(natState.where === 'comm' ? 'natInComm' : 'natRoot');
+            if (!root) return;
+            if (!natState.month) natState.month = monthKey(Date.now());
+            const mk = natState.month, cur = monthKey(Date.now()), f = natFiltered(), tab = natState.tab;
+            const scrollBox = document.getElementById('natScroll'), keepTop = scrollBox ? scrollBox.scrollTop : 0;
+            const ol = (rows, fn, n) => rows.length ? `<ol class="nat-list">${rows.slice(0, n).map(fn).join('')}</ol>` : '';
+            const loading = natState.busy && !natState.data;
+            let body = '';
+            if (loading) body = `<div class="space-y-2">${'<div class="nat-skel"></div>'.repeat(6)}</div>`;
+            else if (tab === 'all') {
+                body = (f.towns.length ? natSection('🗺️ 동네별 1위', '각 동네에서 이번 달 가장 공감을 많이 받은 글', 'towns', `<div class="nat-towns">${f.towns.slice(0, 8).map(natTownCard).join('')}</div>`) : '')
+                    + natSection('🔥 전국 인기 글 TOP 10', '공감·댓글·조회를 합쳐 매긴 순위', 'posts', ol(f.posts, natPostRow, 10) || natEmpty('이번 달 아직 공감을 받은 글이 없어요.<br>우리 동네 게시판에 글을 쓰고 이웃의 공감을 받아 보세요!'))
+                    + `<div class="nat-duo">${natSection('👍 좋았던 곳', '칭찬해요 · 맛집 · 명소', 'good', ol(f.good, x => x.kind === 'place' ? natPlaceRow(x, f.good.indexOf(x)) : natPostRow(x, f.good.indexOf(x)), 5) || natEmpty('아직 없어요'))}
+                        ${natSection('🙏 아쉬웠던 곳', '이웃들이 가장 많이 공감한 개선 요청', 'bad', ol(f.bad, natPostRow, 5) || natEmpty('아직 없어요'))}</div>`
+                    + natSection('👑 이달의 인기 이웃', '내 일상 게시물로 ❤를 가장 많이 받은 이웃 (순위 공개를 켠 이웃만)', 'people', ol(f.people, natPersonRow, 5) || natEmpty('아직 순위에 오른 이웃이 없어요.<br>내 프로필에서 일상을 올리고 순위 공개를 켜 보세요.'));
+            }
+            else if (tab === 'posts') body = ol(f.posts, natPostRow, 100) || natEmpty('조건에 맞는 글이 없어요.');
+            else if (tab === 'good') body = ol(f.good, (x, i) => x.kind === 'place' ? natPlaceRow(x, i) : natPostRow(x, i), 100) || natEmpty('조건에 맞는 좋았던 곳이 없어요.');
+            else if (tab === 'bad') body = ol(f.bad, natPostRow, 100) || natEmpty('조건에 맞는 아쉬운 점이 없어요.');
+            else if (tab === 'places') body = ol(f.places, natPlaceRow, 100) || natEmpty('이번 달 올라온 맛집·명소 후기가 없어요.');
+            else if (tab === 'people') body = ol(f.people, natPersonRow, 100) || natEmpty('아직 순위에 오른 이웃이 없어요.');
+            else if (tab === 'towns') body = f.towns.length ? `<div class="nat-towns">${f.towns.map(natTownCard).join('')}</div>` : natEmpty('아직 1위가 정해진 동네가 없어요.');
+            const inSheet = natState.where !== 'comm';
+            root.innerHTML = `
+                <div class="nat-hero shrink-0">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="nat-eyebrow"><i class="fa-solid fa-trophy"></i> 전국 동네 커뮤니티</div>
+                            <h2 class="nat-h">이달의 전국 랭킹</h2>
+                            <p class="nat-sub">내 동네가 아니어도 괜찮아요. 전국 모든 동네에서 이번 달 가장 뜨거웠던 글·장소·이웃을 한눈에.</p>
+                        </div>
+                        ${inSheet ? `<button onclick="closeSheet()" class="nat-x" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                    </div>
+                    <div class="flex items-center justify-between gap-2 flex-wrap mt-3">
+                        <div class="nat-month">
+                            <button onclick="natSet('month', '${monthShift(mk, -1)}')" aria-label="이전 달"><i class="fa-solid fa-chevron-left"></i></button>
+                            <b>${monthLabel(mk)}</b>
+                            <button onclick="natSet('month', '${monthShift(mk, 1)}')" ${mk >= cur ? 'disabled' : ''} aria-label="다음 달"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        <div class="nat-stats"><span><b>${f.stats.towns}</b> 동네</span><span><b>${f.stats.posts}</b> 글</span><span><b>${f.stats.likes}</b> 공감</span></div>
+                    </div>
+                </div>
+                <div class="nat-controls shrink-0">
+                    <div class="hscroll gap-1.5 pb-1">${NAT_TABS.map(t => `<button onclick="natSet('tab', '${t[0]}')" class="nat-chip ${tab === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <select onchange="natSet('sido', this.value)" class="nat-input w-28 shrink-0"><option value="">전국</option>${NAT_SIDOS.map(s => `<option value="${s}" ${natState.sido === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
+                        <label class="nat-input flex-1 flex items-center gap-2"><i class="fa-solid fa-magnifying-glass text-slate-400 text-xs"></i><input id="natQ" value="${esc(natState.q)}" oninput="natState.q = this.value; clearTimeout(window._natT); window._natT = setTimeout(() => { renderNational(); const e = document.getElementById('natQ'); if (e) { e.focus(); e.setSelectionRange(e.value.length, e.value.length); } }, 250)" placeholder="동네·제목·가게 이름 검색" class="flex-1 min-w-0 bg-transparent outline-none text-xs"></label>
+                        <button onclick="natLoad(true)" title="새로 불러오기" class="nat-input shrink-0 !px-2.5"><i class="fa-solid fa-rotate ${natState.busy ? 'fa-spin' : ''}"></i></button>
+                    </div>
+                </div>
+                <div id="natScroll" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar nat-body">${body}
+                    <p class="text-center text-[0.625rem] text-slate-400 mt-4 leading-relaxed">순위는 매달 1일에 새로 시작해요 · 차단한 이웃의 글은 보이지 않아요<br>${FIREBASE_CONFIG ? '' : '지금은 체험 모드라 이 기기에 저장된 동네 글로만 순위를 계산합니다.'}</p>
+                </div>`;
+            const sb = document.getElementById('natScroll'); if (sb && keepTop) sb.scrollTop = keepTop;
+        }
+
         let profileShown = { uid: '', nick: '', emoji: '', photo: '', area: '' };
         let commEditPhoto = null;     // 프로필 수정 중인 사진 (null=그대로, ''=지움, 그 외=새 사진)
         function editProfile(keep) {
@@ -4201,6 +4773,30 @@
             commTouch();
             renderCommMembers();
             renderCommMessages(); renderFreeMessages();
+            renderMeBtn();
+            showAlertToast({ head: '프로필', title: '프로필을 저장했어요.' });
+        }
+        // 맨 위 '내 프로필' 버튼: 어느 화면에서든 한 번에 내 프로필(내 일상)로
+        function renderMeBtn() {
+            const b = document.getElementById('meBtn');
+            if (!b) return;
+            b.innerHTML = `${avatarHtml(meFields(), 'w-7 h-7', 'text-sm')}<span class="hidden lg:flex flex-col items-start leading-tight min-w-0"><span class="text-[0.75rem] font-extrabold max-w-[6.5rem] truncate">${esc(myNick())}</span><span class="text-[0.5625rem] font-semibold text-slate-500 dark:text-slate-400 max-w-[6.5rem] truncate">${esc(myTown ? myTown.dong : '내 프로필')}</span></span>`;
+        }
+        // Esc: 맨 위에 떠 있는 창부터 하나씩 닫기 (사진 크게 보기 → 프로필 → 공용 창 → 앱 안내 → 떠 있는 패널)
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape' || e.isComposing) return;
+            const shown = id => { const el = document.getElementById(id); return el && !el.classList.contains('hidden'); };
+            if (shown('commMediaView')) closeMedia();
+            else if (shown('commProfileCard')) closeProfile();
+            else if (shown('sheetModal')) closeSheet();
+            else if (shown('appModal')) closeAppModal();
+            else if (shown('floatModal')) closeFloat();
+            else return;
+            e.preventDefault();
+        });
+        function openMyProfile() {
+            openCommunity();
+            setTimeout(() => showProfile(COMM_UID), 80);
         }
 
         // 사진 크게 보기
@@ -4967,10 +5563,11 @@
             { k: 'life', label: '동네 이야기', fa: 'fa-house-chimney-user', c: 'sky', tabs: ['free', 'hello', 'wish', 'praise'] },
             { k: 'local', label: '맛집·명소', fa: 'fa-utensils', c: 'orange', tabs: ['food', 'spot'] },
             { k: 'market', label: '동네 장터', fa: 'fa-store', c: 'emerald', tabs: ['market'] },
-            { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['popular', 'meet', 'friends', 'random', 'dm'] }
+            { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['popular', 'meet', 'friends', 'random', 'dm'] },
+            { k: 'nation', label: '전국 랭킹', fa: 'fa-trophy', c: 'amber', tabs: ['national'] }
         ];
         const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '우리동네 맛집', spot: '우리동네 명소',
-            market: '동네 장터', popular: '우리동네 인기쟁이', meet: '동네 친구', friends: '친구', random: '랜덤 채팅', dm: '1:1 대화' };
+            market: '동네 장터', popular: '우리동네 인기쟁이', meet: '동네 친구', friends: '친구', random: '랜덤 채팅', dm: '1:1 대화', national: '이달의 전국 랭킹' };
         const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-hand-holding-heart', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-tree',
             popular: 'fa-crown', meet: 'fa-user-plus', friends: 'fa-user-group', random: 'fa-shuffle', dm: 'fa-envelope' };
         function commGroupOf(tab) { return COMM_GROUPS.find(g => g.tabs.includes(tab)) || COMM_GROUPS[0]; }
@@ -5043,7 +5640,7 @@
                 const on = t === commTab, b = tabBadge(t);
                 return `<button onclick="setCommTab('${t}')" ${ordAttrs(okey, t, 'groupTabs(commGroupOf(commTab))', 'renderCommTabBar()')} class="ord-item comm-tab relative flex items-center gap-1.5 px-3 py-2 text-xs font-bold whitespace-nowrap border-b-[3px] cursor-grab transition ${on ? `border-${cur.c}-500 text-${cur.c}-700 dark:text-${cur.c}-300` : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'}"><i class="fa-solid ${COMM_TAB_FA[t] || 'fa-circle'} text-[0.6875rem] ${on ? '' : 'opacity-70'}"></i>${COMM_TAB_LABEL[t]}${b ? ` <span class="text-[0.5625rem] bg-red-500 text-white rounded-full px-1.5 leading-4">${b === '●' ? '●' : b}</span>` : ''}</button>`;
             }).join('')}</div>` : '';
-            bar.innerHTML = `<div class="grid grid-cols-5 gap-1.5 px-2 pt-2 ${subs ? '' : 'pb-2'}">${groups}</div>${subs}`;
+            bar.innerHTML = `<div class="grid gap-1.5 px-2 pt-2 ${subs ? '' : 'pb-2'}" style="grid-template-columns: repeat(${COMM_GROUPS.length}, minmax(0, 1fr));">${groups}</div>${subs}`;
         }
 
         // ================= 게시판 (네이버 카페처럼: 글 목록 → 글 보기 → 댓글) =================
@@ -5245,6 +5842,8 @@
                 const db = await commInit();
                 if (db) { const FV = firebase.firestore.FieldValue; await P.col().doc(id).update({ [P.like]: has ? FV.arrayRemove(COMM_UID) : FV.arrayUnion(COMM_UID) }); }
                 else { p[P.like] = has ? (p[P.like] || []).filter(u => u !== COMM_UID) : (p[P.like] || []).concat(COMM_UID); P.save(); pbRefresh(b); }
+                if (db) hotMirror(b, p, { likes: Math.max(0, pbLikes(b, p) + (has ? -1 : 1)) });     // 전국 랭킹 요약
+                if (!has) showAlertToast({ head: P.likeLabel, title: '공감을 보냈어요. 이번 달 전국 랭킹에도 반영돼요.' });
             } catch (e) { console.error(e); }
         }
         async function pbComment(b, id) {
@@ -5257,6 +5856,7 @@
                 inp.value = ''; inp.style.height = '';
                 if (db) await PB[b].col().add(msg);
                 else { msg.id = 'c' + Date.now() + Math.random().toString(36).slice(2, 7); PB[b].list().unshift(msg); PB[b].save(); pbRefresh(b); }
+                if (db) { const p = PB[b].list().find(x => x.id === id); if (p) hotMirror(b, p, { comments: pbComments(b, id).length + 1 }); }
                 const sc = document.getElementById('pbPostScroll'); if (sc) setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, 50);
             } catch (e) { console.error(e); }
         }
@@ -5499,6 +6099,8 @@
                 const db = await commInit();
                 if (db) await boardCol(b).add(msg);
                 else { msg.id = 'b' + Date.now() + Math.random().toString(36).slice(2, 7); boardData[b].unshift(msg); boardLocalSave(b); }
+                if (db && B.place) hotMirrorPlace(b, msg);      // 맛집·명소 후기 → 전국 랭킹 요약
+                showAlertToast({ head: B.name, title: '올렸어요! 이웃의 공감을 많이 받으면 이달의 전국 랭킹에 올라가요.' });
                 boardDraft = { rating: 0, img: null };
                 boardUi[b].form = false;
                 if (B.place) boardUi[b].place = placeKey(msg.name);      // 올리면 그 가게(장소) 후기 모음으로 이동
@@ -5524,6 +6126,7 @@
                 const db = await commInit();
                 if (db) { const FV = firebase.firestore.FieldValue; await boardCol(b).doc(id).update({ welcome: has ? FV.arrayRemove(COMM_UID) : FV.arrayUnion(COMM_UID) }); }
                 else { m.welcome = has ? (m.welcome || []).filter(u => u !== COMM_UID) : (m.welcome || []).concat(COMM_UID); boardLocalSave(b); renderBoardBody(b); }
+                if (db) hotMirror(b, m, { likes: Math.max(0, (m.welcome || []).length + (has ? -1 : 1)) });
             } catch (e) { console.error(e); }
         }
         async function boardReply(b, id) {
@@ -5535,6 +6138,7 @@
                 const db = await commInit();
                 if (db) await boardCol(b).add(msg);
                 else { msg.id = 'r' + Date.now() + Math.random().toString(36).slice(2, 7); boardData[b].unshift(msg); boardLocalSave(b); renderBoardBody(b); }
+                if (db && !BOARDS[b].place) { const m = boardData[b].find(x => x.id === id); if (m) hotMirror(b, m, { comments: boardData[b].filter(x => x.parent === id).length + 1 }); }
                 boardOpen.add(id);
             } catch (e) { console.error(e); }
         }
@@ -6945,6 +7549,7 @@
             renderCommunity();
             commSubscribe();
             updateAlertButton();
+            renderMeBtn();
         }
 
         function resetTown() {
@@ -6959,6 +7564,7 @@
             lsSet('my_town', 'null');
             updateCommBadge();
             renderCommunity();
+            renderMeBtn();
         }
 
         function initCommunity() {
@@ -6966,6 +7572,7 @@
             if (myTown) commSubscribe();   // 인증된 동네가 있으면 제보·SOS 알림을 받기 위해 바로 연결
             socialInit();
             updateAlertButton();
+            renderMeBtn();
             if (isDocked('community')) renderCommunity();
         }
 
