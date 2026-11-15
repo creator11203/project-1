@@ -1243,6 +1243,100 @@ def find_foreign(title, full=None):
     return None
 
 
+# ── 본문(내용)으로 해외 기사 가려내기 ──
+#   제목에는 나라 이름이 없어도('한 학생이 개울에서 수영하다 익사', '인기 데이트 프로그램 출연 여배우 체포') 본문에는
+#   '베트남 다락성 쑤언푸옥면', '일본 경시청', '현지 경찰' 같은 단서가 나옴 → 단서가 여럿이고 국내 단서가 없으면 해외 기사로 봄.
+#   해외 기사라도 한국인·한국 기업이 얽혔으면(korea_linked) '해외' 분류로 보여 주되 국내 사건 집계에는 넣지 않고, 아니면 올리지 않음.
+FOREIGN_WIRE_RE = re.compile(
+    r"현지\s*(?:시간|시각|경찰|당국|언론|매체|소방|주민|병원|보도|방송|신문)|\(현지|외신|AFP|AP\s*통신|로이터|신화\s*통신|교도\s*통신|지지\s*통신|블룸버그|CNN|BBC|NHK|아사히|마이니치|요미우리|산케이|SCMP|VnExpress|탄니엔|뚜오이쩨|"
+    r"(?:일본|중국|대만|홍콩|베트남|태국|필리핀|인도네시아|말레이시아|캄보디아|미국|영국|프랑스|독일|러시아|호주|캐나다|인도)\s*(?:현지\s*)?(?:매체|언론|경찰|당국|소방|검찰|법원)|"
+    r"경시청|[가-힣]{2,4}현경(?![가-힣])|도도부현|중국\s*공안|공안국|베트남어|일본어로|중국어로|영어로")
+_VN_PROV = (r"다락|닥락|닥농|럼동|잘라이|꼰뚬|칸호아|푸옌|빈딘|닌투언|빈투언|동나이|빈즈엉|떠이닌|롱안|띠엔장|벤쩨|빈롱|짜빈|동탑|속짱|까마우|하띤|응에안|탄호아|타이빈|남딘|닌빈|하이즈엉|흥옌|박닝|박장|랑선|까오방|하장|뚜옌꽝|"
+            r"라오까이|옌바이|선라|디엔비엔|라이쩌우|호아빈|푸토|빈푹|타이응우옌|꽝남|꽝응아이|꽝빈|꽝찌|꽝닌|투아티엔후에|바리아붕따우")
+_CN_PROV = r"광둥|광동|쓰촨|사천|허난|산둥|저장|장쑤|후난|후베이|윈난|구이저우|헤이룽장|지린|랴오닝|허베이|안후이|푸젠|장시|하이난|간쑤|칭하이|네이멍구|광시|닝샤|신장웨이우얼"
+_JP_PREF = (r"아오모리|이와테|미야기|아키타|야마가타|후쿠시마|이바라키|도치기|군마|사이타마|지바|가나가와|니가타|도야마|이시카와|후쿠이|야마나시|나가노|기후|시즈오카|아이치|미에|시가|교토|오사카|효고|와카야마|돗토리|시마네|"
+            r"오카야마|히로시마|야마구치|도쿠시마|가가와|에히메|고치|후쿠오카|사가|나가사키|구마모토|오이타|미야자키|가고시마|오키나와")
+# 베트남·중국 '○○성', 일본 '○○현·부' 행정구역, '○○성 △△면·읍' 꼴 (우리나라에는 '성'·'현' 단위 행정구역이 없음)
+ASIA_ADMIN_RE = re.compile(r"(?<![가-힣])(?:(?:" + _VN_PROV + r"|" + _CN_PROV + r")성|(?:" + _JP_PREF + r")(?:현|부)|도쿄도|[가-힣]{2,4}성\s+[가-힣]{2,6}(?:면|읍)(?![가-힣]))")
+FOREIGN_MONEY_RE = re.compile(r"\d[\d,.]*\s*(?:만|억)?\s*(?:엔|위안|바트|루피아|링깃|페소|루블|파운드|유로)(?![가-힣])|베트남\s*동(?![가-힣])")
+
+
+# 국내 수사·구조 기관만 (KOREA_AUTH_RE 는 '시청·군청·구청'까지 잡아서 일본 '경시청' 같은 해외 기관도 걸림)
+KOREA_AUTH_STRICT_RE = re.compile(r"[가-힣]{1,6}(?:경찰서|소방서|소방본부|해양경찰서|지방경찰청|지검|지청)|[가-힣]{1,4}해경|119\s*구조|112\s*신고|(?:경찰청|소방청|해양경찰청|검찰청)")
+
+
+def foreign_clues(text):
+    """본문에서 해외 기사임을 보여 주는 단서 점수와 나라 이름들"""
+    t = _FOREIGN_CLEAN.sub(" ", text or "")
+    ctx = bool(FOREIGN_CTX_RE.search(t))
+    names = set()
+    for rx, label, la, ln, amb, probe in _WORLD:
+        if label == "북한" or (probe not in t and not probe.isascii()):
+            continue
+        if amb and not ctx:
+            continue
+        if rx.search(t):
+            names.add(label.split()[0])
+    score = len(names)
+    if ASIA_ADMIN_RE.search(t):
+        score += 2
+    if FOREIGN_WIRE_RE.search(t):
+        score += 1
+    if FOREIGN_MONEY_RE.search(t):
+        score += 1
+    return score, names
+
+
+def body_foreign_verdict(text):
+    """기사 본문(앞부분)으로 해외 기사인지: None(국내/불확실) · 'ov'(해외지만 한국과 연결) · 'drop'(한국과 무관한 해외 소식)"""
+    head = PRE_CLEAN.sub(" ", (text or "")[:900])
+    if len(head) < 30:
+        return None
+    if KOREA_AUTH_STRICT_RE.search(head) or DOMESTIC_CTX_RE.search(head):
+        return None                              # '○○경찰서·소방서·해경'이 나오면 국내 사건
+    score, names = foreign_clues(head)
+    if score < 2:
+        return None
+    if _has_domestic_place(head) and score < 3:
+        return None                              # 국내 지명이 함께 나오면 단서가 충분할 때만 해외로 봄
+    return "ov" if korea_linked(head) else "drop"
+
+
+# 드라마·영화 속 '연기' 이야기 (예: "유연석, '라이어' 연쇄 성폭행범 연기 잘해서 더 소름…눈빛만으로 긴장감")
+#   '○○범·살인마·악역 + 연기'는 배우가 맡은 '배역' 이야기이지 실제 범죄가 아님. ('연기됐다'(미룸)·'연기 치솟아'(불)와는 다른 뜻이라 낱말 짝으로만 판단)
+ACTING_ROLE_RE = re.compile(r"(?:[가-힣]{1,6}범|범인|살인마|살인자|악역|가해자|괴물|사이코패스|연쇄\s*[가-힣]{2,6}|조폭|깡패|스토커|변태|빌런|악당)[^.…\"”]{0,4}연기(?!\s*(?:가\s*|를\s*)?(?:치솟|자욱|가득|피어|흡입|뿜|나오|나는|속))|"
+                            r"연기\s*(?:잘|력|변신|호평|열연|내공|천재|도전)|(?:눈빛|표정|분위기|열연|호연)[^.…]{0,8}(?:소름|긴장감|압도)|연기(?:를|가)\s*(?:너무|정말)?\s*잘")
+BODY_ACTING_RE = re.compile(r"드라마|영화|극\s*중|극중|배역|캐릭터|시청률|방영|제작\s*발표회|넷플릭스|티빙|웨이브|시즌\s*\d|배우|연기")
+# 상품 홍보에서 '출동 준비 완료'처럼 비유로 쓴 말 (예: "[고양이 눈] 출동 준비 완료…깨끗이 빨아서 출동한 대걸레들")
+DISPATCH_PROMO_RE = re.compile(r"출동\s*(?:준비|채비|대기)\s*(?:완료|끝|중)?|출동\s*완료|(?:깨끗이|빨아서|빨아|씻어|닦아)\s*[^.…]{0,6}출동|출동\s*(?:합니다|해요|한다)\s*[!~♪]|출동\s*[!~♪]")
+DISPATCH_REAL_RE = re.compile(r"경찰|소방|119|112|구급|구조|해경|특공대|특수\s*부대|사고|화재|부상|사망|숨져|신고|환자|응급|재난|산불|폭우|침수|폭발|추락|실종|시신")
+PRODUCT_WORD_RE = re.compile(r"대걸레|걸레|청소기|청소\s*용품|세제|세탁|살림|제품|브랜드|판매|구매|리뷰|후기|주방|욕실|위생|생활\s*용품|생필품|인테리어")
+
+
+def is_acting_story(title, text=""):
+    """배우가 맡은 배역·연기 이야기인지 (제목, 또는 본문 앞부분에 드라마·영화·배우 말이 여럿이고 수사기관 말이 없을 때)"""
+    if STRICT_FACT_RE.search(title or "") or LEGAL_FACT_RE.search(title or ""):
+        return False
+    if ACTING_ROLE_RE.search(title or ""):
+        return True
+    head = (text or "")[:600]
+    if head and not KOREA_AUTH_RE.search(head) and not re.search(r"입건|구속|검거|체포|송치|경찰", head):
+        return len(set(BODY_ACTING_RE.findall(head))) >= 3 and bool(ACTING_ROLE_RE.search(head))
+    return False
+
+
+def is_dispatch_promo(title, text=""):
+    """'출동 준비 완료' 같은 비유·홍보 문구 (진짜 경찰·소방 출동이나 사고 낱말이 없을 때)"""
+    if not DISPATCH_PROMO_RE.search(title or "") or DISPATCH_REAL_RE.search(title or ""):
+        return False
+    if PRODUCT_WORD_RE.search(title or ""):
+        return True
+    head = (text or "")[:600]
+    if head and head != title:
+        return bool(PRODUCT_WORD_RE.search(head)) and not DISPATCH_REAL_RE.search(head)
+    return True                                  # 제목만 있고 실제 출동 근거(경찰·소방·사고…)가 전혀 없으면 비유로 봄
+
+
 def overseas_sub(text):
     """해외 분쟁 기사의 소분류 (한글 제목 기준)"""
     if KO_PEACE_RE.search(text) and not KO_CASUALTY_RE.search(text):
@@ -1518,6 +1612,10 @@ def classify(title, content):
         return None
     if ANIMAL_ACTOR_RE.search(title) and not HUMAN_HARM_RE.search(title):
         return None                      # 동물이 한 행동을 사람 범죄처럼 쓴 기사
+    if is_dispatch_promo(title, content):
+        return None                      # '출동 준비 완료·깨끗이 빨아서 출동' 같은 상품 홍보 비유
+    if is_acting_story(title, content):
+        return None                      # 배우가 '범인 역'을 연기했다는 이야기 (실제 범죄 아님)
     if BIZ_WAR_METAPHOR_RE.search(title) and not KO_CASUALTY_RE.search(title):
         return None                      # 기업·기술 경쟁을 전쟁에 빗댄 경제 기사
     # 연예·음악·스포츠 기사에서 '체포·검거·폭발' 같은 말이 따옴표 안(노래 제목·비유)에만 있으면 사건이 아님
@@ -1576,11 +1674,16 @@ def classify(title, content):
     if not foreign and not _has_domestic_place(t) and not DOMESTIC_CTX_RE.search(t):
         # 제목에는 나라 이름이 없지만 본문 첫머리가 해외 사건인 경우 (예: '납치됐던 어머니와 아들 40년 만에 재회' → 본문: 중국 …)
         #   본문에 국내 지명·국내 수사기관(○○경찰서·소방서·해경)이 있으면 국내 사건으로 봄
-        head = PRE_CLEAN.sub(" ", (content or "")[:260])
-        if head and not _has_domestic_place(head) and not DOMESTIC_CTX_RE.search(head) and not KOREA_AUTH_RE.search(head):
-            got = find_foreign(head, head)
-            if got and got[0] != "북한":
-                foreign = got
+        head = PRE_CLEAN.sub(" ", (content or "")[:900])
+        if head and head != title and not KOREA_AUTH_STRICT_RE.search(head):
+            # 본문(요약)의 단서를 여러 개 모아서 판단: 나라·도시 이름, 베트남·중국 '○○성'·일본 '○○현', 현지 경찰·외신, 엔·위안 같은 돈 단위
+            #   (예: '한 학생이 개울에서 수영하다 익사' → 본문 '베트남 다락성 쑤언푸옥면')
+            if body_foreign_verdict(head):
+                foreign = find_foreign(head, head) or ("해외", None, None)
+            elif not _has_domestic_place(head) and not DOMESTIC_CTX_RE.search(head):
+                got = find_foreign(head[:260], head[:260])
+                if got and got[0] != "북한":
+                    foreign = got
     if foreign:
         # 나라 밖 사건은 대한민국과 연결된 것만 (한국인 피해·한국 기업·국적기·국내 유입 등). 나머지 해외 소식은 올리지 않음
         #   ※ '피해자 국적'을 확인: 제목(또는 본문 첫머리)에 한국인·교민·한국 기업 같은 표시가 없으면 다른 나라 사람의 피해로 봄
@@ -2768,6 +2871,8 @@ def build_item(entry, feed, now_ts):
         content = clean_text(entry.get("summary") or entry.get("description") or "") or title
     content = content[:400]
 
+    if norm_key(title) in BLOCKED:
+        return None                              # 본문을 확인해 해외·비사건으로 판명된 기사 (blocked.json)
     cls = classify(title, content)
     if not cls:
         collect_tip(title, source, link, ts)     # 사건이 아닌 '예방·대처 요령' 기사는 안전 브리핑용으로 따로 모음
@@ -2819,6 +2924,87 @@ def save_tips(cutoff_ts):
     with open(TIPS_JSON, "w", encoding="utf-8") as f:
         f.write("[\n" + ",\n".join(json.dumps(v, ensure_ascii=False) for v in keep) + "\n]\n")
     return len(keep)
+
+
+# ── 기사 본문 확인 (blocked.json) ──
+#   구글 뉴스·일부 RSS 는 제목만 줘서 '나라 이름이 제목에 없는 해외 기사'·'배우 연기 이야기'를 제목만으로는 못 가림.
+#   그래서 새 국내 기사는 언론사 본문을 한 번 열어 앞부분을 확인하고(bc 표시), 해외·비사건으로 판명되면 지우고 blocked.json 에 적어 둠
+#   (그래야 다음 수집 때 같은 제목이 구글 뉴스에서 다시 들어와도 올리지 않음).
+BLOCKED_JSON = "blocked.json"
+BLOCKED = {}
+MAX_BODY_PER_RUN = 60
+
+
+def load_blocked():
+    try:
+        with open(BLOCKED_JSON, encoding="utf-8") as f:
+            return {k: float(v) for k, v in json.load(f).items()}
+    except Exception:
+        return {}
+
+
+def save_blocked(cutoff_ts):
+    keep = {k: v for k, v in BLOCKED.items() if v >= cutoff_ts}
+    with open(BLOCKED_JSON, "w", encoding="utf-8") as f:
+        f.write("{\n" + ",\n".join(f"{json.dumps(k, ensure_ascii=False)}: {int(v)}" for k, v in sorted(keep.items())) + "\n}\n")
+    return len(keep)
+
+
+def body_verdict(item, text):
+    """기사 본문으로 다시 판정: None(그대로) · 'drop'(지움) · 'ov'(해외 분류로 옮김)"""
+    title = item.get("title", "")
+    if is_acting_story(title, text) or is_dispatch_promo(title, text):
+        return "drop"
+    v = body_foreign_verdict(text)
+    if v == "ov" and not KOREA_EVENT_RE.search(title):
+        return "drop"                            # 한국과 연결돼도 실제 피해·사건이 제목에 없으면 올리지 않음
+    return v
+
+
+def check_bodies(items, started):
+    """새 국내 기사의 본문 앞부분을 읽어 해외 기사·배우 연기·홍보 비유를 걸러냄 → (지운 건수, 해외로 옮긴 건수)"""
+    from concurrent.futures import ThreadPoolExecutor
+    cands = []
+    for v in sorted(items.values(), key=lambda x: -x["timestamp"]):
+        if len(cands) >= MAX_BODY_PER_RUN:
+            break
+        if v.get("bc") or (v.get("bf") or 0) >= 2 or v.get("group") == OVERSEAS_GROUP or v.get("category") == "북한 도발":
+            continue
+        if v.get("source") == "시민 직접 제보" or not v.get("link") or v["link"].startswith("https://news.google.com"):
+            continue
+        cands.append(v)
+    if not cands or time.time() - started > 420:
+        return 0, 0
+
+    def one(v):
+        try:
+            return v, fetch_article_text(v["link"])
+        except Exception:
+            return v, ""
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        res = list(ex.map(one, cands))
+    dropped = moved = 0
+    for v, text in res:
+        if len(text) < 60:
+            v["bf"] = (v.get("bf") or 0) + 1       # 본문을 못 읽음 (두 번까지만 다시 시도)
+            continue
+        v["bc"] = 1
+        key = norm_key(v["title"])
+        verdict = body_verdict(v, text)
+        if verdict == "drop":
+            items.pop(key, None)
+            BLOCKED[key] = v["timestamp"]
+            dropped += 1
+        elif verdict == "ov":
+            hint_text = PRE_CLEAN.sub(" ", text[:300])
+            new = make_item(v["title"], v.get("content") or v["title"], _overseas_from(v["group"], v["category"]), OVERSEAS_GROUP,
+                            v["source"], v["link"], v["timestamp"], v.get("hint"), None, hint_text[:200])
+            new["embed"] = v.get("embed")
+            new["loctext"] = hint_text[:200]
+            new["bc"] = "ov"
+            items[key] = new
+            moved += 1
+    return dropped, moved
 
 
 def make_item(title, content, sub, group, source, link, ts, hint, orig=None, loctext=None):
@@ -3111,12 +3297,28 @@ def reprocess_existing(old):
                 out[norm_key(title)] = make_item(title, title, cls_en[0], cls_en[1], source, it.get("link", ""), ts, None, orig)
                 out[norm_key(title)]["embed"] = it.get("embed")
                 continue
+            if norm_key(title) in BLOCKED:
+                continue
+            if it.get("bc") == "ov" and it.get("group") == OVERSEAS_GROUP and it.get("category"):
+                # 본문으로 '해외 기사(한국과 연결)'로 판명된 기사: 제목만으로 다시 계산하면 국내 기사로 되돌아가므로 그대로 유지
+                if is_court_news(title):
+                    continue
+                item = make_item(title, content[:400], it["category"], OVERSEAS_GROUP, source, it.get("link", ""), ts, it.get("hint"), None, it.get("loctext"))
+                item["embed"] = it.get("embed")
+                item["bc"] = "ov"
+                if it.get("loctext"):
+                    item["loctext"] = it["loctext"]
+                out[norm_key(title)] = item
+                continue
             cls = classify(title, content)
             if not cls:
                 collect_tip(title, source, it.get("link", ""), ts)   # 새 기준에서 빠진 예방 정보 기사는 안전 브리핑용으로
                 continue
             item = make_item(title, content[:400], cls[0], cls[1], source, it.get("link", ""), ts, it.get("hint"), None, it.get("loctext"))
             item["embed"] = it.get("embed")
+            for k in ("bc", "bf"):                     # 본문 확인 기록 (한 번 읽은 기사는 다시 열지 않음)
+                if it.get(k):
+                    item[k] = it[k]
             if it.get("enr"):
                 item["enr"] = it["enr"]                # 본문 위치 확인을 이미 한 기사 (몇 번째 방식으로 확인했는지)
             if it.get("loctext"):
@@ -3138,6 +3340,7 @@ def main():
     print("=== 우리동네 사건사고 수집 시작 ===", now.strftime("%Y-%m-%d %H:%M:%S"))
 
     TIPS.update(load_tips())
+    BLOCKED.update(load_blocked())
     items = reprocess_existing(load_existing())
     print(f"기존 기사 {len(items)}건 불러옴")
 
@@ -3253,6 +3456,10 @@ def main():
         time.sleep(0.4)
     print(f"원문 주소로 변환: {resolved}건 (구글 링크 남은 건수: {len(pending) - resolved}건)")
 
+    # 새 국내 기사의 본문 앞부분을 읽어 해외 기사·배우 연기 이야기·홍보 비유를 한 번 더 걸러냄
+    n_drop, n_move = check_bodies(items, started)
+    print(f"본문 확인: 해외·비사건으로 지운 기사 {n_drop}건 / 해외 분류로 옮긴 기사 {n_move}건")
+
     # 언론사별로 '사이트 안에 띄우기'가 되는지 확인 (한 번 확인한 언론사는 다시 확인하지 않음)
     dom_embed = {}
     for v in items.values():
@@ -3287,6 +3494,7 @@ def main():
     with open(NEWS_JSON, "w", encoding="utf-8") as f:
         f.write("[\n" + ",\n".join(json.dumps(v, ensure_ascii=False) for v in final) + "\n]\n")
     print(f"안전 브리핑용 예방·대처 정보: {save_tips(cutoff_ts)}건 (tips.json)")
+    print(f"본문 확인으로 걸러 둔 기사 목록: {save_blocked(cutoff_ts)}건 (blocked.json)")
 
     by_day = {}
     by_src = {}
@@ -3337,8 +3545,30 @@ def selftest():
         ("납치됐던 어머니와 아들이 거의 40년 만에 재회해 눈물을 흘렸다", False),
         ("출국 앞둔 李 \"조작기소 통한 사법살인 시도\"…李 대신 총리가 '특검법' 의결할 듯", False),
         ("주말 저녁 잠실광역환승센터 화재 발생…29분 만에 진화", True),
+        # 2026-11-15 2차 지적 사례
+        ("[고양이 눈]출동 준비 완료…깨끗이 빨아서 출동한 대걸레들", False),
+        ("소방 출동 준비 완료…화재 현장 대응", None),
+        ("유연석, '라이어' 연쇄 성폭행범 연기 잘해서 더 소름…눈빛만으로 긴장감 형성", False),
+        ("방화범 입건…주택가 연기 치솟아 주민 대피", None),
+    ]
+    # 본문으로 해외 기사 가리기 (제목에는 나라 이름이 없음)
+    body_samples = [
+        ("한 학생이 친구들과 함께 개울에서 수영을 하던 중 익사하여 사망했습니다.",
+         "베트남 다락성 쑤언푸옥면에서 한 학생이 친구들과 개울에서 수영을 하던 중 익사했다. 현지 경찰은 사고 경위를 조사하고 있다.", False),
+        ("인기 데이트 프로그램에 출연했던 31세 여배우가 체포됐다",
+         "일본 경시청은 도쿄에서 인기 연애 프로그램에 출연했던 31세 여배우를 마약 소지 혐의로 체포했다고 현지 매체가 보도했다.", False),
+        ("대전 중구 편의점서 흉기 난동…20대 검거", "대전 서부경찰서는 중구 한 편의점에서 흉기를 휘두른 20대를 검거했다.", True),
     ]
     bad = 0
+    for title, body, want in body_samples:
+        try:
+            r = classify(title, body)
+            if bool(r) != want:
+                print(f"[selftest 주의] 본문 판별 결과가 예상과 다름: {title} → {r}")
+        except Exception:
+            bad += 1
+            print(f"[selftest 실패] {title}")
+            traceback.print_exc()
     for title, want in samples:
         try:
             r = classify(title, title)
