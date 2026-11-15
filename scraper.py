@@ -195,9 +195,10 @@ TOPIC_QUERIES = [
     "폭파 협박 OR 살인 예고 OR 공중협박 OR 폭발물 신고 OR 기내 난동",
     "난폭운전 OR 보복운전 OR 무면허 운전 OR 약물 운전 적발",
     "중대재해처벌법 OR 동물학대 OR 폐기물 무단투기 OR 병역기피 OR 불법체류 적발",
-    # 해외 사고·재난
-    "해외 지진 OR 해외 홍수 OR 해외 산불 OR 해외 화재 사망 OR 해외 폭발 사망",
-    "미국 총격 OR 여객기 추락 OR 열차 탈선 사망 OR 한국인 관광객 사고 OR 교민 피해",
+    # 해외: 대한민국과 연결된 사건만 (한국인·교민 피해, 국적기 사고, 국내로 이어지는 범죄)
+    "한국인 사망 OR 한국인 부상 OR 한국인 실종 OR 한국인 납치 OR 한국인 감금",
+    "한국인 관광객 사고 OR 교민 피해 OR 재외국민 피해 OR 영사 조력",
+    "국내 송환 OR 국내 밀반입 OR 국적기 비상착륙 OR 국적기 회항",
 ]
 
 # 구글 뉴스 지역별 검색: (검색 지역명, 해당 시·도 정식명칭)
@@ -216,7 +217,8 @@ REGION_QUERIES = [
 REGION_QUERY_TEMPLATE = "{} 사건 OR 사고 OR 경찰 OR 화재 OR 폭행 OR 사망"
 
 
-# 해외 주요 언론 (영문). 제목을 한글로 번역해서 '해외'에 올립니다. 로그에 [실패]로 뜨는 주소는 지우거나 바꿔 주세요.
+# 해외 주요 언론 (영문). 제목에 한국(Korea·Korean·Seoul·국적 항공사 등)이 나온 기사만 골라 한글로 번역해서 '해외'에 올립니다.
+# (전쟁 지역 전문 언론은 한국과 관련된 기사가 거의 없어서 뺐습니다.) 로그에 [실패]로 뜨는 주소는 지우거나 바꿔 주세요.
 FOREIGN_FEEDS = [
     ("BBC", "https://feeds.bbci.co.uk/news/world/rss.xml"),
     ("뉴욕타임스", "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
@@ -226,26 +228,13 @@ FOREIGN_FEEDS = [
     ("도이체벨레", "https://rss.dw.com/rdf/rss-en-world"),
     ("NHK월드", "https://www3.nhk.or.jp/nhkworld/en/news/feeds/"),
     ("재팬타임스", "https://www.japantimes.co.jp/feed/"),
-    ("키이우 인디펜던트", "https://kyivindependent.com/news-archive/rss/"),
-    ("타스통신", "https://tass.com/rss/v2.xml"),
-    ("모스크바타임스", "https://www.themoscowtimes.com/rss/news"),
-    ("타임스오브이스라엘", "https://www.timesofisrael.com/feed/"),
-    ("테헤란타임스", "https://www.tehrantimes.com/rss"),
-    ("미 국방부", "https://www.defense.gov/DesktopModules/ArticleCS/RSS.ashx?ContentType=1&Site=945&max=10"),
 ]
-# 구글 뉴스 영문판 검색 (로이터·AP 등 여러 해외 언론 기사가 모입니다)
+# 구글 뉴스 영문판 검색: 한국인·한국 기업·국적기가 얽힌 해외 사건만 (그 밖의 해외 소식은 이 사이트 취지와 맞지 않아 모으지 않음)
 FOREIGN_QUERIES = [
-    "airstrike OR \"missile strike\" OR \"drone attack\" OR shelling",
-    "warship OR \"shot down\" OR sunk OR \"navy\" attack",
-    "Ukraine Russia strike OR attack OR killed",
-    "Israel OR Gaza OR Iran OR Lebanon strike OR attack OR killed",
-    "\"Red Sea\" OR Hormuz OR \"Taiwan Strait\" OR \"South China Sea\" attack OR seized OR military",
+    "\"South Korean\" killed OR injured OR missing OR kidnapped OR detained OR arrested",
+    "\"Korean national\" OR \"Korean nationals\" OR \"Korean tourists\" OR \"Korean tourist\" killed OR injured OR attack OR accident",
+    "\"Korean Air\" OR Asiana OR \"Jeju Air\" accident OR emergency OR crash",
     "\"North Korea\" missile OR launch",
-    "Hormuz tanker attack OR seized OR drone",
-    "\"prisoner swap\" OR surrender OR landmine OR artillery OR \"car bomb\"",
-    "intercepted missile OR \"fighter jets scrambled\" OR \"spy arrested\"",
-    "ceasefire OR truce OR \"peace talks\" Ukraine OR Gaza OR Israel OR Russia OR Sudan",
-    "reconstruction OR \"peace deal\" OR \"prisoner exchange\" OR \"hostage deal\" Ukraine OR Gaza OR Lebanon",
 ]
 MAX_TRANSLATE_PER_RUN = 60     # 한 번 실행에 번역할 최대 건수 (번역 서버 부담을 줄이기 위해)
 
@@ -385,8 +374,8 @@ GROUPS = {
     "감염병·보건": ["감염병", "가축전염병", "식중독·위생"],
     "실종·변사": ["실종·수색", "변사·시신발견"],
     "생활안전·소동": ["혼잡·인파", "경찰·소방 출동", "소동·해프닝", "생활 사고", "시민제보"],
-    # ── 해외 (나라 밖에서 일어난 일은 모두 여기로) ──
-    "해외": ["해외 전쟁·분쟁", "해외 휴전·협상·재건", "해외 테러·피격", "해외 사고·재난", "해외 자연재해", "해외 범죄", "해외 기타"],
+    # ── 해외 (나라 밖에서 일어난 일 중 대한민국과 연결된 것만: korea_linked) ──
+    "해외": ["해외 전쟁·분쟁", "해외 테러·피격", "해외 사고·재난", "해외 자연재해", "해외 범죄", "해외 기타"],
 }
 SUB_TO_GROUP = {sub: g for g, subs in GROUPS.items() for sub in subs}
 OVERSEAS_GROUP = "해외"
@@ -608,6 +597,14 @@ GUIDE_RE = re.compile(r"(?:신청|신고|접수|상담|문의|확인|이용|활�
                       r"(?:온라인|비대면|모바일|앱|전화)\s*(?:으로|로)?\s*(?:신청|접수|신고|상담)|"
                       r"피해\s*(?:구제|지원|상담|신고\s*(?:센터|창구|방법|요령)|예방\s*(?:법|요령|수칙))|구제\s*(?:신청|절차|방법)|채무\s*조정|신복위|신용\s*회복\s*위원회|"
                       r"대처\s*(?:법|방법|요령)|예방\s*(?:법|요령|수칙)|행동\s*요령|이렇게\s*(?:하세요|대처|대응|신청|신고)|꿀팁|알아두면|체크\s*리스트")
+# 앞으로 바뀌는 법·제도 (개정·시행·처벌 강화·의무화…): 지금 일어난 사건이 아니므로 올리지 않음
+LAW_CHANGE_RE = re.compile(r"시행(?![사착])|개정|입법|법안|국회\s*(?:통과|본회의)|본회의\s*통과|국무회의|의결|처벌\s*(?:강화|기준|대상|수위|확대)|형량\s*(?:강화|상향)|"
+                           r"과태료\s*(?:상향|인상|부과\s*기준)|벌칙\s*강화|내년부터|부터\s*(?:시행|적용|달라|바뀐|바뀌|금지|의무)|"
+                           r"달라지는|달라진다|바뀌는|바뀐다|새로\s*생기는|의무화|규제\s*(?:강화|신설)|가이드라인|지침\s*(?:마련|발표|개정)|법령|시행령|시행규칙|제도\s*(?:개선|도입|시행)")
+# 범죄 수법 안내·주의 당부·소비자경보 같은 '안내문' 기사 (특정 사건이 일어난 게 아니라 '이런 범죄를 조심하라'는 기사)
+CRIME_NOTICE_RE = re.compile(r"소비자\s*경보|사칭\s*(?:주의|기승|문자\s*주의)|(?:사기|피싱|스미싱|보이스\s*피싱|문자|전화|투자\s*리딩|로맨스\s*스캠|노쇼)\s*기승|주의(?:하세요|해야|\s*당부|\s*요망|\s*요구|\s*환기|\s*필요)|조심(?:하세요|해야)|"
+                             r"수법\s*(?:주의|공개|안내|소개|총정리)|피해\s*예방|예방\s*(?:법|요령|수칙|안내|교육|홍보)|유형\s*(?:공개|분석|안내|정리)|신종\s*수법|"
+                             r"이런\s*(?:문자|전화|수법|메시지)|속지\s*마세요|당하지\s*않으려면|경계령|주의령|피해\s*사례\s*(?:공개|안내|소개)")
 # 실제 범죄 사건임을 보여주는 낱말 (기술·상품 기사 필터의 예외)
 CRIME_HINT_RE = re.compile(r"일당|피해자|피해액|총책|조직원|\d+\s*억|범행|덜미|압수|단속|불법|짝퉁|가짜|위조|사기|횡령|배임|탈세|절도|훔|도난|화재|불이|리콜|이물질|식중독|검출|경찰|소방|119|출동|인파|부상|사망")
 # 기관 행사·인사·표창 (경찰서·소방서 이름만 들어간 기사)
@@ -667,6 +664,9 @@ def is_not_incident(title, content):
     # 가축전염병 발생·사이버 해킹 피해는 '방역 강화·보안 대책' 같은 말이 함께 있어도 실제 사건이므로 그대로 올림
     if (LIVESTOCK_RE.search(title) and OUTBREAK_RE.search(title)) or (CYBER_RE.search(title) and CYBER_EVENT_RE.search(title)):
         return False
+    # 법·제도 변경, 범죄 수법 안내·주의 당부 (제목에 구속·검거·사망 같은 실제 사건 낱말이 없을 때만)
+    if not STRICT_FACT_RE.search(title) and (LAW_CHANGE_RE.search(title) or CRIME_NOTICE_RE.search(title)):
+        return True
     warn = WARNING_RE.search(title)
     hard = HARD_FACT_RE.search(title)
     if not STRICT_FACT_RE.search(title) and (STATS_RE.search(title) or ORG_EVENT_RE.search(title)):
@@ -736,10 +736,10 @@ LEGAL_FACT_RE = re.compile(r"구속|입건|검거|체포|송치|기소|징역|�
 #   incident = 발생 (사고·화재·실종처럼 지금 일어난 일)
 #   police   = 수사 (구속·입건·검거·송치 등. 보통 며칠 안에 일어난 사건이라 실시간 성격이 있음)
 #   court    = 재판·판결 (기소·공판·구형·선고·징역·항소 등. 보통 몇 달~몇 년 전 사건의 후속 소식)
-#   화면(index.html)에서는 court 를 7일 다발 지역 집계와 실시간 알림에서 빼고, 목록에는 ⚖️ 표시로 보여 줍니다.
+#   court 기사는 실시간 사건사고 알리미 취지에 맞지 않아 classify() 에서 아예 빼고(is_court_news), 화면(index.html)에서도 숨깁니다.
 #   index.html 의 stageOf() 와 같은 기준이어야 합니다. (news.json 에 "stage" 로 저장)
-STAGE_COURT_STRONG_RE = re.compile(r"선고|징역|실형|집행\s*유예|벌금형|무죄|유죄|항소|상고|판결|재판(?!매)|공판|기소(?!\s*의견)|법정\s*구속|감형|형량|양형|원심|파기|국민참여재판|[123]심(?![가-힣])")
-STAGE_COURT_WEAK_RE = re.compile(r"법원|판사|재판부|대법원|검찰|지검|고검|대검")
+STAGE_COURT_STRONG_RE = re.compile(r"선고|징역|실형|집행\s*유예|벌금형|무죄|유죄|항소|상고|판결|재판(?!매)|공판|(?:(?<![가-힣])|구속\s*|불구속\s*)기소(?!\s*의견)|법정\s*구속|감형|형량|양형|원심|파기|국민참여재판|[123]심(?![가-힣])")
+STAGE_COURT_WEAK_RE = re.compile(r"법원|판사|재판부|대법원|검찰|지검|고검|대검|공소청")
 STAGE_NOW_RE = re.compile(r"화재|불이?\s*나|숨져|숨진|숨졌|추락|충돌|추돌|난동|폭발|붕괴|실종|구조|대피|사고|체포|검거|붙잡|덜미|입건|구속|영장|압수\s*수색|발생|신고|출동")
 STAGE_POLICE_RE = re.compile(r"구속|입건|검거|체포|송치|영장|압수\s*수색|수사|조사|붙잡|덜미|지명\s*수배|추적")
 
@@ -748,11 +748,20 @@ def stage_of(title):
     t = title or ""
     if STAGE_COURT_STRONG_RE.search(t) or (re.search(r"구형", t) and re.search(r"징역|벌금|사형|금고|검찰", t)):
         return "court"
-    if STAGE_COURT_WEAK_RE.search(t) and not STAGE_NOW_RE.search(t):
-        return "court"             # '법원·검찰' 이야기만 있고 현장 사건 낱말이 없으면 사법 소식
+    if STAGE_COURT_WEAK_RE.search(t) and not STAGE_NOW_RE.search(t) and not STAGE_POLICE_RE.search(t):
+        return "court"             # '법원·검찰' 이야기만 있고 현장·수사 낱말이 없으면 사법 소식 ('공소청 송치'는 수사 단계)
     if STAGE_POLICE_RE.search(t):
         return "police"
     return "incident"
+
+
+def is_court_news(title):
+    """재판 과정·판결 결과 기사인지 (이런 기사는 아예 올리지 않음).
+    '검찰 송치'처럼 경찰 수사 단계 낱말이 있는 '법원·검찰' 기사는 수사 소식으로 보고 남깁니다."""
+    t = title or ""
+    if STAGE_COURT_STRONG_RE.search(t) or (re.search(r"구형", t) and re.search(r"징역|벌금|사형|금고|검찰", t)):
+        return True
+    return bool(STAGE_COURT_WEAK_RE.search(t) and not STAGE_NOW_RE.search(t) and not STAGE_POLICE_RE.search(t))
 POLITICS_RE = re.compile(r"대통령|국회|의원|장관|정당|여당|야당|민주당|국민의힘|특검|청문회|탄핵|선거|국정감사|총리|비대위|시장|군수|구청장|도지사|공천|당원")
 METAPHOR_RE = re.compile(r"논란|갈등|파문|후폭풍|반발|공방|파장|감찰|집단행동|비판|압박|이해\s*충돌|국감|의혹")
 # 비유로도 자주 쓰이는 낱말(폭발·붕괴·충돌·한파...)이 들어 있는 분류
@@ -779,6 +788,22 @@ NK_EVENT_RE = re.compile(r"도발|발사|침투|침범|월북|귀순|간첩|무�
 # 해외 기사임을 보여주는 표현 (나라 이름이 다른 뜻으로도 쓰이는 경우의 확인용)
 FOREIGN_CTX_RE = re.compile(r"현지\s*(?:시간|시각|경찰|당국|언론|매체|소방|주민)|\(현지|외신|AFP|AP\s*통신|로이터|신화\s*통신|교도\s*통신|타스|블룸버그|CNN|BBC|NHK|특파원|해외|국제")
 DOMESTIC_CTX_RE = re.compile(r"국내|우리나라|한국\s*(?:정부|경찰|내)|입국|귀국|방한|내한|인천공항|김포공항|국내\s*유입|거점|송환|원정|[가-힣]{2,6}발\s*(?:항공기|여객기|비행기)")
+# ── 해외 사건은 '대한민국과 연결된 것'만 올림 ──
+#   이 사이트는 내 주변·국내 사건사고 실시간 알리미라서, 나라 밖 소식은 기본으로 모두 뺍니다.
+#   단, 한국인·교민·한국 기업·한국 선박이 피해를 입었거나, 한국 국적기 사고, 국내로 이어지는 범죄(송환·국내 유입) 등은 올립니다.
+KOREA_LINK_RE = re.compile(r"한국인|한국\s*국적|한국\s*(?:여성|남성|청년|학생|유학생|관광객|여행객|근로자|노동자|선원|선박|어선|기업|업체|공장|법인|직원|주재원|선교사|교민|가족|아동|아이)|"
+                           r"우리\s*(?:국민|교민|선박|선원|어선|기업)|교민|재외\s*국민|한인|한국계|(?<![가-힣])韓|한국발|한국행|국적기|"
+                           r"외교부|재외\s*공관|(?:주|駐)\s*?[가-힣]{1,8}\s*(?:한국\s*)?(?:대사관|총영사관|영사관|대사)|영사\s*(?:조력|협력|면담)|"
+                           r"대한항공|아시아나|제주항공|티웨이|진에어|에어부산|에어서울|이스타항공|에어프레미아|"
+                           r"국내\s*(?:유입|피해|송환|입국|조직|총책|일당)|(?:국내|한국)으?로\s*(?:송환|들여|밀반입|유입|압송)|(?:국내|한국)\s*(?:송환|압송)|밀반입|K-?팝\s*(?:가수|공연)\s*(?:사고|사망|부상)")
+KOREA_EVENT_RE = re.compile(r"사망|숨져|숨진|숨졌|사상|부상|다쳐|다쳤|중상|피격|피습|납치|감금|억류|나포|실종|사고|추락|화재|폭발|테러|총격|공격|피해|체포|구금|검거|구속|송환|압송|밀반입|"
+                            r"비상\s*착륙|회항|고립|대피|침몰|전복|좌초|확진|감염|살해|폭행|강도|사기|도난|절도|협박")
+EN_KOREA_RE = re.compile(r"(?<![A-Za-z])(?:South\s+)?Korean?s?(?![A-Za-z])|Seoul|Busan|Incheon|Korean\s+Air|Asiana|Jeju\s+Air|Samsung|Hyundai", re.I)
+
+
+def korea_linked(title_ko, title_en=""):
+    """해외 기사가 대한민국과 연결돼 있는지 (한국인 피해·한국 기업·국적기·국내 유입 등)"""
+    return bool(KOREA_LINK_RE.search(title_ko or "") or (title_en and EN_KOREA_RE.search(title_en)))
 
 # (표시 이름, 위도, 경도, [기사에서 찾을 낱말들]) - 위쪽(도시 등 구체적인 곳)부터 먼저 찾습니다.
 # 이름 앞에 '?' 가 붙은 낱말은 다른 뜻으로도 쓰여서, 해외 기사임이 확인될 때만 인정합니다. (예: ?인도, ?수단, ?파리)
@@ -941,9 +966,9 @@ def classify_en(title):
     """해외 언론 영문 제목 → (소분류, 대분류). 실제 사건이 아니면 None."""
     if re.search(r"football|soccer|\bmatch\b|league|\bgoal\b|tournament|world cup|olympic|\bscore|film|movie|review|book|novel|game\b", title, re.I):
         return None                      # 스포츠·문화 기사
-    # 휴전·평화 협상·재건: 분쟁 지역 기사이면 '해외 휴전·협상·재건'으로 올림 (경고·전망 기사여도 협상 국면은 중요한 소식)
-    if EN_PEACE_RE.search(title) and EN_PLACE_RE.search(title) and not re.search(r"trade|tariff|wage|union|contract|budget|merger|deal with (?:apple|google|microsoft)", title, re.I):
-        return "해외 휴전·협상·재건", OVERSEAS_GROUP
+    # 휴전·평화 협상·재건은 사건사고가 아니므로 올리지 않음 (실시간 사건사고 알리미 취지)
+    if EN_PEACE_RE.search(title) and not re.search(r"killed|dead|injured|wounded|casualt", title, re.I):
+        return None
     if not (EN_EVENT_RE.search(title) and EN_PLACE_RE.search(title)):
         return None
     if EN_TALK_RE.search(title) and not EN_HARD_RE.search(title):
@@ -1087,6 +1112,9 @@ def classify(title, content):
     full = PRE_CLEAN.sub(" ", title + " " + (content or ""))
     if NON_NEWS_RE.search(title) or AD_RE.search(full):
         return None
+    # 재판 과정·판결 결과(기소·공판·구형·선고·항소…)는 '지금 일어난 사건'이 아니므로 올리지 않음 (실시간 사건사고 알리미 취지)
+    if is_court_news(title):
+        return None
 
     # ── 1) 북한 관련 국가안보 ──
     if NK_RE.search(t) and NK_EVENT_RE.search(t) and not re.search(r"북한과?\s*(?:관련\s*없|무관)|대공\s*혐의점\s*없", t):
@@ -1105,13 +1133,19 @@ def classify(title, content):
     if foreign and (DOMESTIC_CTX_RE.search(t) or _has_domestic_place(t)):
         foreign = None                   # 제목에 국내 지명이 함께 있으면 국내 사건 (예: '중국인 관광객 제주서…')
     if foreign:
+        # 나라 밖 사건은 대한민국과 연결된 것만 (한국인 피해·한국 기업·국적기·국내 유입 등). 나머지 해외 소식은 올리지 않음
+        if not korea_linked(t):
+            return None
+        # 한국과 연결돼 있어도 '발언·전망'이 아니라 실제로 피해·사건이 난 기사만 (예: '韓 업체들 中에 집중해야' 같은 말은 제외)
+        if not KOREA_EVENT_RE.search(t):
+            return None
         if SPORTS_RE.search(t) or REVIEW_RE.search(t) or ENT_STRONG_RE.search(t):
             return None
         if (HISTORY_RE.search(t) or SCIENCE_RE.search(t) or TECH_RE.search(t)) and not HARD_FACT_RE.search(t):
             return None
-        # 휴전·평화 협상·재건 국면: 분쟁 지역 소식이면 올림
-        if KO_PEACE_RE.search(t) and (FOREIGN_RE.search(t) or WAR_RE.search(t)) and not re.search(r"무역|관세|임금|노조|노사|예산|인수|합병", t):
-            return overseas_sub(t), OVERSEAS_GROUP
+        # 휴전·평화 협상·재건은 사건사고가 아니므로 올리지 않음
+        if KO_PEACE_RE.search(t) and not KO_CASUALTY_RE.search(t):
+            return None
         # 전쟁·분쟁: 실제 벌어진 일만 (경고·전망·분석은 제외)
         if WAR_RE.search(t) or (FOREIGN_RE.search(t) and CONFLICT_RE.search(t) and not re.search(r"교통사고|추돌|화재|지진|홍수|산불|태풍|폭우|붕괴", t)):
             if KO_TALK_RE.search(t) and not KO_CASUALTY_RE.search(t):
@@ -2316,8 +2350,8 @@ def reprocess_existing(old):
             orig = it.get("orig")
             if orig:                                   # 해외 언론 번역 기사
                 cls_en = classify_en(orig)
-                if not cls_en or foreign_talk(title):
-                    continue
+                if not cls_en or foreign_talk(title) or not korea_linked(title, orig) or is_court_news(title):
+                    continue                           # 대한민국과 연결되지 않은 해외 소식·재판 소식은 지움
                 out[norm_key(title)] = make_item(title, title, cls_en[0], cls_en[1], source, it.get("link", ""), ts, None, orig)
                 out[norm_key(title)]["embed"] = it.get("embed")
                 continue
@@ -2417,6 +2451,8 @@ def main():
                     source = pub or source
                 if not title_en or norm_key(title_en) in known_orig:
                     continue
+                if not EN_KOREA_RE.search(title_en):
+                    continue                       # 한국과 관련 없는 해외 기사는 번역도 하지 않음
                 cls_en = classify_en(title_en)
                 if not cls_en:
                     continue
@@ -2429,8 +2465,8 @@ def main():
                 if not title_ko:
                     continue                       # 번역 실패 → 다음 실행 때 다시 시도
                 known_orig.add(norm_key(title_en))
-                if foreign_talk(title_ko):
-                    continue                       # 주장·경고·전망 기사는 올리지 않음
+                if foreign_talk(title_ko) or is_court_news(title_ko):
+                    continue                       # 주장·경고·전망·재판 기사는 올리지 않음
                 it = make_item(title_ko, title_ko, cls_en[0], cls_en[1], source, entry.get("link", "") or "", ts, None, title_en)
                 key = norm_key(title_ko)
                 if key not in items:
