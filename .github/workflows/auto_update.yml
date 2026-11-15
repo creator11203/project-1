@@ -20,7 +20,8 @@ jobs:
 
     env:
       LOOP_MINUTES: 20        # 한 번 실행될 때 계속 수집하는 시간 (분)
-      CYCLE_SECONDS: 360      # 수집 간격 (초). 6분 = 한 시간에 최대 10번 올림 → GitHub Pages 배포 한도(시간당 약 10회) 안쪽
+      CYCLE_SECONDS: 420      # 수집 간격 (초). 7분 = 한 시간에 최대 약 8번 올림 → GitHub Pages 배포 한도(시간당 약 10회)에 여유를 둠
+                              #   (6분이면 정확히 10회라, 사람이 index.html 을 한 번만 올려도 한도를 넘어 배포가 밀리고 사이트가 한동안 안 바뀔 수 있음)
       GOOGLE_EVERY_SEC: 900   # 구글 뉴스 검색은 15분마다 한 번 (너무 자주 하면 구글이 막음). 언론사 직접 RSS 는 매번
 
     steps:
@@ -44,11 +45,15 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           END=$(( $(date +%s) + LOOP_MINUTES * 60 ))
           ROUND=0
+          FAILS=0
           while true; do
             ROUND=$((ROUND + 1))
             START=$(date +%s)
             echo "::group::수집 ${ROUND}회차 ($(TZ=Asia/Seoul date '+%H:%M:%S'))"
-            python scraper.py || echo "[경고] scraper.py 실행 중 오류 — 다음 회차에 다시 시도합니다."
+            if ! python scraper.py; then
+              FAILS=$((FAILS + 1))
+              echo "::error::scraper.py 실행 실패 (${ROUND}회차) — 위 오류 메시지를 확인하세요. 다음 회차에 다시 시도합니다."
+            fi
             git add news.json
             # tips.json: 안전 브리핑에 보여 줄 예방·대처 정보 기사 (사건 목록과 따로 모음)
             if [ -f tips.json ]; then git add tips.json; fi
@@ -68,3 +73,8 @@ jobs:
             if [ $NEXT -ge $END ]; then break; fi
             if [ $NEXT -gt $NOW ]; then sleep $(( NEXT - NOW )); fi
           done
+          # 모든 회차가 실패했으면(예: scraper.py 문법 오류) 실행 결과를 빨간색 '실패'로 표시 → Actions 탭에서 바로 알 수 있게
+          if [ $FAILS -ge $ROUND ]; then
+            echo "::error::이번 실행의 수집 ${ROUND}회가 모두 실패했습니다. 기사가 업데이트되지 않고 있습니다."
+            exit 1
+          fi
