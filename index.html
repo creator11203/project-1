@@ -89,25 +89,40 @@
         /* 커뮤니티 버튼 */
         .comm-btn { background: linear-gradient(135deg, #059669 0%, #0d9488 55%, #0284c7 100%); }
         .comm-btn:hover { filter: brightness(1.1); }
-        /* 맨 위 주요 버튼 3개(안전 브리핑 · 우리동네 커뮤니티 · 실시간 제보하기)를 하나의 띠로 보고, 옅은 빛이 왼쪽 끝→오른쪽 끝으로 지나감.
-           버튼마다 가상 요소(::after)에 '버튼 묶음 전체 너비(--sweep-w)'짜리 빛 그림을 깔고, 버튼이 묶음 안에서 얼마나 떨어져 있는지(--off)만큼 밀어서
-           세 버튼의 빛이 한 줄로 이어짐. 진행 정도(--sweep-t, 0→1)는 묶음(.hero-sweep)에서 한 번만 애니메이션해서 세 버튼이 항상 같은 박자로 움직임.
-           빛은 버튼 모양(둥근 모서리) 안에만 그려지고 밖으로 튀어나오지 않음. */
-        @property --sweep-t { syntax: '<number>'; inherits: true; initial-value: 0; }
-        .hero-sweep { --sweep-w: 420px; animation: hero-sweep 5.2s cubic-bezier(.4, 0, .6, 1) infinite; }
-        @keyframes hero-sweep { 0% { --sweep-t: 0; } 42% { --sweep-t: 1; } 100% { --sweep-t: 1; } }
+        /* 맨 위 주요 버튼 3개(안전 브리핑 · 우리동네 커뮤니티 · 실시간 제보하기)의 빛: 버튼마다 '자기 안에서만' 부드러운 유리 광택이 지나감.
+           버튼 사이 여백(흰 배경)에는 빛이 전혀 그려지지 않고, 왼쪽 버튼 → 가운데 → 오른쪽 순서로 차례차례(--i 번째 버튼만큼 늦게) 반짝임.
+           빛 모양: 딱딱한 대각선 줄 대신, 세로로 길쭉한 타원형 광택(넓고 옅은 번짐 + 가운데 가늘고 밝은 심지)이 살짝 휘어 보이며 미끄러지듯 지나감.
+           가상 요소(::after)가 버튼 크기 그대로(inset 0, 둥근 모서리 그대로)라서 빛은 버튼 모양 밖으로 절대 나가지 않음.
+           (--cx: 빛 가운데의 위치. 0 = 버튼 왼쪽 끝, 1 = 오른쪽 끝. 그림 크기 s 일 때 위치 % = (cx - s/2) / (1 - s)) */
+        @property --cx { syntax: '<number>'; inherits: false; initial-value: -0.5; }
         .sweep-btn { position: relative; isolation: isolate; }
         .sweep-btn::after {
             content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
             background-image:
-                linear-gradient(105deg, rgba(255,255,255,0) 40%, rgba(255,255,255,.10) 45.5%, rgba(255,255,255,.55) 50%, rgba(255,255,255,.10) 54.5%, rgba(255,255,255,0) 60%),
-                linear-gradient(to bottom, rgba(255,255,255,.16), rgba(255,255,255,0) 55%);
-            background-size: var(--sweep-w) 100%, 100% 100%;
+                radial-gradient(closest-side, rgba(255,255,255,.95), rgba(255,255,255,.35) 55%, rgba(255,255,255,0)),
+                radial-gradient(closest-side, rgba(255,255,255,.42), rgba(255,255,255,.16) 45%, rgba(255,255,255,.04) 75%, rgba(255,255,255,0)),
+                linear-gradient(to bottom, rgba(255,255,255,.22), rgba(255,255,255,.04) 48%, rgba(255,255,255,0) 52%);
+            background-size: 9% 150%, 60% 230%, 100% 100%;
             background-repeat: no-repeat;
-            /* 빛(그림 가운데 40~60%)이 묶음 왼쪽 바깥에서 시작해 오른쪽 바깥으로 빠져나가도록 -0.6W → +0.6W */
-            background-position-x: calc(var(--sweep-w) * (var(--sweep-t) * 1.2 - 0.6) - var(--off, 0px)), 0;
+            background-position:
+                calc((var(--cx) - .045) / .91 * 100%) 50%,
+                calc((var(--cx) - .3) / .4 * 100%) 50%,
+                0 0;
+            mix-blend-mode: soft-light;
+            animation: btn-glint 6.4s cubic-bezier(.55, .05, .25, 1) infinite;
+            animation-delay: calc(var(--i, 0) * .38s + 1s);
         }
-        @media (prefers-reduced-motion: reduce) { .hero-sweep { animation: none; } }
+        /* soft-light 는 흰 빛이 버튼 색을 살리며 밝아지게 함. 그 위에 아주 옅은 보통 광택을 한 겹 더 (::before) */
+        .sweep-btn::before {
+            content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+            background-image: radial-gradient(closest-side, rgba(255,255,255,.72), rgba(255,255,255,.2) 50%, rgba(255,255,255,0));
+            background-size: 22% 190%; background-repeat: no-repeat;
+            background-position: calc((var(--cx) - .11) / .78 * 100%) 50%;
+            animation: btn-glint 6.4s cubic-bezier(.55, .05, .25, 1) infinite;
+            animation-delay: calc(var(--i, 0) * .38s + 1s);
+        }
+        @keyframes btn-glint { 0% { --cx: -0.5; } 26% { --cx: 1.5; } 100% { --cx: 1.5; } }
+        @media (prefers-reduced-motion: reduce) { .sweep-btn::after, .sweep-btn::before { animation: none; } }
         /* 맨 위 버튼 줄은 글씨 크기 조절과 상관없이 고정 → 크기를 px 대신 rem 으로 (제목 줄 고정 배율과 함께 항상 같은 크기) */
         .comm-faces span { width: 1.375rem; height: 1.375rem; border-radius: 50%; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .8125rem; line-height: 1; border: .125rem solid #059669; margin-left: -.4375rem; }
         .comm-faces span:first-child { margin-left: 0; }
@@ -1632,7 +1647,8 @@
                 if (showHeaders && k !== lastKey) {
                     lastKey = k;
                     const h = document.createElement('div');
-                    h.className = 'sticky top-0 z-10 -mx-3 px-3 py-1 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-y border-slate-200 dark:border-slate-700 flex justify-between';
+                    // 목록 안쪽 여백(p-3)만큼 위로 끌어올려 붙임(-top-3): 위 줄(빨간 안내줄·날짜 줄)에 틈 없이 딱 붙어서, 스크롤할 때 그 틈으로 기사가 비치지 않음
+                    h.className = (container.children.length ? '' : '-mt-3 ') + 'sticky -top-3 z-10 -mx-3 px-3 py-1 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 bg-slate-100/95 dark:bg-slate-800/95 backdrop-blur border-y border-slate-200 dark:border-slate-700 flex justify-between';
                     h.innerHTML = `<span>${dateLabel(ts)}</span><span class="font-mono text-slate-400">${perDay[k]}건</span>`;
                     container.appendChild(h);
                 }
@@ -2154,17 +2170,12 @@
             if (typeof updateCommBadge === 'function') updateCommBadge();
             syncSweep();
         }
-        // 맨 위 주요 버튼 3개를 지나가는 빛: 버튼 묶음 전체 너비와 각 버튼의 시작 위치를 CSS 변수로 알려 줌 (버튼이 바뀌거나 창 크기가 바뀔 때마다)
+        // 맨 위 주요 버튼의 빛: 왼쪽 버튼부터 차례로 반짝이도록 몇 번째 버튼인지(--i)를 알려 줌 (버튼이 바뀔 때마다)
         function syncSweep() {
             const wrap = document.getElementById('heroBtns');
             if (!wrap) return;
-            const wr = wrap.getBoundingClientRect();
-            if (!wr.width) return;
-            wrap.style.setProperty('--sweep-w', Math.round(wr.width) + 'px');
-            wrap.querySelectorAll('.sweep-btn').forEach(b => b.style.setProperty('--off', Math.round(b.getBoundingClientRect().left - wr.left) + 'px'));
+            wrap.querySelectorAll('.sweep-btn').forEach((b, i) => b.style.setProperty('--i', i));
         }
-        window.addEventListener('resize', syncSweep);
-        if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => { const w = document.getElementById('heroBtns'); if (w) new ResizeObserver(syncSweep).observe(w); });
         // 창 너비 조절 막대 (끌면 바로 넓어지고 좁아짐, 값은 저장됨)
         function curFloatW() { if (floatW) return floatW; const b = document.getElementById('floatBox'); return b && b.offsetWidth ? Math.round(b.offsetWidth / window.innerWidth * 100) : 60; }
         function wideBtnHtml(dark) {
@@ -3438,7 +3449,7 @@
                 </button>` : ''}
                 <div class="flex-1 min-h-0 flex">
                     <div id="commMain" class="flex-1 min-w-0 flex flex-col"></div>
-                    ${(commTab === 'talk' || commTab === 'free') ? `<aside id="commMembers" class="w-40 shrink-0 border-l border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar hide-narrow bg-slate-50 dark:bg-slate-900/60"></aside>` : ''}
+                    <!-- 커뮤니티는 게시판: 어느 탭에서도 '이웃 ○명'·이웃 명단·내 프로필 같은 인원 표시를 두지 않음 -->
                 </div>`;
             renderCommTabBar();
             renderCommMembers();
