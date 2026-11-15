@@ -84,6 +84,11 @@
         .safety-pin { position: relative; border-radius: 10px; background: #fff; border: 3px solid #0f172a; display: flex; align-items: center; justify-content: center; font-size: 18px; line-height: 1; }
         .safety-pin > i { position: absolute; left: 50%; bottom: -9px; width: 8px; height: 8px; margin-left: -4px; transform: rotate(45deg); border-radius: 1px; }
         .safety-pin > span { position: relative; z-index: 1; }
+        /* 지도에 항상 그리는 경찰서(파랑)·소방서(빨강) 표시: 병원(H)과 헷갈리지 않게 동그란 색 테두리 + 그림 */
+        .station-pin { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+        .station-toggle { background: #fff; color: #0f172a; font-size: 11px; font-weight: 700; padding: 4px 8px; cursor: pointer; white-space: nowrap; border-radius: 6px; }
+        .station-toggle.off { color: #94a3b8; text-decoration: line-through; }
+        .dark .station-toggle { background: #1e293b; color: #e2e8f0; }
         .dark .leaflet-container { background: #0b1220; }
         .leaflet-popup-content { margin: 10px 12px; }
         /* 커뮤니티 버튼 */
@@ -1360,11 +1365,101 @@
             markersLayer = makeMarkersLayer().addTo(map);
             map.on('popupclose moveend zoomend dragend', () => setTimeout(flushPendingMarkers, 400));
             safetyLayer = L.layerGroup().addTo(map);
+            initStationLayer();
             const sel = document.getElementById('mapStyleSelect');
             if (sel) { sel.innerHTML = Object.keys(MAP_STYLES).map(k => `<option value="${k}">${MAP_STYLES[k].name}</option>`).join(''); sel.value = mapStyle; }
             renderMapLegend();
             updateMapMarkers();
         }
+        // ================= 경찰서·소방서 항상 표시 =================
+        // 기본 지도(OpenStreetMap)는 확대하면 병원(H)은 잘 보이지만 경찰서·소방서는 거의 안 보여서,
+        // 지도를 어느 곳으로 옮기든 확대(13단계 이상)하면 그 화면 안의 경찰서·지구대·파출소(🚓 파랑)와 소방서·119안전센터(🚒 빨강)를 따로 그려 줍니다.
+        // 공개 지도 데이터(Overpass)를 0.1도 칸 단위로 한 번만 받아 기억해 두고, 같은 곳을 다시 볼 때는 다시 묻지 않습니다.
+        const STATION_MIN_ZOOM = 13, STATION_CELL = 0.1;
+        const STATION_KINDS = {
+            police: { icon: '🚓', label: '경찰', color: '#1d4ed8', bg: '#dbeafe' },
+            fire: { icon: '🚒', label: '소방', color: '#dc2626', bg: '#fee2e2' }
+        };
+        let stationLayer = null, stationTimer = null, stationBusy = false, stationCtl = null;
+        let stationOn = (() => { try { return localStorage.getItem('station_on') !== '0'; } catch (e) { return true; } })();
+        const stationCells = new Set();          // 이미 받아 온 칸
+        const stationSeen = new Set();           // 이미 그린 시설 (중복 방지)
+        function stationIcon(kind) {
+            const k = STATION_KINDS[kind];
+            return L.divIcon({ className: '', html: `<div class="station-pin" style="border-color:${k.color};background:${k.bg};"><span>${k.icon}</span></div>`, iconSize: [26, 26], iconAnchor: [13, 13], popupAnchor: [0, -12] });
+        }
+        function initStationLayer() {
+            stationLayer = L.layerGroup();
+            const Ctl = L.Control.extend({
+                options: { position: 'topleft' },
+                onAdd() {
+                    const b = L.DomUtil.create('button', 'station-toggle leaflet-bar');
+                    b.type = 'button';
+                    L.DomEvent.disableClickPropagation(b);
+                    b.onclick = () => { stationOn = !stationOn; try { localStorage.setItem('station_on', stationOn ? '1' : '0'); } catch (e) {} syncStationLayer(); };
+                    this._b = b; return b;
+                }
+            });
+            stationCtl = new Ctl().addTo(map);
+            map.on('moveend zoomend', () => { clearTimeout(stationTimer); stationTimer = setTimeout(syncStationLayer, 500); });
+            syncStationLayer();
+        }
+        function syncStationLayer() {
+            if (!map || !stationLayer) return;
+            const zoomOk = map.getZoom() >= STATION_MIN_ZOOM;
+            const show = stationOn && zoomOk;
+            if (stationCtl && stationCtl._b) {
+                const b = stationCtl._b;
+                b.innerHTML = `🚓🚒 <span>${stationOn ? (zoomOk ? (stationBusy ? '찾는 중…' : '경찰·소방 표시 중') : '확대하면 경찰·소방 표시') : '경찰·소방 숨김'}</span>`;
+                b.title = stationOn ? '누르면 경찰서·소방서 표시를 끕니다' : '누르면 경찰서·소방서를 지도에 표시합니다 (확대했을 때)';
+                b.classList.toggle('off', !stationOn);
+            }
+            if (!show) { if (map.hasLayer(stationLayer)) map.removeLayer(stationLayer); return; }
+            if (!map.hasLayer(stationLayer)) stationLayer.addTo(map);
+            // 화면 안에서 아직 안 받아 온 칸만 모아서 한 번에 물음
+            const bd = map.getBounds(), c = STATION_CELL;
+            const need = [];
+            for (let la = Math.floor(bd.getSouth() / c); la <= Math.floor(bd.getNorth() / c); la++)
+                for (let ln = Math.floor(bd.getWest() / c); ln <= Math.floor(bd.getEast() / c); ln++)
+                    if (!stationCells.has(la + ',' + ln)) need.push([la, ln]);
+            if (!need.length || stationBusy || need.length > 16) return;
+            const s = Math.min(...need.map(x => x[0])) * c, n = (Math.max(...need.map(x => x[0])) + 1) * c;
+            const w = Math.min(...need.map(x => x[1])) * c, e = (Math.max(...need.map(x => x[1])) + 1) * c;
+            const bbox = [s, w, n, e].map(v => v.toFixed(3)).join(',');
+            const query = `[out:json][timeout:25];(nwr["amenity"="police"](${bbox});nwr["amenity"="fire_station"](${bbox}););out center tags 800;`;
+            const servers = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+            const ctls = [];
+            const ask = url => new Promise((ok, no) => {
+                const ctl = window.AbortController ? new AbortController() : null;
+                if (ctl) { ctls.push(ctl); setTimeout(() => ctl.abort(), 30000); }
+                fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl ? ctl.signal : undefined })
+                    .then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => (j && Array.isArray(j.elements)) ? ok(j) : no('bad')).catch(no);
+            });
+            stationBusy = true; syncStationLabel();
+            new Promise((ok, no) => { let fails = 0; servers.forEach(u => ask(u).then(ok, () => { if (++fails === servers.length) no('all failed'); })); })
+                .then(data => {
+                    need.forEach(x => stationCells.add(x[0] + ',' + x[1]));
+                    (data.elements || []).forEach(el => {
+                        const t = el.tags || {}, kind = t.amenity === 'police' ? 'police' : (t.amenity === 'fire_station' ? 'fire' : null);
+                        const lat = el.lat != null ? el.lat : (el.center && el.center.lat), lng = el.lon != null ? el.lon : (el.center && el.center.lon);
+                        if (!kind || lat == null || lng == null) return;
+                        const id = el.type + el.id;
+                        if (stationSeen.has(id)) return;
+                        stationSeen.add(id);
+                        const k = STATION_KINDS[kind];
+                        const name = t['name:ko'] || t.name || (kind === 'police' ? '경찰 시설' : '소방 시설');
+                        const phone = t.phone || t['contact:phone'] || '';
+                        L.marker([lat, lng], { icon: stationIcon(kind), zIndexOffset: 1500, title: name })
+                            .bindTooltip(esc(name), { direction: 'top', offset: [0, -12] })
+                            .bindPopup(`<div style="font-family:sans-serif;max-width:220px;"><span style="font-size:10px;background:${k.color};color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold;">${k.icon} ${kind === 'police' ? '경찰서·지구대·파출소' : '소방서·119안전센터'}</span><br><b style="font-size:12px;">${esc(name)}</b>${phone ? '<br><a style="font-size:11px;" href="tel:' + esc(phone.replace(/[^0-9+]/g, '')) + '">☎ ' + esc(phone) + '</a>' : ''}<br><span style="font-size:11px;color:#64748b;">긴급 신고는 ${kind === 'police' ? '112' : '119'}</span> · <a style="font-size:11px;" target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lng}">길찾기 ↗</a></div>`)
+                            .addTo(stationLayer);
+                    });
+                })
+                .catch(() => {})                       // 서버가 모두 바쁘면 다음에 지도를 움직일 때 다시 시도
+                .finally(() => { ctls.forEach(x => { try { x.abort(); } catch (e) {} }); stationBusy = false; syncStationLayer(); });
+        }
+        function syncStationLabel() { if (stationCtl && stationCtl._b) stationCtl._b.querySelector('span').textContent = '찾는 중…'; }
+
         // 지도 안내(범례): 지도에 실제로 그려지는 모양 그대로 보여 줌. 접어 둘 수 있고 상태는 기억됨
         let legendOpen = (() => { try { return localStorage.getItem('legend_open') !== '0'; } catch (e) { return true; } })();
         function toggleLegend() { legendOpen = !legendOpen; try { localStorage.setItem('legend_open', legendOpen ? '1' : '0'); } catch (e) {} renderMapLegend(); }
@@ -2699,7 +2794,9 @@
             const fresh = [];                      // 같은 사건의 후속 기사는 다시 알리지 않음
             newArticles.forEach(n => { if (!alertSeenEvents.has(evOf(n))) { alertSeenEvents.add(evOf(n)); fresh.push(n); } });
             if (!alertCfg.enabled) return;
-            const live = fresh.filter(alertStageOk);          // 재판·판결 소식은 설정에서 켜지 않으면 알리지 않음
+            // 새로 모인 기사라도 3시간보다 오래된 일(지난 날짜 채우기·구글 검색으로 뒤늦게 들어온 기사)은 '방금 난 사건'이 아니므로 알리지 않음
+            const freshSince = Date.now() / 1000 - 3 * 3600;
+            const live = fresh.filter(n => alertStageOk(n) && Number(n.timestamp) >= freshSince);
             const here = live.filter(matchHere);
             const mine = live.filter(n => !here.includes(n) && matchAlertRegion(n));
             if (here.length === 0 && mine.length === 0) return;
