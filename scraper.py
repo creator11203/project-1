@@ -866,7 +866,7 @@ ENT_SPORT_RE = re.compile(r"열애|결혼|이혼|스캔들|아이돌|드라마|�
                           # 연예인·유명인의 발언·의견 기사 (예: '성시경 "운전대 안 잡아"…고경표 음주운전에 개념발언 소환')
                           r"개념\s*발언|소신\s*발언|사이다\s*발언|(?:발언|과거|소신|개념|명언|일화|인터뷰|어록)\s*(?:이|가)?\s*(?:다시\s*)?(?:재)?소환|소환\s*(?:된|되는)\s*(?:발언|과거|명언|어록)|"
                           r"누리꾼\s*(?:반응|갑론을박|시끌)|갑론을박|네티즌|팬들\s*(?:응원|분노|걱정|반응)|공개\s*응원|일침|저격|"
-                          r"안대\s*(?:낀|쓴|착용)|눈병|다래끼|민낯|셀카|입국\s*패션|공항\s*패션|(?:Oh!?\s*쎈|OSEN))")
+                          r"안대\s*(?:낀|쓴|착용)|눈병|다래끼|민낯|셀카|입국\s*패션|공항\s*패션|(?:Oh!?\s*쎈|OSEN)")   # ※ 괄호 하나가 더 있어 스크립트가 시작하자마자 멈추던 오류 수정
 # 유명인 여러 명의 말을 따옴표로 옮긴 기사 (예: '성시경 "…"·김희철 "…"') — 사건 자체가 아니라 반응·의견 기사
 #   (작은따옴표 ‘쾅’ 같은 강조 표현은 세지 않고, 큰따옴표로 옮긴 말만 셈)
 PERSON_QUOTE_RE = re.compile(r"[가-힣]{2,4}\s*[“\"][^”\"]{2,30}[”\"]")
@@ -3119,5 +3119,51 @@ def main():
     print("분류별:", dict(sorted(by_group.items(), key=lambda x: -x[1])))
 
 
+def selftest():
+    """인터넷 없이 빠르게 확인하는 자가 진단 (python scraper.py --selftest)
+    · 이 파일을 읽어 들이는 것 자체(정규식 괄호·문법 오류)가 첫 번째 검사
+    · 사건 분류·위치 찾기·기존 기사 다시 계산을 실제로 돌려 보고, 하나라도 오류가 나면 실패(종료 코드 1)
+    워크플로가 수집 전에 이걸 먼저 돌려서, 고장 난 scraper.py 가 올라오면 바로 알려 주고 직전 정상 버전으로 대신 수집합니다."""
+    import sys
+    import traceback
+    samples = [
+        ("서울 강남구 역삼동 오피스텔 화재로 1명 숨져", True),
+        ("부산 해운대구서 음주운전 차량이 보행자 들이받아…50대 입건", True),
+        ("번개장터, 고객 정보 유출 가능성 공지…\"성명·연락처 유출 우려\"", None),
+        ("[속보]최민희 징계받나… 민주 “김민석, 감찰 결과 보고받고 윤리심판원 이첩 지시”", False),
+        ("아이유 신곡 '살인자의 고백' 차트 1위", False),
+        ("법원, 전세사기 일당에 징역 10년 선고", False),
+    ]
+    bad = 0
+    for title, want in samples:
+        try:
+            r = classify(title, title)
+            if r:
+                locate(title, title, "대전광역시", r[1] == OVERSEAS_GROUP)
+                stage_of(title)
+                all_tags(title, r[0], r[1])
+            if want is not None and bool(r) != want:
+                print(f"[selftest 주의] 분류 결과가 예상과 다름: {title} → {r}")
+        except Exception:
+            bad += 1
+            print(f"[selftest 실패] {title}")
+            traceback.print_exc()
+    old = load_existing()[:300]
+    try:
+        reprocess_existing(old)
+    except Exception:
+        bad += 1
+        traceback.print_exc()
+    if ERRORS["count"]:
+        bad += 1
+        print(f"[selftest 실패] 기존 기사 재계산 중 오류 {ERRORS['count']}건: {ERRORS['samples'][:3]}")
+    print(f"[selftest] {'통과' if not bad else '실패'} — 예시 {len(samples)}건 · 기존 기사 {len(old)}건 확인")
+    sys.exit(1 if bad else 0)
+
+
 if __name__ == "__main__":
-    main()
+    import sys as _sys
+    if "--selftest" in _sys.argv:
+        selftest()
+    else:
+        main()
