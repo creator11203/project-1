@@ -432,6 +432,7 @@
                 <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     우리동네 사건사고 
                     <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-mono shadow-sm">전국 실시간 관제</span>
+                    <span id="staleBadge" class="hidden text-[0.6875rem] px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold whitespace-nowrap" title="수집 서버(GitHub Actions)가 잠시 멈췄을 수 있습니다. 보통 몇 분~수십 분 안에 다시 이어집니다."></span>
                 </h1>
                 <p class="text-xs text-slate-500 dark:text-slate-400">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</p>
             </div>
@@ -1407,6 +1408,17 @@
                 showAlertToast({ head: '🔄 새 버전', title: '웹사이트 화면이 새 버전으로 업데이트되었습니다. 편할 때 누르면 새 화면으로 바뀝니다. (기사 목록은 지금도 자동으로 계속 업데이트됩니다)', reload: true });
             } catch (e) {}
         }
+        // 수집 지연 표시: 가장 최근 기사가 90분 넘게 지났으면 맨 위 제목 옆에 노란 표시 (수집 서버가 멈춘 걸 바로 알 수 있게)
+        let newestNewsTs = 0;
+        function updateStaleBadge() {
+            const el = document.getElementById('staleBadge');
+            if (!el || !newestNewsTs) return;
+            const min = Math.floor((Date.now() / 1000 - newestNewsTs) / 60);
+            const stale = min >= 90;
+            el.classList.toggle('hidden', !stale);
+            if (stale) el.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> 기사 수집 지연 · 최근 기사 ${min >= 120 ? Math.floor(min / 60) + '시간 ' + (min % 60) + '분' : min + '분'} 전`;
+        }
+        setInterval(updateStaleBadge, 60000);
         async function loadIncidentsFromJSON(isManualRefresh = false) {
             if (loadBusy) return;
             loadBusy = true;
@@ -1436,7 +1448,8 @@
                         await loadHighways();
                         data.forEach(n => { n.timestamp = Number(n.timestamp) || 0; fixRouteLocation(n); });
                         data.sort((a, b) => b.timestamp - a.timestamp);
-                        const sig = data.length + ':' + data[0].id + ':' + data[data.length - 1].id;
+                        newestNewsTs = data[0].timestamp; updateStaleBadge();
+                        const sig =data.length + ':' + data[0].id + ':' + data[data.length - 1].id;
                         if (sig !== lastSig || isManualRefresh) {
                             const first = !lastSig;
                             data = data.filter(keepOnSite);   // 재판·판결 소식, 한국과 관련 없는 해외 소식은 화면에 올리지 않음
