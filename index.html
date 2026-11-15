@@ -1520,7 +1520,7 @@
             //   헤드라인만 빠르게 전하도록 지역·기사 개수 표시는 넣지 않음
             const one = top.map((ev, i) => `
                 <button onclick="openHeadline(${ev.lead.id})" class="inline-flex items-center gap-1.5 pl-3 pr-4 text-xs text-slate-800 dark:text-slate-100 hover:text-red-500">
-                    <span class="min-w-[1.25rem] h-[1.125rem] px-1 rounded bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 text-[0.625rem] font-black inline-flex items-center justify-center">${i + 1}</span>
+                    <span class="min-w-[1.25rem] h-[1.125rem] px-1 rounded bg-red-600 text-white text-[0.6875rem] font-black inline-flex items-center justify-center shadow-sm shadow-red-600/40">${i + 1}</span>
                     ${isOverseas(ev.lead) ? '<span class="px-1 py-0.5 rounded bg-zinc-700 text-white text-[0.625rem] font-bold">해외</span>' : ''}
                     <b>${esc(ev.lead.title)}</b>
                 </button><span class="text-slate-300 dark:text-slate-600 select-none">|</span>`).join('');
@@ -3423,6 +3423,12 @@
             if (!uid || uid === COMM_UID) return;
             if (!confirm((nick || '이웃') + '님을 차단할까요?\n차단하면 서로의 글이 보이지 않고 1:1 대화·통화를 할 수 없습니다.')) return;
             blocked[uid] = { nick: nick || '이웃', emoji: emoji || '🙂', ts: Date.now() };
+            // 차단하면 팔로우 관계도 양쪽 모두 끊음 (내 팔로잉에서 빼고, 상대를 내 팔로워에서도 지움)
+            if (typeof isFollowing === 'function' && isFollowing(uid)) unfollowUser(uid);
+            if (typeof followers !== 'undefined' && followers.some(f => f.uid === uid)) {
+                followers = followers.filter(f => f.uid !== uid);
+                commInit().then(db => { if (db) db.collection('followers').doc(COMM_UID).collection('list').doc(uid).delete().catch(() => {}); });
+            }
             if (dmWith && dmWith.uid === uid) { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } }
             dmUnread.delete(uid);
             closeProfile();
@@ -4170,8 +4176,10 @@
             const posts = commMessages.filter(x => x.uid === uid).length;
             // 인스타그램처럼: 위쪽은 프로필(사진·이름·소개·숫자·버튼), 아래쪽은 이 사람이 올린 일상 게시물 격자
             card.innerHTML = `
-                <div class="w-full max-w-md max-h-full overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 text-center" onclick="event.stopPropagation()">
-                    <div class="flex items-center gap-4 text-left">
+                <div class="relative w-full max-w-md max-h-full overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 text-center" onclick="event.stopPropagation()">
+                    ${mine ? '' : `<button onclick="openPeerManage('${esc(uid)}')" title="이 이웃 관리: 팔로워 삭제 · 내 게시물 숨기기 · 제한 · 이름 바꾸기 · 차단" class="absolute top-3 right-3 z-10 inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 hover:border-fuchsia-400 hover:text-fuchsia-600"><i class="fa-solid fa-gear"></i> 관리</button>`}
+                    ${!mine && (peerPref(uid, 'hide') || peerPref(uid, 'restrict')) ? `<div class="mb-2 text-[0.625rem] font-bold text-fuchsia-600 text-left">${peerPref(uid, 'hide') ? '👁‍🗨 내 게시물 숨김' : ''}${peerPref(uid, 'hide') && peerPref(uid, 'restrict') ? ' · ' : ''}${peerPref(uid, 'restrict') ? '🔇 제한 중' : ''}</div>` : ''}
+                    <div class="flex items-center gap-4 text-left ${mine ? '' : 'pr-14'}">
                         <div class="shrink-0 p-[3px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600"><div class="rounded-full bg-white dark:bg-slate-900 p-[2px]">${avatarHtml(m, 'w-20 h-20', 'text-4xl')}</div></div>
                         <div class="min-w-0 flex-1">
                             <div class="text-base font-bold text-slate-900 dark:text-white truncate">${esc(displayName(uid, m.nick))}${mine ? ' (나)' : ''}</div>
@@ -4239,7 +4247,8 @@
             if (!lsSet('feed_posts', JSON.stringify(l))) lsSet('feed_posts', JSON.stringify(l.map(p => Object.assign({}, p, { media: (p.media || []).slice(0, 1) }))));
         }
         function feedCol() { return commDb.collection('feedPosts'); }
-        function feedVisible(p) { return !!p && (p.uid === COMM_UID || (p.pub !== false && !isBlocked(p.uid))); }
+        // 남의 게시물: 공개 + 차단 안 함 + 글쓴이가 '이 사람에게 내 게시물 숨기기'로 나를 넣지 않았을 때만 보임
+        function feedVisible(p) { return !!p && (p.uid === COMM_UID || (p.pub !== false && !isBlocked(p.uid) && !(p.hideFrom || []).includes(COMM_UID))); }
         function feedFind(uid, id) { return (feedCache[uid] || []).find(p => p.id === id) || null; }
         function feedCount(o) { return o ? Object.keys(o).length : 0; }
         async function loadFeed(uid) {
@@ -4344,7 +4353,7 @@
                 <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
                     <div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">💬 댓글 ${p.comments || 0}</div>
                     <div id="feedCmts" class="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar">${feedCommentsHtml()}</div>
-                    ${myTown ? `<div class="mt-2 flex gap-1.5"><input id="feedCmtIn" maxlength="${FEED_CMT_MAX}" placeholder="댓글 달기 (${FEED_CMT_MAX}자 이내)" onkeydown="if(event.key==='Enter'&&!event.isComposing)feedComment()" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white">
+                    ${(p.noReply || []).includes(COMM_UID) ? '<div class="text-[0.625rem] text-slate-400 mt-1">글쓴이가 댓글을 제한한 게시물입니다.</div>' : myTown ? `<div class="mt-2 flex gap-1.5"><input id="feedCmtIn" maxlength="${FEED_CMT_MAX}" placeholder="댓글 달기 (${FEED_CMT_MAX}자 이내)" onkeydown="if(event.key==='Enter'&&!event.isComposing)feedComment()" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white">
                         <button onclick="feedComment()" class="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold">게시</button></div>` : '<div class="text-[0.625rem] text-slate-400 mt-1">동네 인증을 하면 댓글을 달 수 있습니다.</div>'}
                 </div></div>`;
         }
@@ -4400,6 +4409,7 @@
             const inp = document.getElementById('feedCmtIn');
             const text = ((inp && inp.value) || '').trim().slice(0, FEED_CMT_MAX);
             if (!p || !text || !myTown) return;
+            if ((p.noReply || []).includes(COMM_UID)) { showAlertToast({ head: '댓글', title: '글쓴이가 댓글을 제한한 게시물입니다.' }); return; }
             if (typeof hasBadWords === 'function' && hasBadWords(text)) { showAlertToast({ head: '댓글', title: '이웃이 불쾌할 수 있는 표현이 있어 올리지 않았습니다.' }); return; }
             inp.value = '';
             const c = Object.assign({ uid: COMM_UID, text: text, ts: Date.now() }, meFields());
@@ -4493,7 +4503,7 @@
                 const db = await commInit();
                 if (feedDraft.video && db) media.push({ k: 'video', url: await commUploadVideo(feedDraft.video.file) });
                 const post = Object.assign({ uid: COMM_UID, town: townKey(myTown), text: text, media: media, ts: Date.now(), hearts: {}, reacts: {}, comments: 0,
-                    pub: commProfile.feedPublic !== false, rank: !!commProfile.rankPublic }, meFields());
+                    pub: commProfile.feedPublic !== false, rank: !!commProfile.rankPublic, hideFrom: peerList('hide'), noReply: peerList('restrict') }, meFields());   // 이웃 관리: 숨김·제한한 사람
                 if (db) { const ref = await feedCol().add(post); post.id = ref.id; }
                 else { post.id = 'p' + Date.now().toString(36); post.cmts = []; const list = feedLocal(); list.unshift(post); feedLocalSave(list); }
                 feedCache[COMM_UID] = [post].concat(feedCache[COMM_UID] || []);
@@ -4904,7 +4914,7 @@
                     <a target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/?q=${q}" class="nat-map nat-map-k">카카오</a>
                 </span></div></li>`;
         }
-        // 이달의 인기 이웃 TOP10: 동네와 상관없이 누구나 친구 요청 · 대화 요청을 보낼 수 있음
+        // 이달의 인기 이웃 TOP10: 동네와 상관없이 누구나 팔로우 · 대화 요청을 보낼 수 있음
         function natPersonRow(r, i) {
             const me = r.uid === COMM_UID, u = esc(r.uid);
             const fr = me ? '' : (isFollowing(r.uid) ? `<button onclick="event.stopPropagation(); unfollowUser('${u}')" class="nat-pill nat-pill-done">✓ 팔로잉</button>`
@@ -5893,7 +5903,8 @@
             { k: 'life', label: '동네 이야기', fa: 'fa-house-chimney-user', c: 'sky', tabs: ['popular', 'free', 'hello', 'wish', 'praise'] },
             { k: 'local', label: '맛집·핫플', fa: 'fa-utensils', c: 'orange', tabs: ['food', 'spot'] },
             { k: 'market', label: '동네 장터', fa: 'fa-store', c: 'emerald', tabs: ['market'] },
-            { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['meet', 'friends', 'random', 'dm'] },
+            // 이웃·대화: '팔로잉 소식'을 맨 앞에 (예전에 순서를 저장해 둔 사람도 한 번은 맨 앞으로 옮김 → groupTabs)
+            { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['friends', 'meet', 'random', 'dm'] },
             { k: 'nation', label: '전국 TOP10', fa: 'fa-trophy', c: 'amber', tabs: ['national'] },
             { k: 'me', label: '내 프로필', fa: 'fa-circle-user', c: 'fuchsia', tabs: ['me'] }
         ];
@@ -5907,6 +5918,12 @@
             let o = [];
             try { o = JSON.parse(lsGet('comm_order_' + g.k) || '[]'); } catch (e) {}
             o = o.filter(t => g.tabs.includes(t));
+            // '친구' → '팔로잉 소식'으로 바뀐 뒤 처음 한 번: 예전에 저장한 순서가 있어도 팔로잉 소식을 맨 앞으로 (그 뒤 사용자가 끌어 옮기면 그대로 따름)
+            if (g.k === 'people' && lsGet('comm_order_people_v2') !== '1') {
+                o = ['friends'].concat(o.filter(t => t !== 'friends'));
+                lsSet('comm_order_people_v2', '1');
+                if (o.length > 1) lsSet('comm_order_people', JSON.stringify(o));
+            }
             g.tabs.forEach(t => { if (!o.includes(t)) o.push(t); });
             return o;
         }
@@ -6730,7 +6747,7 @@
             let first = true;
             chatReqUnsubs.push(db.collection('chatReqs').doc(COMM_UID).collection('list').orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
                 const prev = new Set(chatReqs.map(r => r.uid));
-                chatReqs = snap.docs.map(d => d.data()).filter(r => r.uid && !isBlocked(r.uid) && !dmAllowed.has(r.uid));
+                chatReqs = snap.docs.map(d => d.data()).filter(r => r.uid && !isBlocked(r.uid) && !dmAllowed.has(r.uid) && !isRestricted(r.uid));   // 제한한 사람의 대화 요청은 보이지 않음
                 if (!first) chatReqs.filter(r => !prev.has(r.uid)).forEach(r => commAlert('chatReq', { head: '💬 대화 요청이 왔어요', title: (r.nick || '이웃') + '님이 1:1 대화를 요청했습니다.' + (r.msg ? ' "' + r.msg + '"' : ''), foot: '눌러서 수락하거나 거절하기', tab: 'dm' }));
                 first = false;
                 updateCommBadge();
@@ -6837,7 +6854,7 @@
             dmInboxUnsub = db.collection('dmThreads').doc(COMM_UID).collection('list').orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
                 if (dmInboxReady) snap.docChanges().forEach(ch => {
                     const d = ch.doc.data();
-                    if (ch.type !== 'removed' && d.from && d.from !== COMM_UID && !isBlocked(d.uid) && !(dmWith && d.uid === dmWith.uid)) {
+                    if (ch.type !== 'removed' && d.from && d.from !== COMM_UID && !isBlocked(d.uid) && !isRestricted(d.uid) && !(dmWith && d.uid === dmWith.uid)) {   // 제한한 사람의 메시지는 알리지 않음
                         dmUnread.add(d.uid);
                         commAlert('dm', { head: '✉ 새 메시지가 도착했어요', badge: d.nick || '이웃', title: d.last || '', foot: '눌러서 1:1 대화 열기', tab: 'dm' });
                     }
@@ -7647,16 +7664,18 @@
         }
 
         function socialInit() {
-            commInit().then(db => { if (db) { listenCalls(); listenBlocks(); } subscribeDM(); subscribeFriends(); subscribeChatReqs(); subscribeFollow(); });
+            commInit().then(db => { if (db) { listenCalls(); listenBlocks(); } loadPeerPrefs(); subscribeDM(); subscribeFriends(); subscribeChatReqs(); subscribeFollow(); });
         }
 
-        // ---- 친구 (채팅 앱처럼: 친구 요청 → 수락하면 서로 친구, 친구 이름은 내가 보기 편한 이름으로 바꿀 수 있음) ----
+        // ---- 예전 '친구' 데이터 (지금은 팔로우·팔로잉으로 바뀜) ----
+        //  friends 는 예전에 친구였던 사람과 바로 대화할 수 있게(canChat) + 예전에 붙인 이름(alias)을 살리려고만 남겨 둠. 새로 친구를 맺는 화면은 없음
         let friends = (() => { try { return JSON.parse(lsGet('friends') || '{}') || {}; } catch (e) { return {}; } })();   // { uid: { nick, emoji, photo, area, alias, ts } }
         let friendReqs = [];          // 나에게 온 친구 요청
         let friendSent = new Set((() => { try { return JSON.parse(lsGet('friend_sent') || '[]'); } catch (e) { return []; } })());
         let friendUnsubs = [], friendEditing = null, friendQuery = '';
         function isFriend(uid) { return !!uid && uid !== COMM_UID && Object.prototype.hasOwnProperty.call(friends, uid); }
-        function friendAlias(uid) { return isFriend(uid) ? (friends[uid].alias || '') : ''; }
+        // 나에게만 보이는 이름: 이웃 관리에서 바꾼 이름 → 예전 친구 이름 순서
+        function friendAlias(uid) { return (peerPrefs[uid] && peerPrefs[uid].alias) || (isFriend(uid) ? (friends[uid].alias || '') : ''); }
         function displayName(uid, nick) { if (uid === COMM_UID) return myNick(); return friendAlias(uid) || nick || '이웃'; }
         async function saveFriends() {
             lsSet('friends', JSON.stringify(friends));
@@ -7672,150 +7691,158 @@
                 Object.keys(list).forEach(u => { if (!friends[u]) friends[u] = list[u]; });
                 lsSet('friends', JSON.stringify(friends));
             } catch (e) { console.error(e); }
-            let first = true;
-            friendUnsubs.push(db.collection('friendReqs').doc(COMM_UID).collection('list').orderBy('ts', 'desc').limit(100).onSnapshot(snap => {
-                const prev = new Set(friendReqs.map(r => r.uid));
-                friendReqs = snap.docs.map(d => d.data()).filter(r => r.uid && !isFriend(r.uid) && !isBlocked(r.uid));
-                if (!first) friendReqs.filter(r => !prev.has(r.uid)).forEach(r => showAlertToast({ head: '👥 친구 요청', title: (r.nick || '이웃') + '님이 친구 요청을 보냈습니다.', foot: '커뮤니티 > 친구 탭에서 수락할 수 있습니다', openCommunity: true }));
-                first = false;
-                if (commTab === 'friends') renderFriends();
-                renderCommHead();
-            }, err => console.error(err)));
-            friendUnsubs.push(db.collection('friendAccepted').doc(COMM_UID).collection('list').onSnapshot(snap => {
-                snap.docs.forEach(d => {
+            // ── 예전 '친구 요청/수락' 정리 (팔로우 방식으로 바뀜) ──
+            //  · 아직 남아 있는 받은 친구 요청: 수락 화면이 없어졌으므로 조용히 지움 (상대는 이제 [팔로우]를 누르면 됨)
+            //  · 예전에 보낸 요청을 상대가 수락한 기록: 그 사람을 팔로잉으로 옮김
+            //  ※ 예전에는 여기서 '친구' 화면을 다시 그려서, 팔로잉 소식을 보는 중에 화면이 옛 친구 목록으로 바뀌는 문제가 있었음
+            try {
+                const old = await db.collection('friendReqs').doc(COMM_UID).collection('list').limit(100).get();
+                old.docs.forEach(d => d.ref.delete().catch(() => {}));
+                const acc = await db.collection('friendAccepted').doc(COMM_UID).collection('list').limit(100).get();
+                let moved = false;
+                acc.docs.forEach(d => {
                     const r = d.data();
-                    if (r.uid && !isFriend(r.uid)) {
-                        friends[r.uid] = { nick: r.nick || '이웃', emoji: r.emoji || '🙂', photo: r.photo || '', area: r.area || '', alias: '', ts: Date.now() };
-                        friendSent.delete(r.uid); lsSet('friend_sent', JSON.stringify(Array.from(friendSent)));
-                        showAlertToast({ head: '👥 친구', title: (r.nick || '이웃') + '님이 친구 요청을 수락했습니다.' });
-                        saveFriends();
-                    }
+                    if (r.uid && !isBlocked(r.uid) && !following[r.uid]) { following[r.uid] = { nick: r.nick || '이웃', emoji: r.emoji || '🙂', photo: r.photo || '', area: r.area || '', ts: Date.now() }; moved = true; }
                     d.ref.delete().catch(() => {});
                 });
-                if (commTab === 'friends') renderFriends();
-            }, err => console.error(err)));
+                if (moved) { saveFollowing(); subscribeFollowFeed(); }
+            } catch (e) { console.error(e); }
+            friendReqs = []; friendSent.clear(); lsSet('friend_sent', '[]');
         }
         function friendInfo(uid) {
             if (profileShown.uid === uid) return { nick: profileShown.nick, emoji: profileShown.emoji, photo: profileShown.photo, area: profileShown.area };
             const m = commMembers.concat(commMessages, freeMessages).find(x => x.uid === uid) || dmThreads.find(x => x.uid === uid) || natPeopleInfo[uid] || {};
             return { nick: m.nick || '이웃', emoji: m.emoji || '🙂', photo: m.photo || '', area: m.area || '' };
         }
-        function friendButtons(uid) {
-            const b = 'px-2.5 py-1 rounded-lg text-[0.6875rem] font-bold';
-            if (isFriend(uid)) return `<span class="${b} bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300">👥 친구</span>
-                <button onclick="renameFriendPrompt('${esc(uid)}')" class="${b} border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">✏ 이름 바꾸기</button>`;
-            if (friendReqs.some(r => r.uid === uid)) return `<button onclick="acceptFriend('${esc(uid)}')" class="${b} bg-teal-600 hover:bg-teal-500 text-white">친구 요청 수락</button><button onclick="declineFriend('${esc(uid)}'); closeProfile()" class="${b} border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300">거절</button>`;
-            if (friendSent.has(uid)) return `<span class="${b} text-slate-500 bg-slate-100 dark:bg-slate-800">👥 친구 요청 보냄 · 수락 대기</span>`;
-            return `<button onclick="addFriend('${esc(uid)}')" class="${b} bg-teal-600 hover:bg-teal-500 text-white">👥 친구 요청</button>`;
+        // ================= 이웃 관리 (상대 프로필의 ⚙ 관리 버튼) =================
+        //  원하지 않는 사람이 나를 팔로우했을 때 등을 대비한 장치. 모두 상대에게 알리지 않고 조용히 적용됩니다.
+        //   · 팔로워에서 삭제: 상대를 내 팔로워 목록에서 지움 (상대가 다시 팔로우할 수는 있음 → 막으려면 차단)
+        //   · 팔로우 취소
+        //   · 내 게시물 숨기기: 이 사람에게만 내 '내 일상' 게시물이 보이지 않음 (다른 이웃에게는 그대로 공개)
+        //   · 제한하기: 이 사람은 내 게시물에 댓글을 달 수 없고, 이 사람의 대화 요청·메시지 알림이 오지 않음
+        //   · 이름 바꾸기: 나에게만 보이는 이름
+        //   · 차단: 서로 글·프로필·대화가 보이지 않음 (기존 차단 기능)
+        //  저장: 이 기기 + 서버 연결 시 peerPrefs/{나}. '숨기기·제한'은 내 게시물마다 hideFrom·noReply 목록으로도 기록 (상대 화면에서 걸러지도록)
+        // var: 이 줄보다 먼저 실행되는 화면 코드(displayName)에서도 오류 없이 쓰이도록
+        var peerPrefs = (() => { try { return JSON.parse(lsGet('peer_prefs') || '{}') || {}; } catch (e) { return {}; } })();   // { uid: { alias, hide, restrict } }
+        function peerPref(uid, k) { return !!(peerPrefs[uid] && peerPrefs[uid][k]); }
+        function peerList(k) { return Object.keys(peerPrefs).filter(u => peerPrefs[u] && peerPrefs[u][k]); }
+        function isRestricted(uid) { return peerPref(uid, 'restrict'); }
+        async function savePeerPrefs() {
+            lsSet('peer_prefs', JSON.stringify(peerPrefs));
+            try { const db = await commInit(); if (db) await db.collection('peerPrefs').doc(COMM_UID).set({ list: peerPrefs, ts: Date.now() }); } catch (e) { console.error(e); }
         }
-        async function addFriend(uid) {
-            if (!uid || uid === COMM_UID || isBlocked(uid)) return;
-            const info = friendInfo(uid);
+        async function loadPeerPrefs() {
             try {
                 const db = await commInit();
-                if (db) {
-                    await db.collection('friendReqs').doc(uid).collection('list').doc(COMM_UID).set(Object.assign({ uid: COMM_UID, ts: Date.now(), photo: myPhoto() }, meFields()));
-                    friendSent.add(uid); lsSet('friend_sent', JSON.stringify(Array.from(friendSent)));
-                    showAlertToast({ head: '👥 친구', title: (info.nick || '이웃') + '님에게 친구 요청을 보냈습니다. 상대가 수락하면 서로 친구가 됩니다.' });
-                } else {
-                    friendSent.add(uid); lsSet('friend_sent', JSON.stringify(Array.from(friendSent)));
-                    showAlertToast({ head: '👥 친구', title: (info.nick || '이웃') + '님에게 친구 요청을 보냈습니다. 상대가 수락하면 서로 친구가 됩니다.' });
-                }
+                if (!db) return;
+                const d = await db.collection('peerPrefs').doc(COMM_UID).get();
+                const list = d.exists ? (d.data().list || {}) : {};
+                Object.keys(list).forEach(u => { peerPrefs[u] = Object.assign({}, list[u], peerPrefs[u] || {}); });
+                lsSet('peer_prefs', JSON.stringify(peerPrefs));
             } catch (e) { console.error(e); }
-            if (profileShown.uid === uid && !document.getElementById('commProfileCard').classList.contains('hidden')) showProfile(uid);
-            if (commTab === 'friends') renderFriends();
         }
-        async function acceptFriend(uid) {
-            const r = friendReqs.find(x => x.uid === uid);
-            if (!r) return;
-            friends[uid] = { nick: r.nick || '이웃', emoji: r.emoji || '🙂', photo: r.photo || '', area: r.area || '', alias: '', ts: Date.now() };
-            friendReqs = friendReqs.filter(x => x.uid !== uid);
-            await saveFriends();
-            try {
-                const db = await commInit();
-                if (db) {
-                    await db.collection('friendAccepted').doc(uid).collection('list').doc(COMM_UID).set(Object.assign({ uid: COMM_UID, ts: Date.now(), photo: myPhoto() }, meFields()));
-                    await db.collection('friendReqs').doc(COMM_UID).collection('list').doc(uid).delete();
-                }
-            } catch (e) { console.error(e); }
-            showAlertToast({ head: '👥 친구', title: (r.nick || '이웃') + '님과 친구가 되었습니다.' });
-            if (commTab === 'friends') renderFriends();
-            renderCommHead();
+        // 숨기기·제한을 바꾸면 이미 올린 내 게시물에도 반영
+        async function applyPeerToMyPosts(uid, field, on) {
+            const db = await commInit();
+            if (db) {
+                try {
+                    const snap = await feedCol().where('uid', '==', COMM_UID).limit(200).get();
+                    const FV = firebase.firestore.FieldValue;
+                    await Promise.all(snap.docs.map(d => d.ref.update({ [field]: on ? FV.arrayUnion(uid) : FV.arrayRemove(uid) })));
+                } catch (e) { console.error(e); }
+            } else {
+                const list = feedLocal().map(p => {
+                    if (p.uid !== COMM_UID) return p;
+                    const a = (p[field] || []).filter(x => x !== uid);
+                    if (on) a.push(uid);
+                    return Object.assign({}, p, { [field]: a });
+                });
+                feedLocalSave(list);
+            }
+            (feedCache[COMM_UID] || []).forEach(p => { const a = (p[field] || []).filter(x => x !== uid); if (on) a.push(uid); p[field] = a; });
         }
-        async function declineFriend(uid) {
-            friendReqs = friendReqs.filter(x => x.uid !== uid);
-            try { const db = await commInit(); if (db) await db.collection('friendReqs').doc(COMM_UID).collection('list').doc(uid).delete(); } catch (e) { console.error(e); }
-            if (commTab === 'friends') renderFriends();
-            renderCommHead();
+        async function setPeerPref(uid, k, on) {
+            peerPrefs[uid] = Object.assign({}, peerPrefs[uid], { [k]: !!on });
+            await savePeerPrefs();
+            if (k === 'hide') await applyPeerToMyPosts(uid, 'hideFrom', !!on);
+            if (k === 'restrict') {
+                await applyPeerToMyPosts(uid, 'noReply', !!on);
+                if (on) { chatReqs = chatReqs.filter(r => r.uid !== uid); dmUnread.delete(uid); updateCommBadge(); }
+            }
+            const name = displayName(uid, (peerManageInfo && peerManageInfo.nick) || '이웃');
+            const msg = { hide: on ? `${name}님에게 내 게시물이 보이지 않아요.` : `${name}님에게도 내 게시물이 다시 보여요.`,
+                restrict: on ? `${name}님은 내 게시물에 댓글을 달 수 없고, 대화 요청·메시지 알림도 오지 않아요.` : `${name}님 제한을 풀었어요.` }[k];
+            if (msg) showAlertToast({ head: '이웃 관리', title: msg });
+            renderPeerManage();
         }
-        async function removeFriend(uid) {
-            if (!isFriend(uid) || !confirm(displayName(uid, friends[uid].nick) + '님을 친구 목록에서 삭제할까요?')) return;
-            delete friends[uid];
-            await saveFriends();
-            if (commTab === 'friends') renderFriends();
-        }
+        // 이름 바꾸기 (나에게만 보이는 이름). 예전 친구 이름(alias)도 그대로 씀
         async function setFriendAlias(uid, alias) {
-            if (!isFriend(uid)) return;
-            friends[uid].alias = String(alias || '').trim().slice(0, 16);
-            friendEditing = null;
-            await saveFriends();
-            if (commTab === 'friends') renderFriends();
+            const v = String(alias || '').trim().slice(0, 16);
+            peerPrefs[uid] = Object.assign({}, peerPrefs[uid], { alias: v });
+            if (isFriend(uid)) { friends[uid].alias = v; await saveFriends(); }
+            await savePeerPrefs();
+            if (commTab === 'friends') renderFollowFeed();
             else if (commTab === 'dm') renderDM();
             renderCommMessages(); renderFreeMessages();
         }
         function renameFriendPrompt(uid) {
-            if (!isFriend(uid)) return;
-            const v = prompt('친구 이름 바꾸기 (나에게만 보이는 이름, 비우면 원래 이름)', friends[uid].alias || friends[uid].nick || '');
+            const cur = friendAlias(uid) || ((peerManageInfo && peerManageInfo.uid === uid && peerManageInfo.nick) || friendInfo(uid).nick || '');
+            const v = prompt('이름 바꾸기 (나에게만 보이는 이름, 비우면 원래 이름)', cur);
             if (v === null) return;
-            setFriendAlias(uid, v).then(() => { if (profileShown.uid === uid) showProfile(uid); });
+            setFriendAlias(uid, v).then(() => { if (document.getElementById('peerManageBox')) renderPeerManage(); else if (profileShown.uid === uid) showProfile(uid); });
         }
-        function renderFriends() {
-            const main = document.getElementById('commMain');
-            if (!main || commTab !== 'friends') return;
-            const q = friendQuery.trim().toLowerCase();
-            const list = Object.keys(friends).filter(u => !isBlocked(u)).map(u => Object.assign({ uid: u }, friends[u]))
-                .filter(f => !q || ((f.alias || '') + ' ' + (f.nick || '') + ' ' + (f.area || '')).toLowerCase().includes(q))
-                .sort((a, b) => displayName(a.uid, a.nick).localeCompare(displayName(b.uid, b.nick), 'ko'));
-            const reqs = friendReqs.filter(r => !isBlocked(r.uid));
-            const btn = 'px-2 py-1 rounded-lg text-[0.6875rem] font-bold';
-            main.innerHTML = `
-                <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 shrink-0">
-                    <input id="friendSearch" type="search" placeholder="친구 이름·지역 검색" oninput="friendQuery = this.value; renderFriendList()" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white">
-                    <span class="text-[0.6875rem] text-slate-500 whitespace-nowrap">친구 ${Object.keys(friends).length}명</span>
+        // 팔로워에서 삭제 (상대가 나를 팔로우한 기록을 지움)
+        async function removeFollower(uid) {
+            const name = displayName(uid, (peerManageInfo && peerManageInfo.nick) || '이웃');
+            if (!confirm(`${name}님을 내 팔로워에서 삭제할까요?\n상대에게 따로 알림은 가지 않습니다. 다시 팔로우하지 못하게 하려면 [차단]을 이용해 주세요.`)) return;
+            followers = followers.filter(f => f.uid !== uid);
+            try { const db = await commInit(); if (db) await db.collection('followers').doc(COMM_UID).collection('list').doc(uid).delete(); } catch (e) { console.error(e); }
+            showAlertToast({ head: '이웃 관리', title: `${name}님을 팔로워에서 삭제했어요.` });
+            renderPeerManage();
+            if (commTab === 'me') renderMeTab();
+        }
+        let peerManageInfo = null;
+        function openPeerManage(uid) {
+            if (!uid || uid === COMM_UID) return;
+            peerManageInfo = profileShown.uid === uid ? Object.assign({}, profileShown) : Object.assign({ uid: uid }, followInfo(uid));
+            renderPeerManage();
+        }
+        function renderPeerManage() {
+            const card = document.getElementById('commProfileCard');
+            const m = peerManageInfo;
+            if (!card || !m) return;
+            const uid = m.uid, u = esc(uid), blockedNow = iBlocked(uid);
+            const sw = (k, on, icon, label, help) => `<label class="flex items-start gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                <span class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0"><i class="fa-solid ${icon}"></i></span>
+                <span class="flex-1 min-w-0 text-left"><span class="block text-[0.8125rem] font-bold text-slate-900 dark:text-white">${label}</span><span class="block text-[0.6875rem] text-slate-500 leading-snug">${help}</span></span>
+                <span class="relative mt-1 shrink-0"><input type="checkbox" class="peer sr-only" ${on ? 'checked' : ''} onchange="setPeerPref('${u}', '${k}', this.checked)">
+                    <span class="block w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-600 peer-checked:bg-fuchsia-500 transition"></span>
+                    <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition peer-checked:translate-x-4"></span></span></label>`;
+            const act = (fn, icon, label, help, danger) => `<button onclick="${fn}" class="w-full flex items-start gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                <span class="w-8 h-8 rounded-lg ${danger ? 'bg-red-50 dark:bg-red-950/50 text-red-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'} flex items-center justify-center shrink-0"><i class="fa-solid ${icon}"></i></span>
+                <span class="flex-1 min-w-0"><span class="block text-[0.8125rem] font-bold ${danger ? 'text-red-600' : 'text-slate-900 dark:text-white'}">${label}</span><span class="block text-[0.6875rem] text-slate-500 leading-snug">${help}</span></span></button>`;
+            const rel = [followsMe(uid) ? '나를 팔로우함' : '', isFollowing(uid) ? '내가 팔로우 중' : ''].filter(Boolean).join(' · ') || '서로 팔로우하지 않음';
+            card.innerHTML = `<div id="peerManageBox" class="w-full max-w-sm max-h-full flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden" style="white-space: normal;" onclick="event.stopPropagation()">
+                <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+                    <button onclick="showProfile('${u}')" title="프로필로 돌아가기" class="text-slate-400 hover:text-slate-700 dark:hover:text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                    ${avatarHtml(m, 'w-10 h-10', 'text-lg')}
+                    <div class="flex-1 min-w-0"><div class="text-sm font-extrabold text-slate-900 dark:text-white truncate">${esc(displayName(uid, m.nick))} 관리</div><div class="text-[0.625rem] text-slate-500">${rel} · 상대에게 알리지 않아요</div></div>
+                    <button onclick="closeProfile()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <div id="friendList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar"></div>`;
-            const se = document.getElementById('friendSearch'); if (se) se.value = friendQuery;
-            renderFriendList(list, reqs, btn);
-        }
-        function renderFriendList(list, reqs, btn) {
-            if (!list) { renderFriends(); const s = document.getElementById('friendSearch'); if (s) { s.focus(); s.setSelectionRange(s.value.length, s.value.length); } return; }
-            const box = document.getElementById('friendList');
-            if (!box) return;
-            const row = f => {
-                const editing = friendEditing === f.uid;
-                return `<div class="flex items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                    <button onclick="showProfile('${esc(f.uid)}')" class="shrink-0">${avatarHtml(f, 'w-10 h-10', 'text-lg')}</button>
-                    <div class="flex-1 min-w-0">
-                        ${editing ? `<div class="flex items-center gap-1"><input id="aliasInput" type="text" maxlength="16" placeholder="${esc(f.nick || '이웃')}" onkeydown="if (event.key === 'Enter') setFriendAlias('${esc(f.uid)}', this.value); if (event.key === 'Escape') { friendEditing = null; renderFriends(); }" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-teal-500 rounded px-2 py-1 text-xs text-slate-900 dark:text-white">
-                            <button onclick="setFriendAlias('${esc(f.uid)}', document.getElementById('aliasInput').value)" class="${btn} bg-teal-600 text-white">저장</button></div>`
-                        : `<div class="text-sm font-bold text-slate-900 dark:text-white truncate">${esc(displayName(f.uid, f.nick))}</div>
-                           <div class="text-[0.625rem] text-slate-500 truncate">${f.alias ? '원래 이름 ' + esc(f.nick || '이웃') + ' · ' : ''}${esc(shortArea(f.area) || '')}</div>`}
-                    </div>
-                    ${editing ? '' : `<div class="flex items-center gap-1 shrink-0">
-                        <button onclick="openDM('${esc(f.uid)}', friends['${esc(f.uid)}'].nick, friends['${esc(f.uid)}'].emoji, friends['${esc(f.uid)}'].photo, friends['${esc(f.uid)}'].area)" title="1:1 대화" class="${btn} bg-sky-600 hover:bg-sky-500 text-white"><i class="fa-solid fa-comment"></i><span class="hide-xnarrow"> 대화</span></button>
-                        <button onclick="friendEditing = '${esc(f.uid)}'; renderFriends(); setTimeout(() => { const i = document.getElementById('aliasInput'); if (i) { i.value = friends['${esc(f.uid)}'].alias || ''; i.focus(); } }, 0)" title="이름 바꾸기" class="${btn} border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300">✏</button>
-                        <button onclick="removeFriend('${esc(f.uid)}')" title="친구 삭제" class="${btn} text-slate-400 hover:text-red-500"><i class="fa-solid fa-user-minus"></i></button>
-                    </div>`}
-                </div>`;
-            };
-            box.innerHTML = (reqs.length ? `<div class="px-3 py-1.5 text-[0.6875rem] font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/40 border-b border-teal-200 dark:border-teal-900">받은 친구 요청 ${reqs.length}</div>` + reqs.map(r => `
-                    <div class="flex items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-                        ${avatarHtml(r, 'w-9 h-9', 'text-lg')}
-                        <div class="flex-1 min-w-0"><div class="text-xs font-bold text-slate-900 dark:text-white truncate">${esc(r.nick || '이웃')}</div><div class="text-[0.625rem] text-slate-500 truncate">${esc(shortArea(r.area) || '')} · ${timeAgo(r.ts || Date.now())}</div></div>
-                        <button onclick="acceptFriend('${esc(r.uid)}')" class="${btn} bg-teal-600 hover:bg-teal-500 text-white">수락</button>
-                        <button onclick="declineFriend('${esc(r.uid)}')" class="${btn} border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300">거절</button>
-                    </div>`).join('') : '')
-                + (list.length ? list.map(row).join('') : `<div class="text-center py-12 px-4 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${friendQuery ? '검색한 친구가 없습니다.' : '아직 친구가 없습니다.<br>대화방에서 이웃의 아이콘을 눌러 프로필을 열고 <b>👥 친구 추가</b>를 눌러 보세요.<br>상대가 수락하면 서로 친구가 됩니다.'}</div>`);
+                <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
+                    <div class="px-4 pt-3 pb-1 text-[0.6875rem] font-bold text-slate-400">팔로우</div>
+                    ${followsMe(uid) ? act(`removeFollower('${u}')`, 'fa-user-minus', '팔로워에서 삭제', '이 사람이 나를 팔로우한 기록을 지워요. 내 소식이 이 사람의 팔로잉 소식에 더 이상 올라가지 않아요.') : ''}
+                    ${isFollowing(uid) ? act(`unfollowUser('${u}').then(renderPeerManage)`, 'fa-user-xmark', '팔로우 취소', '이 사람의 새 게시물이 내 팔로잉 소식에 더 이상 올라오지 않아요.') : act(`followUser('${u}').then(renderPeerManage)`, 'fa-user-plus', '팔로우하기', '이 사람의 새 게시물을 팔로잉 소식에서 받아 봐요.')}
+                    <div class="px-4 pt-3 pb-1 text-[0.6875rem] font-bold text-slate-400">내 게시물 공개 범위</div>
+                    ${sw('hide', peerPref(uid, 'hide'), 'fa-eye-slash', '이 사람에게 내 게시물 숨기기', '이 사람에게만 내 일상 게시물이 보이지 않아요. 다른 이웃에게는 그대로 공개돼요.')}
+                    ${sw('restrict', peerPref(uid, 'restrict'), 'fa-comment-slash', '제한하기', '이 사람은 내 게시물에 댓글을 달 수 없고, 이 사람의 대화 요청·메시지 알림이 오지 않아요.')}
+                    <div class="px-4 pt-3 pb-1 text-[0.6875rem] font-bold text-slate-400">기타</div>
+                    ${act(`renameFriendPrompt('${u}')`, 'fa-pen', '이름 바꾸기', friendAlias(uid) ? `지금: ${esc(friendAlias(uid))} (원래 이름 ${esc(m.nick || '이웃')})` : '나에게만 보이는 이름으로 바꿔요.')}
+                    ${blockedNow ? act(`unblockUser('${u}'); setTimeout(renderPeerManage, 300)`, 'fa-unlock', '차단 해제', '다시 서로의 글·프로필이 보이고 대화할 수 있어요.')
+                        : act(`blockUser('${u}', peerManageInfo.nick, peerManageInfo.emoji)`, 'fa-ban', '차단하기', '서로의 글·프로필·대화가 보이지 않고, 팔로우도 함께 끊겨요.', true)}
+                </div></div>`;
+            card.classList.remove('hidden');
         }
 
         // ================= 팔로우 · 팔로잉 (인스타그램·트위터처럼) =================
