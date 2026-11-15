@@ -41,8 +41,10 @@ UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
 # 1. 수집 대상 주소
 # ───────────────────────────────────────────────────────────────
 def google_rss(query):
-    """구글 뉴스 검색 RSS 주소 (최근 7일 한정)"""
-    q = urllib.parse.quote(query + " when:7d")
+    """구글 뉴스 검색 RSS 주소 (최근 1일 한정).
+    예전엔 7일이라 구글이 '관련도 높은 지난 기사'를 먼저 내줘서 방금 난 사건이 밀려 빠지는 일이 있었음 → 실시간 성격에 맞게 1일.
+    지난 날짜는 backfill_feeds()(날짜 지정 검색)가 따로 채움."""
+    q = urllib.parse.quote(query + " when:1d")
     return f"https://news.google.com/rss/search?q={q}&hl=ko&gl=KR&ceid=KR:ko"
 
 
@@ -649,6 +651,13 @@ LIVESTOCK_RE = re.compile(r"조류\s*인플루엔자|조류\s*독감|고병원�
                           r"가축\s*전염병|가금|양돈|산란계|오리\s*농장|돼지\s*농장|닭\s*농장|꿀벌|낭충봉아")
 OUTBREAK_RE = re.compile(r"확진|양성|검출|발생|의심\s*신고|살처분|매몰|폐사|이동\s*중지|방역대|유입|감염")
 CYBER_RE = re.compile(r"해킹|해커|랜섬|악성\s*(?:코드|앱)|디도스|DDoS|사이버\s*(?:공격|위협|침해|위기)|개인\s*정보|정보\s*유출|데이터\s*유출|침해\s*사고|유심|다크\s*웹|피싱")
+# 사이버: 실제로 유출·해킹·탈취 '피해가 발생한' 기사만. 대비·전망·과징금 같은 후속·안내 기사는 제외
+CYBER_OCCUR_RE = re.compile(r"유출(?:됐|돼|된|되어|\s*(?:사고|피해|정황|사실|확인|발생))|털(?:려|렸|린)|뚫려|뚫렸|침투(?:했|해)|해킹(?:당|돼|됐|된|으로|에\s|\s*(?:피해|사고|정황|흔적|확인|발생))|"
+                            r"탈취(?:당|돼|됐|된|해|한|\s*(?:피해|사고|정황))|감염(?:돼|됐|된|되어|\s*(?:피해|사고|의심))|공격(?:받|당|을\s*받|으로)|침해\s*(?:사고|정황|흔적|신고)|"
+                            r"마비(?:됐|돼|된)|먹통|장애\s*(?:발생|로)|피해\s*(?:발생|확인|속출|잇따)|도용(?:당|돼|됐)|노출(?:됐|돼|된)|\d[\d,.]*\s*(?:만\s*)?명[^.…]{0,12}유출")
+CYBER_PREP_RE = re.compile(r"대비|예방|방지|막(?:는다|으려|기\s*위|아야)|대응\s*(?:훈련|체계|역량|전략|방안)|훈련|모의|점검|보안\s*(?:강화|교육|캠페인|수칙|솔루션|기술|투자|시장)|"
+                           r"가이드|전망|보고서|리포트|동향|트렌드|세미나|컨퍼런스|포럼|출시|솔루션|기술\s*개발")
+CYBER_AFTER_RE = re.compile(r"과징금|과태료|(?<![가-힣])제재(?!\s*에도)|행정\s*처분|집단\s*소송|손해\s*배상\s*소송|보상\s*(?:보험|지원|방안|계획)|지원책|재발\s*방지")
 CYBER_EVENT_RE = re.compile(r"유출|탈취|침해|감염|공격|피해|당해|당했|뚫|마비|장애|노출|도용|적발|검거|구속|체포|송치|기소|확인|신고|조사|수사|발생|정황|사고")
 
 
@@ -662,6 +671,12 @@ def is_not_incident(title, content):
     if AD_RE.search(text):
         return True
     # 가축전염병 발생·사이버 해킹 피해는 '방역 강화·보안 대책' 같은 말이 함께 있어도 실제 사건이므로 그대로 올림
+    if CYBER_RE.search(title):
+        occur = CYBER_OCCUR_RE.search(title) or STRICT_FACT_RE.search(title)
+        if CYBER_AFTER_RE.search(title) and not STRICT_FACT_RE.search(title):
+            return True                  # 과징금·보상 지원 같은 '예전 유출 사고의 후속' 기사
+        if CYBER_PREP_RE.search(title) and not occur:
+            return True                  # 대비·전망·훈련·솔루션 기사 (실제 피해 없음)
     if (LIVESTOCK_RE.search(title) and OUTBREAK_RE.search(title)) or (CYBER_RE.search(title) and CYBER_EVENT_RE.search(title)):
         return False
     # 법·제도 변경, 범죄 수법 안내·주의 당부 (제목에 구속·검거·사망 같은 실제 사건 낱말이 없을 때만)
@@ -784,7 +799,12 @@ KO_CASUALTY_RE = re.compile(r"사망|숨져|숨졌|사상|부상|격침|격추|�
 KO_PEACE_RE = re.compile(r"휴전|종전|정전\s*(?:협정|협상|합의|회담)|평화\s*(?:협상|회담|협정|합의|안|계획|구상)|전후\s*재건|재건(?:\s*(?:사업|지원|회의|비용|기금|계획|협력))?|포로\s*(?:교환|송환)|인질\s*(?:석방|교환|협상)|(?:휴전|종전|평화|분쟁|전쟁)[^.…]{0,10}협상|협상\s*(?:타결|결렬|재개|진전|돌입)")
 EN_PEACE_RE = re.compile(r"cease-?fire|truce|armistice|peace (?:talks?|deal|plan|agreement|negotiations?|summit|process)|reconstruction|rebuild(?:ing)?|prisoner (?:swap|exchange)|hostage (?:deal|release)|negotiat\w+", re.I)
 NK_RE = re.compile(r"북한|북측|김정은|NLL|DMZ|군사분계선|대남|오물\s*풍선|GPS\s*교란|(?<![가-힣])北")
-NK_EVENT_RE = re.compile(r"도발|발사|침투|침범|월북|귀순|간첩|무인기|미사일|풍선|교란|포격|총격|핵실험|ICBM")
+NK_EVENT_RE = re.compile(r"도발|발사|침투|침범|월북|귀순|간첩|무인기|미사일|풍선|교란|포격|총격|핵실험|ICBM|지뢰|폭파|사격|월선|나포|교전|피격|낙탄")
+# 북한·접경 기사에서 '실제로 일어난 일'을 보여주는 낱말
+NK_OCCUR_RE = re.compile(r"발사|쐈|쏘아|쏴|침범|침투|넘어(?:와|온|왔)|월북|귀순|격추|포격|사격|총격|교전|살포|날려\s*보|낙하|떨어(?:져|진|졌)|추락|교란|피격|사망|숨져|숨진|부상|다쳐|"
+                         r"포착|감지|탐지|격퇴|출격|침입|발견|검거|체포|구속|적발|송치|입건|감행|폭파|폭발|지뢰\s*도발|도발했|나포|월선|낙탄|핵실험\s*(?:강행|실시|단행)")
+NK_TALK2_RE = re.compile(r"문제\s*제기|묻자|위문|예산|이견|여야|국회|예결위|특검|국감|안보\s*(?:태세|비상|인식)|밸런스|칼럼|기고|시론|규탄|성명|담화|논평|잠잠|"
+                         r"^[^\s\"“]{2,8}\s*[\"“]")
 # 해외 기사임을 보여주는 표현 (나라 이름이 다른 뜻으로도 쓰이는 경우의 확인용)
 FOREIGN_CTX_RE = re.compile(r"현지\s*(?:시간|시각|경찰|당국|언론|매체|소방|주민)|\(현지|외신|AFP|AP\s*통신|로이터|신화\s*통신|교도\s*통신|타스|블룸버그|CNN|BBC|NHK|특파원|해외|국제")
 DOMESTIC_CTX_RE = re.compile(r"국내|우리나라|한국\s*(?:정부|경찰|내)|입국|귀국|방한|내한|인천공항|김포공항|국내\s*유입|거점|송환|원정|[가-힣]{2,6}발\s*(?:항공기|여객기|비행기)")
@@ -1121,6 +1141,11 @@ def classify(title, content):
         if HISTORY_RE.search(t) and not HARD_FACT_RE.search(t):
             return None
         if KO_TALK_RE.search(t) and not KO_CASUALTY_RE.search(t) and not re.search(r"발사|침투|침범|귀순|월북", t):
+            return None
+        # 실제로 벌어진 일(발사·침범·사격·피격·검거…)이 제목에 있어야 함. 정치권 공방·예산·위문·외교 발언·칼럼은 제외
+        if not NK_OCCUR_RE.search(t):
+            return None
+        if (POLITICS_RE.search(t) or NK_TALK2_RE.search(t)) and not KO_CASUALTY_RE.search(t) and not re.search(r"발사했|발사해|쐈|침범했|넘어왔|귀순했|월북했|격추|사격했", t):
             return None
         if re.search(r"간첩", t):
             return "간첩·내란·외환", "국가안보·테러"
