@@ -139,6 +139,10 @@ def google_site_rss(domain):
 
 # 구글 뉴스 주제별 검색 (구글 뉴스는 여러 언론사 기사를 모아서 보여줍니다)
 TOPIC_QUERIES = [
+    # 실시간 속보 (방금 일어난 사건이 다른 검색어에 밀려 빠지지 않도록)
+    "속보 화재 OR 속보 사고 OR 속보 숨져 OR 속보 사망 OR 속보 실종",
+    "119 출동 OR 소방 출동 OR 주민 대피 OR 고립 구조 OR 긴급 구조",
+    "숨진 채 발견 OR 사망 사고 OR 중상 OR 의식불명 OR 심정지",
     "살인 OR 살해 OR 시신 OR 흉기 OR 칼부림",
     "폭행 OR 상해 OR 난동 OR 묻지마 OR 가정폭력 OR 학교폭력 OR 아동학대",
     "방화 OR 납치 OR 감금 OR 인질",
@@ -152,19 +156,15 @@ TOPIC_QUERIES = [
     "실종 OR 변사 OR 숨진 채 발견 OR 수색",
     "경찰 검거 OR 구속 OR 입건 OR 체포 OR 송치",
     "침수 OR 산사태 OR 싱크홀 OR 정전 OR 지진 OR 폭설",
-    "북한 도발 OR 간첩 OR 무인기",
-    "전쟁 OR 교전 OR 공습 OR 미사일 OR 휴전",
-    "휴전 협상 OR 종전 협상 OR 평화 협상 OR 평화 회담 OR 휴전 합의 OR 휴전 파기",
-    "전후 재건 OR 재건 지원 OR 포로 교환 OR 인질 석방 OR 정전 협정",
-    "공습 OR 폭격 OR 타격 OR 격침 OR 격추 OR 피격",
-    "우크라이나 OR 러시아 공습 OR 드론 OR 미사일",
-    "이스라엘 OR 이란 OR 가자 OR 레바논 공습 OR 타격",
-    "홍해 OR 호르무즈 OR 대만해협 OR 남중국해 군함 OR 나포 OR 격침",
-    "미군 OR 중국군 OR 자위대 OR 나토 공습 OR 격추 OR 타격",
-    "호르무즈 해협 OR 유조선 피격 OR 유조선 나포 OR 해상 봉쇄",
-    "드론 공격 OR 자폭 드론 OR 요격 OR 전투기 출격 OR 유도탄",
-    "폭탄 테러 OR 자폭 테러 OR 스파이 체포 OR 간첩 구금",
-    "전차 OR 자주포 OR 지뢰 매설 OR 기습 작전 OR 포로 교환 OR 투항",
+    # 북한·접경 (실제로 일어난 일만: 발사·침범·사격·지뢰·귀순·월북·풍선·GPS 교란)
+    "북한 미사일 발사 OR 탄도미사일 발사 OR 북한 포격 OR 북한 사격",
+    "군사분계선 침범 OR NLL 침범 OR DMZ 지뢰 OR 북한군 월선 OR 경고사격",
+    "북한 귀순 OR 월북 OR 오물풍선 OR GPS 교란 OR 북한 무인기 침범",
+    "간첩 검거 OR 간첩 혐의 구속 OR 국가보안법 위반 체포",
+    "군부대 사고 OR 훈련 중 사망 OR 오발 사고 OR 폭발물 사고 군",
+    # 대한민국과 연결된 해외 사건 (한국인 피해·한국 선박·국적기)
+    "한국 선박 피격 OR 한국인 선원 납치 OR 한국 국적 선박 나포",
+    "해외 한국인 피해 OR 교민 사망 OR 한국인 여행객 사고",
     # 사이버·보건·날씨
     "랜섬웨어 OR 디도스 OR 계정 탈취 OR 악성코드 OR 사이버 공격",
     "해킹 피해 OR 해킹 사고 OR 해커 조직 OR 북한 해커 OR 침해사고 OR 서버 해킹",
@@ -427,7 +427,7 @@ RULES_SRC = [
     # ── 국가적 법익: 공무원의 직무·공무방해·사법 ──
     ("뇌물·직권남용", r"뇌물|금품\s*수수|향응|수뢰|수수\s*의혹|청탁|직권\s*남용|직무\s*유기|공무상\s*비밀|피의사실\s*공표|김영란법|청탁금지법|비위|비리|공금|"
                   r"감찰\s*(?:착수|조사|결과)|" + _OFFICIAL),
-    ("위증·무고·도주", r"위증|무고\s*(?:죄|혐의)|무고로|범인\s*(?:도피|은닉)|증거\s*(?:인멸|위조)|탈주|도주\s*(?:죄|극)|수감자\s*도주|호송\s*중\s*도주"),
+    ("위증·무고·도주", r"위증|무고\s*(?:죄|혐의)|무고로|범인\s*(?:도피|은닉)|증거\s*(?:인멸|위조)|(?<!이)탈주|도주\s*(?:죄|극)|수감자\s*도주|호송\s*중\s*도주"),
     ("선거범죄", r"선거법\s*위반|공직선거법|허위\s*사실\s*공표|후보자\s*비방|기부\s*행위|선거\s*사범|매표\s*행위|투표지\s*(?:훼손|촬영)|선거\s*방해"),
     # ── 재산·경제 ──
     ("전기통신금융사기", r"보이스\s*피싱|스미싱|(?<![가-힣])피싱|큐싱|파밍|대포\s*(?:통장|계좌)|대포폰|전화\s*금융\s*사기|전기통신금융사기|로맨스\s*스캠|리딩방|(?:검사|경찰|금감원|기관|공무원|군부대)\s*사칭"),
@@ -474,7 +474,7 @@ RULES_SRC = [
     ("산업안전·중대재해법", r"중대재해\s*처벌법|중대재해처벌법|중대재해법|산업안전보건법|산안법|중대\s*재해[^.…]{0,10}(?:혐의|기소|송치|입건|수사|압수\s*수색|구속)"),
     ("병역·집시·출입국", r"병역\s*(?:기피|면탈|비리)|병역법|입영\s*기피|집시법|미신고\s*집회|불법\s*집회|해산\s*명령|불법\s*체류|밀입국|출입국관리법|불법\s*취업"),
     ("과실치사상", r"과실\s*치사|과실\s*치상|업무상\s*과실|중과실"),
-    ("기타 범죄", r"무허가|짝퉁|저작권\s*침해|암표|불법\s*(?:영업|유통|판매|제조|도축)|식품위생법|원산지\s*(?:허위|위반|속여)|(?:산업\s*)?기술\s*유출|영업\s*비밀|불법\s*녹음|도청|불법\s*감청|직장\s*내\s*괴롭힘|갑질"),
+    ("기타 범죄", r"무허가|짝퉁|저작권\s*침해|암표|불법\s*(?:영업|유통|판매|제조|도축)|식품위생법|원산지\s*(?:허위|위반|속여)|(?:산업\s*)?기술\s*유출|영업\s*비밀|불법\s*녹음|(?<![가-힣])도청(?!\s*(?:사|청사|앞|광장|소재지|공무원|직원|이전|신청사|소년))|불법\s*감청|직장\s*내\s*괴롭힘|갑질"),
     # ── 감염병·보건 (자연재해의 '주의보'보다 먼저) ──
     # 가축·가금·꿀벌·야생동물 전염병 (가축전염병예방법의 제1·2·3종 가축전염병 중 국내에서 자주 보도되는 것)
     ("가축전염병", r"조류\s*인플루엔자|조류\s*독감|(?:고|저)병원성|HPAI|H5N\d|H7N\d|AI\s*(?:확진|발생|의심|항원|검출|방역|양성|유입|특별\s*방역)|"
@@ -534,6 +534,8 @@ RULES = [(r[0], SUB_TO_GROUP[r[0]], re.compile(r[1]), len(r) > 2) for r in RULES
 #   예) 애정 폭발, 지지율 추락, 문화재(→화재), 세금 폭탄, 무역 전쟁, 별점 테러, 마약 김밥, 취업 한파, 골 가뭄
 PRE_CLEAN = re.compile(
     r"사기\s*진작|사기\s*저하|사기업|사기\s*충천|"
+    # '사고 싶다'(사다)·'사상 첫'(역사상)·'북한이탈주민'(탈주 아님)·'○○도청소년'(도청 아님)
+    r"사고\s*(?:싶|파는|팔고|팔기|팔아)|사상\s*(?:첫|최초|최대|최고|최저|처음|유례|초유|두\s*번째)|(?:북한\s*)?이탈\s*주민|도청\s*소년|"
     r"문화재|무형\s*문화재|화재\s*보험|화재\s*해상|(?:삼성|메리츠|흥국|현대해상|롯데|한화|DB)\s*화재|낙하산|날벼락|벼락\s*(?:거지|치기|부자|스타)|"
     r"(?<![가-힣])(?:애정|사랑|인기|매력|분노|감정|눈물|웃음|반응|수요|포텐|잠재력|케미|존재감|화력|타선|득점|골|흥행|입담|끼|예능감|텐션|관심|조회\s*수|매출|거래량|주문|검색량|"
     r"불만|민원|갈등|설렘|감동|열기|환호|함성|성량|가창력|비주얼|미모|매력|팬심|호응|기대감|인구|물량|트래픽|예약|판매|감성|흥|귀여움|입소문|화제성)\s*['‘’“”\"]?\s*(?:대)?폭발|"
@@ -660,6 +662,102 @@ CYBER_PREP_RE = re.compile(r"대비|예방|방지|막(?:는다|으려|기\s*위|
 CYBER_AFTER_RE = re.compile(r"과징금|과태료|(?<![가-힣])제재(?!\s*에도)|행정\s*처분|집단\s*소송|손해\s*배상\s*소송|보상\s*(?:보험|지원|방안|계획)|지원책|재발\s*방지")
 CYBER_EVENT_RE = re.compile(r"유출|탈취|침해|감염|공격|피해|당해|당했|뚫|마비|장애|노출|도용|적발|검거|구속|체포|송치|기소|확인|신고|조사|수사|발생|정황|사고")
 
+# ───────────────────────────────────────────────────────────────
+# 실시간 사건사고 알리미 취지에 맞추는 추가 필터 (2026-11-15)
+#   원인: 사건 분류 규칙이 '낱말(명사)'만 보고 기사를 넣어서, 실제로 일이 일어나지 않은 기사도 들어왔음
+#   (예: '반복되는 침수, 재정부담' · '학폭… 청소년기 뇌' · '보이스피싱 막을 지킴이 양성' · '딥페이크 시대… 확인 습관')
+#   → ① 제목에 '실제로 일어났다'는 표시(EVENT_OCCUR_RE)가 있어야 올리고
+#     ② 후속(책임 촉구·사과·추모·소송)·전망·정치 공방·외교·통계·예방 성공·행정 절차·행사·나눔 기사는 따로 걸러냄
+# ───────────────────────────────────────────────────────────────
+# ① 제목에 '실제로 일어난 일'임을 보여주는 표시
+EVENT_OCCUR_RE = re.compile(
+    r"발생|일어나|일어난|났다|났어|숨져|숨진|숨졌|사망|사상자|부상|다쳐|다쳤|다친|중상|경상|중태|의식\s*불명|심정지|실종|수색|구조|구출|발견|시신|변사|"
+    r"검거|체포|구속|입건|송치|붙잡|덜미|적발|압수\s*수색|영장|수사|혐의|범행|피의자|용의자|가해자|피해자|피해액|일당|조직원|총책|수거책|(?<![\d])[1-9]0대|"
+    r"신고|출동|대피|통제|고립|이송|화재|불(?:이\s*나|\s*나|길|타|탄|붙)|(?:서|에)\s*불(?![가-힣])|(?<![가-힣])불(?:…|\.{2,}|\s*[,·]|\s*$)|전소|진화|폭발|"
+    r"피격|피습|습격|쓰러|끊겨|끊긴|파손|피해\s*(?:속출|잇따|발생|입|당|커|확산|신고)|곳곳\s*피해|교통사고|만취|불법|무더기|내사|고소|고발|송환|압수|"
+    r"고병원성|구제역|아프리카\s*돼지\s*열병|럼피\s*스킨|"
+    r"누출|호흡\s*곤란|중독|쓰러져|쓰러진|주먹|횡령|배임|사칭|소동|대치|설득\s*중|기울어|날아가|날아갔|['‘’]쿵['‘’]|중\s*사고|사고(?:…|\s*$|로\s|가\s)|"
+    r"붕괴|무너|추락|추돌|충돌|전복|침몰|좌초|탈선|들이받|치여|치였|돌진|역주행|뺑소니|음주\s*운전|무면허|"
+    r"떨어져|떨어진|넘어져|깔려|끼여|끼임|질식|감전|익사|물에\s*빠|매몰|침수(?:돼|됐|된|되|\s*피해)|잠겨|잠긴|범람|산사태|싱크홀|땅\s*꺼짐|정전|단수|결항|휴교|먹통|마비|불통|멈춰|멈춤|"
+    r"폭행|때려|때린|찔러|찔린|찔려|흉기|살해|살인|피살|난동|협박|납치|감금|성폭행|성추행|추행|불법\s*촬영|몰래\s*촬영|스토킹|학대|방화|투약|밀반입|밀수|훔|털어|털린|도난|절도|강도|"
+    r"빼앗|가로채|가로챈|편취|속여|당해|당했|뜯어|유출|해킹|탈취|감염|확진|검출|양성|살처분|폐사|집단\s*(?:감염|발병|식중독)|식중독|역학\s*조사|"
+    r"특보|주의보|경보|발령|발효|재난\s*문자|속보|긴급|참변|참사|아수라장|날벼락")
+# ② 사건 '이후'의 후속 기사: 책임 규명 촉구·사과·추모·소송·대책 마련 (사건 낱말이 있어도 실시간 사건 기사가 아님)
+FOLLOWUP_RE = re.compile(r"책임\s*(?:규명|자\s*처벌|공방|론|전가|회피|묻)|처벌\s*(?:촉구|요구)|진상\s*(?:규명|조사\s*촉구)|규명\s*(?:촉구|요구)|촉구|기자\s*회견|1인\s*시위|규탄|"
+                         r"추모(?:식|제|비|공간|행사|문화제|객)?|분향소|\d+\s*주기|재발\s*방지|사과문|공식\s*사과|사과(?:했|드|합니다|드립니다)|공식\s*입장|입장문|해명|반박|"
+                         r"손해\s*배상|손배(?:소)?|승소|패소|보상금|배상금|유족\s*(?:요구|반발|호소|회견)|후속\s*(?:조치|대책)|대책\s*(?:마련|회의|발표|부심)|보도\s*그\s*후")
+BREAKING_RE = re.compile(r"\[\s*속보\s*\]|긴급|방금|지금\s*(?:현장|불)")
+# ③ 전망·예측·경고성 발언 (예: 'AI 사고가 주요 사망원인 될 것')
+OPINION_RE = re.compile(r"(?:될|할|올|일어날|늘어날|증가할|커질|나올|닥칠|생길)\s*(?:것|수도|듯)|전망")              # 앞날을 내다보는 말: 사건 낱말이 있어도 제외
+OPINION_WEAK_RE = re.compile(r"예측|예상(?!\s*(?:밖|못한))|경고(?!\s*사격)|가능성(?!\s*(?:수사|조사|염두))")       # 실제 피해(사망·부상 등)가 함께 있으면 사건으로 남김
+# ④ 정치·사법 공방·외교 (예: '내란 특수본 출범 초읽기…실효성 의문', '미·중·러 3자 회동 앞 외교전')
+POLITICAL_RE = re.compile(r"특검|특수본|특별\s*수사\s*본부|출범|초읽기|정치권|여야|국정\s*조사|청문회|공방|실효성|의문|비판|쓴소리|일침|도마|"
+                          r"외교|회동|정상\s*(?:회담|회의)|회담|순방|밀착|동맹|(?:3|삼)자\s*회|양자\s*회")
+# ⑤ 통계·추세 기사 (예: '현역병 대부업 대출 69배 급증')
+STATS2_RE = re.compile(r"급증|급감|증가세|감소세|늘었|늘어|줄었|줄어|최다|역대\s*(?:최|급)|\d+\s*배\s*(?:급증|증가|늘|↑|뛰|껑충)|\d+\s*년\s*(?:간|새|만에\s*최)|매년|해마다|통계|현황|실태|"
+                       r"조사\s*결과|설문|추이|평균|비율|점유율|건수(?!\s*\d+건\s*(?:발생|접수)\s*(?:중|돼))")
+# ⑥ 예방 성공·예방 활동·교육 (예: '직원 직감으로 보이스피싱 막았다', '보이스피싱 막을 지킴이 28명 양성')
+PREVENTED_RE = re.compile(r"막았|막아(?!\s*(?:서|선|놓|세운|선\s*채))|막은|막을|막는|예방했|예방한|지켜(?:냈|낸|줬)|지킨|피해\s*(?:막|예방|차단)|차단했|지킴이|"
+                          r"양성(?!\s*(?:판정|반응|확진|률|자|으로))|수료|위촉|발대|협약|순찰\s*(?:강화|활동|나서)|합동\s*순찰|교육\s*(?:실시|진행|나서|프로그램)")
+# ⑦ 행정 절차·결정 (예: '전세사기 피해 불인정 249건…결정문에 이유 밝힌다')
+ADMIN_RE = re.compile(r"불인정|결정문|심의|위원회\s*(?:결정|의결|심의)|인정\s*(?:건수|비율|률)|접수\s*현황|처리\s*현황|민원\s*(?:처리|접수)\s*(?:건|현황)|재정\s*부담|예산|복구비|"
+                      r"재원|국비|보험금\s*(?:지급|청구)")
+# ⑧ 행사·회의·나눔·모임 (예: '청소년참여기구 담당자 회의', '이북도민 500여명 한자리', '폭우 피해 상인에 김치 나눔')
+GATHER_RE = re.compile(r"나눔|나눠|기부|기탁|전달식|후원|봉사|위문|한자리|모여\s|모인|화합|축제|행사|개최|(?<!화상)(?<!화상\s)회의(?!\s*(?:중|도중|에서\s*(?:쓰러|숨)))|담당자|(?:상|하)반기|"
+                       r"총회|간담회|결연|교류|기념품|정\s*나눠|고향의\s*정|성료|팡파르|개막|폐막")
+# ⑨ 연구·학술 (예: '학폭·왕따 등 사회적 스트레스, 청소년기 뇌에 더 큰 흔적')
+RESEARCH_RE = re.compile(r"(?<![가-힣])뇌(?!\s*(?:진탕|출혈|졸중|경색|사(?![가-힣])|손상\s*(?:입|으로)))|청소년기|흔적|연구(?!원\s*(?:숨|사망|부상))|학회|논문|교수(?!\s*(?:구속|체포|입건|송치))|실험|분석\s*결과|메커니즘|상관관계|유전자")
+# ⑩ 드라마·예능 내용: 맨 앞에 프로그램 이름 '…' + 배우 이름(·) 꼴 (예: "'문무' 김강우·이현욱 父子, 시체밭서 습격")
+DRAMA_TITLE_RE = re.compile(r"^\s*['‘\"“][^'’\"”]{1,12}['’\"”]\s*[가-힣]{2,4}\s*[·,]\s*[가-힣]{2,4}")
+_PROGRAM_TAG_RE = re.compile(r"\(([가-힣A-Za-z]{2,6})\)\s*$")
+_NOT_PROGRAM_TAGS = {"종합", "속보", "1보", "2보", "3보", "상보", "영상", "사진", "포토", "단독", "인터뷰", "전문", "공식입장", "자막뉴스", "현장영상", "르포", "그래픽",
+                     "외", "등", "일보", "뉴스", "사진있음", "포토뉴스", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북",
+                     "전남", "경북", "경남", "제주", "정정", "수정", "추가", "업데이트", "지도", "표", "그림"}
+
+
+def is_drama(title):
+    """드라마·예능 줄거리 기사인지 (맨 앞 '프로그램명' + 배우 이름, 또는 맨 끝 (예능 줄임말))"""
+    if DRAMA_TITLE_RE.search(title):
+        return True
+    m = _PROGRAM_TAG_RE.search(title)
+    if m:
+        tag = m.group(1)
+        if tag not in _NOT_PROGRAM_TAGS and not re.search(r"(?:시|군|구|도|동|읍|면|청|서|원|대|교)$", tag) and not re.search(r"\d", tag):
+            return True                  # 예) '…김치 500kg 나눔 (사당귀)'
+    return False
+
+
+def not_realtime(title):
+    """실시간 사건사고가 아닌 기사: 후속·전망·정치 공방·외교·통계·예방 성공·행정 절차·행사·나눔·연구 (True 면 올리지 않음)"""
+    strict = STRICT_FACT_RE.search(title)
+    if FOLLOWUP_RE.search(title) and not BREAKING_RE.search(title):
+        return True                      # 사건 낱말이 있어도 '책임 규명 촉구·사과·추모·소송'은 후속 기사
+    if strict:
+        return False                     # 구속·검거·숨져 같은 확실한 사건 낱말이 있으면 아래 기준은 적용하지 않음
+    warn = WARNING_RE.search(title)
+    hard = HARD_FACT_RE.search(title)
+    if POLITICAL_RE.search(title) and not KO_CASUALTY_RE.search(title):
+        return True
+    if not warn and (OPINION_RE.search(title) or (OPINION_WEAK_RE.search(title) and not hard)):
+        return True
+    # 통계·추세: 단, '구제역 추가 발생…올해 16건으로 늘어'처럼 새로 발생한 일이 있으면 남김
+    if STATS2_RE.search(title) and not NEW_OCCUR_RE.search(title):
+        return True
+    # 예방 성공·예방 활동: 단, '소화기로 화재 확산 막아'처럼 실제로 불·사고가 난 경우는 남김
+    if PREVENTED_RE.search(title) and not PHYSICAL_EVENT_RE.search(title):
+        return True
+    # 행사·나눔·행정 기사: 단, '축제 인파 몰려 10명 부상'·'불꽃축제서 암표 8건 적발'처럼 실제 사건이 있으면 남김
+    if (ADMIN_RE.search(title) or GATHER_RE.search(title)) and not (hard or ACTION_FACT_RE.search(title)):
+        return True
+    if RESEARCH_RE.search(title) and not (hard or ACTION_FACT_RE.search(title)):
+        return True
+    return False
+
+
+NEW_OCCUR_RE = re.compile(r"(?:추가|또|잇따라|새로|연이어)\s*(?:발생|확진|검출)|확진(?:됐|돼|\s*판정)|(?:에서|서)\s*(?:발생|확진)")
+PHYSICAL_EVENT_RE = re.compile(r"화재|불이?\s*나|(?:서|에)\s*불(?![가-힣])|진화|폭발|붕괴|추락|구조|발생|확진|구제역|고병원성|부상|사망|숨|다쳐|다쳤|대피")
+ACTION_FACT_RE = re.compile(r"적발|검거|체포|입건|송치|붙잡|부상|사망|숨져|숨진|숨졌|다쳐|다쳤|대피|폭행|흉기|사고(?:로|가|\s*(?:발생|났|당))|탈취|해킹")
+
 
 def is_not_incident(title, content):
     """사건사고 '발생' 기사가 아닌 것(서평·광고·정책·발언·사설·기술·과학·역사·상품·예방)을 걸러냄"""
@@ -681,6 +779,9 @@ def is_not_incident(title, content):
         return False
     # 법·제도 변경, 범죄 수법 안내·주의 당부 (제목에 구속·검거·사망 같은 실제 사건 낱말이 없을 때만)
     if not STRICT_FACT_RE.search(title) and (LAW_CHANGE_RE.search(title) or CRIME_NOTICE_RE.search(title)):
+        return True
+    # 후속·전망·정치 공방·외교·통계·예방 성공·행정·행사·나눔·연구 기사
+    if not_realtime(title):
         return True
     warn = WARNING_RE.search(title)
     hard = HARD_FACT_RE.search(title)
@@ -753,7 +854,7 @@ LEGAL_FACT_RE = re.compile(r"구속|입건|검거|체포|송치|기소|징역|�
 #   court    = 재판·판결 (기소·공판·구형·선고·징역·항소 등. 보통 몇 달~몇 년 전 사건의 후속 소식)
 #   court 기사는 실시간 사건사고 알리미 취지에 맞지 않아 classify() 에서 아예 빼고(is_court_news), 화면(index.html)에서도 숨깁니다.
 #   index.html 의 stageOf() 와 같은 기준이어야 합니다. (news.json 에 "stage" 로 저장)
-STAGE_COURT_STRONG_RE = re.compile(r"선고|징역|실형|집행\s*유예|벌금형|무죄|유죄|항소|상고|판결|재판(?!매)|공판|(?:(?<![가-힣])|구속\s*|불구속\s*)기소(?!\s*의견)|법정\s*구속|감형|형량|양형|원심|파기|국민참여재판|[123]심(?![가-힣])")
+STAGE_COURT_STRONG_RE = re.compile(r"선고|징역|실형|집행\s*유예|(?<![가-힣])집유|재심|결심\s*(?:공판|재판)|불구속\s*재판|벌금형|무죄|유죄|항소|상고|판결|재판(?!매)|공판|(?:(?<![가-힣])|구속\s*|불구속\s*)기소(?!\s*의견)|법정\s*구속|감형|형량|양형|원심|파기|국민참여재판|[123]심(?![가-힣])")
 STAGE_COURT_WEAK_RE = re.compile(r"법원|판사|재판부|대법원|검찰|지검|고검|대검|공소청")
 STAGE_NOW_RE = re.compile(r"화재|불이?\s*나|숨져|숨진|숨졌|추락|충돌|추돌|난동|폭발|붕괴|실종|구조|대피|사고|체포|검거|붙잡|덜미|입건|구속|영장|압수\s*수색|발생|신고|출동")
 STAGE_POLICE_RE = re.compile(r"구속|입건|검거|체포|송치|영장|압수\s*수색|수사|조사|붙잡|덜미|지명\s*수배|추적")
@@ -804,6 +905,7 @@ NK_EVENT_RE = re.compile(r"도발|발사|침투|침범|월북|귀순|간첩|무�
 NK_OCCUR_RE = re.compile(r"발사|쐈|쏘아|쏴|침범|침투|넘어(?:와|온|왔)|월북|귀순|격추|포격|사격|총격|교전|살포|날려\s*보|낙하|떨어(?:져|진|졌)|추락|교란|피격|사망|숨져|숨진|부상|다쳐|"
                          r"포착|감지|탐지|격퇴|출격|침입|발견|검거|체포|구속|적발|송치|입건|감행|폭파|폭발|지뢰\s*도발|도발했|나포|월선|낙탄|핵실험\s*(?:강행|실시|단행)")
 NK_TALK2_RE = re.compile(r"문제\s*제기|묻자|위문|예산|이견|여야|국회|예결위|특검|국감|안보\s*(?:태세|비상|인식)|밸런스|칼럼|기고|시론|규탄|성명|담화|논평|잠잠|"
+                         r"외교|회동|회담|정상\s*회의|밀착|순방|동맹|이탈\s*주민|탈북민\s*(?:행사|모임|정착|지원)|"
                          r"^[^\s\"“]{2,8}\s*[\"“]")
 # 해외 기사임을 보여주는 표현 (나라 이름이 다른 뜻으로도 쓰이는 경우의 확인용)
 FOREIGN_CTX_RE = re.compile(r"현지\s*(?:시간|시각|경찰|당국|언론|매체|소방|주민)|\(현지|외신|AFP|AP\s*통신|로이터|신화\s*통신|교도\s*통신|타스|블룸버그|CNN|BBC|NHK|특파원|해외|국제")
@@ -1085,6 +1187,10 @@ def _classify_incident(title, content, t, full):
         return None                      # 경찰·소방이 실제로 움직였거나 사람이 몰린 일만
     if sub == "경찰·소방 출동" and not re.search(r"출동|112|119|신고\s*(?:접수|받|로|에)|대치|구조|대피|부상|다쳐|다쳤|통제|수색|체포|검거|추격|사고(?!\s*(?:예방|대비|줄))|긴급", t):
         return None
+    # 실시간 사건사고 알리미: 제목에 '실제로 일어난 일'(발생·숨져·검거·화재·대피·특보 발령…)이 보여야 올림.
+    #   분류 낱말(침수·학폭·딥페이크·보이스피싱·내란…)만 있고 일어난 일이 없는 해설·연구·예방 기사는 여기서 빠짐
+    if not EVENT_OCCUR_RE.search(t):
+        return None
     return sub, group
 
 
@@ -1134,6 +1240,9 @@ def classify(title, content):
         return None
     # 재판 과정·판결 결과(기소·공판·구형·선고·항소…)는 '지금 일어난 사건'이 아니므로 올리지 않음 (실시간 사건사고 알리미 취지)
     if is_court_news(title):
+        return None
+    # 드라마·예능 줄거리 (예: "'문무' 김강우·이현욱 父子, 시체밭서 습격") — 실제로 입건·구속된 경우만 예외
+    if is_drama(title) and not (LEGAL_FACT_RE.search(title) or STRICT_FACT_RE.search(title)):
         return None
 
     # ── 1) 북한 관련 국가안보 ──
@@ -1828,9 +1937,17 @@ def refine_locations(items, started=None):
     return n_poi, n_dong
 
 
+NATIONAL_INST_ALIASES = {a for marks in INSTITUTIONS_NATIONAL.values() for a in marks}
+# '군대·현역병·장병' 처럼 특정 부대·지역 없이 군 전체를 말하는 기사 (예: '현역병 대부업 대출 69배 급증')
+MILITARY_GENERIC_RE = re.compile(r"군대|현역병|장병|병사들?(?![가-힣])|군\s*간부|초급\s*간부|부사관|병영|군\s*복무|복무\s*중인|입대|전역\s*(?:자|병)|군인들?(?![가-힣])|국군")
+
+
 def locate(title, content, hint_sido=None, overseas=False):
     """(위치이름, 위도, 경도, 정밀도정보) 반환. 모르면 (미상, None, None, …)"""
     key = title
+    _mil = (not overseas and MILITARY_GENERIC_RE.search(title) and not find_sidos(title)) and match_sigungu(title, None)
+    if not overseas and MILITARY_GENERIC_RE.search(title) and not find_sidos(title) and (not _mil or _mil[4] in NATIONAL_INST_ALIASES):
+        return "대한민국 (세부 위치 미상)", None, None, {"prec": None, "place": None}   # 군 전체 이야기 → 특정 지역에 찍지 않음
     full = title + " | " + (content or "")[:900]     # 요약 + 본문에서 찾은 위치 문장(loctext)까지
     if overseas:
         hit = find_foreign(title, full) or find_foreign(full, full)
@@ -1841,10 +1958,14 @@ def locate(title, content, hint_sido=None, overseas=False):
             return name, round(la + dy, 4), round(ln + dx, 4), {"prec": "world"}
         return "해외 (위치 미상)", None, None, {"prec": None}
     place = find_poi(_NOT_PLACE.sub(" ", full))
+    unknown = ("대한민국 (세부 위치 미상)", None, None, {"prec": None, "place": None})
     for scope in (title, full):
         res = match_sigungu(scope, hint_sido)
         if res:
             label, lat, lng, rad, inst_alias, sgg, dong = res
+            if inst_alias and inst_alias in NATIONAL_INST_ALIASES and not find_sidos(scope.replace(inst_alias, " ")):
+                # 금감원·국방부·경찰청(본청)·부처 같은 '전국 단위 기관' 발표·통계: 사건이 그 건물에서 일어난 게 아니므로 특정 지역에 찍지 않음
+                return unknown
             if inst_alias:
                 # 기관명으로만 찾은 경우: 기사에 다른 시·도가 따로 적혀 있으면 그쪽을 우선
                 other = find_sidos(scope.replace(inst_alias, " "))
@@ -2097,9 +2218,55 @@ def build_item(entry, feed, now_ts):
 
     cls = classify(title, content)
     if not cls:
+        collect_tip(title, source, link, ts)     # 사건이 아닌 '예방·대처 요령' 기사는 안전 브리핑용으로 따로 모음
         return None
     sub, group = cls
     return make_item(title, content, sub, group, source, link, ts, feed.get("hint"))
+
+
+# ── 안전 브리핑용 '예방·대처 정보' (tips.json) ──
+#   '딥페이크 시대, 가게를 지키는 건 확인 습관'처럼 사건은 아니지만 이용자에게 도움이 되는 예방 정보 기사는
+#   사건 목록(news.json)에는 넣지 않고, tips.json 에 모아서 안전 브리핑에서 관련 사건 옆에 '이렇게 예방하세요'로 보여 줍니다.
+TIPS_JSON = "tips.json"
+TIPS_MAX = 120
+TIP_RE = re.compile(r"예방|막으려면|막는\s*법|지키는|지키려면|요령|수칙|대처|확인\s*습관|체크|꿀팁|알아두|피하려면|당하지\s*않으려면|주의(?:하세요|해야|사항|점)|조심|행동\s*요령|"
+                    r"대응법|예방법|구별법|구분법|식별|속지\s*않|이렇게\s*(?:하세요|대처|대응)|확인하세요|안전\s*(?:수칙|정보|요령)|소비자\s*경보|사칭\s*주의|신종\s*수법|수법\s*(?:주의|공개)")
+TIPS = {}
+
+
+def collect_tip(title, source, link, ts):
+    try:
+        if not TIP_RE.search(title) or is_court_news(title) or NON_NEWS_RE.search(title) or AD_RE.search(title) or REVIEW_RE.search(title):
+            return
+        if ENT_SPORT_RE.search(title) or is_drama(title) or LAW_CHANGE_RE.search(title):
+            return
+        t = PRE_CLEAN.sub(" ", title)
+        found = _match_rules(t, t)
+        if not found or found[2]:                # 넓은 분류(경찰·소방 출동 등)로만 걸린 건 제외 → 어떤 위험에 대한 예방인지 분명한 것만
+            return
+        sub, group = found[0], found[1]
+        if group == OVERSEAS_GROUP:
+            return
+        TIPS[norm_key(title)] = {"id": make_id("tip" + norm_key(title)), "title": title, "source": source, "link": link,
+                                 "timestamp": ts, "category": sub, "group": group}
+    except Exception:
+        pass
+
+
+def load_tips():
+    try:
+        with open(TIPS_JSON, encoding="utf-8") as f:
+            data = json.load(f)
+        return {norm_key(x["title"]): x for x in data if x.get("title")}
+    except Exception:
+        return {}
+
+
+def save_tips(cutoff_ts):
+    keep = sorted((v for v in TIPS.values() if v.get("timestamp", 0) >= cutoff_ts), key=lambda x: -x["timestamp"])[:TIPS_MAX]
+    with open(TIPS_JSON, "w", encoding="utf-8") as f:
+        f.write("[\n" + ",\n".join(json.dumps(v, ensure_ascii=False) for v in keep) + "\n]\n")
+    return len(keep)
 
 
 def make_item(title, content, sub, group, source, link, ts, hint, orig=None, loctext=None):
@@ -2382,6 +2549,7 @@ def reprocess_existing(old):
                 continue
             cls = classify(title, content)
             if not cls:
+                collect_tip(title, source, it.get("link", ""), ts)   # 새 기준에서 빠진 예방 정보 기사는 안전 브리핑용으로
                 continue
             item = make_item(title, content[:400], cls[0], cls[1], source, it.get("link", ""), ts, it.get("hint"), None, it.get("loctext"))
             item["embed"] = it.get("embed")
@@ -2402,6 +2570,7 @@ def main():
     cutoff_ts = (now - timedelta(days=KEEP_DAYS - 1)).replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
     print("=== 우리동네 사건사고 수집 시작 ===", now.strftime("%Y-%m-%d %H:%M:%S"))
 
+    TIPS.update(load_tips())
     items = reprocess_existing(load_existing())
     print(f"기존 기사 {len(items)}건 불러옴")
 
@@ -2549,6 +2718,7 @@ def main():
 
     with open(NEWS_JSON, "w", encoding="utf-8") as f:
         f.write("[\n" + ",\n".join(json.dumps(v, ensure_ascii=False) for v in final) + "\n]\n")
+    print(f"안전 브리핑용 예방·대처 정보: {save_tips(cutoff_ts)}건 (tips.json)")
 
     by_day = {}
     by_src = {}
