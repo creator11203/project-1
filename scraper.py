@@ -557,7 +557,10 @@ PRE_CLEAN = re.compile(
     r"(?<![가-힣])(?:판매|흥행|인기|신인|이변의|돌풍의|초반|막판)\s*돌풍|돌풍을?\s*(?:일으|이어|예고|불러)|"
     r"(?<![가-힣])(?:정치|금융|유통|업계|정계)\s*지진|지진아|태풍의\s*눈|"
     r"(?<![가-힣])(?:경쟁|논란|인기|열기|관심|공방|갈등|논쟁|매수세|상승세|수요|의혹|추격)(?:에|이|의)?\s*불\s*(?:이\s*)?붙|불붙|"
-    r"눈길을?\s*(?:끌|사로|끈)|억장이\s*무너|가슴이\s*무너|(?:사업|계획|협상|법안|매각|인수)\s*(?:이|가)?\s*좌초|동상\s*(?:제막|건립|철거|세우)")
+    r"눈길을?\s*(?:끌|사로|끈)|억장이\s*무너|가슴이\s*무너|(?:사업|계획|협상|법안|매각|인수)\s*(?:이|가)?\s*좌초|동상\s*(?:제막|건립|철거|세우)|"
+    # 연예·팬덤의 '체포' 비유: 신곡 '체포하겠어', '심장 체포', '미모 체포', '체포 완료' 등 (실제 체포가 아님)
+    r"체포\s*(?:하겠|할게|해\s*버릴|해버릴|해\s*줘|해줘|당하고\s*싶|각|완료|성공|요정|장인|주의보)|(?:심장|마음|눈빛|미모|비주얼|귀여움|팬심|시선|눈길)\s*(?:을|를)?\s*체포|"
+    r"(?:심장|마음|눈빛|미모|비주얼|귀여움)\s*(?:을|를)?\s*(?:저격|강탈|폭행|폭격|습격|납치|도둑)|(?:심쿵|광대)\s*(?:주의|폭발|승천)")
 # 해외 지명을 찾기 전에 지우는 표현 (나라 이름이 들어 있지만 해외 사건이 아닌 것)
 _FOREIGN_CLEAN = re.compile(
     r"아프리카\s*돼지\s*열병|일본\s*뇌염|중국집|호주머니|부탄\s*가스|"
@@ -571,7 +574,12 @@ _FOREIGN_CLEAN = re.compile(
 NON_NEWS_RE = re.compile(
     r"\[(책의\s*향기|신간|새\s*책|새책|서평|책과\s*삶|북스|책|도서|영화|리뷰|칼럼|사설|기고|오피니언|시론|논단|데스크|기자수첩|기자의\s*눈|인터뷰|포토|만평|운세|부고|인사|알림|"
     r"광고|AD|PR|협찬|보도자료|여담야담|팩트체크|해설|분석|시선|에세이|문화|공연|전시|방송|드라마|예능|연재|특파원\s*칼럼|횡설수설|만물상|취재수첩|현장에서|독자\s*투고|"
-    r"날씨|오늘\s*날씨|내일\s*날씨|주말\s*날씨|기획|특집|이슈\s*분석|뉴스\s*분석|르포|Q&A|카드뉴스|그래픽|인포그래픽|퀴즈|역사\s*속|그때\s*그|오늘의\s*역사)[^\]]*\]|"
+    r"날씨|오늘\s*날씨|내일\s*날씨|주말\s*날씨|기획|특집|이슈\s*분석|뉴스\s*분석|르포|Q&A|카드뉴스|그래픽|인포그래픽|퀴즈|역사\s*속|그때\s*그|오늘의\s*역사|"
+    # 연예 매체 꼬리표 (예: [Oh!쎈 이슈] [★포토] [스타] [MD포토] [SC리뷰] [TEN이슈] [엑's 이슈] [N이슈] [종합이슈] [화보])
+    r"사진|PHOTO|Photo|화보|"
+    r"Oh!?\s*쎈|OSEN|★|☆|스타(?!트|벅스)|MD\s*포토|SC\s*[가-힣]|TEN\s*[가-힣]|텐\s*(?:아시아|이슈|포토)|엑['’]?s|N\s*(?:이슈|현장|인터뷰|리뷰|초점|무비)|종합\s*이슈|핫\s*이슈|HOT|직캠|움짤|PICK|연예|엔터|셀럽|"
+    r"이슈\s*(?:IN|인|픽|톡|줌)|초점|현장\s*(?:포토|스케치)|TV\s*[가-힣]|라디오|유튜브|SNS|인스타|★샷|스타\s*포커스)[^\]]*\]|"
+    r"(?:Oh!?\s*쎈|OSEN)\s*(?:이슈|초점|포토|현장|리뷰|인터뷰|스타)|"
     r"^\s*(사설|칼럼|기고|시론)\s*[:|]|"
     r"\[[가-힣]{2,4}(?:\s*[가-힣]{2,6})?의\s[^\]]{2,24}\]")
 # 책·영화·공연 소개
@@ -707,6 +715,17 @@ GATHER_RE = re.compile(r"나눔|나눠|기부|기탁|전달식|후원|봉사|위
                        r"총회|간담회|결연|교류|기념품|정\s*나눠|고향의\s*정|성료|팡파르|개막|폐막")
 # ⑨ 연구·학술 (예: '학폭·왕따 등 사회적 스트레스, 청소년기 뇌에 더 큰 흔적')
 RESEARCH_RE = re.compile(r"(?<![가-힣])뇌(?!\s*(?:진탕|출혈|졸중|경색|사(?![가-힣])|손상\s*(?:입|으로)))|청소년기|흔적|연구(?!원\s*(?:숨|사망|부상))|학회|논문|교수(?!\s*(?:구속|체포|입건|송치))|실험|분석\s*결과|메커니즘|상관관계|유전자")
+# ⑨-2 성과·실적·효과 홍보 (예: '안성시, 여성 안심 환경조성 성과 인정…112신고 21.3% 감소', 'CCTV 설치 후 범죄 30% 줄어')
+#   기관·지자체가 '잘했다'는 결과를 알리는 기사 — 사건이 새로 일어난 게 아님
+ACHIEVE_RE = re.compile(r"(?<![가-힣])성과(?!급)|실적\s*(?:발표|우수|1위|달성|공개|평가)|우수\s*(?:사례|기관|지자체|시책|모델)|모범\s*사례|인정\s*받|인정받|성과\s*인정|효과\s*(?:톡톡|입증|거둬|거뒀|봤|확인|나타|있었)|호평|"
+                        r"\d+(?:\.\d+)?\s*%\s*(?:감소|증가|줄|늘|하락|상승|↓|↑|낮아|높아|개선)|(?:감소|증가|하락|상승)(?:했|해|세|폭|률)|(?:절반|대폭)\s*(?:감소|줄)|"
+                        r"환경\s*조성|안심\s*(?:마을|귀갓길|골목|환경|도시|존|거리|비상벨)|(?:여성|어린이|노인)\s*안심|조성\s*(?:사업|완료|추진)|평가\s*(?:에서|결과|1위)|"
+                        r"(?:대상|최우수상|우수상|장관상|대통령상|국무총리상)\s*(?:수상|받|선정)|인증\s*(?:획득|받|취득)|1위\s*(?:달성|차지|선정)|달성|목표\s*초과")
+# ⑪ 의견·반응 기사: 여러 사람의 말을 따옴표로 옮겨 놓은 꼴 (예: '성시경 "운전대 안 잡아"·김희철 "차 없앴다"')
+REMARK_RE = re.compile(r"발언|소신|일침|쓴소리|소환|언급|저격|응원|반응|심경|생각|입장|의견|고백|토로|털어놔|털어놓|밝혀|밝혔|화제|눈길|공감")
+REMARK_STRONG_RE = re.compile(r"발언|소신|일침|쓴소리|(?<!경찰\s)(?<!검찰\s)소환(?!\s*(?:조사|통보|요구))|저격|공개\s*응원|심경|고백|토로|털어놔|털어놓|화제|어록|명언")
+
+
 # ⑩ 드라마·예능 내용: 맨 앞에 프로그램 이름 '…' + 배우 이름(·) 꼴 (예: "'문무' 김강우·이현욱 父子, 시체밭서 습격")
 DRAMA_TITLE_RE = re.compile(r"^\s*['‘\"“][^'’\"”]{1,12}['’\"”]\s*[가-힣]{2,4}\s*[·,]\s*[가-힣]{2,4}")
 _PROGRAM_TAG_RE = re.compile(r"\(([가-힣A-Za-z]{2,6})\)\s*$")
@@ -732,10 +751,19 @@ def not_realtime(title):
     strict = STRICT_FACT_RE.search(title)
     if FOLLOWUP_RE.search(title) and not BREAKING_RE.search(title):
         return True                      # 사건 낱말이 있어도 '책임 규명 촉구·사과·추모·소송'은 후속 기사
+    hard = HARD_FACT_RE.search(title)
+    # 유명인 여러 명의 말·반응을 모아 놓은 기사 ('A "…"·B "…"') 또는 발언·반응 중심 기사 (구속·검거 같은 확실한 사건 낱말이 있어도 '반응' 기사이면 제외)
+    quotes = len(PERSON_QUOTE_RE.findall(title))
+    if quotes >= 2 and not BREAKING_RE.search(title) and (REMARK_STRONG_RE.search(title) or not hard):
+        return True
     if strict:
         return False                     # 구속·검거·숨져 같은 확실한 사건 낱말이 있으면 아래 기준은 적용하지 않음
     warn = WARNING_RE.search(title)
-    hard = HARD_FACT_RE.search(title)
+    # 성과·실적·효과·통계 감소 홍보 기사 ('112신고 21.3% 감소', '여성 안심 환경조성 성과 인정')
+    if ACHIEVE_RE.search(title) and not (hard or ACTION_FACT_RE.search(title) or BREAKING_RE.search(title)):   # '필로폰 적발…첫 성과'는 실제 단속이라 남김
+        return True
+    if quotes >= 1 and REMARK_STRONG_RE.search(title) and not hard and not BREAKING_RE.search(title):
+        return True                      # '○○ "…" 발언 화제' 같은 한 사람의 의견 기사
     if POLITICAL_RE.search(title) and not KO_CASUALTY_RE.search(title):
         return True
     if not warn and (OPINION_RE.search(title) or (OPINION_WEAK_RE.search(title) and not hard)):
@@ -834,7 +862,18 @@ ENT_SPORT_RE = re.compile(r"열애|결혼|이혼|스캔들|아이돌|드라마|�
                           # 연예 화보·행사 기사 (예: '…미모로 화제', '레드카펫 드레스')
                           r"미모|자태|비주얼|각선미|몸매|볼륨|노출\s*(?:패션|드레스|의상)|과감한?\s*(?:패션|노출|드레스|의상)|레드\s*카펫|드레스\s*자태|(?:공항|사복|하객|시사회)\s*패션|패셔니스타|"
                           r"영화제|부국제|부산국제영화제|청룡\s*(?:영화상|시리즈)|백상\s*예술|대종상|시상식|무대\s*인사|쇼케이스|팬\s*사인회|웃음꽃|훈훈|러블리|청순|섹시|여신|"
-                          r"소속사|매니지먼트|연예계|연예인|셀럽|인플루언서|SNS\s*(?:근황|게시물|사진)|인스타그램|틱톡커|BJ|스트리머")
+                          r"소속사|매니지먼트|연예계|연예인|셀럽|인플루언서|SNS\s*(?:근황|게시물|사진)|인스타그램|틱톡커|BJ|스트리머|"
+                          # 연예인·유명인의 발언·의견 기사 (예: '성시경 "운전대 안 잡아"…고경표 음주운전에 개념발언 소환')
+                          r"개념\s*발언|소신\s*발언|사이다\s*발언|(?:발언|과거|소신|개념|명언|일화|인터뷰|어록)\s*(?:이|가)?\s*(?:다시\s*)?(?:재)?소환|소환\s*(?:된|되는)\s*(?:발언|과거|명언|어록)|"
+                          r"누리꾼\s*(?:반응|갑론을박|시끌)|갑론을박|네티즌|팬들\s*(?:응원|분노|걱정|반응)|공개\s*응원|일침|저격|"
+                          r"안대\s*(?:낀|쓴|착용)|눈병|다래끼|민낯|셀카|입국\s*패션|공항\s*패션|(?:Oh!?\s*쎈|OSEN))")
+# 유명인 여러 명의 말을 따옴표로 옮긴 기사 (예: '성시경 "…"·김희철 "…"') — 사건 자체가 아니라 반응·의견 기사
+#   (작은따옴표 ‘쾅’ 같은 강조 표현은 세지 않고, 큰따옴표로 옮긴 말만 셈)
+PERSON_QUOTE_RE = re.compile(r"[가-힣]{2,4}\s*[“\"][^”\"]{2,30}[”\"]")
+# 연예·아이돌 그룹 / 연예 활동 표시 (MUSIC_RE 보다 넓게: 사진 기사·근황 기사)
+IDOL_RE = re.compile(r"아일릿|ILLIT|뉴진스|에스파|aespa|아이브|IVE|르세라핌|BTS|방탄소년단|블랙핑크|BLACKPINK|세븐틴|스트레이\s*키즈|트와이스|엔시티|NCT|투모로우바이투게더|TXT|"
+                     r"엔하이픈|제로베이스원|(?<![가-힣])라이즈|RIIZE|베이비몬스터|키스오브라이프|아일린|ITZY|케플러|프로미스나인|오마이걸|레드벨벳|마마무|\(여자\)\s*아이들|"
+                     r"보이넥스트도어|QWER|트리플에스|하츠투하츠|올데이\s*프로젝트|걸그룹|보이그룹|아이돌(?!보|봄)|컴백|팬미팅|팬사인회|음악방송|음방|쇼케이스", re.I)
 # 연예 행사장(영화제·시상식·콘서트 등)에서 실제로 사건사고가 났음을 보여 주는 낱말
 EVENT_INCIDENT_RE = re.compile(r"화재(?!\s*의)|불이\s*나|불길|연기\s*(?:치솟|발생|가득)|폭발(?!적)|압사|깔려|깔림|붕괴|무너|추락|흉기|칼부림|난동|폭행|피습|"
                                r"부상(?!\s*(?:투혼|복귀|병동|이탈|선수))|다쳐|다친|다쳤|사망|숨져|숨진|숨졌|심정지|실신|쓰러져|쓰러진|이송|대피|구조|119|112|"
@@ -1145,7 +1184,7 @@ def _classify_incident(title, content, t, full):
     # 드라마·예능·영화 줄거리 기사
     if ENT_STRONG_RE.search(t):
         return None
-    ent = ENT_SPORT_RE.search(t) or ENT_SOURCE_RE.search(content or "")
+    ent = ENT_SPORT_RE.search(t) or IDOL_RE.search(t) or ENT_SOURCE_RE.search(content or "")
     # 연예 기사: 연예인이 실제로 사고를 내거나(들이받아·추돌·숨져) 입건·구속된 경우,
     # 또는 영화제·시상식·공연장 '현장에서 실제 사건사고가 난' 경우(화재·폭발·압사·부상·대피·출동 등)만 통과
     real = LEGAL_FACT_RE.search(t) or HARD_FACT_RE.search(t) or EVENT_INCIDENT_RE.search(t)
@@ -1231,9 +1270,13 @@ def classify(title, content):
     # 연예·음악·스포츠 기사에서 '체포·검거·폭발' 같은 말이 따옴표 안(노래 제목·비유)에만 있으면 사건이 아님
     quoted = " ".join(_QUOTED_SEG.findall(title))
     _fact = lambda s: LEGAL_FACT_RE.search(s) or HARD_FACT_RE.search(s) or EVENT_INCIDENT_RE.search(s)
-    if quoted and _fact(quoted) and (MUSIC_RE.search(title) or ENT_SPORT_RE.search(title) or SPORTS_RE.search(title)):
+    if quoted and _fact(quoted) and (MUSIC_RE.search(title) or IDOL_RE.search(title) or ENT_SPORT_RE.search(title) or SPORTS_RE.search(title)):
         if not _fact(_unquote(title)):
             return None
+    # 연예 사진·근황 기사 (예: '[사진] 안대 낀 아일릿 윤아, 눈병 체포하겠어'): 아이돌·연예 표시가 있고
+    #   비유 표현을 지운 뒤에도 실제 사건 낱말(구속·입건·사망·화재·부상…)이 없으면 사건이 아님
+    if (IDOL_RE.search(title) or ENT_SPORT_RE.search(title)) and not _fact(PRE_CLEAN.sub(" ", _unquote(title))):
+        return None
     t = PRE_CLEAN.sub(" ", title)
     full = PRE_CLEAN.sub(" ", title + " " + (content or ""))
     if NON_NEWS_RE.search(title) or AD_RE.search(full):
@@ -1910,6 +1953,25 @@ def refine_locations(items, started=None):
         allow = started is None or time.time() - started < 600
         center, sgg, sido, place, dong = g.get("center"), g.get("sgg"), g.get("sido"), g.get("place"), g.get("dong")
         hit = None
+        hw = g.get("hw")
+        if place and hw and _POI_STRONG_RX.search(place):
+            # 고속도로 기사의 '○○나들목·○○휴게소·○○터널': 노선 이름과 함께 찾고, 노선에서 15km 안일 때만 인정
+            hwname = highways().get(hw, {}).get("name", "")
+            for qtext in (f"{hwname} {place}", f"{sgg} {place}" if sgg else place):
+                hit = geocode(qtext, None, None, allow)
+                if hit and hw_nearest(hw, hit)[1] <= 15:
+                    near = nearest_region(hit[0], hit[1])
+                    if near and near[0] < 40:
+                        it["location"] = f"{near[1].label} ({hwname})"
+                    break
+                hit = None
+            if hit:
+                dy, dx = _jitter(it["title"], 0.0004)
+                it["lat"], it["lng"], it["prec"], it["place"] = round(hit[0] + dy, 5), round(hit[1] + dx, 5), "poi", place
+                if place not in it["location"]:
+                    it["location"] += " " + place
+                n_poi += 1
+            continue
         if place:
             if sgg or sido:
                 hit = geocode(f"{sgg or sido} {place}", center, 30 if sgg else 150, allow)
@@ -1937,6 +1999,105 @@ def refine_locations(items, started=None):
     return n_poi, n_dong
 
 
+# ── 고속도로: '호남고속도로 추돌사고'처럼 노선 이름만 있는 기사는 그 노선 위에 찍음 ──
+#   노선 좌표는 highways.json (index.html 도 같은 파일로 지도에 노선을 그림)
+#   ① 제목·본문에 노선 근처(30km 안)의 시·군·구가 함께 나오면 → 그 시·군·구에서 가장 가까운 노선 위 지점 (prec=sgg)
+#   ② 시·도만 나오면 → 그 시·도에서 가장 가까운 노선 위 지점, ③ 아무 지명도 없으면 → 노선 가운데 (prec=road)
+#   'OO 방향/방면'은 차가 가던 쪽(목적지)이지 사고 장소가 아니므로 지명에서 뺌 (예: '부산 방향' → 부산 아님)
+HIGHWAYS_JSON = "highways.json"
+_HW = {"data": None, "rx": None}
+_DIR_RX = re.compile(r"[가-힣A-Za-z]{1,8}\s*(?:방향|방면|쪽\s*방향|행\s*방향)(?:으로|의|에서)?")
+
+
+def highways():
+    if _HW["data"] is None:
+        try:
+            with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), HIGHWAYS_JSON), encoding="utf-8") as f:
+                raw = json.load(f)
+        except Exception as e:
+            print(f"[경고] {HIGHWAYS_JSON} 을 읽지 못했습니다: {e}")
+            raw = {}
+        data = {k: v for k, v in raw.items() if not k.startswith("_") and isinstance(v, dict) and v.get("segs")}
+        alts = []
+        for k, v in data.items():
+            for a in v.get("alias") or [k]:
+                pat = a if "고속도로" in a else a + r"\s*(?:고속도로|고속국도|선\s*고속도로)"
+                alts.append((len(a), k, pat))
+        alts.sort(key=lambda x: -x[0])          # 긴 이름부터 ('중부내륙' 을 '중부' 보다 먼저)
+        _HW["data"] = data
+        _HW["rx"] = [(k, re.compile(r"(?<![가-힣0-9])" + p)) for _, k, p in alts]
+    return _HW["data"]
+
+
+def find_highway(text):
+    """기사에 나온 고속도로 노선 키 (가장 앞에 나온 것). 없으면 None"""
+    highways()
+    best = None
+    for k, rx in _HW["rx"] or []:
+        m = rx.search(text or "")
+        if m and (best is None or m.start() < best[0]):
+            best = (m.start(), k)
+    return best[1] if best else None
+
+
+def _seg_nearest(p, a, b):
+    """선분 a-b 위에서 p 와 가장 가까운 점 (평면 근사)"""
+    ax, ay, bx, by, px, py = a[1] * 88.0, a[0] * 111.0, b[1] * 88.0, b[0] * 111.0, p[1] * 88.0, p[0] * 111.0
+    dx, dy = bx - ax, by - ay
+    t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return ((ay + t * dy) / 111.0, (ax + t * dx) / 88.0)
+
+
+def hw_nearest(key, p):
+    """(노선 위 가장 가까운 점, 거리 km)"""
+    best = None
+    for seg in highways().get(key, {}).get("segs", []):
+        for a, b in zip(seg, seg[1:]):
+            q = _seg_nearest(p, a, b)
+            d = dist_km(p, q)
+            if best is None or d < best[1]:
+                best = (q, d)
+    return best or (None, 1e9)
+
+
+def hw_middle(key):
+    """노선 가운데쯤 지점 (가장 긴 구간의 가운데 꼭짓점)"""
+    segs = highways().get(key, {}).get("segs", [])
+    seg = max(segs, key=len) if segs else None
+    if not seg:
+        return None
+    return tuple(seg[len(seg) // 2])
+
+
+def locate_highway(hw, title, full):
+    """고속도로 기사 위치 (위치이름, 위도, 경도, 정밀도정보)"""
+    name = highways()[hw].get("name", hw + "고속도로")
+    clean_t, clean = _DIR_RX.sub(" ", title), _DIR_RX.sub(" ", full)
+    place = find_poi(_NOT_PLACE.sub(" ", clean))
+    for scope in (clean_t, clean):
+        res = match_sigungu(scope, None)
+        if res and not res[4]:
+            label, lat, lng, rad, _inst, sgg, dong = res
+            q, d = hw_nearest(hw, (lat, lng))
+            if q and d <= 30:
+                dy, dx = _jitter(title, 0.006)
+                return (f"{label} ({name})", round(q[0] + dy, 4), round(q[1] + dx, 4),
+                        {"prec": "sgg", "sgg": sgg, "dong": None, "center": (q[0], q[1]), "place": place, "hw": hw})
+    for scope in (clean_t, clean):
+        s = find_sidos(scope)
+        if s:
+            near = sorted(((hw_nearest(hw, SIDO_CENTER[x]), x) for x in s), key=lambda z: z[0][1])
+            (q, d), sido = near[0]
+            if q and d <= 80:
+                dy, dx = _jitter(title, 0.01)
+                return (f"{sido} ({name})", round(q[0] + dy, 4), round(q[1] + dx, 4),
+                        {"prec": "road", "sido": sido, "center": (q[0], q[1]), "place": place, "hw": hw})
+    mid = hw_middle(hw)
+    if not mid:
+        return None
+    return name, round(mid[0], 4), round(mid[1], 4), {"prec": "road", "center": mid, "place": place, "hw": hw}
+
+
 NATIONAL_INST_ALIASES = {a for marks in INSTITUTIONS_NATIONAL.values() for a in marks}
 # '군대·현역병·장병' 처럼 특정 부대·지역 없이 군 전체를 말하는 기사 (예: '현역병 대부업 대출 69배 급증')
 MILITARY_GENERIC_RE = re.compile(r"군대|현역병|장병|병사들?(?![가-힣])|군\s*간부|초급\s*간부|부사관|병영|군\s*복무|복무\s*중인|입대|전역\s*(?:자|병)|군인들?(?![가-힣])|국군")
@@ -1957,6 +2118,12 @@ def locate(title, content, hint_sido=None, overseas=False):
             name = "북한·접경지역" if label == "북한" else f"해외 ({label})"
             return name, round(la + dy, 4), round(ln + dx, 4), {"prec": "world"}
         return "해외 (위치 미상)", None, None, {"prec": None}
+    # 고속도로 기사: 제목에 노선 이름이 있으면 노선 위로 (본문에만 있으면 제목에 다른 지명이 없을 때만)
+    hw = find_highway(title) or (find_highway(full) if not _has_domestic_place(_DIR_RX.sub(" ", title)) else None)
+    if hw:
+        got = locate_highway(hw, title, full)
+        if got:
+            return got
     place = find_poi(_NOT_PLACE.sub(" ", full))
     unknown = ("대한민국 (세부 위치 미상)", None, None, {"prec": None, "place": None})
     for scope in (title, full):
@@ -2089,7 +2256,7 @@ def location_sentences(text, limit=220):
     return " ".join(out)[:limit]
 
 
-_PREC_RANK = {"poi": 4, "dong": 3, "sgg": 2, "sido": 1, "inst": 1, "world": 1, None: 0}   # inst(기관 소재지)는 시·도 수준으로 약하게 봄
+_PREC_RANK = {"poi": 4, "dong": 3, "sgg": 2, "road": 1.5, "sido": 1, "inst": 1, "world": 1, None: 0}   # inst(기관 소재지)는 시·도 수준으로 약하게 봄
 
 
 def enrich_locations(items, started):
@@ -2097,7 +2264,7 @@ def enrich_locations(items, started):
     from concurrent.futures import ThreadPoolExecutor
     cands = []
     # 지도에 아예 못 찍은 기사(위치 미상) → 시·도까지만 아는 기사 → 시·군·구까지 아는 기사 순서로 먼저 확인
-    order = {None: 0, "sido": 1, "inst": 1, "sgg": 2}
+    order = {None: 0, "sido": 1, "inst": 1, "road": 1, "sgg": 2}
     for v in sorted(items, key=lambda x: (order.get(x.get("prec"), 3), -x["timestamp"])):
         if len(cands) >= MAX_ENRICH_PER_RUN:
             break
@@ -2106,7 +2273,7 @@ def enrich_locations(items, started):
         if v.get("group") == OVERSEAS_GROUP or v.get("category") == "북한 도발":
             continue
         # 예전 방식(1)으로 이미 확인한 기사는, 위치를 아직 모르거나 시·도까지만 아는 경우에만 새 방식으로 한 번 더 확인
-        if enr >= ENRICH_VER or (enr and v.get("prec") not in (None, "sido", "inst")):
+        if enr >= ENRICH_VER or (enr and v.get("prec") not in (None, "sido", "inst", "road")):
             continue
         if not v.get("link") or v["link"].startswith("https://news.google.com"):
             continue
@@ -2136,6 +2303,7 @@ def enrich_locations(items, started):
         old_rank = _PREC_RANK.get(v.get("prec"), 0) + (0.5 if (old_g.get("place") or old_g.get("dong")) else 0)
         if lat is not None and new_rank > old_rank:
             v["location"], v["lat"], v["lng"], v["prec"], v["_geo"] = loc, lat, lng, geo.get("prec"), geo
+            v["route"] = geo.get("hw")
             better += 1
     return better
 
@@ -2291,7 +2459,8 @@ def make_item(title, content, sub, group, source, link, ts, hint, orig=None, loc
         "hint": hint,
         "orig": orig,       # 해외 언론 기사의 원문(영문) 제목
         "embed": None,      # 이 사이트 안에 원문을 띄울 수 있는지 (False 면 언론사가 막아 둔 것)
-        "prec": geo.get("prec"),   # 위치 정밀도: poi(장소) / dong(읍·면·동) / sgg(시·군·구) / sido(시·도) / inst(법원·검찰 등 기관 소재지) / world(해외) / None(모름)
+        "prec": geo.get("prec"),   # 위치 정밀도: poi(장소) / dong(읍·면·동) / sgg(시·군·구) / road(고속도로 노선) / sido(시·도) / inst(법원·검찰 등 기관 소재지) / world(해외) / None(모름)
+        "route": geo.get("hw"),    # 고속도로 기사면 노선 키 (highways.json). 화면에서 노선을 지도에 그려 줌
         "place": None,      # 기사에 나온 구체적인 장소 이름 (좌표를 찾은 경우에만)
         "stage": stage_of(title),  # 기사 단계: incident(발생) / police(수사) / court(재판·판결 — 집계·알림에서 뺌)
         "_geo": geo,        # 좌표를 더 정밀하게 찾기 위한 임시 정보 (저장 전에 지움)
