@@ -89,6 +89,25 @@
         /* 커뮤니티 버튼 */
         .comm-btn { background: linear-gradient(135deg, #059669 0%, #0d9488 55%, #0284c7 100%); }
         .comm-btn:hover { filter: brightness(1.1); }
+        /* 맨 위 주요 버튼 3개(안전 브리핑 · 우리동네 커뮤니티 · 실시간 제보하기)를 하나의 띠로 보고, 옅은 빛이 왼쪽 끝→오른쪽 끝으로 지나감.
+           버튼마다 가상 요소(::after)에 '버튼 묶음 전체 너비(--sweep-w)'짜리 빛 그림을 깔고, 버튼이 묶음 안에서 얼마나 떨어져 있는지(--off)만큼 밀어서
+           세 버튼의 빛이 한 줄로 이어짐. 진행 정도(--sweep-t, 0→1)는 묶음(.hero-sweep)에서 한 번만 애니메이션해서 세 버튼이 항상 같은 박자로 움직임.
+           빛은 버튼 모양(둥근 모서리) 안에만 그려지고 밖으로 튀어나오지 않음. */
+        @property --sweep-t { syntax: '<number>'; inherits: true; initial-value: 0; }
+        .hero-sweep { --sweep-w: 420px; animation: hero-sweep 5.2s cubic-bezier(.4, 0, .6, 1) infinite; }
+        @keyframes hero-sweep { 0% { --sweep-t: 0; } 42% { --sweep-t: 1; } 100% { --sweep-t: 1; } }
+        .sweep-btn { position: relative; isolation: isolate; }
+        .sweep-btn::after {
+            content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+            background-image:
+                linear-gradient(105deg, rgba(255,255,255,0) 40%, rgba(255,255,255,.10) 45.5%, rgba(255,255,255,.55) 50%, rgba(255,255,255,.10) 54.5%, rgba(255,255,255,0) 60%),
+                linear-gradient(to bottom, rgba(255,255,255,.16), rgba(255,255,255,0) 55%);
+            background-size: var(--sweep-w) 100%, 100% 100%;
+            background-repeat: no-repeat;
+            /* 빛(그림 가운데 40~60%)이 묶음 왼쪽 바깥에서 시작해 오른쪽 바깥으로 빠져나가도록 -0.6W → +0.6W */
+            background-position-x: calc(var(--sweep-w) * (var(--sweep-t) * 1.2 - 0.6) - var(--off, 0px)), 0;
+        }
+        @media (prefers-reduced-motion: reduce) { .hero-sweep { animation: none; } }
         /* 맨 위 버튼 줄은 글씨 크기 조절과 상관없이 고정 → 크기를 px 대신 rem 으로 (제목 줄 고정 배율과 함께 항상 같은 크기) */
         .comm-faces span { width: 1.375rem; height: 1.375rem; border-radius: 50%; background: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: .8125rem; line-height: 1; border: .125rem solid #059669; margin-left: -.4375rem; }
         .comm-faces span:first-child { margin-left: 0; }
@@ -254,11 +273,14 @@
                 <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
             </div>
             <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-mobile-screen-button"></i> <span class="hidden 2xl:inline">앱 다운로드</span></button>
-            <button onclick="openBriefing()" title="오늘·이번 주 주요 사건을 비서처럼 요약해 드립니다" class="relative bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-clipboard-list"></i> 안전 브리핑<span id="briefDot" class="hidden absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-900 animate-pulse"></span></button>
+            <!-- 주요 버튼 3개(안전 브리핑 · 우리동네 커뮤니티 · 실시간 제보하기): 왼쪽 끝에서 오른쪽 끝으로 옅은 빛이 한 줄로 지나감 (.hero-sweep / .sweep-btn) -->
+            <div id="heroBtns" class="hero-sweep flex items-center gap-1.5">
+            <button onclick="openBriefing()" title="오늘·이번 주 주요 사건을 비서처럼 요약해 드립니다" class="sweep-btn relative bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-clipboard-list"></i> 안전 브리핑<span id="briefDot" class="hidden absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-red-500 border-2 border-white dark:border-slate-900 animate-pulse"></span></button>
             <span id="floatBtnWrap"></span>
-            <button onclick="openCommunity('report')" title="우리동네 안전망에 실시간 제보 · 언론사 제보도 함께" class="bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow-md shadow-red-600/30 transition flex items-center gap-1.5 whitespace-nowrap">
+            <button onclick="openCommunity('report')" title="우리동네 안전망에 실시간 제보 · 언론사 제보도 함께" class="sweep-btn bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-[0.8125rem] font-extrabold px-3.5 py-2 rounded-lg shadow-md shadow-red-600/30 transition flex items-center gap-1.5 whitespace-nowrap">
                 <i class="fa-solid fa-bullhorn"></i> 실시간 제보하기
             </button>
+            </div>
         </div>
     </header>
 
@@ -329,6 +351,8 @@
                 <span id="listCount" class="text-[0.6875rem] text-slate-500 font-medium whitespace-nowrap"></span>
                 <div id="dateMenu" class="hidden absolute left-3 top-full mt-1 z-30 w-60 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-2xl p-1"></div>
             </div>
+            <!-- 다발 지역에서 지역을 골랐을 때: 날짜 줄 바로 아래에 붙는 빨간 안내줄 (목록과 따로 있어서 스크롤해도 사이에 기사가 비치지 않음) -->
+            <div id="hotspotBar" class="hidden shrink-0 px-3 py-2 bg-rose-600 text-white text-xs font-bold items-center justify-between gap-2"></div>
 
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
         </div>
@@ -442,7 +466,39 @@
         function showInFilter(n) {
             if (selCats.size && !groupsOf(n).some(g => selCats.has(g))) selCats.clear();
             groupsOf(n).forEach(g => exCats.delete(g));
+            if (!showCourt && isCourt(n)) { showCourt = true; lsSet('show_court', '1'); }   // 숨겨 둔 재판·판결 소식을 열 때는 다시 보이게
             saveSelCats();
+        }
+        // ---- 기사 단계: 지금 일어난 사건(incident) / 수사 중(police) / 재판·판결 소식(court) ----
+        // scraper.py 가 news.json 에 stage 를 넣어 주지만, 예전 기사에는 없을 수 있어서 같은 기준으로 제목에서 다시 판정합니다.
+        // 재판·판결(court)은 몇 달~몇 년 전 사건의 후속 소식이라 7일 다발 지역 집계·실시간 알림·지도 밀집도에서 빼고,
+        // 목록에는 ⚖️ 표시로 보여 주며(끌 수 있음), 안전 브리핑에는 '재판·판결 소식' 칸에 따로 모읍니다.
+        const STAGE_COURT_STRONG = /선고|징역|실형|집행\s*유예|벌금형|무죄|유죄|항소|상고|판결|재판(?!매)|공판|기소(?!\s*의견)|법정\s*구속|감형|형량|양형|원심|파기|국민참여재판|[123]심(?![가-힣])/;
+        const STAGE_COURT_WEAK = /법원|판사|재판부|대법원|검찰|지검|고검|대검/;
+        const STAGE_NOW = /화재|불이?\s*나|숨져|숨진|숨졌|추락|충돌|추돌|난동|폭발|붕괴|실종|구조|대피|사고|체포|검거|붙잡|덜미|입건|구속|영장|압수\s*수색|발생|신고|출동/;
+        const STAGE_POLICE = /구속|입건|검거|체포|송치|영장|압수\s*수색|수사|조사|붙잡|덜미|지명\s*수배|추적/;
+        function stageOf(n) {
+            if (!n) return 'incident';
+            if (n.stage === 'court' || n.stage === 'police' || n.stage === 'incident') return n.stage;
+            if (n._stage) return n._stage;
+            const t = n.title || '';
+            let s = 'incident';
+            if (STAGE_COURT_STRONG.test(t) || (/구형/.test(t) && /징역|벌금|사형|금고|검찰/.test(t))) s = 'court';
+            else if (STAGE_COURT_WEAK.test(t) && !STAGE_NOW.test(t)) s = 'court';
+            else if (STAGE_POLICE.test(t)) s = 'police';
+            n._stage = s;
+            return s;
+        }
+        function isCourt(n) { return stageOf(n) === 'court'; }
+        // 목록·지도에 재판·판결 소식을 보여 줄지 (기본 보임, 분류 줄의 ⚖️ 버튼으로 끄고 켬)
+        let showCourt = (() => { try { return localStorage.getItem('show_court') !== '0'; } catch (e) { return true; } })();
+        function toggleCourt() {
+            showCourt = !showCourt;
+            try { localStorage.setItem('show_court', showCourt ? '1' : '0'); } catch (e) {}
+            refreshAll();
+        }
+        function courtBadge(size) {
+            return `<span class="${size === 'lg' ? 'text-xs px-2 py-0.5' : 'text-[0.625rem] px-1.5 py-0.5'} rounded bg-slate-700 dark:bg-slate-600 text-white font-extrabold" title="재판·판결 소식: 예전 사건의 수사·재판 결과라 사건사고 집계와 실시간 알림에는 넣지 않습니다">⚖️ 재판·판결</span>`;
         }
         function oneCat() { return selCats.size === 1 ? Array.from(selCats)[0] : null; }
         function saveSelCats() {
@@ -766,9 +822,13 @@
             document.addEventListener('click', ensureAudio, { once: true });
             // 날짜 메뉴 바깥을 누르면 닫기
             document.addEventListener('click', (e) => {
-                if (e.target && e.target.closest && !e.target.closest('#dateBarWrap')) toggleDateMenu(false);
-                if (e.target && e.target.closest && !e.target.closest('#layoutPanel') && !e.target.closest('[onclick="toggleLayoutPanel()"]')) toggleLayoutPanel(false);
-                if (e.target && e.target.closest && !e.target.closest('#commMenu') && !e.target.closest('[onclick="toggleCommMenu()"]')) toggleCommMenu(false);
+                if (!e.target || !e.target.closest) return;
+                // 누른 버튼이 자기 창을 다시 그리면서(화면 설정의 2칸/3칸·칸 고르기 등) 이미 화면에서 빠진 경우:
+                // 창 바깥을 누른 것으로 잘못 보고 창을 닫아 버리지 않도록 그냥 둠
+                if (!document.contains(e.target)) return;
+                if (!e.target.closest('#dateBarWrap')) toggleDateMenu(false);
+                if (!e.target.closest('#layoutPanel') && !e.target.closest('[onclick="toggleLayoutPanel()"]')) toggleLayoutPanel(false);
+                if (!e.target.closest('#commMenu') && !e.target.closest('[onclick="toggleCommMenu()"]')) toggleCommMenu(false);
             });
         });
 
@@ -1298,9 +1358,10 @@
             if (loc.startsWith('해외') || loc.startsWith('북한')) return 'world';
             return loc.includes(' ') ? 'sgg' : 'sido';
         }
-        const PREC_RANK = { poi: 4, dong: 3, sgg: 2, sido: 1, world: 1 };
-        const PREC_ZOOM = { poi: 16, dong: 15, sgg: 13, sido: 9, world: 5 };
-        const PREC_TEXT = { poi: '장소까지 확인', dong: '읍·면·동까지 확인', sgg: '시·군·구 단위(대략)', sido: '시·도 단위(대략)', world: '해외(대략)' };
+        // inst = 법원·검찰·경찰청 같은 기관이 있는 곳으로만 잡은 위치 (사건이 실제로 일어난 곳이 아니라서 집계·지도 핀에서 뺌)
+        const PREC_RANK = { poi: 4, dong: 3, sgg: 2, sido: 1, inst: 1, world: 1 };
+        const PREC_ZOOM = { poi: 16, dong: 15, sgg: 13, sido: 9, inst: 11, world: 5 };
+        const PREC_TEXT = { poi: '장소까지 확인', dong: '읍·면·동까지 확인', sgg: '시·군·구 단위(대략)', sido: '시·도 단위(대략)', inst: '법원·검찰 등 기관 소재지(사건 장소 아님)', world: '해외(대략)' };
         // 같은 사건의 기사들 가운데 위치가 가장 자세한 기사
         function bestLocated(items) {
             let best = null;
@@ -1343,17 +1404,19 @@
 
             const list = [];
             groupEvents(getFilteredNews()).slice(0, 1200).forEach(ev => {
-                const news = bestLocated(ev.items);
+                // 법원·검찰 소재지로만 위치가 잡힌 기사는 핀을 찍지 않음 (사건이 거기서 난 게 아니므로)
+                const news = bestLocated(ev.items.filter(n => precOf(n) !== 'inst'));
                 if (!news) return;
+                const court = ev.items.every(isCourt);     // 재판·판결 소식만 있는 사건: 흐린 점선 핀
                 const g = groupOf(ev.lead);
                 const color = CATEGORY_GROUPS[g].color;
                 const selected = ev.items.some(n => n.id === selectedNewsId);
                 const p = precOf(news);
-                const exact = p === 'poi' || p === 'dong';
-                const size = selected ? 22 : (exact ? 16 : (p === 'sgg' ? 14 : 12));
+                const exact = !court && (p === 'poi' || p === 'dong');
+                const size = selected ? 22 : (exact ? 16 : (p === 'sgg' && !court ? 14 : 12));
                 const icon = L.divIcon({
                     className: 'custom-icon',
-                    html: `<div class="pin ${exact ? 'exact' : (p === 'sgg' ? '' : 'approx')} ${selected ? 'sel' : ''}" style="background:${color};width:${size}px;height:${size}px;${exact || selected ? '' : 'box-shadow:0 0 8px ' + color + ';'}"></div>`,
+                    html: `<div class="pin ${exact ? 'exact' : (p === 'sgg' && !court ? '' : 'approx')} ${selected ? 'sel' : ''}" style="background:${color};width:${size}px;height:${size}px;${exact || selected ? '' : 'box-shadow:0 0 8px ' + color + ';'}"></div>`,
                     iconSize: [size, size], iconAnchor: [size / 2, size / 2]
                 });
                 const marker = L.marker([news.lat, news.lng], { icon, zIndexOffset: selected ? 1000 : (exact ? 100 : 0) });
@@ -1363,6 +1426,7 @@
                         <h4 style="font-size: 12px; font-weight: bold; margin: 6px 0 4px;">${esc(ev.lead.title)}</h4>
                         <p style="font-size: 11px; color: #475569; margin: 0;"><i class="fa-solid fa-location-dot" style="color:#ef4444"></i> ${esc(news.location)}${ev.items.length > 1 ? ' · 관련 기사 ' + ev.items.length + '개' : ''}</p>
                         <p style="font-size: 10px; color: #94a3b8; margin: 2px 0 0;">위치: ${PREC_TEXT[p] || ''}${news.place ? ' · ' + esc(news.place) : ''}</p>
+                        ${court ? '<p style="font-size: 10px; color: #64748b; margin: 2px 0 0;">⚖️ 재판·판결 소식 — 사건이 지금 일어난 것은 아닙니다</p>' : ''}
                     </div>
                 `);
                 marker.on('click', () => selectNews(ev.lead.id));
@@ -1384,6 +1448,9 @@
             const allOn = currentCategory === 'all' && selCats.size === 0;
             const selN = Array.from(selCats).reduce((a, g) => a + (gCount[g] || 0), 0);
 
+            // ⚖️ 재판·판결 소식 보이기/숨기기 (집계·알림에는 원래 안 들어가고, 이 버튼은 목록·지도 표시만 바꿈)
+            const courtN = base.filter(isCourt).length;
+            const courtBtn = small => `<button onclick="toggleCourt()" title="${showCourt ? '누르면 재판·판결 소식을 목록·지도에서 숨깁니다' : '누르면 재판·판결 소식을 다시 보여 줍니다'}&#10;재판·판결 소식은 예전 사건의 후속 보도라 다발 지역 집계와 실시간 알림에는 들어가지 않습니다" class="cat-btn shrink-0 ${small ? 'px-2 py-0.5 text-[0.625rem]' : 'px-2.5 py-1 text-[0.6875rem]'} rounded-md border whitespace-nowrap font-bold transition ${showCourt ? 'bg-slate-700 text-white border-slate-800 hover:bg-slate-600' : 'bg-white dark:bg-slate-900 text-slate-400 border-dashed border-slate-400 dark:border-slate-500 line-through'}">⚖️ 재판·판결 <span class="opacity-70 font-mono">${courtN}</span></button>`;
             const allBtn = `<button onclick="setCategoryFilter('all')" data-cat="all" title="모든 분류 보기 (선택 모두 해제)" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition ${allOn ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-transparent font-bold shadow-sm' : 'bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-700 font-bold'}">전체 <span class="opacity-70 font-mono">${base.length}</span></button>`;
             let html = allBtn;
             // 사건이 많은 순서대로 앞에 놓고, 해외는 항상 맨 뒤에 따로 구분해서 놓음
@@ -1414,6 +1481,7 @@
                 <span class="flex items-center rounded-md border border-slate-300 dark:border-slate-600">${modeBtn('include', '✓ 골라 보기')}${modeBtn('exclude', '⊘ 빼고 보기')}</span>
                 <span class="cat-hint whitespace-nowrap text-[0.625rem] ${(exMode ? exCats.size : selCats.size) ? 'font-bold ' + (exMode ? 'text-red-600 dark:text-red-300' : 'text-indigo-600 dark:text-indigo-300') : 'text-slate-400'}">${hint}</span>
                 ${exCats.size ? `<button onclick="clearExcluded()" title="빼 둔 분류를 모두 다시 보기" class="whitespace-nowrap text-[0.625rem] font-bold text-red-600 dark:text-red-300 border border-red-300 dark:border-red-700 rounded px-1.5 py-0.5 hover:bg-red-50 dark:hover:bg-red-950/40">⊘ 제외 ${exCats.size}개 해제</button>` : ''}
+                ${courtBtn(false)}
                 <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
             document.getElementById('groupButtons').innerHTML = html;
             // 기사 원문 화면을 3칸에 넣지 않았을 때: 사건 목록(요약) 위에 분류 버튼을 한 줄로 줄여서 보여 줌
@@ -1426,6 +1494,7 @@
                         <span class="flex items-center rounded-md border border-slate-300 dark:border-slate-600 shrink-0">${modeBtn('include', '✓ 골라 보기')}${modeBtn('exclude', '⊘ 빼고 보기').replace('tip-right', '')}</span>
                         <span class="cat-hint truncate text-[0.625rem] ${(exMode ? exCats.size : selCats.size) ? 'font-bold ' + (exMode ? 'text-red-600 dark:text-red-300' : 'text-indigo-600 dark:text-indigo-300') : 'text-slate-400'}">${hint}</span>
                         ${exCats.size ? `<button onclick="clearExcluded()" class="shrink-0 whitespace-nowrap text-[0.625rem] font-bold text-red-600 dark:text-red-300 border border-red-300 dark:border-red-700 rounded px-1.5 py-0.5">⊘ 해제</button>` : ''}
+                        ${courtBtn(true)}
                         <button onclick="setCategoryFilter('범죄 다발 지역')" title="7일간 전국 사건사고 다발 지역 (기사 원문 창으로 열림)" class="cat-btn ml-auto shrink-0 px-2 py-0.5 rounded-md text-[0.625rem] border whitespace-nowrap bg-rose-600 text-white border-rose-700 font-bold">🚨 다발 지역</button>
                     </div>` : '';
             }
@@ -1528,13 +1597,17 @@
             document.getElementById('listCount').textContent = '사건 ' + events.length + '건' + (filtered.length > events.length ? ' · 기사 ' + filtered.length + '개' : '');
             container.innerHTML = '';
 
-            // 다발 지역에서 지역을 고른 상태: 맨 위에 어느 지역인지와 돌아가기 버튼
-            if (currentCategory === '범죄 다발 지역' && selectedHotspotRegion) {
-                const bar = document.createElement('div');
-                bar.className = 'sticky top-0 z-20 -mx-3 -mt-3 px-3 py-2 bg-rose-600 text-white text-xs font-bold flex items-center justify-between gap-2';
-                bar.innerHTML = `<span class="truncate">🚨 ${esc(selectedHotspotRegion)} · 최근 7일 사건 ${events.length}건</span><button class="shrink-0 px-2 py-0.5 rounded bg-white/20 hover:bg-white/30">← 다발 지역 순위</button>`;
-                bar.querySelector ? (bar.querySelector('button').onclick = backToHotspots) : (bar.onclick = backToHotspots);
-                container.appendChild(bar);
+            // 다발 지역에서 지역을 고른 상태: 날짜 줄 바로 아래(목록 바깥)에 어느 지역인지와 돌아가기 버튼을 여백 없이 붙임
+            const hotBar = document.getElementById('hotspotBar');
+            if (hotBar) {
+                if (currentCategory === '범죄 다발 지역' && selectedHotspotRegion) {
+                    hotBar.innerHTML = `<span class="truncate">🚨 ${esc(selectedHotspotRegion)} · 최근 7일 사건 ${events.length}건</span><button class="shrink-0 px-2 py-0.5 rounded bg-white/20 hover:bg-white/30">← 다발 지역 순위</button>`;
+                    hotBar.querySelector('button').onclick = backToHotspots;
+                    hotBar.classList.remove('hidden'); hotBar.classList.add('flex');
+                } else {
+                    hotBar.classList.add('hidden'); hotBar.classList.remove('flex');
+                    hotBar.innerHTML = '';
+                }
             }
 
             if (events.length === 0) {
@@ -1577,6 +1650,7 @@
                         <span class="flex flex-wrap items-center gap-1 min-w-0">
                             ${freshEventKeys.has(ev.key) ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-extrabold">NEW</span>' : ''}
                             ${isOverseas(news) ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-zinc-700 text-white font-extrabold">🌍 해외</span>' : ''}
+                            ${isCourt(news) ? courtBadge() : ''}
                             ${tagBadges(news)}
                         </span>
                         <span class="text-[0.625rem] text-slate-500 whitespace-nowrap shrink-0 font-mono" title="${esc(news.time)}">${esc(shortTime(news))}</span>
@@ -1631,10 +1705,11 @@
         }
 
         // ================= 다발 지역 (사건 수 기준, 같은 사건의 기사 여러 개는 1건) =================
-        // 기사의 시·군·구 (다발 지역 집계용). 해외·북한·위치 미상·시도만 아는 기사는 제외
+        // 기사의 시·군·구 (다발 지역 집계용). 해외·북한·위치 미상·시도만 아는 기사와 법원·검찰 소재지로만 위치가 잡힌 기사는 제외
         function hotspotRegionOf(n) {
             const loc = n.location || '';
             if (isOverseas(n) || loc.startsWith('북한') || loc.startsWith('해외') || loc.includes('미상') || !loc.includes(' ')) return null;
+            if (precOf(n) === 'inst') return null;
             return sigunguOf(loc);
         }
         // 사건 하나 = 지역 하나: 같은 사건의 기사들이 서로 다른 곳으로 찍혀 있으면(예: 한 기사는 동까지, 다른 기사는 법원 소재지)
@@ -1652,8 +1727,9 @@
             return best ? best.r : null;
         }
         // 최근 7일(오늘 포함 7개 날짜) 사건 목록 → 사건마다 지역 하나. 지금 고른 분류(골라 보기·빼고 보기)를 그대로 따름
+        // 재판·판결 소식(court)은 예전 사건의 후속 보도라 세지 않음 (같은 사건에 발생·수사 기사가 있으면 그 기사로 셈)
         function hotspotEvents() {
-            const evs = groupEvents(newsData.filter(n => inLast7(n) && n.source !== '시스템' && catPass(n)));
+            const evs = groupEvents(newsData.filter(n => inLast7(n) && n.source !== '시스템' && !isCourt(n) && catPass(n)));
             evs.forEach(ev => { ev.region = eventRegion(ev); });
             return evs.filter(ev => ev.region);
         }
@@ -1703,7 +1779,7 @@
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/25">
                         <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 전국 사건사고 다발 지역</h2>
-                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">오늘 포함 최근 7일 동안 서로 다른 사건마다 1건으로 셉니다. 같은 사건을 다룬 기사 여러 개는 1건으로 묶고, 사건 하나는 위치가 가장 자세한 지역 한 곳에만 셉니다. 해외·위치 미상·시·도까지만 알려진 기사는 빠집니다.${selCats.size || exCats.size ? ' <b class="text-rose-600">지금 고른 분류 기준으로 집계 중입니다.</b>' : ''} 지역을 누르면 왼쪽에 그 지역 사건이 정리됩니다.</p>
+                        <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">오늘 포함 최근 7일 동안 서로 다른 사건마다 1건으로 셉니다. 같은 사건을 다룬 기사 여러 개는 1건으로 묶고, 사건 하나는 위치가 가장 자세한 지역 한 곳에만 셉니다. 해외·위치 미상·시·도까지만 알려진 기사, 그리고 ⚖️ 재판·판결 소식(예전 사건의 후속 보도)과 법원·검찰 소재지로만 위치가 잡힌 기사는 빠집니다.${selCats.size || exCats.size ? ' <b class="text-rose-600">지금 고른 분류 기준으로 집계 중입니다.</b>' : ''} 지역을 누르면 왼쪽에 그 지역 사건이 정리됩니다.</p>
                     </div>
                     <div id="hotspotList" class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
                 </div>
@@ -1935,6 +2011,7 @@
 
         // 분류 조건(빼고 보기 · 골라 보기 · 세부 분류)을 통과하는지
         function catPass(news) {
+            if (!showCourt && isCourt(news)) return false;                                          // ⚖️ 재판·판결 소식을 꺼 두면 숨김
             if (exCats.size && groupsOf(news).some(g => exCats.has(g))) return false;              // 빼고 보기로 고른 분류의 기사는 숨김
             if (selCats.size) {
                 if (!groupsOf(news).some(g => selCats.has(g))) return false;                       // 화재+추돌 기사는 '화재·사고'와 '교통사고' 양쪽에 모두 나옴
@@ -2068,14 +2145,26 @@
             // 칸에 넣지 않은 화면마다 버튼 하나씩 (안전 브리핑을 칸에 넣으면 두 화면이 버튼으로 빠질 수 있음)
             wrap.className = 'flex items-center gap-1.5';
             wrap.innerHTML = hiddenPanels().map(h => h === 'community'
-                ? `<button onclick="openCommunity()" title="이웃과 사건사고를 나누는 우리 동네 게시판" class="comm-btn relative text-white pl-2 pr-3.5 py-1.5 rounded-full shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5 whitespace-nowrap">
+                ? `<button onclick="openCommunity()" title="이웃과 사건사고를 나누는 우리 동네 게시판" class="comm-btn sweep-btn relative text-white pl-2 pr-3.5 py-1.5 rounded-full shadow-md shadow-emerald-600/30 transition flex items-center gap-1.5 whitespace-nowrap">
                     <span class="comm-faces flex items-center" style="transform: scale(.9); transform-origin: left center; margin-right: -4px;"><span>🙂</span><span>🐶</span><span>🌸</span></span>
                     <span class="text-[0.8125rem] font-extrabold">우리동네 커뮤니티</span>
                     <span id="commBadge" class="hidden absolute -top-2 -right-2 bg-red-600 text-white text-[0.625rem] font-bold px-1.5 py-0.5 rounded-full animate-pulse">SOS</span>
                 </button>`
                 : `<button onclick="openFloat('${h}')" data-panel="${h}" title="${h === 'article' ? '고른 기사의 원문을 창으로 엽니다' : PANELS[h].label + ' 창 열기'}" class="bg-sky-600 hover:bg-sky-500 text-white ${hiddenPanels().length > 1 ? 'text-xs px-2.5 py-1.5' : 'text-[0.8125rem] px-3.5 py-2'} font-extrabold rounded-lg shadow shadow-sky-600/20 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid ${PANELS[h].icon}"></i> ${PANELS[h].short}</button>`).join('');
             if (typeof updateCommBadge === 'function') updateCommBadge();
+            syncSweep();
         }
+        // 맨 위 주요 버튼 3개를 지나가는 빛: 버튼 묶음 전체 너비와 각 버튼의 시작 위치를 CSS 변수로 알려 줌 (버튼이 바뀌거나 창 크기가 바뀔 때마다)
+        function syncSweep() {
+            const wrap = document.getElementById('heroBtns');
+            if (!wrap) return;
+            const wr = wrap.getBoundingClientRect();
+            if (!wr.width) return;
+            wrap.style.setProperty('--sweep-w', Math.round(wr.width) + 'px');
+            wrap.querySelectorAll('.sweep-btn').forEach(b => b.style.setProperty('--off', Math.round(b.getBoundingClientRect().left - wr.left) + 'px'));
+        }
+        window.addEventListener('resize', syncSweep);
+        if (window.ResizeObserver) document.addEventListener('DOMContentLoaded', () => { const w = document.getElementById('heroBtns'); if (w) new ResizeObserver(syncSweep).observe(w); });
         // 창 너비 조절 막대 (끌면 바로 넓어지고 좁아짐, 값은 저장됨)
         function curFloatW() { if (floatW) return floatW; const b = document.getElementById('floatBox'); return b && b.offsetWidth ? Math.round(b.offsetWidth / window.innerWidth * 100) : 60; }
         function wideBtnHtml(dark) {
@@ -2201,8 +2290,8 @@
             p.innerHTML = `
                 <div class="flex items-center justify-between mb-2"><b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-columns"></i> 화면 설정</b><button onclick="toggleLayoutPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button></div>
                 <div class="flex gap-1.5 mb-2">${cnt(2)}${cnt(3)}</div>
-                <p class="text-[0.6875rem] text-slate-500 mb-2 leading-relaxed">화면 ${paneCount}칸에 어떤 화면을 놓을지 고르세요. 같은 화면을 고르면 두 칸이 서로 자리를 바꿉니다.</p>
-                <div class="grid gap-1 mb-2" style="grid-template-columns: repeat(${slots.length}, 1fr);">${slots.map(i => `<div class="rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 p-1.5 text-center"><div class="text-[0.625rem] text-slate-400">${names[i]}</div><i class="fa-solid ${PANELS[layout[i]].icon} text-emerald-500"></i><div class="text-[0.625rem] font-bold text-slate-700 dark:text-slate-200 leading-tight">${PANELS[layout[i]].short}</div></div>`).join('')}</div>
+                <p class="text-[0.6875rem] text-slate-500 mb-2 leading-relaxed">화면 ${paneCount}칸에 어떤 화면을 놓을지 고르세요. 칸을 누르면 다음 화면으로 바뀌고, 아래 목록에서 바로 고를 수도 있습니다. 같은 화면을 고르면 두 칸이 서로 자리를 바꿉니다.</p>
+                <div class="grid gap-1 mb-2" style="grid-template-columns: repeat(${slots.length}, 1fr);">${slots.map(i => `<button type="button" onclick="cycleSlot(${i})" title="${names[i]}: 누르면 다음 화면으로 바꿉니다" class="rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 hover:border-emerald-400 active:scale-95 transition p-1.5 text-center"><div class="text-[0.625rem] text-slate-400">${names[i]}</div><i class="fa-solid ${PANELS[layout[i]].icon} text-emerald-500"></i><div class="text-[0.625rem] font-bold text-slate-700 dark:text-slate-200 leading-tight">${PANELS[layout[i]].short}</div></button>`).join('')}</div>
                 ${slots.map(i => `
                     <label class="block text-[0.6875rem] text-slate-500 mb-0.5">${names[i]}</label>
                     <select onchange="setSlot(${i}, this.value)" class="${inp} mb-2">${Object.keys(PANELS).map(x => `<option value="${x}" ${x === layout[i] ? 'selected' : ''}>${PANELS[x].label}</option>`).join('')}</select>`).join('')}
@@ -2216,6 +2305,11 @@
             layout[i] = key;
             applyLayout();
             renderLayoutPanel();
+        }
+        // 칸 미리보기(왼쪽 칸·가운데 칸·오른쪽 칸 버튼)를 누르면 그 칸의 화면을 다음 화면으로 바꿈
+        function cycleSlot(i) {
+            const keys = Object.keys(PANELS);
+            setSlot(i, keys[(keys.indexOf(layout[i]) + 1) % keys.length]);
         }
         function setLayoutPreset(i) { layout = LAYOUT_PRESETS[i][1].slice(); applyLayout(); renderLayoutPanel(); }
 
@@ -2462,7 +2556,8 @@
         // 새 기사가 들어왔을 때 '알림 지역'에 해당하면 지도 오른쪽 아래에 알림 창을 띄우고 소리를 냅니다.
         const ALERT_SOUNDS = { dingdong: '띵동', bell: '종소리', siren: '경보음', none: '소리 없음' };
         let alertCfg = (() => {
-            const base = { enabled: true, sound: 'dingdong', volume: 70, scope: 'sigungu', region: null, useLocation: false, radiusKm: 5, sos: true, report: true, dm: true };
+            // court: 재판·판결 소식도 알릴지 (기본 꺼짐 — 지금 일어난 사건이 아니므로)
+            const base = { enabled: true, sound: 'dingdong', volume: 70, scope: 'sigungu', region: null, useLocation: false, radiusKm: 5, sos: true, report: true, dm: true, court: false };
             try { return Object.assign(base, JSON.parse(localStorage.getItem('alert_cfg') || '{}')); } catch (e) { return base; }
         })();
         let alertSeenIds = null;      // 이미 본 기사 번호 (처음 불러올 때는 알림을 띄우지 않음)
@@ -2545,7 +2640,7 @@
             if (area === alertSummaryArea) return;
             alertSummaryArea = area;
             const since = Date.now() / 1000 - 6 * 3600;
-            const recent = groupEvents(newsData.filter(n => n.timestamp >= since && matchHere(n))).map(ev => ev.lead);
+            const recent = groupEvents(newsData.filter(n => n.timestamp >= since && alertStageOk(n) && matchHere(n))).map(ev => ev.lead);
             if (recent.length === 0) return;
             showAlertToast({
                 head: '📍 현재 계신 지역에서 사건사고가 발생했어요', badge: area + ' · 최근 6시간 ' + recent.length + '건',
@@ -2561,6 +2656,8 @@
         }
         function initAlerts() { updateAlertButton(); startHereWatch(); }
 
+        // 알림을 보낼 단계인지: 발생·수사 기사는 알리고, 재판·판결 소식은 [알림 설정]에서 켠 사람에게만
+        function alertStageOk(n) { return alertCfg.court || !isCourt(n); }
         // 새로 들어온 기사 확인 (loadIncidentsFromJSON 에서 호출)
         function checkNewIncidents(list) {
             if (alertSeenIds === null) { alertSeenIds = new Set(list.map(n => n.id)); alertSeenEvents = new Set(list.map(evOf)); return; }
@@ -2569,8 +2666,9 @@
             const fresh = [];                      // 같은 사건의 후속 기사는 다시 알리지 않음
             newArticles.forEach(n => { if (!alertSeenEvents.has(evOf(n))) { alertSeenEvents.add(evOf(n)); fresh.push(n); } });
             if (!alertCfg.enabled) return;
-            const here = fresh.filter(matchHere);
-            const mine = fresh.filter(n => !here.includes(n) && matchAlertRegion(n));
+            const live = fresh.filter(alertStageOk);          // 재판·판결 소식은 설정에서 켜지 않으면 알리지 않음
+            const here = live.filter(matchHere);
+            const mine = live.filter(n => !here.includes(n) && matchAlertRegion(n));
             if (here.length === 0 && mine.length === 0) return;
             here.slice(0, 3).forEach(n => showAlertToast({
                 head: '📍 현재 계신 지역에서 사건사고가 발생했어요', badge: n.category, title: n.title,
@@ -2664,9 +2762,13 @@
                     <b class="text-sm text-slate-900 dark:text-white">🔔 우리 동네 알림 설정</b>
                     <button onclick="toggleAlertPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button>
                 </div>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-2">
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
                     <span>알림 받기</span>
                     <input type="checkbox" ${alertCfg.enabled ? 'checked' : ''} onchange="setAlertCfg('enabled', this.checked)">
+                </label>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-2" title="재판·판결 소식은 예전 사건의 후속 보도라 기본으로는 알리지 않습니다">
+                    <span>⚖️ 재판·판결 소식도 알림 <span class="text-[0.625rem] text-slate-400">(기본 꺼짐)</span></span>
+                    <input type="checkbox" ${alertCfg.court ? 'checked' : ''} onchange="setAlertCfg('court', this.checked)">
                 </label>
                 <div class="text-[0.6875rem] text-slate-500 mb-1">알림 지역: <b class="text-slate-800 dark:text-slate-100">${esc(alertRegionText())}</b></div>
                 <div class="grid grid-cols-2 gap-1 mb-2">
@@ -3138,7 +3240,7 @@
             playAlertSound(sos ? 'siren' : undefined);
         }
 
-        // 접속 표시: 내 프로필과 마지막 접속 시각을 동네 명단에 기록
+        // 내 프로필을 동네 명단에 기록 (lastSeen 은 명단을 최근 활동 200명으로 끊어 받는 데만 쓰고, 화면에 접속 여부로 보여 주지는 않음)
         async function commTouch() {
             if (!myTown) return;
             const me = Object.assign({ uid: COMM_UID, intro: commProfile.intro || '', joinedAt: commProfile.joinedAt || Date.now(), lastSeen: Date.now(), photo: myPhoto() }, meFields());
@@ -3479,17 +3581,19 @@
             if (scrollBottom || nearBottom) list.scrollTop = list.scrollHeight;
         }
 
-        // 이웃 명단 (최근 3분 안에 접속한 사람은 초록 점)
+        // 이웃 명단 (게시판이라 누가 접속 중인지는 보여 주지 않음: 접속 인원·초록 점·마지막 접속 시각 없이 이름순)
         function renderCommMembers() {
             const box = document.getElementById('commMembers');
             if (!box) return;
-            const now = Date.now();
-            const list = commMembers.filter(m => !isBlocked(m.uid)).sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
-            const isOn = m => now - (m.lastSeen || 0) < 3 * 60000;
-            box.innerHTML = `<div class="px-3 py-2 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-900">이웃 ${list.length}명 <span class="text-emerald-500">· 접속 중 ${list.filter(isOn).length}</span></div>`
+            const list = commMembers.filter(m => !isBlocked(m.uid)).sort((a, b) => {
+                if (a.uid === COMM_UID) return -1;                 // 나는 맨 위
+                if (b.uid === COMM_UID) return 1;
+                return koSort(a.nick || '이웃', b.nick || '이웃');
+            });
+            box.innerHTML = `<div class="px-3 py-2 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-slate-50 dark:bg-slate-900">이웃 ${list.length}명</div>`
                 + list.map(m => `
                     <button onclick="showProfile('${esc(m.uid)}')" class="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-200/70 dark:hover:bg-slate-800">
-                        <span class="relative w-7 h-7 shrink-0">${avatarHtml(m, 'w-7 h-7', 'text-sm')}<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${isOn(m) ? 'bg-emerald-500' : 'bg-slate-300'}"></span></span>
+                        <span class="relative w-7 h-7 shrink-0">${avatarHtml(m, 'w-7 h-7', 'text-sm')}</span>
                         <span class="truncate text-xs text-slate-800 dark:text-slate-100">${esc(m.nick || '이웃')}${m.uid === COMM_UID ? ' (나)' : ''}</span>
                     </button>`).join('');
         }
@@ -3509,14 +3613,13 @@
             if (!mine && blockedBy.has(uid)) { showAlertToast({ head: '프로필', title: '볼 수 없는 프로필입니다.' }); return; }
             const area = m.area || '';
             const posts = commMessages.filter(x => x.uid === uid).length;
-            const on = m.lastSeen && Date.now() - m.lastSeen < 3 * 60000;
             card.innerHTML = `
                 <div class="w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 text-center" onclick="event.stopPropagation()">
                     <div class="flex justify-center">${avatarHtml(m, 'w-20 h-20', 'text-4xl')}</div>
                     <div class="mt-2 text-base font-bold text-slate-900 dark:text-white">${esc(displayName(uid, m.nick))}${mine ? ' (나)' : ''}</div>
                     ${!mine && friendAlias(uid) ? `<div class="text-[0.625rem] text-slate-400">원래 이름: ${esc(m.nick || '이웃')}</div>` : ''}
                     <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-location-dot"></i> ${esc(area || (myTown ? myArea() : '지역 미상'))}</div>
-                    <div class="text-[0.6875rem] text-slate-500">${area && myTown && area !== myArea() ? '다른 동네 이웃' : (myTown ? esc(myTown.dong) + ' 이웃' : '')}${on || mine ? ' · <span class="text-emerald-500">접속 중</span>' : (m.lastSeen ? ' · ' + timeAgo(m.lastSeen) + ' 접속' : '')}</div>
+                    <div class="text-[0.6875rem] text-slate-500">${area && myTown && area !== myArea() ? '다른 동네 이웃' : (myTown ? esc(myTown.dong) + ' 이웃' : '')}</div>
                     <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words">${esc(m.intro || '아직 소개가 없습니다.')}</p>
                     <div class="mt-2 text-[0.6875rem] text-slate-500">작성한 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}</div>
                     <div id="pfTrust" class="mt-2">${trustHtml(trustCache[uid])}</div>
@@ -6562,7 +6665,8 @@
             const c = briefCenter();
             const since = Date.now() / 1000 - days * 86400;
             const list = newsData.filter(n => n.timestamp >= since && n.source !== '시스템');
-            const local = list.filter(n => briefMatch(n, c));
+            // 브리핑은 실제 피해가 생긴 사건(발생·수사 기사)만 요약. 재판·판결 소식은 예전 사건의 후속 보도라 넣지 않음 (목록에서 ⚖️ 표시로만 봄)
+            const local = list.filter(n => briefMatch(n, c) && !isCourt(n));
             const evs = groupEvents(local);
             const byGroup = {};
             evs.forEach(ev => groupsOf(ev.lead).forEach(g => { byGroup[g] = (byGroup[g] || 0) + 1; }));
