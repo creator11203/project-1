@@ -50,6 +50,8 @@ jobs:
             echo "::group::수집 ${ROUND}회차 ($(TZ=Asia/Seoul date '+%H:%M:%S'))"
             python scraper.py || echo "[경고] scraper.py 실행 중 오류 — 다음 회차에 다시 시도합니다."
             git add news.json
+            # tips.json: 안전 브리핑에 보여 줄 예방·대처 정보 기사 (사건 목록과 따로 모음)
+            if [ -f tips.json ]; then git add tips.json; fi
             # geocache.json: 동(洞)·장소 좌표를 한 번 찾으면 저장해 두는 파일 (scraper.py 가 자동으로 만듭니다)
             if [ -f geocache.json ]; then git add geocache.json; fi
             if git diff --staged --quiet; then
