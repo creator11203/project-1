@@ -460,8 +460,9 @@
             <button id="themeBtn" onclick="toggleTheme()" title="다크 모드로 바꾸기" aria-label="다크 모드로 바꾸기" class="theme-btn w-8 h-8 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-indigo-600 dark:text-amber-300 border border-slate-300 dark:border-slate-700 transition">
                 <i id="themeIcon" class="fa-solid fa-moon text-[0.9rem]"></i>
             </button>
+            <button onclick="openTour(0)" title="처음 사용하는 분을 위한 단계별 안내" aria-label="사용 안내" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-regular fa-circle-question"></i> <span class="hidden xl:inline">사용 안내</span></button>
             <div class="relative">
-                <button onclick="toggleLayoutPanel()" title="화면 배치 바꾸기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-table-columns"></i> <span class="hidden xl:inline">화면 설정</span></button>
+                <button id="layoutBtn" onclick="toggleLayoutPanel()" title="화면 배치 바꾸기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-table-columns"></i> <span class="hidden xl:inline">화면 설정</span></button>
                 <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
             </div>
             <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-mobile-screen-button"></i> <span class="hidden 2xl:inline">앱 다운로드</span></button>
@@ -4835,9 +4836,69 @@
             if (!myTown) return [];
             const tk = townKey(myTown), out = [];
             const lists = { talk: commMessages, free: freeMessages, praise: praiseMessages, hello: boardData.hello, wish: boardData.wish };
-            Object.keys(lists).forEach(b => (lists[b] || []).filter(m => !pbIsComment(m) && (m.ts || 0) >= range[0] && (m.ts || 0) < range[1]).forEach(m => out.push(natPost(b, m, tk, lists[b]))));
+            Object.keys(lists).forEach(b => (lists[b] || []).filter(m => !m.demo && !pbIsComment(m) && (m.ts || 0) >= range[0] && (m.ts || 0) < range[1]).forEach(m => out.push(natPost(b, m, tk, lists[b]))));
             out.push(...natPlaces('food', boardData.food, tk, range), ...natPlaces('spot', boardData.spot, tk, range));
             return out;
+        }
+        // ---- 체험 모드 전용: 전국 여러 지역의 '(예시)' 순위 (예시 게시물 보기를 켜 둔 경우에만, 이번 달에만 표시. 저장하지 않음) ----
+        const NAT_DEMO_AREAS = [
+            ['서울특별시', '마포구', '연남동'], ['부산광역시', '해운대구', '우동'], ['대구광역시', '수성구', '범어동'], ['인천광역시', '연수구', '송도동'],
+            ['광주광역시', '북구', '용봉동'], ['대전광역시', '유성구', '봉명동'], ['경기도', '수원시 영통구', '영통동'], ['강원특별자치도', '강릉시', '교동'],
+            ['충청북도', '청주시 상당구', '성안동'], ['전북특별자치도', '전주시 완산구', '효자동'], ['전라남도', '여수시', '학동'], ['경상북도', '경주시', '황남동'],
+            ['경상남도', '창원시 성산구', '상남동'], ['제주특별자치도', '제주시', '애월읍'], ['세종특별자치시', '세종시', '나성동'], ['충청남도', '천안시 서북구', '불당동']
+        ];
+        const NAT_DEMO_POSTS = [   // [지역, 게시판, 말머리, 제목, 내용, 공감, 댓글, 조회, 닉네임, 이모지, 몇 시간 전]
+            [0, 'talk', '', '[예시] 연남동 골목 정전, 한 시간째 복구 중이에요', '저녁 7시쯤부터 연남동 먹자골목 일대가 정전이에요. 한전에서 나와 작업 중이고 신호등도 꺼져서 지나가실 때 조심하세요.', 42, 18, 410, '골목 지킴이', '🔦', 3],
+            [1, 'praise', '', '[예시] 해운대 우동 주민센터 직원분 너무 친절하세요', '전입신고하러 갔는데 서류 하나하나 챙겨 주셨어요. 덕분에 한 번에 끝냈습니다. 감사합니다 👏', 38, 9, 300, '바다 산책러', '🌊', 8],
+            [7, 'free', '추천', '[예시] 강릉 교동 새벽 산책길 노을이 장관이에요', '오늘 새벽 일출 보러 나갔다가 사진 한 장 건졌어요. 이번 주말 맑대요, 꼭 가 보세요!', 35, 12, 520, '새벽 러너', '🏃', 20],
+            [13, 'hello', '', '[예시] 제주 애월로 이사 왔어요, 반갑습니다!', '서울에서 내려와 한 달 살기 시작했어요. 동네 카페·산책 코스 추천 부탁드려요 🍊', 33, 21, 280, '귤 좋아', '🍊', 30],
+            [6, 'wish', '도로·교통', '[예시] 영통 사거리 보행 신호가 너무 짧아요', '유모차 끌고 건너다가 중간에 신호가 바뀌었어요. 신호 시간 조금만 늘려 주세요.', 31, 14, 260, '유모차 맘', '👶', 14],
+            [3, 'free', '정보', '[예시] 송도 센트럴파크 주말 플리마켓 열려요', '이번 토·일 10시부터 6시까지 센트럴파크 광장에서 플리마켓 열려요. 푸드트럭도 와요!', 29, 7, 610, '송도 주민', '🌳', 26],
+            [11, 'praise', '', '[예시] 경주 황남동 한옥 카페 사장님 인심이 최고예요', '관광객인 줄 알고 서비스까지 챙겨 주셨는데 알고 보니 이웃 주민이었어요 😂 따뜻한 동네네요.', 27, 10, 240, '천년 고도', '🏯', 40],
+            [12, 'wish', '안전·치안', '[예시] 상남동 뒷골목 가로등이 몇 달째 꺼져 있어요', '퇴근길에 너무 어두워서 불안해요. 구청에 민원 넣었는데 확인 부탁드려요.', 25, 11, 330, '야근러', '🌙', 11],
+            [9, 'free', '모임', '[예시] 전주 효자동 아침 배드민턴 모임 사람 구해요', '매주 토요일 8시 효자체육관에서 쳐요. 초보 환영, 라켓 빌려드려요!', 22, 15, 190, '셔틀콕', '🏸', 55],
+            [4, 'wish', '쓰레기·청결', '[예시] 용봉동 분리수거장 무단 투기가 심해요', '주말마다 대형 폐기물이 쌓여요. CCTV나 안내판 설치되면 좋겠어요.', 21, 8, 205, '깔끔이', '🧹', 33],
+            [2, 'talk', '', '[예시] 범어동 사거리 접촉사고, 우회 부탁드려요', '방금 사거리에서 승용차 두 대가 부딪혔어요. 다친 분은 없어 보이고 경찰 출동했어요.', 19, 6, 350, '출근길', '🚗', 2],
+            [5, 'hello', '', '[예시] 대전 봉명동 신혼집 구했어요, 잘 부탁드려요', '조용하고 공원이 가까워서 만족 중이에요. 맛집 많이 알려 주세요 🙏', 17, 13, 170, '신혼 부부', '💍', 70],
+            [10, 'praise', '', '[예시] 여수 학동 버스 기사님 덕분에 지갑 찾았어요', '버스에 두고 내린 지갑을 종점까지 보관해 주셨어요. 정말 감사드립니다!', 15, 5, 150, '밤바다', '🌃', 48],
+            [8, 'free', '질문', '[예시] 청주 성안동 소아과 추천해 주세요', '아이가 열이 나는데 대기 짧은 소아과 아시는 분 계신가요?', 13, 17, 140, '초보 아빠', '🍼', 6]
+        ];
+        const NAT_DEMO_PLACES = [   // [지역, food|spot, 이름, 장소, 종류, 별점합, 후기수]
+            [7, 'food', '교동 초당순두부집', '강릉 교동 초당두부거리', '한식', 48, 10],
+            [10, 'food', '학동 게장백반', '여수 학동 수산시장 옆', '한식', 43, 9],
+            [1, 'spot', '우동 달맞이 전망 카페', '해운대 달맞이길', '카페', 42, 9],
+            [13, 'spot', '애월 해안도로 노을 포인트', '제주 애월 한담해안', '뷰', 38, 8],
+            [9, 'food', '효자동 한옥마을 비빔밥', '전주 한옥마을 입구', '한식', 36, 8],
+            [0, 'spot', '연남동 경의선숲길 책방', '마포 연남동 숲길', '책방', 30, 7],
+            [11, 'spot', '황남동 야경 산책로', '경주 대릉원 돌담길', '산책', 28, 6],
+            [12, 'food', '상남동 수제 돈가스', '창원 상남시장 근처', '양식', 26, 6]
+        ];
+        const NAT_DEMO_PEOPLE = [   // [지역, 닉네임, 이모지, ❤, 감정, 댓글, 게시물]
+            [13, '귤 좋아 (예시)', '🍊', 64, 22, 30, 9], [7, '새벽 러너 (예시)', '🏃', 58, 20, 24, 8], [1, '바다 산책러 (예시)', '🌊', 51, 18, 21, 7],
+            [0, '골목 지킴이 (예시)', '🔦', 47, 15, 19, 7], [10, '밤바다 (예시)', '🌃', 40, 14, 16, 6], [9, '셔틀콕 (예시)', '🏸', 36, 12, 15, 6],
+            [11, '천년 고도 (예시)', '🏯', 31, 10, 12, 5], [3, '송도 주민 (예시)', '🌳', 27, 9, 10, 5], [6, '유모차 맘 (예시)', '👶', 22, 7, 9, 4], [5, '신혼 부부 (예시)', '💍', 18, 6, 7, 4]
+        ];
+        let natDemoCache = null;
+        function natDemoTown(i) { const a = NAT_DEMO_AREAS[i]; return { sido: a[0], sigungu: a[1], dong: a[2], area: a.join(' '), town: a.join('_') }; }
+        function natDemo() {
+            if (natDemoCache) return natDemoCache;
+            const now = Date.now(), obj = n => { const o = {}; for (let i = 0; i < n; i++) o['d' + i] = 1; return o; };
+            const items = [], full = {};
+            NAT_DEMO_POSTS.forEach((r, i) => {
+                const t = natDemoTown(r[0]), pid = 'natdemo-' + i, id = 'natdemo_' + i, ts = now - r[10] * 3600000;
+                items.push(Object.assign({ kind: 'post', id: id, board: r[1], pid: pid, title: r[3], snippet: r[4], likes: r[5], comments: r[6], views: r[7], uid: 'natdemo_u' + i, nick: r[8] + ' (예시)', emoji: r[9], ts: ts, tag: r[2], demo: true }, t));
+                const cm = ['저도 그렇게 생각해요!', '정보 감사합니다 🙏', '우리 동네도 비슷해요.', '좋은 글 공유해 주셔서 고마워요.'];
+                full[id] = { p: { id: pid, uid: 'natdemo_u' + i, nick: r[8] + ' (예시)', emoji: r[9], title: r[3], text: r[4], ts: ts }, coms: cm.slice(0, Math.min(4, 1 + (r[6] % 4))).map((c, j) => ({ id: 'c' + j, uid: 'natdemo_c' + j, nick: '이웃 ' + (j + 1) + ' (예시)', emoji: ['🙂', '😊', '🐶', '🌼'][j], text: c, ts: ts + (j + 1) * 600000 })) };
+            });
+            NAT_DEMO_PLACES.forEach((r, i) => {
+                const t = natDemoTown(r[0]);
+                items.push(Object.assign({ kind: 'place', id: 'natdemo_place_' + i, board: r[1], name: r[2] + ' (예시)', place: r[3], tag: r[4], sum: r[5], n: r[6], last: now - i * 7200000, demo: true }, t));
+            });
+            const feed = NAT_DEMO_PEOPLE.map((r, i) => ({ uid: 'natdemo_p' + i, nick: r[1], emoji: r[2], area: natDemoTown(r[0]).area, hearts: obj(r[3]), reacts: obj(r[4]), comments: r[5], ts: now - i * 3600000, rank: true, pubPosts: r[6], demo: true, _posts: r[6] }));
+            // 게시물 수만큼 같은 사람의 글로 펼침
+            const feedAll = [];
+            feed.forEach(f => { for (let k = 0; k < f._posts; k++) feedAll.push(Object.assign({}, f, { hearts: k === 0 ? f.hearts : {}, reacts: k === 0 ? f.reacts : {}, comments: k === 0 ? f.comments : 0, ts: f.ts - k * 60000 })); });
+            return (natDemoCache = { items: items, full: full, feed: feedAll });
         }
         async function natLoad(force) {
             const mk = natState.month || (natState.month = monthKey(Date.now()));
@@ -4856,6 +4917,7 @@
                     feed = feedLocal().filter(p => (p.ts || 0) >= range[0] && (p.ts || 0) < range[1]);
                 }
             } catch (e) { console.error(e); }
+            if (demoOn() && mk === monthKey(Date.now())) { const dm = natDemo(); items = items.concat(dm.items); feed = feed.concat(dm.feed); }
             const by = {};
             items.concat(natMine(range)).forEach(x => {
                 if (x.kind === 'place' && by[x.id]) { const o = by[x.id]; if (x.n > o.n) by[x.id] = x; return; }   // 같은 장소: 후기가 더 많이 모인 쪽
@@ -4938,6 +5000,7 @@
         function natLocalList(b, tk) { try { return JSON.parse(localStorage.getItem(natLocalKey(b, tk)) || '[]'); } catch (e) { return []; } }
         async function natFetchFull(x) {
             if (natFull[x.id] && (natFull[x.id].p || natFull[x.id].busy)) return;
+            if (x.demo && natDemo().full[x.id]) { const d = natDemo().full[x.id]; natFull[x.id] = { p: Object.assign({}, d.p), coms: d.coms.slice() }; if (natState.open === x.id) renderNational(); return; }
             natFull[x.id] = { busy: true, p: null, coms: [] };
             try {
                 // 우리 동네 글이면 이미 받아 둔 목록에서
@@ -4970,6 +5033,7 @@
             f.p[field] = has ? arr.filter(u => u !== COMM_UID) : arr.concat(COMM_UID);
             x.likes = Math.max(0, (x.likes || 0) + (has ? -1 : 1));
             renderNational();
+            if (x.demo) { if (!has) showAlertToast({ head: '❤️ 공감', title: `${x.dong || '다른 동네'} 이웃의 글에 공감을 보냈어요. (예시)` }); return; }
             try {
                 const db = await commInit();
                 if (db) {
@@ -9186,6 +9250,120 @@
             updateMapMarkers();
             alert('제보가 등록되었습니다! (이 화면에서만 보이며, 새로고침하면 사라집니다)');
         }
+
+        // ================= 첫 방문 사용 안내 (투어) =================
+        //  · 사이트에 들어오면 가장 먼저 뜨는 단계별 안내. [다음]을 눌러 핵심 기능을 하나씩 확인
+        //  · 오른쪽 위 ✕ = 이번에만 닫기 / [오늘 하루 열지 않기] / [앞으로 열지 않기] 로 선택
+        //  · 상단 [사용 안내] 버튼으로 언제든 다시 열 수 있음
+        const TOUR_STEPS = [
+            { icon: '👋', title: '우리동네 사건사고에 오신 걸 환영해요', text: '전국의 사건·사고를 실시간으로 모아 보여 주는 안전 관제 사이트예요. 1분이면 끝나는 핵심 사용법을 [다음]으로 넘기며 확인해 보세요.', target: '' },
+            { icon: '🚨', title: '속보 바', text: '지금 가장 많이 보도되는 사건 1~10위 헤드라인이 흘러가요. 제목을 누르면 해당 기사로 바로 이동해요.', target: '#tickerWrap' },
+            { icon: '📍', title: '내 동네만 골라 보기', text: '시·도 → 시·군·구 → 읍·면·동 순서로 고르면 우리 동네 사건만 모아 볼 수 있어요. 기본은 전국 전체예요.', target: '#sidoSelect' },
+            { icon: '📅', title: '날짜 · 사건 목록', text: '화살표나 날짜 버튼으로 지난 날짜의 사건도 볼 수 있어요. 목록은 새 기사가 올라오면 새로고침 없이 자동으로 추가돼요.', target: '#dateButton' },
+            { icon: '🗂️', title: '분류 버튼', text: '교통·화재·범죄 같은 분류 버튼으로 보고 싶은 종류만 걸러 볼 수 있어요. 기사를 누르면 아래에 원문 요약이 열려요.', target: '#categoryBar' },
+            { icon: '🗺️', title: '사건 지도', text: '사건이 일어난 위치를 지도에서 확인해요. [알림 설정]으로 내 지역 속보를 받고, [내 주변 안전시설]로 가까운 병원·소방서·경찰서를 찾을 수 있어요.', target: '#alertButton' },
+            { icon: '📋', title: '안전 브리핑', text: '오늘·이번 주 주요 사건을 비서처럼 요약해 드려요. 바쁠 때 이것만 눌러도 오늘 동네 분위기를 알 수 있어요.', target: '#heroBtns button' },
+            { icon: '💬', title: '우리동네 커뮤니티', text: '동네 이웃과 안전망·이런저런·이사왔어요·맛집·핫플 게시판에서 소통해요. 메뉴의 [우리동네 TOP10]에서는 이달의 전국 인기 글·장소·이웃도 볼 수 있어요.', target: '#floatBtnWrap' },
+            { icon: '📢', title: '실시간 제보하기', text: '목격한 사고나 위험 상황을 이웃에게 바로 알려요. 언론사 제보도 함께 할 수 있어요.', target: '#heroBtns button:last-child' },
+            { icon: '⚙️', title: '내 화면으로 꾸미기', text: '[화면 설정]으로 패널 배치를 바꾸고, A-/A+ 로 글씨 크기를, 달 모양 버튼으로 다크 모드를 바꿀 수 있어요. 안내는 상단 [사용 안내]에서 언제든 다시 볼 수 있어요.', target: '#layoutBtn' }
+        ];
+        const tourState = { i: 0, open: false };
+        function tourSkipped() {
+            if (lsGet('tour_never') === '1') return true;
+            const until = Number(lsGet('tour_until') || 0);
+            return until > Date.now();
+        }
+        function tourTarget(sel) {
+            if (!sel) return null;
+            const el = document.querySelector(sel);
+            if (!el || el.closest('#panelStore')) return null;
+            const r = el.getBoundingClientRect();
+            return (r.width > 4 && r.height > 4) ? el : null;
+        }
+        function tourRender() {
+            const root = document.getElementById('tourRoot');
+            if (!root) return;
+            const n = TOUR_STEPS.length, i = tourState.i, s = TOUR_STEPS[i], last = i === n - 1;
+            const el = tourTarget(s.target);
+            if (el) { try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {} }
+            const r = el ? el.getBoundingClientRect() : null, pad = 6;
+            const spot = document.getElementById('tourSpot'), dim = document.getElementById('tourDim');
+            if (r) {
+                const x1 = Math.max(0, r.left - pad), y1 = Math.max(0, r.top - pad), x2 = Math.min(innerWidth, r.right + pad), y2 = Math.min(innerHeight, r.bottom + pad);
+                dim.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
+                dim.style.display = 'block';
+                Object.assign(spot.style, { display: 'block', left: (r.left - pad) + 'px', top: (r.top - pad) + 'px', width: (r.width + pad * 2) + 'px', height: (r.height + pad * 2) + 'px' });
+                root.classList.remove('tour-plain');
+            } else { spot.style.display = 'none'; dim.style.display = 'none'; root.classList.add('tour-plain'); }
+            const card = document.getElementById('tourCard');
+            card.classList.remove('tour-top', 'tour-bottom', 'tour-center');
+            card.classList.add(!r ? 'tour-center' : ((r.top + r.height / 2) < innerHeight * 0.5 ? 'tour-bottom' : 'tour-top'));
+            card.innerHTML = `
+                <button onclick="tourClose()" class="tour-x" aria-label="안내 닫기" title="닫기"><i class="fa-solid fa-xmark"></i></button>
+                <div class="tour-icon">${s.icon}</div>
+                <div class="tour-step">${i + 1} / ${n}</div>
+                <h2 class="tour-title">${esc(s.title)}</h2>
+                <p class="tour-text">${esc(s.text)}</p>
+                <div class="tour-dots">${TOUR_STEPS.map((_, k) => `<button onclick="tourGo(${k})" class="${k === i ? 'on' : ''}" aria-label="${k + 1}번째 안내"></button>`).join('')}</div>
+                <div class="tour-nav">
+                    <button onclick="tourGo(${i - 1})" class="tour-btn tour-prev" ${i === 0 ? 'disabled' : ''}>이전</button>
+                    <button onclick="${last ? 'tourClose()' : 'tourGo(' + (i + 1) + ')'}" class="tour-btn tour-next">${last ? '시작하기 🎉' : '다음 <i class="fa-solid fa-arrow-right"></i>'}</button>
+                </div>
+                <div class="tour-foot">
+                    <button onclick="tourHide('day')">오늘 하루 열지 않기</button><span>·</span><button onclick="tourHide('never')">앞으로 열지 않기</button>
+                </div>`;
+            const nx = card.querySelector('.tour-next'); if (nx) nx.focus({ preventScroll: true });
+        }
+        function tourGo(k) { if (k < 0 || k >= TOUR_STEPS.length) return; tourState.i = k; tourRender(); }
+        function tourClose() {
+            const root = document.getElementById('tourRoot'); if (root) root.remove();
+            tourState.open = false; document.removeEventListener('keydown', tourKey); window.removeEventListener('resize', tourRender);
+        }
+        function tourHide(mode) {
+            if (mode === 'never') lsSet('tour_never', '1');
+            else lsSet('tour_until', String(Date.now() + 24 * 3600000));
+            tourClose();
+            try { showAlertToast({ head: '👋 사용 안내', title: mode === 'never' ? '앞으로 자동으로 열지 않아요. 상단 [사용 안내]로 다시 볼 수 있어요.' : '오늘은 다시 열지 않아요. 상단 [사용 안내]로 다시 볼 수 있어요.' }); } catch (e) {}
+        }
+        function tourKey(e) {
+            if (e.key === 'Escape') tourClose();
+            else if (e.key === 'ArrowRight') tourGo(tourState.i + 1);
+            else if (e.key === 'ArrowLeft') tourGo(tourState.i - 1);
+        }
+        function openTour(start) {
+            if (tourState.open) return;
+            if (!document.getElementById('tourCss')) {
+                const st = document.createElement('style'); st.id = 'tourCss';
+                st.textContent = `
+                #tourRoot { position: fixed; inset: 0; z-index: 3000; }
+                #tourRoot.tour-plain { background: rgba(2,6,23,.62); backdrop-filter: blur(2px); }
+                #tourDim { position: fixed; inset: 0; background: rgba(2,6,23,.62); }
+                #tourSpot { position: fixed; border-radius: 12px; box-shadow: 0 0 0 3px #818cf8, 0 0 22px 4px rgba(129,140,248,.7); pointer-events: none; animation: tourPulse 1.6s ease-in-out infinite; }
+                @keyframes tourPulse { 50% { box-shadow: 0 0 0 5px #a5b4fc, 0 0 30px 8px rgba(165,180,252,.75); } }
+                #tourCard { position: fixed; left: 50%; transform: translateX(-50%); width: min(26rem, calc(100vw - 2rem)); background: #fff; color: #0f172a; border-radius: 20px; padding: 1.4rem 1.25rem 1rem; box-shadow: 0 24px 60px -12px rgba(0,0,0,.55); text-align: center; user-select: none; }
+                #tourCard.tour-center { top: 50%; transform: translate(-50%, -50%); } #tourCard.tour-bottom { bottom: 1.5rem; } #tourCard.tour-top { top: 1.5rem; }
+                .dark #tourCard { background: #0f172a; color: #f1f5f9; border: 1px solid #334155; }
+                .tour-x { position: absolute; top: .6rem; right: .6rem; width: 2rem; height: 2rem; border-radius: 999px; background: #f1f5f9; color: #475569; font-size: .9rem; } .tour-x:hover { background: #e2e8f0; }
+                .dark .tour-x { background: #1e293b; color: #cbd5e1; }
+                .tour-icon { font-size: 2.4rem; line-height: 1; } .tour-step { margin-top: .5rem; font-size: .6875rem; font-weight: 800; color: #6366f1; letter-spacing: .04em; }
+                .tour-title { font-size: 1.15rem; font-weight: 900; letter-spacing: -.02em; margin-top: .15rem; } .tour-text { font-size: .875rem; line-height: 1.6; color: #475569; margin-top: .5rem; word-break: keep-all; }
+                .dark .tour-text { color: #cbd5e1; }
+                .tour-dots { display: flex; justify-content: center; gap: .35rem; margin: .9rem 0 .8rem; } .tour-dots button { width: .5rem; height: .5rem; border-radius: 999px; background: #cbd5e1; transition: all .2s; } .tour-dots button.on { width: 1.4rem; background: #4f46e5; }
+                .tour-nav { display: flex; gap: .5rem; } .tour-btn { flex: 1; padding: .65rem .8rem; border-radius: 12px; font-size: .875rem; font-weight: 800; }
+                .tour-prev { background: #f1f5f9; color: #475569; } .tour-prev:disabled { opacity: .4; cursor: default; } .dark .tour-prev { background: #1e293b; color: #cbd5e1; }
+                .tour-next { flex: 2; background: linear-gradient(90deg, #4f46e5, #7c3aed); color: #fff; box-shadow: 0 8px 18px -8px rgba(79,70,229,.8); } .tour-next:hover { filter: brightness(1.1); }
+                .tour-foot { margin-top: .75rem; padding-top: .6rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; align-items: center; gap: .5rem; font-size: .6875rem; color: #94a3b8; }
+                .dark .tour-foot { border-color: #334155; } .tour-foot button { color: #64748b; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; } .tour-foot button:hover { color: #0f172a; } .dark .tour-foot button:hover { color: #fff; }`;
+                document.head.appendChild(st);
+            }
+            const root = document.createElement('div'); root.id = 'tourRoot'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', '사용 안내');
+            root.innerHTML = '<div id="tourDim"></div><div id="tourSpot"></div><div id="tourCard"></div>';
+            document.body.appendChild(root);
+            tourState.open = true; tourState.i = start || 0;
+            document.addEventListener('keydown', tourKey); window.addEventListener('resize', tourRender);
+            tourRender();
+        }
+        window.addEventListener('load', () => { setTimeout(() => { if (!tourSkipped()) openTour(0); }, 700); });
     </script>
 </body>
 </html>
