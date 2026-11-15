@@ -756,8 +756,14 @@
             if (spans.some(s => s[3]) && !realNow.test(rest)) return true;      // '드라마·영화 ○○' 꼴인데 현실의 사건 표시가 없음
             return false;
         }
+        // 배우의 '배역 연기' 이야기 · 상품 홍보의 '출동 준비 완료' 비유 (scraper.py 의 ACTING_ROLE_RE · DISPATCH_PROMO_RE 와 같은 기준)
+        const ACTING_ROLE = /(?:[가-힣]{1,6}범|범인|살인마|살인자|악역|가해자|괴물|사이코패스|연쇄\s*[가-힣]{2,6}|조폭|깡패|스토커|변태|빌런|악당)[^.…"”]{0,4}연기(?!\s*(?:가\s*|를\s*)?(?:치솟|자욱|가득|피어|흡입|뿜|나오|나는|속))|연기\s*(?:잘|력|변신|호평|열연|내공|천재|도전)|(?:눈빛|표정|분위기|열연|호연)[^.…]{0,8}(?:소름|긴장감|압도)|연기(?:를|가)\s*(?:너무|정말)?\s*잘/;
+        const DISPATCH_PROMO = /출동\s*(?:준비|채비|대기)\s*(?:완료|끝|중)?|출동\s*완료|(?:깨끗이|빨아서|빨아|씻어|닦아)\s*[^.…]{0,6}출동|출동\s*(?:합니다|해요|한다)\s*[!~♪]|출동\s*[!~♪]/;
+        const DISPATCH_REAL = /경찰|소방|119|112|구급|구조|해경|특공대|특수\s*부대|사고|화재|부상|사망|숨져|신고|환자|응급|재난|산불|폭우|침수|폭발|추락|실종|시신/;
         function notIncidentTitle(t) {
             if (isPartyPolitics(t)) return true;                                // 정치 공방·징계 기사 (위치와 상관없는 기사)
+            if (ACTING_ROLE.test(t) && !STRICT_FACT.test(t)) return true;       // 배우가 범인 역을 연기했다는 이야기 (실제 범죄 아님)
+            if (DISPATCH_PROMO.test(t) && !DISPATCH_REAL.test(t)) return true;  // '출동 준비 완료' 같은 홍보 비유
             if (onlyInWorkTitle(t)) return true;                                // 사건 낱말이 노래·영화·드라마 제목 안에만 있음
             if (ENT_TAG.test(t)) return true;                               // 정치 공방·징계 기사 (위치와 상관없는 기사)
             if (ENT_TAG.test(t)) return true;                                  // [사진] [Oh!쎈 이슈] 같은 연예·사진 기사
@@ -773,6 +779,7 @@
             if (groupOf(n) !== '해외' && notIncidentTitle(n.title || '')) return false;
             if (groupOf(n) === '해외') {
                 const t = n.title || '';
+                if (n.bc === 'ov') return true;                                                   // 기사 본문을 읽어 '한국과 연결된 해외 기사'로 확인된 것
                 if (!(KOREA_LINK.test(t) || (n.orig && EN_KOREA.test(n.orig)))) return false;   // 한국과 연결되지 않은 해외 소식
                 if (!n.orig && !KOREA_EVENT.test(t)) return false;                                // 실제 피해·사건 없이 발언·전망만 있는 기사
             }
@@ -4047,8 +4054,8 @@
                 text: '이웃과 자유롭게 소통하는 곳입니다. 맛집·날씨·동네 소식 등 편하게 이야기 나눠요. 서로 존중하는 대화 매너는 프로필의 신뢰 지수에 반영됩니다.' },
             market: { title: '동네 장터', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900',
                 text: '이웃끼리 물건을 사고팔고, 교환·나눔하는 곳입니다. 사람이 많은 곳에서 직접 만나 거래하고, 거래 후 남긴 별점은 신뢰 지수에 반영됩니다.' },
-            meet: { title: '동네 친구', cls: 'bg-pink-50 dark:bg-pink-950/40 text-pink-800 dark:text-pink-200 border-pink-200 dark:border-pink-900',
-                text: '같은 시·군·구 이웃의 소개 카드를 보고, 서로 좋아요를 누르면 대화를 시작할 수 있는 곳입니다.' },
+            meet: { title: '친구해요', cls: 'bg-pink-50 dark:bg-pink-950/40 text-pink-800 dark:text-pink-200 border-pink-200 dark:border-pink-900',
+                text: '대화방을 만들어(글·음성, 인원수 선택) 관심 있는 이웃이 들어오길 기다리거나, 열려 있는 방에 들어가 이야기할 수 있습니다. 같은 시·군·구 이웃의 소개 카드를 보고 서로 좋아요를 누르면 1:1 대화도 열립니다.' },
             friends: { title: '팔로잉 소식', cls: 'bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-800 dark:text-fuchsia-200 border-fuchsia-200 dark:border-fuchsia-900',
                 text: '내가 팔로우한 이웃이 올린 일상 게시물이 실시간으로 올라오는 곳입니다. 이웃 프로필에서 [팔로우]를 누르면 바로 소식을 받아 볼 수 있고, 서로 팔로우(맞팔)하면 대화 요청 없이 1:1 대화를 할 수 있습니다.' },
             random: { title: '랜덤 채팅', cls: 'bg-violet-50 dark:bg-violet-950/40 text-violet-800 dark:text-violet-200 border-violet-200 dark:border-violet-900',
@@ -4439,7 +4446,8 @@
                 box.innerHTML = `<div class="text-center py-10 text-slate-400"><div class="text-3xl mb-1">📷</div><div class="text-xs">${uid === COMM_UID ? '아직 게시물이 없습니다. [새 게시물]로 오늘의 일상을 기록해 보세요.' : '아직 올린 게시물이 없습니다.'}</div></div>`;
                 return;
             }
-            box.innerHTML = `<div class="grid grid-cols-3 gap-1">${list.map(p => {
+            // 칸 크기는 커뮤니티 화면 너비와 상관없이 고정(최대 7rem): 화면이 넓어도 커지지 않고, 아주 좁을 때만 3칸이 나란히 줄어듦
+            box.innerHTML = `<div class="grid gap-1" style="grid-template-columns: repeat(3, minmax(0, 7rem)); justify-content: center;">${list.map(p => {
                 const m = (p.media || [])[0];
                 const inner = feedImgOk(m) ? `<img src="${m.src}" alt="" class="w-full h-full object-cover">`
                     : (feedVideoOk(m) ? `<div class="w-full h-full bg-slate-800 text-white flex items-center justify-center text-2xl"><i class="fa-solid fa-play"></i></div>`
@@ -5361,7 +5369,7 @@
             renderCommunity();
             if (tab === 'market') { subscribeMarket(); if (marketScope === 'nation') subscribeMarketNation(); }
             if (tab === 'dm') subscribeDM();
-            if (tab === 'meet') subscribeMeet();
+            if (tab === 'meet') { subscribeMeet(); subscribeRooms(); }
             if (tab === 'free') subscribeFree();
             if (tab === 'friends') subscribeFriends();
             if (tab === 'praise') subscribePraise();
@@ -5587,7 +5595,7 @@
             const se = document.getElementById('mkSearch'); if (se) se.value = marketQuery;
         }
 
-        // ---- 동네 친구 (같은 시·군·구 이웃과 서로 '좋아요'를 누르면 1:1 대화) ----
+        // ---- 친구해요 (대화방 만들기·들어가기 + 같은 시·군·구 이웃과 서로 '좋아요'를 누르면 1:1 대화) ----
         const MEET_AGES = ['20대', '30대', '40대', '50대', '60대 이상'];
         const MEET_SAMPLES = [
             { uid: 'sample1', sample: true, nick: '예시 · 산책메이트', emoji: '🐶', age: '30대', intro: '저녁에 강아지 산책 같이 하실 분 찾아요.', tags: '산책, 반려견, 커피' },
@@ -5595,7 +5603,8 @@
             { uid: 'sample3', sample: true, nick: '예시 · 동네책방', emoji: '⭐', age: '40대', intro: '한 달에 한 번 책 읽고 이야기 나눠요.', tags: '독서, 영화, 보드게임' }
         ];
         let meetProfile = (() => { try { return JSON.parse(lsGet('meet_profile') || 'null'); } catch (e) { return null; } })();
-        let meetView = 'browse';      // 'browse'(둘러보기) / 'matches'(매칭·대화) / 'edit'(내 카드)
+        let meetView = 'rooms';       // 'rooms'(대화방 목록) / 'roomNew'(방 만들기) / 'room'(방 안) / 'browse'(카드 둘러보기) / 'matches'(매칭·대화) / 'edit'(내 카드)
+        const ROOM_VIEWS = ['rooms', 'roomNew', 'room'];
         let meetProfiles = [], meetLikesOut = new Set(), meetLikesIn = new Set(), meetUnsubs = [];
         let meetSeen = new Set((() => { try { return JSON.parse(lsGet('meet_seen') || '[]'); } catch (e) { return []; } })());
         let meetChatWith = null, meetChat = [], meetChatUnsub = null, meetPhoto = null, meetMsg = '';
@@ -5633,7 +5642,7 @@
         }
         function meetNotifyMatch(uid) {
             const p = meetProfiles.find(x => x.uid === uid);
-            showAlertToast({ head: '💞 동네 친구 매칭', title: (p ? p.nick : '이웃') + '님과 서로 좋아요를 눌렀어요. 대화를 시작해 보세요.', foot: meetArea(), openCommunity: true });
+            showAlertToast({ head: '💞 친구해요 매칭', title: (p ? p.nick : '이웃') + '님과 서로 좋아요를 눌렀어요. 대화를 시작해 보세요.', foot: meetArea(), openCommunity: true });
             playAlertSound();
         }
 
@@ -5661,7 +5670,7 @@
             renderMeet();
         }
         async function meetLeave() {
-            if (!confirm('동네 친구에서 내 카드를 내릴까요? 다른 이웃에게 더 이상 보이지 않습니다.')) return;
+            if (!confirm('친구해요에서 내 카드를 내릴까요? 다른 이웃에게 더 이상 보이지 않습니다.')) return;
             try { const db = await commInit(); if (db) await meetDoc().collection('profiles').doc(COMM_UID).delete(); } catch (e) { console.error(e); }
             meetProfile = null; lsSet('meet_profile', 'null'); stopMeet(); meetProfiles = [];
             renderMeet();
@@ -5682,7 +5691,7 @@
             renderMeet();
         }
         function meetResetSeen() { meetSeen = new Set(); lsSet('meet_seen', '[]'); meetMsg = ''; renderMeet(); }
-        function setMeetView(v) { meetView = v; meetMsg = ''; meetChatWith = null; if (meetChatUnsub) { meetChatUnsub(); meetChatUnsub = null; } renderMeet(); }
+        function setMeetView(v) { if (v === 'rooms' && roomOpenId) v = 'room'; meetView = v; meetMsg = ''; roomMsg = ''; meetChatWith = null; if (meetChatUnsub) { meetChatUnsub(); meetChatUnsub = null; } renderMeet(); }
 
         async function openMeetChat(uid) {
             meetChatWith = uid; meetChat = [];
@@ -5718,6 +5727,348 @@
             box.scrollTop = box.scrollHeight;
         }
 
+        // ---- 친구해요 대화방: 인원수·제목을 정해 방을 만들고, 관심 있는 이웃이 들어와 글 또는 음성으로 대화 ----
+        //  · 방 종류: 글(💬) / 음성(🎙)  · 인원수: 2~10명  · 방은 우리 동네(시·군·구) 안에서만 보임
+        //  · 서버(Firebase)가 연결되어 있으면 이웃에게 실제로 보이고, 음성방은 WebRTC(브라우저끼리 직접 연결)로 말소리가 오갑니다.
+        //  · 체험 모드(서버 없음)에서는 예시 방 5개와 '내 기기에만 저장되는 내 방'만 보입니다.
+        const ROOM_MAXES = [2, 3, 4, 5, 6, 8, 10];
+        const ROOM_TTL = 24 * 3600 * 1000;       // 하루가 지난 방은 목록에서 뺌
+        const ROOM_SAMPLES = (() => {
+            const now = Date.now(), M = 60000;
+            const mem = arr => { const o = {}; arr.forEach(([nick, emoji]) => { o['sm_' + nick] = { nick: nick, emoji: emoji }; }); return o; };
+            const msgs = arr => arr.map(([nick, emoji, text, ago]) => ({ uid: 'sm_' + nick, nick: nick, emoji: emoji, text: text, ts: now - ago * M }));
+            return [
+                { id: 'rs1', sample: true, kind: 'text', title: '퇴근하고 가볍게 수다 떨 분 💬', max: 6, hostNick: '커피러버', ts: now - 14 * M,
+                  members: mem([['커피러버', '☕'], ['퇴근요정', '🌙'], ['산책메이트', '🐶']]),
+                  msgs: msgs([['커피러버', '☕', '오늘 다들 퇴근하셨나요? 저는 이제 막 도착했어요 ㅎㅎ', 12], ['퇴근요정', '🌙', '저도요! 저녁은 동네 국밥집 가려구요', 9], ['산책메이트', '🐶', '국밥 좋네요~ 저는 강아지 산책 먼저 하고 먹으려구요', 5]]) },
+                { id: 'rs2', sample: true, kind: 'text', title: '주말 등산·러닝 같이 하실 분', max: 8, hostNick: '주말러너', ts: now - 55 * M,
+                  members: mem([['주말러너', '🌳'], ['북한산러버', '⛰️'], ['아침형인간', '🌅'], ['뚜벅이', '👟'], ['런린이', '🏃']]),
+                  msgs: msgs([['주말러너', '🌳', '이번 주 토요일 아침 7시에 동네 공원에서 가볍게 뛰어요!', 50], ['런린이', '🏃', '초보도 괜찮을까요? 천천히 뛰는 편이에요', 41], ['주말러너', '🌳', '그럼요~ 5km 걷다 뛰다 합니다 😊', 36]]) },
+                { id: 'rs3', sample: true, kind: 'text', title: '반려견 산책 메이트 구해요', max: 4, hostNick: '말티즈맘', ts: now - 3 * 3600000,
+                  members: mem([['말티즈맘', '🐩'], ['골댕이아빠', '🦮']]),
+                  msgs: msgs([['말티즈맘', '🐩', '저녁 8시쯤 강아지 산책시키는 분 계세요?', 170], ['골댕이아빠', '🦮', '저희 골든리트리버 있어요! 보통 공원 쪽으로 가요', 160]]) },
+                { id: 'rs4', sample: true, kind: 'voice', title: '자기 전 가볍게 음성 수다 🎙', max: 6, hostNick: '밤마실', ts: now - 8 * M,
+                  members: mem([['밤마실', '🌙'], ['라떼한잔', '🥛'], ['야식요정', '🍜'], ['새벽감성', '🎧']]), msgs: [] },
+                { id: 'rs5', sample: true, kind: 'voice', title: '조용히 책 이야기 나눠요 (듣기만 해도 OK)', max: 8, hostNick: '책벌레', ts: now - 40 * M,
+                  members: mem([['책벌레', '📚'], ['소설덕후', '📖'], ['에세이좋아', '☕']]), msgs: [] }
+            ];
+        })();
+        let sampleRooms = ROOM_SAMPLES.map(r => JSON.parse(JSON.stringify(r)));     // 예시 방은 이 화면 안에서만 바뀜 (저장하지 않음)
+        let meetRooms = [], roomListUnsub = null, roomFilter = 'all', roomMsg = '', roomNewKind = 'text';
+        let roomOpenId = null, roomMsgs = [], roomMsgUnsub = null, roomLive = null;
+        function roomLocalKey() { return 'meet_rooms_' + (myTown ? meetKey() : ''); }
+        function roomRef(id) { return meetDoc().collection('rooms').doc(id); }
+        function roomCount(r) { return Object.keys((r && r.members) || {}).length; }
+        function roomGet(id) { return meetRooms.find(r => r.id === id) || sampleRooms.find(r => r.id === id) || null; }
+        function roomLocalSave() { lsSet(roomLocalKey(), JSON.stringify(meetRooms)); }
+        function roomVisible() {
+            const now = Date.now();
+            return meetRooms.concat(sampleRooms)
+                .filter(r => roomCount(r) > 0 && (now - (r.ts || 0) < ROOM_TTL || (r.members && r.members[COMM_UID])) && (roomFilter === 'all' || r.kind === roomFilter) && !isBlocked(r.hostUid))
+                .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        }
+        async function subscribeRooms() {
+            if (roomListUnsub) { roomListUnsub(); roomListUnsub = null; }
+            if (!myTown) return;
+            const db = await commInit();
+            if (!db) {
+                try { meetRooms = JSON.parse(lsGet(roomLocalKey()) || '[]'); } catch (e) { meetRooms = []; }
+                meetRooms = meetRooms.filter(r => Date.now() - (r.ts || 0) < ROOM_TTL);
+                roomRefresh();
+                return;
+            }
+            roomListUnsub = meetDoc().collection('rooms').orderBy('ts', 'desc').limit(60).onSnapshot(snap => {
+                meetRooms = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                roomRefresh();
+            }, err => console.error(err));
+        }
+        function roomRefresh() {
+            if (commTab !== 'meet') return;
+            if (meetView === 'rooms') { renderMeet(); return; }
+            if (meetView === 'room') {
+                const r = roomGet(roomOpenId);
+                if (!r || (!r.sample && !(r.members && r.members[COMM_UID]) && commDb)) { roomLeave(false, true); return; }   // 방이 사라졌거나 내가 내보내짐
+                roomUpdateView(r);
+                if (roomLive && r.kind === 'voice') roomSyncPeers(r);
+            }
+        }
+        function setRoomFilter(f) { roomFilter = f; renderMeet(); }
+        function openRoomNew() { roomNewKind = 'text'; roomMsg = ''; meetView = 'roomNew'; renderMeet(); }
+        function pickRoomKind(k) { roomNewKind = k; document.querySelectorAll('[data-rk]').forEach(b => { const on = b.dataset.rk === k; b.className = 'flex-1 py-3 rounded-xl border-2 text-sm font-extrabold ' + (on ? 'border-pink-600 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-200' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'); }); }
+        async function roomCreate() {
+            const title = ((document.getElementById('rmTitle') || {}).value || '').trim();
+            const max = Number((document.getElementById('rmMax') || {}).value) || 4;
+            if (!title) { roomMsg = '방 제목을 적어 주세요.'; renderMeet(); return; }
+            const me = { nick: myNick(), emoji: commProfile.emoji || '🙂' };
+            const room = { kind: roomNewKind, title: title.slice(0, 30), max: max, hostUid: COMM_UID, hostNick: me.nick, hostEmoji: me.emoji, ts: Date.now(), members: {} };
+            room.members[COMM_UID] = me;
+            try {
+                const db = await commInit();
+                if (db) { const ref = await meetDoc().collection('rooms').add(room); room.id = ref.id; meetRooms.unshift(room); }
+                else { room.id = 'r' + Date.now() + Math.random().toString(36).slice(2, 6); meetRooms.unshift(room); roomLocalSave(); }
+            } catch (e) { console.error(e); roomMsg = '방을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.'; renderMeet(); return; }
+            roomEnter(room.id, true);
+        }
+        async function roomEnter(id, justCreated) {
+            const r = roomGet(id);
+            if (!r) return;
+            const already = !!(r.members && r.members[COMM_UID]);
+            if (!already && roomCount(r) >= r.max) { roomMsg = '이미 가득 찬 방입니다.'; renderMeet(); return; }
+            if (roomOpenId && roomOpenId !== id) await roomLeave(true);
+            const me = { nick: myNick(), emoji: commProfile.emoji || '🙂' };
+            roomOpenId = id; roomMsgs = []; roomMsg = ''; meetView = 'room';
+            r.members = r.members || {};
+            if (r.sample) { r.members[COMM_UID] = me; roomMsgs = (r.msgs || []).slice(); }
+            else if (commDb) {
+                try {
+                    if (!already) await roomRef(id).update({ ['members.' + COMM_UID]: me });
+                    r.members[COMM_UID] = me;
+                    roomMsgUnsub = roomRef(id).collection('messages').orderBy('ts', 'desc').limit(200).onSnapshot(snap => { roomMsgs = snap.docs.map(d => d.data()).reverse(); roomUpdateMsgs(); }, err => console.error(err));
+                } catch (e) { console.error(e); roomOpenId = null; meetView = 'rooms'; roomMsg = '입장하지 못했습니다. 방이 사라졌거나 가득 찼을 수 있어요.'; renderMeet(); return; }
+                if (r.kind === 'voice') roomVoiceStart(r);
+            } else {
+                r.members[COMM_UID] = me; roomLocalSave();
+                try { roomMsgs = JSON.parse(lsGet('meet_room_msgs_' + id) || '[]'); } catch (e) { roomMsgs = []; }
+            }
+            renderMeet();
+        }
+        async function roomLeave(silent, gone) {
+            const id = roomOpenId;
+            if (!id) return;
+            const r = roomGet(id);
+            roomVoiceStop();
+            if (roomMsgUnsub) { roomMsgUnsub(); roomMsgUnsub = null; }
+            roomOpenId = null; roomMsgs = [];
+            if (r && !gone) {
+                if (r.sample) delete r.members[COMM_UID];
+                else if (commDb) {
+                    try {
+                        const left = Object.keys(r.members || {}).filter(u => u !== COMM_UID).length;
+                        if (!left) await roomRef(id).delete();
+                        else await roomRef(id).update({ ['members.' + COMM_UID]: firebase.firestore.FieldValue.delete() });
+                    } catch (e) { console.error(e); }
+                }
+                // 체험 모드(서버 없음)에서는 내가 만든 방이 '기다리는 중'으로 목록에 남음 (나가도 지워지지 않음)
+            }
+            if (!silent) { meetView = 'rooms'; if (gone) roomMsg = '방이 닫혔어요.'; renderMeet(); }
+        }
+        window.addEventListener('pagehide', () => { try { if (roomOpenId && commDb) { const r = roomGet(roomOpenId); if (r && !r.sample) roomRef(roomOpenId).update({ ['members.' + COMM_UID]: firebase.firestore.FieldValue.delete() }); } } catch (e) {} });
+        async function roomSend() {
+            const input = document.getElementById('rmText');
+            const text = ((input && input.value) || '').trim();
+            const r = roomGet(roomOpenId);
+            if (!text || !r) return;
+            const msg = { uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂', text: text.slice(0, 300), ts: Date.now() };
+            input.value = '';
+            if (!r.sample && commDb) { try { await roomRef(r.id).collection('messages').add(msg); } catch (e) { console.error(e); } return; }
+            roomMsgs.push(msg);
+            if (!r.sample) lsSet('meet_room_msgs_' + r.id, JSON.stringify(roomMsgs.slice(-200)));
+            roomUpdateMsgs();
+            if (r.sample && r.kind === 'text') {          // 예시 방: 다른 참여자가 짧게 답해 줌 (체험용)
+                const others = Object.keys(r.members).filter(u => u !== COMM_UID);
+                const lines = ['좋아요! 반가워요 😊', '오 저도 그 생각했어요 ㅎㅎ', '다음에 같이 해요~', '맞아요 맞아요!', '그럼 이야기 더 나눠 봐요 :)'];
+                setTimeout(() => {
+                    if (roomOpenId !== r.id || !others.length) return;
+                    const u = others[Math.floor(Math.random() * others.length)], m = r.members[u];
+                    roomMsgs.push({ uid: u, nick: m.nick, emoji: m.emoji, text: lines[Math.floor(Math.random() * lines.length)], ts: Date.now() });
+                    roomUpdateMsgs();
+                }, 1400);
+            }
+        }
+        function roomKindBadge(r) {
+            return r.kind === 'voice'
+                ? '<span class="px-1.5 py-0.5 rounded bg-violet-600 text-white text-[0.625rem] font-extrabold">🎙 음성</span>'
+                : '<span class="px-1.5 py-0.5 rounded bg-sky-600 text-white text-[0.625rem] font-extrabold">💬 글</span>';
+        }
+        function roomPeopleHtml(r) {
+            const ids = Object.keys(r.members || {});
+            const voice = r.kind === 'voice';
+            return ids.map(u => {
+                const m = r.members[u], me = u === COMM_UID;
+                const muted = me && roomLive && roomLive.stream && !roomLive.stream.getAudioTracks().some(t => t.enabled);
+                return `<div class="flex flex-col items-center gap-0.5 ${voice ? 'w-16' : 'w-14'}">
+                    <div class="relative w-12 h-12 rounded-full bg-white dark:bg-slate-800 border-2 ${me ? 'border-pink-500' : 'border-slate-300 dark:border-slate-600'} flex items-center justify-center text-2xl">${esc(m.emoji || '🙂')}${voice ? `<span class="absolute -right-1 -bottom-1 text-[0.6875rem] bg-white dark:bg-slate-900 rounded-full border border-slate-300 dark:border-slate-600 px-0.5">${muted ? '🔇' : '🎙'}</span>` : ''}</div>
+                    <div class="text-[0.625rem] text-slate-700 dark:text-slate-200 truncate w-full text-center">${me ? '나' : esc(m.nick || '이웃')}</div></div>`;
+            }).join('') + Array.from({ length: Math.max(0, r.max - ids.length) }, () => `<div class="flex flex-col items-center gap-0.5 ${voice ? 'w-16' : 'w-14'}"><div class="w-12 h-12 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-300 dark:text-slate-600 text-lg">＋</div><div class="text-[0.625rem] text-slate-400">빈 자리</div></div>`).join('');
+        }
+        function roomUpdateView(r) {
+            const c = document.getElementById('rmCount'), p = document.getElementById('rmPeople'), w = document.getElementById('rmWait');
+            const n = roomCount(r);
+            if (c) c.textContent = n + '/' + r.max + '명';
+            if (p) p.innerHTML = roomPeopleHtml(r);
+            if (w) w.classList.toggle('hidden', n > 1);
+        }
+        function roomUpdateMsgs() {
+            const box = document.getElementById('rmMsgs');
+            if (!box) return;
+            const near = (box.scrollHeight - box.scrollTop - box.clientHeight) < 150;
+            box.innerHTML = roomMsgs.filter(m => !isBlocked(m.uid)).map(m => {
+                const mine = m.uid === COMM_UID;
+                return `<div class="flex ${mine ? 'justify-end' : 'justify-start'} gap-1.5">${mine ? '' : `<div class="w-7 h-7 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 flex items-center justify-center text-sm">${esc(m.emoji || '🙂')}</div>`}
+                    <div style="max-width:78%;">${mine ? '' : `<div class="text-[0.625rem] text-slate-500 mb-0.5">${esc(m.nick || '이웃')}</div>`}
+                    <div class="rounded-2xl border px-3 py-1.5 text-sm ${mine ? 'bg-pink-100 dark:bg-pink-900/70 border-pink-300 dark:border-pink-700 text-slate-900 dark:text-white' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100'}"><span class="whitespace-pre-line break-words">${esc(m.text)}</span><div class="text-[0.625rem] text-slate-400 mt-0.5">${timeAgo(m.ts)}</div></div></div></div>`;
+            }).join('') || '<div class="text-center py-10 text-xs text-slate-400">첫 인사를 건네 보세요.</div>';
+            if (near || !box.dataset.init) { box.scrollTop = box.scrollHeight; box.dataset.init = '1'; }
+        }
+
+        // ---- 음성방: 브라우저끼리 직접 연결(WebRTC 메시). 연결 정보(신호)만 서버(Firestore)로 주고받고 소리는 서버를 거치지 않음 ----
+        async function roomVoiceStart(r) {
+            roomVoiceStop();
+            const rl = roomLive = { id: r.id, pcs: {}, stream: null, unsubs: [] };
+            try { rl.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+            catch (e) { rl.stream = null; roomMsg = '마이크를 사용할 수 없어 듣기만 합니다. (브라우저 마이크 권한을 확인해 주세요)'; }
+            if (roomLive !== rl) { if (rl.stream) rl.stream.getTracks().forEach(t => t.stop()); return; }
+            rl.unsubs.push(roomRef(r.id).collection('sig').where('to', '==', COMM_UID).onSnapshot(s => s.docChanges().forEach(ch => { if (ch.type === 'added') roomAnswer(ch.doc).catch(e => console.error(e)); }), err => console.error(err)));
+            roomSyncPeers(roomGet(r.id) || r);
+            if (meetView === 'room') renderMeet();
+        }
+        function roomNewPc(u) {
+            const pc = new RTCPeerConnection(RTC_CFG);
+            const x = roomLive.pcs[u] = { pc: pc, unsubs: [], audio: null, ref: null };
+            if (roomLive.stream) roomLive.stream.getTracks().forEach(t => pc.addTrack(t, roomLive.stream));
+            else pc.addTransceiver('audio', { direction: 'recvonly' });
+            pc.ontrack = e => {
+                if (!x.audio) { x.audio = document.createElement('audio'); x.audio.autoplay = true; x.audio.playsInline = true; x.audio.style.display = 'none'; document.body.appendChild(x.audio); }
+                x.audio.srcObject = e.streams[0];
+                const p = x.audio.play(); if (p && p.catch) p.catch(() => {});
+            };
+            pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed') roomDropPeer(u); };
+            return x;
+        }
+        async function roomOffer(u) {
+            if (!roomLive || roomLive.pcs[u]) return;
+            const id = roomLive.id, x = roomNewPc(u), pc = x.pc;
+            const ref = x.ref = roomRef(id).collection('sig').doc(COMM_UID + '__' + u);
+            pc.onicecandidate = e => { if (e.candidate) ref.collection('ca').add(e.candidate.toJSON()).catch(() => {}); };
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            await ref.set({ from: COMM_UID, to: u, offer: { type: offer.type, sdp: offer.sdp }, ts: Date.now() });
+            x.unsubs.push(ref.onSnapshot(s => { const d = s.data(); if (d && d.answer && !pc.currentRemoteDescription) pc.setRemoteDescription(new RTCSessionDescription(d.answer)).catch(() => {}); }));
+            x.unsubs.push(ref.collection('cb').onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); })));
+        }
+        async function roomAnswer(doc) {
+            const d = doc.data();
+            if (!roomLive || !d || !d.offer || d.answer || Date.now() - (d.ts || 0) > 120000) return;     // 2분 넘은 옛 신호는 무시
+            const u = d.from;
+            if (roomLive.pcs[u] || isBlocked(u)) return;
+            const x = roomNewPc(u), pc = x.pc, ref = x.ref = doc.ref;
+            pc.onicecandidate = e => { if (e.candidate) ref.collection('cb').add(e.candidate.toJSON()).catch(() => {}); };
+            await pc.setRemoteDescription(new RTCSessionDescription(d.offer));
+            const ans = await pc.createAnswer();
+            await pc.setLocalDescription(ans);
+            await ref.update({ answer: { type: ans.type, sdp: ans.sdp } });
+            x.unsubs.push(ref.collection('ca').onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'added') pc.addIceCandidate(new RTCIceCandidate(c.doc.data())).catch(() => {}); })));
+        }
+        function roomSyncPeers(r) {
+            if (!roomLive || roomLive.id !== r.id) return;
+            const ids = Object.keys(r.members || {}).filter(u => u !== COMM_UID && !isBlocked(u));
+            ids.forEach(u => { if (!roomLive.pcs[u] && COMM_UID < u) roomOffer(u).catch(e => console.error(e)); });    // 두 사람 중 아이디가 앞선 쪽이 먼저 연결을 제안
+            Object.keys(roomLive.pcs).forEach(u => { if (!ids.includes(u)) roomDropPeer(u); });
+        }
+        function roomDropPeer(u) {
+            const x = roomLive && roomLive.pcs[u];
+            if (!x) return;
+            x.unsubs.forEach(f => { try { f(); } catch (e) {} });
+            try { x.pc.close(); } catch (e) {}
+            if (x.audio) { x.audio.srcObject = null; x.audio.remove(); }
+            if (x.ref && x.ref.id.startsWith(COMM_UID + '__')) x.ref.delete().catch(() => {});
+            delete roomLive.pcs[u];
+        }
+        function roomVoiceStop() {
+            const rl = roomLive;
+            if (!rl) return;
+            Object.keys(rl.pcs).forEach(u => roomDropPeer(u));
+            rl.unsubs.forEach(f => { try { f(); } catch (e) {} });
+            if (rl.stream) rl.stream.getTracks().forEach(t => t.stop());
+            roomLive = null;
+        }
+        function roomToggleMic() {
+            const t = roomLive && roomLive.stream && roomLive.stream.getAudioTracks()[0];
+            if (!t) { roomMsg = '체험 모드이거나 마이크를 사용할 수 없어요.'; const m = document.getElementById('rmNote'); if (m) m.textContent = roomMsg; return; }
+            t.enabled = !t.enabled;
+            const b = document.getElementById('rmMic');
+            if (b) b.innerHTML = t.enabled ? '🎙 마이크 켜짐 (누르면 끔)' : '🔇 마이크 꺼짐 (누르면 켬)';
+            const r = roomGet(roomOpenId); if (r) roomUpdateView(r);
+        }
+
+        function renderRooms(main, head) {
+            const msg = roomMsg ? `<p class="text-xs text-amber-600 dark:text-amber-400 text-center">${esc(roomMsg)}</p>` : '';
+            const demo = FIREBASE_CONFIG ? '' : '<div class="text-[0.6875rem] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg px-2.5 py-1.5 leading-relaxed">체험 모드: 아래 <b>예시 방 5개</b>로 화면을 보여 드려요. 지금 만든 방은 내 기기에만 보이며, 서버를 연결하면 이웃에게 보이고 음성방에서 실제로 말소리가 연결됩니다.</div>';
+            // 1) 방 만들기
+            if (meetView === 'roomNew') {
+                const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
+                const kb = (k, label) => `<button data-rk="${k}" onclick="pickRoomKind('${k}')" class="flex-1 py-3 rounded-xl border-2 text-sm font-extrabold ${roomNewKind === k ? 'border-pink-600 bg-pink-50 dark:bg-pink-950/40 text-pink-700 dark:text-pink-200' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'}">${label}</button>`;
+                main.innerHTML = head + `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                    <div class="flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white">➕ 대화방 만들기</b><button onclick="setMeetView('rooms')" class="text-xs text-blue-500 hover:underline">← 목록</button></div>
+                    <div><div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">대화 방식</div><div class="flex gap-2">${kb('text', '💬 글 채팅')}${kb('voice', '🎙 음성 채팅')}</div></div>
+                    <div><div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">방 제목</div><input id="rmTitle" type="text" maxlength="30" placeholder="예) 퇴근하고 수다 떨 분 (최대 30자)" class="${inp}"></div>
+                    <div><div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">참여 인원수 (나 포함)</div><select id="rmMax" class="${inp}">${ROOM_MAXES.map(n => `<option value="${n}" ${n === 4 ? 'selected' : ''}>${n}명</option>`).join('')}</select></div>
+                    ${msg}
+                    <button onclick="roomCreate()" class="w-full py-2.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white text-sm font-bold">방 만들고 기다리기</button>
+                    <p class="text-[0.6875rem] text-slate-400 leading-relaxed">방은 같은 시·군·구 이웃에게만 보이고, 하루가 지나면 목록에서 사라집니다. 개인정보·연락처는 방에서 알려 주지 마세요. 불쾌한 상대는 프로필에서 차단할 수 있습니다.</p>
+                </div>`;
+                return;
+            }
+            // 2) 방 안
+            if (meetView === 'room') {
+                const r = roomGet(roomOpenId);
+                if (!r) { roomOpenId = null; meetView = 'rooms'; renderMeet(); return; }
+                const voice = r.kind === 'voice';
+                const real = !r.sample && !!commDb;
+                const mic = roomLive && roomLive.stream ? (roomLive.stream.getAudioTracks().some(t => t.enabled) ? '🎙 마이크 켜짐 (누르면 끔)' : '🔇 마이크 꺼짐 (누르면 켬)') : '🎙 마이크';
+                const oldIn = document.getElementById('rmText'), keepText = oldIn ? oldIn.value : '', hadFocus = !!oldIn && document.activeElement === oldIn;   // 다른 알림으로 화면이 다시 그려져도 쓰던 글 유지
+                main.innerHTML = `
+                    <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center gap-2 shrink-0">
+                        <button onclick="roomLeave()" class="text-xs font-bold text-red-500 hover:underline shrink-0">나가기</button>
+                        <div class="min-w-0 flex-1 text-center"><div class="text-sm font-extrabold text-slate-900 dark:text-white truncate">${roomKindBadge(r)} ${esc(r.title)}</div></div>
+                        <span id="rmCount" class="text-xs font-bold text-pink-600 shrink-0">${roomCount(r)}/${r.max}명</span>
+                    </div>
+                    <div class="px-3 py-2 flex flex-wrap gap-2 justify-center border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/60"><div id="rmPeople" class="flex flex-wrap gap-2 justify-center">${roomPeopleHtml(r)}</div></div>
+                    <div id="rmWait" class="${roomCount(r) > 1 ? 'hidden' : ''} text-center text-[0.6875rem] text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-950/30 py-1.5 shrink-0">⏳ 이웃이 들어오길 기다리는 중이에요. 방은 목록에 올라가 있어요.</div>
+                    ${voice ? `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 flex flex-col items-center justify-center gap-3 text-center">
+                        <div class="text-5xl">🎙</div>
+                        <div class="text-sm text-slate-700 dark:text-slate-200">${real ? '말소리가 이웃과 직접 연결돼요. 소리가 안 들리면 브라우저 소리·마이크 권한을 확인해 주세요.' : (r.sample ? '예시 방이라 소리는 연결되지 않아요. 화면 구성만 둘러보세요.' : '체험 모드라 다른 이웃과 소리가 연결되지 않아요. 서버를 연결하면 실제로 대화할 수 있어요.')}</div>
+                        <button id="rmMic" onclick="roomToggleMic()" class="px-5 py-2.5 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold ${real ? '' : 'opacity-60'}">${mic}</button>
+                        <div id="rmNote" class="text-xs text-amber-600 dark:text-amber-400">${esc(roomMsg)}</div>
+                    </div>` : `
+                    <div id="rmMsgs" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
+                    <div class="border-t border-slate-200 dark:border-slate-800 p-3 flex items-end gap-2 shrink-0 bg-white dark:bg-slate-900">
+                        ${emojiBtn('rmText')}
+                        <textarea id="rmText" rows="1" maxlength="300" placeholder="메시지를 입력하세요" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-sm text-slate-900 dark:text-white" onkeydown="if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); roomSend(); }"></textarea>
+                        <button onclick="roomSend()" class="px-4 py-2 rounded-lg text-sm font-bold text-white bg-pink-600 hover:bg-pink-500 whitespace-nowrap">보내기</button>
+                    </div>`}`;
+                if (!voice) {
+                    roomUpdateMsgs();
+                    const ni = document.getElementById('rmText');
+                    if (ni && keepText) { ni.value = keepText; if (hadFocus) ni.focus(); }
+                }
+                return;
+            }
+            // 3) 방 목록
+            const list = roomVisible();
+            const fb = (k, label) => `<button onclick="setRoomFilter('${k}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${roomFilter === k ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-800 dark:border-slate-200' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
+            main.innerHTML = head + `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2">
+                ${demo}
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="flex gap-1.5">${fb('all', '전체')}${fb('text', '💬 글')}${fb('voice', '🎙 음성')}</div>
+                    <button onclick="openRoomNew()" class="px-3 py-1.5 rounded-full bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold">➕ 방 만들기</button>
+                </div>
+                ${msg}
+                ${list.length ? list.map(r => {
+                    const n = roomCount(r), full = n >= r.max, mine = !!(r.members && r.members[COMM_UID]);
+                    return `<div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 flex items-center gap-3">
+                        <div class="w-11 h-11 shrink-0 rounded-full ${r.kind === 'voice' ? 'bg-violet-100 dark:bg-violet-950/50' : 'bg-sky-100 dark:bg-sky-950/50'} flex items-center justify-center text-xl">${r.kind === 'voice' ? '🎙' : '💬'}</div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-1">${roomKindBadge(r)}${r.sample ? '<span class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[0.625rem] font-bold">예시</span>' : ''}${full && !mine ? '<span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[0.625rem] font-bold">가득 참</span>' : (n <= 1 ? '<span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[0.625rem] font-bold">기다리는 중</span>' : '')}</div>
+                            <div class="text-sm font-bold text-slate-900 dark:text-white truncate mt-0.5">${esc(r.title)}</div>
+                            <div class="text-[0.6875rem] text-slate-500 truncate">${esc(r.hostEmoji || (r.members && r.members['sm_' + r.hostNick] ? r.members['sm_' + r.hostNick].emoji : '') || '🙂')} ${esc(r.hostNick || '이웃')} · ${timeAgo(r.ts)} · <b class="text-pink-600">${n}/${r.max}명</b></div>
+                        </div>
+                        <button onclick="roomEnter('${esc(r.id)}')" ${full && !mine ? 'disabled' : ''} class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold text-white ${full && !mine ? 'bg-slate-400' : 'bg-pink-600 hover:bg-pink-500'}">${mine ? '들어가기' : (full ? '가득 참' : '입장')}</button>
+                    </div>`;
+                }).join('') : '<div class="text-center py-14 text-xs text-slate-400 leading-relaxed">열려 있는 방이 없어요.<br>[방 만들기]로 먼저 열고 이웃을 기다려 보세요.</div>'}
+            </div>`;
+        }
+
         function meetAvatar(p, size) {
             return p.photo && IMG_DATA_RE.test(p.photo)
                 ? `<img src="${p.photo}" class="${size} object-cover rounded-full border border-slate-300 dark:border-slate-600">`
@@ -5729,13 +6080,23 @@
             if (!main) return;
             const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
             const msg = meetMsg ? `<p class="text-xs text-amber-600 dark:text-amber-400 text-center">${esc(meetMsg)}</p>` : '';
+            const matches = meetMatches();
+            const tab = (v, label) => `<button onclick="setMeetView('${v}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${meetView === v || (v === 'rooms' && ROOM_VIEWS.includes(meetView)) ? 'bg-pink-600 text-white border-pink-700' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
+            const head = `
+                <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
+                    <div class="flex flex-wrap items-center gap-1.5">${tab('rooms', '💬 대화방')}${tab('browse', '카드 둘러보기')}${tab('matches', '매칭·대화 ' + matches.length)}</div>
+                    <button onclick="setMeetView('edit')" class="text-xs text-blue-500 hover:underline">내 카드 수정</button>
+                </div>`;
+
+            // 0) 대화방 (글·음성): 내 카드 없이도 이용할 수 있음
+            if (ROOM_VIEWS.includes(meetView)) { renderRooms(main, head); return; }
 
             // 1) 내 카드 만들기 / 수정
             if (!meetProfile || meetView === 'edit') {
                 const p = meetProfile || {};
                 main.innerHTML = `
                     <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-3">
-                        <div class="flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white">💞 동네 친구 · 내 카드 ${meetProfile ? '수정' : '만들기'}</b>${meetProfile ? '<button onclick="setMeetView(\'browse\')" class="text-xs text-blue-500 hover:underline">← 돌아가기</button>' : ''}</div>
+                        <div class="flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white">💞 친구해요 · 내 카드 ${meetProfile ? '수정' : '만들기'}</b><span class="flex gap-3"><button onclick="setMeetView('rooms')" class="text-xs text-pink-600 hover:underline">💬 대화방</button>${meetProfile ? '<button onclick="setMeetView(\'browse\')" class="text-xs text-blue-500 hover:underline">← 돌아가기</button>' : ''}</span></div>
                         <div class="rounded-xl bg-pink-50 dark:bg-pink-950/30 border border-pink-200 dark:border-pink-800 p-3 text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
                             <b>${esc(meetArea())}</b> 이웃의 카드를 넘겨 보다가 서로 <b>좋아요</b>를 누르면 1:1 대화가 열립니다. 닉네임과 아이콘은 커뮤니티 프로필을 그대로 씁니다.
                         </div>
@@ -5777,14 +6138,6 @@
                 renderMeetChat();
                 return;
             }
-
-            const matches = meetMatches();
-            const tab = (v, label) => `<button onclick="setMeetView('${v}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${meetView === v ? 'bg-pink-600 text-white border-pink-700' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
-            const head = `
-                <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
-                    <div class="flex items-center gap-1.5">${tab('browse', '카드 둘러보기')}${tab('matches', '매칭·대화 ' + matches.length)}</div>
-                    <button onclick="setMeetView('edit')" class="text-xs text-blue-500 hover:underline">내 카드 수정</button>
-                </div>`;
 
             // 3) 매칭 목록
             if (meetView === 'matches') {
@@ -6072,7 +6425,7 @@
             { k: 'me', label: '내 프로필', fa: 'fa-circle-user', c: 'fuchsia', tabs: ['me'] }
         ];
         const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '우리동네 맛집', spot: '우리동네 핫플',
-            market: '동네 장터', popular: '우리동네 TOP10', meet: '동네 친구', friends: '팔로잉 소식', random: '랜덤 채팅', dm: '1:1 대화', national: '이달의 전국 TOP10', me: '내 프로필' };
+            market: '동네 장터', popular: '우리동네 TOP10', meet: '친구해요', friends: '팔로잉 소식', random: '랜덤 채팅', dm: '1:1 대화', national: '이달의 전국 TOP10', me: '내 프로필' };
         const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-face-sad-tear', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-fire',
             popular: 'fa-ranking-star', meet: 'fa-user-plus', friends: 'fa-newspaper', random: 'fa-shuffle', dm: 'fa-envelope' };
         function commGroupOf(tab) { return COMM_GROUPS.find(g => g.tabs.includes(tab)) || COMM_GROUPS[0]; }
@@ -8581,6 +8934,31 @@
             }).filter(x => x.n > 0).sort((a, b) => b.n - a.n).slice(0, 4);
             return { c: c, total: evs.length, articles: local.length, topGroups: topGroups, attention: attention, impactful: impactful, scams: scams };
         }
+        // 전국 위험 요약: 내 지역 보고와 별개로, 지금 전국에서 많이 일어나는 위험 3가지와 대비책을 한 줄씩만 보여 줌
+        function briefNational() {
+            const now = Date.now() / 1000;
+            const calc = days => {
+                const list = newsData.filter(n => n.timestamp >= now - days * 86400 && n.source !== '시스템' && !isOverseas(n) && !isCourt(n));
+                const evs = groupEvents(list), by = {};
+                evs.forEach(ev => groupsOf(ev.lead).forEach(g => { by[g] = (by[g] || 0) + 1; }));
+                return { total: evs.length, by: by };
+            };
+            const d = calc(1), w = calc(7);
+            const top = Object.keys(w.by).filter(g => BRIEF_TIPS[g] && CATEGORY_GROUPS[g]).sort((a, b) => w.by[b] - w.by[a]).slice(0, 3);
+            return { today: d.total, week: w.total, top: top.map(g => ({ g: g, week: w.by[g], today: d.by[g] || 0, tip: (BRIEF_TIPS[g] || [])[0] || '' })) };
+        }
+        function briefNationalHtml() {
+            if (briefCfg.scope === 'all') return '';          // 보고 범위가 이미 전국이면 같은 내용이 되풀이되므로 생략
+            const a = briefNational();
+            if (!a.top.length) return '';
+            return `<section class="rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/20 p-3 space-y-2">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-2"><h3 class="text-sm font-extrabold text-rose-700 dark:text-rose-300">🇰🇷 전국 위험 요약</h3><span class="text-[0.6875rem] text-slate-500 dark:text-slate-400">오늘 ${a.today}건 · 이번 주 ${a.week}건</span></div>
+                <ol class="space-y-1.5">${a.top.map((x, i) => `<li class="flex gap-2 items-start text-xs leading-snug">
+                    <b class="shrink-0 w-5 h-5 rounded-full bg-rose-600 text-white text-[0.6875rem] inline-flex items-center justify-center">${i + 1}</b>
+                    <div class="min-w-0"><div class="font-bold text-slate-900 dark:text-white">${esc(CATEGORY_GROUPS[x.g].label)} <span class="font-normal text-slate-500 dark:text-slate-400">이번 주 ${x.week}건${x.today ? ' · 오늘 ' + x.today + '건' : ''}</span></div>
+                    <div class="text-emerald-700 dark:text-emerald-300">🛡 ${esc(x.tip)}</div></div></li>`).join('')}</ol>
+            </section>`;
+        }
         function briefSection(title, a, days) {
             const evRow = (ev, i) => {
                 const n = ev.lead, g = groupOf(n), tip = (BRIEF_TIPS[g] || [])[0], art = tipsFor([g], 1)[0];
@@ -8643,6 +9021,7 @@
                         <div class="text-sm leading-relaxed">${now.getHours() < 12 ? '좋은 아침입니다.' : (now.getHours() < 18 ? '안녕하세요.' : '오늘 하루 수고 많으셨습니다.')} ${now.getMonth() + 1}월 ${now.getDate()}일 ${p(now.getHours())}:${p(now.getMinutes())} 기준 <b>${esc(c ? c.label : '전국')}</b> 안전 브리핑을 보고드립니다.
                         오늘은 <b>${d.total}건</b>, 이번 주는 <b>${w.total}건</b>의 사건사고가 보도되었습니다.${d.topGroups[0] ? ` 오늘은 특히 <b>${esc(CATEGORY_GROUPS[d.topGroups[0].g].label.replace(/^[^\s가-힣]+\s/, ''))}</b>에 주의하세요.` : ''}</div>
                     </div>
+                    ${briefNationalHtml()}
                     ${briefSection('📅 일간 주요 상황 (오늘)', d, 1)}
                     ${briefSection('🗓 주간 주요 상황 (최근 7일)', w, 7)}
                     <p class="text-[0.6875rem] text-slate-400">이 보고서는 언론 보도를 자동으로 모아 요약한 것으로, 실제 상황과 다를 수 있습니다. 기사 제목을 누르면 원문으로 이동합니다.</p>
