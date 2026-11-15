@@ -374,8 +374,11 @@
         .nat-c-red { background: #fee2e2; color: #b91c1c; } .nat-c-sky { background: #e0f2fe; color: #0369a1; } .nat-c-rose { background: #ffe4e6; color: #be123c; }
         .nat-c-amber { background: #fef3c7; color: #b45309; } .nat-c-orange { background: #ffedd5; color: #c2410c; } .nat-c-emerald { background: #d1fae5; color: #047857; }
         .dark .nat-board, .dark .nat-place-ico { filter: saturate(.9) brightness(.92); }
-        .nat-area { font-size: .625rem; font-weight: 700; color: #059669; white-space: nowrap; }
-        .dark .nat-area { color: #34d399; }
+        /* 동네 이름표: 전국의 동네가 겨루는 곳이라 '어느 동네인지'가 가장 먼저 보이게 (동네마다 고유한 색) */
+        .nat-area { --h: 160; display: inline-flex; align-items: center; gap: .25rem; font-size: .75rem; font-weight: 900; white-space: nowrap; color: #fff; padding: .12rem .55rem .12rem .45rem; border-radius: 999px;
+                    background: linear-gradient(135deg, hsl(var(--h) 68% 42%), hsl(calc(var(--h) + 28) 70% 50%)); box-shadow: 0 2px 6px -2px hsl(var(--h) 70% 30% / .55); }
+        .nat-area .nat-dong { font-weight: 700; opacity: .92; padding-left: .3rem; border-left: 1px solid rgba(255,255,255,.55); }
+        .nat-row.nat-town-row { border-left: 5px solid hsl(var(--h) 68% 48%); }
         .nat-metrics { display: flex; flex-direction: column; align-items: flex-end; gap: .1rem; font-size: .6875rem; color: #64748b; flex-shrink: 0; font-weight: 700; }
         .nat-like { color: #e11d48; font-weight: 800; }
         .nat-detail { padding: 0 .9rem .8rem 3.15rem; font-size: .8125rem; line-height: 1.6; color: #334155; white-space: normal; }
@@ -764,6 +767,7 @@
             if (isPartyPolitics(t)) return true;                                // 정치 공방·징계 기사 (위치와 상관없는 기사)
             if (ACTING_ROLE.test(t) && !STRICT_FACT.test(t)) return true;       // 배우가 범인 역을 연기했다는 이야기 (실제 범죄 아님)
             if (DISPATCH_PROMO.test(t) && !DISPATCH_REAL.test(t)) return true;  // '출동 준비 완료' 같은 홍보 비유
+            if (/애정\s*전선|의미\s*심장|[♥♡❤]|열애설|결별설|불화설|재결합|럽스타/.test(t) && !REAL_FACT.test(t)) return true;   // 연예 가십 ('애정전선 이상 무'의 '정전' 오인)
             if (onlyInWorkTitle(t)) return true;                                // 사건 낱말이 노래·영화·드라마 제목 안에만 있음
             if (ENT_TAG.test(t)) return true;                               // 정치 공방·징계 기사 (위치와 상관없는 기사)
             if (ENT_TAG.test(t)) return true;                                  // [사진] [Oh!쎈 이슈] 같은 연예·사진 기사
@@ -4051,7 +4055,7 @@
             praise: { title: '칭찬해요', cls: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-900',
                 text: '우리 동네에서 칭찬하고 싶은 공간, 고마웠던 일, 좋은 아이디어, 따뜻한 이웃을 사진과 짧은 글로 소개하는 곳입니다. 잡담은 [이런저런]에서 나눠 주세요. 좋은 게시물에는 공감을 눌러 주고, 댓글은 80자 이내로 짧게 남길 수 있습니다.' },
             free: { title: '이런저런', cls: 'bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-200 border-sky-200 dark:border-sky-900',
-                text: '이웃과 자유롭게 소통하는 곳입니다. 맛집·날씨·동네 소식 등 편하게 이야기 나눠요. 서로 존중하는 대화 매너는 프로필의 신뢰 지수에 반영됩니다.' },
+                text: '이웃과 편하게 수다 떠는 곳이에요 ☺️ 맛집, 날씨, 동네 소식 뭐든 좋아요. 서로 존중하는 대화는 프로필 신뢰 지수에 쌓여요.' },
             market: { title: '동네 장터', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900',
                 text: '이웃끼리 물건을 사고팔고, 교환·나눔하는 곳입니다. 사람이 많은 곳에서 직접 만나 거래하고, 거래 후 남긴 별점은 신뢰 지수에 반영됩니다.' },
             meet: { title: '친구해요', cls: 'bg-pink-50 dark:bg-pink-950/40 text-pink-800 dark:text-pink-200 border-pink-200 dark:border-pink-900',
@@ -4065,9 +4069,9 @@
             spot: { title: '우리동네 핫플', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900',
                 text: '산책길·공원·쉼터·전시·아이와 가기 좋은 곳 등 동네에서 가 볼 만한 곳을 추천하는 곳입니다. 장소 이름을 누르면 추천 모음과 지도로 이어집니다.' },
             wish: { title: '아쉬워요', cls: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-900',
-                text: '가로등·도로·쓰레기·소음·시설처럼 동네에서 개선됐으면 하는 점을 이야기하는 곳입니다. 이웃의 🙋 공감이 많은 글이 위로 올라옵니다. 특정인 비방은 삼가 주세요.' },
+                text: '가로등, 도로, 쓰레기, 소음처럼 우리 동네가 더 좋아졌으면 하는 점을 편하게 이야기해 주세요 🙂 이웃의 🙋 공감이 많은 글은 위로 올라가요. 특정인 비방만 조심해 주세요.' },
             hello: { title: '이사왔어요', cls: 'bg-sky-50 dark:bg-sky-950/40 text-sky-800 dark:text-sky-200 border-sky-200 dark:border-sky-900',
-                text: '새로 이사 온 이웃이 인사를 남기는 곳입니다. 먼저 살던 이웃은 👋 환영해요와 짧은 댓글로 반겨 주세요. 집 주소·동호수 같은 개인정보는 적지 마세요.' },
+                text: '새로 이사 온 이웃이 첫인사를 남기는 곳이에요 👋 먼저 살던 이웃은 환영 인사와 짧은 댓글로 반겨 주세요. 집 주소·동호수는 적지 않는 게 좋아요.' },
             dm: { title: '1:1 대화', cls: 'bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700',
                 text: '이웃과 1:1로 대화하는 곳입니다. 돈을 먼저 보내 달라는 요구나 개인정보 요청은 조심하세요.' }
         };
@@ -4103,8 +4107,8 @@
             body.innerHTML = `
                 <div id="commTabBar" class="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"></div>
                 ${commTab === 'free' && helloN ? `<button onclick="setCommTab('hello')" class="w-full shrink-0 px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold flex items-center gap-2 text-left"><span class="text-base">👋</span><span class="flex-1">새로 이사 온 이웃 ${helloN}명이 인사를 남겼어요 · 환영해 주세요!</span><span>보러 가기 →</span></button>` : ''}
-                ${nt ? `<button onclick="toggleTabNotice()" title="눌러서 안내문 펼치기/접기" class="w-full text-left px-3 py-1 border-b shrink-0 flex items-start gap-1.5 text-[0.6875rem] ${nt.cls}" style="white-space: normal;">
-                    <b class="shrink-0">📌 ${nt.title}</b>
+                ${nt ? `<button onclick="toggleTabNotice()" title="눌러서 안내문 펼치기/접기" class="w-full text-left px-3 py-1 border-b shrink-0 flex items-start gap-1.5 text-[0.6875rem] ${commTab === 'talk' ? nt.cls : nt.cls.replace(/text-\w+-800 dark:text-\w+-200/, 'text-slate-600 dark:text-slate-300').replace(/rose/g, 'orange').replace(/red/g, 'orange')}" style="white-space: normal;">
+                    <b class="shrink-0">${commTab === 'talk' ? '📌' : '💬'} ${nt.title}</b>
                     <span id="tabNoticeText" class="flex-1 min-w-0 ${noticeOpen ? '' : 'truncate'}">${nt.text}</span>
                     <i id="tabNoticeIcon" class="fa-solid ${noticeOpen ? 'fa-chevron-up' : 'fa-chevron-down'} shrink-0 opacity-60 mt-0.5"></i>
                 </button>` : ''}
@@ -4203,6 +4207,13 @@
         // 제보 종류는 따로 고르지 않고 글 내용에서 짐작 (글 위의 작은 꼬리표로만 쓰임)
         const REPORT_KIND_RX = [['화재', /화재|불이|불길|연기|타고\s*있|전소/], ['교통사고', /교통사고|추돌|충돌|사고\s*났|차량\s*전복|들이받|오토바이\s*사고/], ['실종', /실종|잃어버|찾고\s*있|찾습니다|미아/],
             ['범죄 의심', /도둑|절도|폭행|싸움|흉기|강도|사기|수상한\s*거래|몰카|불법\s*촬영/], ['수상한 사람', /수상한\s*(?:사람|남성|여성|차)|배회|따라오/], ['안전사고', /넘어|미끄러|추락|떨어|부상|다쳤|쓰러|정전|가스\s*냄새|누수|침수|싱크홀/]];
+        // 제보 종류 표시: 종류마다 색·아이콘이 달라 한눈에 구분 (진한 바탕 + 흰 글씨, 글씨는 크지 않게)
+        const KIND_STYLE = { '화재': ['🔥', 'bg-orange-600'], '교통사고': ['🚗', 'bg-blue-600'], '범죄 의심': ['🚔', 'bg-violet-600'], '수상한 사람': ['👀', 'bg-slate-700'],
+            '실종': ['🔍', 'bg-teal-600'], '안전사고': ['⚠️', 'bg-amber-600'] };
+        function kindChip(kind, big) {
+            const k = kind && kind !== '제보' ? kind : '제보', s = KIND_STYLE[k] || ['📢', 'bg-slate-500'];
+            return `<span class="shrink-0 inline-flex items-center gap-0.5 rounded-md ${s[1]} text-white font-extrabold shadow-sm ${big ? 'px-2 py-0.5 text-xs' : 'px-1.5 py-0.5 text-[0.6875rem]'}">${s[0]} ${esc(k)}</span>`;
+        }
         function guessReportKind(text) { const k = REPORT_KIND_RX.find(x => x[1].test(text || '')); return k ? k[0] : '제보'; }
 
         // 글 목록 (대화창 형태: 오래된 글이 위, 새 글이 아래)
@@ -4228,7 +4239,7 @@
                         <div class="msg-bubble rounded-2xl border px-2.5 py-1.5 text-[0.8125rem] leading-snug shadow-sm ${bubble}" style="max-width:100%;">
                             ${replyQuote(m, ctx)}
                             ${sos ? '<div class="text-[0.6875rem] font-extrabold text-red-600 dark:text-red-300 mb-0.5">🚨 SOS 긴급 도움 요청</div>' : ''}
-                            ${rep ? `<div class="text-[0.6875rem] font-extrabold text-amber-700 dark:text-amber-300 mb-0.5">📢 실시간 제보 · ${esc(m.kind || '기타')}${m.place ? ' · ' + esc(m.place) : ''}</div>` : ''}
+                            ${rep ? `<div class="flex flex-wrap items-center gap-1.5 mb-1">${kindChip(m.kind || '기타', true)}<span class="text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300">${m.place ? '📍 ' + esc(m.place) : '실시간 제보'}</span></div>` : ''}
                             ${lv ? `<div class="text-[0.6875rem] font-extrabold text-rose-600 dark:text-rose-300 mb-0.5">🔴 실시간 방송 ${lvOn ? '중' : '(종료됨)'}${m.place ? ' · 📍' + esc(m.place) : ''}</div>` : ''}
                             ${m.text ? `<p class="whitespace-pre-line break-words">${esc(m.text)}</p>` : ''}
                             ${lv && lvOn ? `<button onclick="${mine ? 'openLiveView()' : `watchLive('${esc(m.liveId || '')}')`}" class="mt-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-600 hover:bg-red-500 text-white text-xs font-bold"><span class="live-dot"></span> ${mine ? '내 방송 보기' : '지금 시청하기'}</button>` : ''}
@@ -4447,7 +4458,7 @@
                 return;
             }
             // 칸 크기는 커뮤니티 화면 너비와 상관없이 고정(최대 7rem): 화면이 넓어도 커지지 않고, 아주 좁을 때만 3칸이 나란히 줄어듦
-            box.innerHTML = `<div class="grid gap-1" style="grid-template-columns: repeat(3, minmax(0, 7rem)); justify-content: center;">${list.map(p => {
+            box.innerHTML = `<div class="grid gap-1" style="grid-template-columns: repeat(3, minmax(0, 7rem)); justify-content: start;">${list.map(p => {
                 const m = (p.media || [])[0];
                 const inner = feedImgOk(m) ? `<img src="${m.src}" alt="" class="w-full h-full object-cover">`
                     : (feedVideoOk(m) ? `<div class="w-full h-full bg-slate-800 text-white flex items-center justify-center text-2xl"><i class="fa-solid fa-play"></i></div>`
@@ -4994,16 +5005,17 @@
         function natMedal(i) {
             return i < 3 ? `<span class="nat-medal nat-m${i + 1}">${i + 1}</span>` : `<span class="nat-rank">${i + 1}</span>`;
         }
-        function natAreaChip(x) { return `<span class="nat-area"><i class="fa-solid fa-location-dot"></i> ${esc(sidoShort(x.sido))} ${esc(x.sigungu || '')} ${esc(x.dong || '')}</span>`; }
+        function natHue(x) { const s = (x.sido || '') + (x.sigungu || ''); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h; }
+        function natAreaChip(x) { return `<span class="nat-area" style="--h:${natHue(x)}"><i class="fa-solid fa-location-dot"></i> ${esc(sidoShort(x.sido))} ${esc(x.sigungu || '')}${x.dong ? `<span class="nat-dong">${esc(x.dong)}</span>` : ''}</span>`; }
         function natPostRow(x, i) {
             const B = NAT_BOARDS[x.board] || NAT_BOARDS.free, open = natState.open === x.id, mineTown = myTown && x.town === townKey(myTown);
-            return `<li class="nat-row ${open ? 'is-open' : ''}">
+            return `<li class="nat-row nat-town-row ${open ? 'is-open' : ''}" style="--h:${natHue(x)}">
                 <button onclick="natToggle('${esc(x.id)}')" class="nat-row-btn">
                     ${natMedal(i)}
                     <span class="min-w-0 flex-1">
-                        <span class="flex items-center gap-1.5 flex-wrap"><span class="nat-board nat-c-${B.c}">${B.e} ${B.n}</span>${x.type === 'sos' ? '<span class="nat-board nat-c-red">SOS</span>' : ''}${x.tag ? `<span class="text-[0.625rem] text-slate-400">${esc(x.tag)}</span>` : ''}</span>
+                        <span class="flex items-center gap-1.5 flex-wrap">${natAreaChip(x)}<span class="nat-board nat-c-${B.c}">${B.e} ${B.n}</span>${x.type === 'sos' ? '<span class="nat-board nat-c-red">SOS</span>' : ''}${x.tag ? `<span class="text-[0.625rem] text-slate-400">${esc(x.tag)}</span>` : ''}</span>
                         <span class="nat-title">${esc(x.title || '(제목 없음)')}${x.hasImg ? ' <i class="fa-regular fa-image text-slate-400 text-[0.7em]"></i>' : ''}</span>
-                        <span class="flex items-center gap-2 flex-wrap mt-0.5">${natAreaChip(x)}<span class="text-[0.625rem] text-slate-400">${esc(x.nick || '이웃')} · ${timeAgo(x.ts)}</span></span>
+                        <span class="text-[0.625rem] text-slate-400">${esc(x.nick || '이웃')} · ${timeAgo(x.ts)}</span>
                     </span>
                     <span class="nat-metrics"><span class="nat-like"><i class="fa-solid fa-heart"></i> ${x.likes || 0}</span><span><i class="fa-regular fa-comment"></i> ${x.comments || 0}</span></span>
                 </button>
@@ -5037,13 +5049,14 @@
         function natPlaceRow(x, i) {
             const B = NAT_BOARDS[x.board] || NAT_BOARDS.food, avg = x.n ? x.sum / x.n : 0;
             const q = encodeURIComponent([x.sigungu, (x.dong || '').replace(/\d+동$/, '동'), x.name].filter(Boolean).join(' '));
-            return `<li class="nat-row"><div class="nat-row-btn">
+            return `<li class="nat-row nat-town-row" style="--h:${natHue(x)}"><div class="nat-row-btn">
                 ${natMedal(i)}
                 <span class="nat-place-ico nat-c-${B.c}">${B.e}</span>
                 <span class="min-w-0 flex-1">
+                    <span class="block mb-0.5">${natAreaChip(x)}</span>
                     <span class="nat-title">${esc(x.name)}</span>
                     <span class="flex items-center gap-2 flex-wrap">${starsHtml(avg, 'text-xs')}<b class="text-[0.6875rem] text-amber-600">${avg.toFixed(1)}</b><span class="text-[0.625rem] text-slate-400">후기 ${x.n}개${x.tag ? ' · ' + esc(x.tag) : ''}</span></span>
-                    <span class="flex items-center gap-2 flex-wrap mt-0.5">${natAreaChip(x)}${x.place ? `<span class="text-[0.625rem] text-slate-400 truncate">📍 ${esc(x.place)}</span>` : ''}</span>
+                    ${x.place ? `<span class="text-[0.625rem] text-slate-400 truncate block mt-0.5">📍 ${esc(x.place)}</span>` : ''}
                 </span>
                 <span class="flex flex-col gap-1 shrink-0">
                     <a target="_blank" rel="noopener noreferrer" href="https://map.naver.com/p/search/${q}" class="nat-map nat-map-n">N 지도</a>
@@ -5244,10 +5257,6 @@
                         <button onclick="openFeedComposer()" class="px-2.5 py-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-600 text-white text-[0.6875rem] font-bold shadow"><i class="fa-solid fa-plus"></i> 새 게시물</button>
                     </div>
                     <div id="pfFeed"><div class="text-center py-8 text-xs text-slate-400">게시물을 불러오는 중…</div></div>
-                </div>
-                <div class="flex gap-1.5">
-                    <button onclick="setCommTab('friends')" class="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-fuchsia-300"><i class="fa-solid fa-newspaper text-fuchsia-500"></i> 팔로잉 소식${commUnseen.feed + commUnseen.follow ? ` <span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${commUnseen.feed + commUnseen.follow}</span>` : ''}</button>
-                    <button onclick="setCommTab('dm')" class="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-fuchsia-300"><i class="fa-solid fa-envelope text-fuchsia-500"></i> 1:1 대화${chatReqs.length ? ` <span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${chatReqs.length}</span>` : ''}</button>
                 </div>
                 <details class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 group">
                     <summary class="px-4 py-2.5 flex items-center justify-between cursor-pointer list-none"><b class="text-xs text-slate-700 dark:text-slate-200"><i class="fa-regular fa-file-lines"></i> 내가 쓴 게시판 글 <span class="text-slate-400 font-semibold">${mine.length}개 · 받은 공감 ${likes}</span></b><i class="fa-solid fa-chevron-down text-[0.625rem] text-slate-400 group-open:rotate-180 transition"></i></summary>
@@ -6559,7 +6568,7 @@
             if (b === 'talk') {
                 if (p.type === 'sos') return '<span class="shrink-0 px-1.5 py-0.5 rounded bg-red-600 text-white text-[0.625rem] font-extrabold">🚨 SOS</span>';
                 if (p.type === 'live') return `<span class="shrink-0 px-1.5 py-0.5 rounded bg-rose-600 text-white text-[0.625rem] font-extrabold">🔴 ${liveIsOn(p.liveId) ? '방송 중' : '방송'}</span>`;
-                if (p.type === 'report') return `<span class="shrink-0 px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-200 text-[0.625rem] font-bold">📢 ${esc(p.kind && p.kind !== '제보' ? p.kind : '제보')}</span>`;
+                if (p.type === 'report') return kindChip(p.kind);
                 return '';
             }
             const f = (PB[b].filters || []).find(x => x[0] === p.kind);
@@ -7353,8 +7362,29 @@
         // ---- 1:1 대화 (채팅 앱처럼 상대마다 채팅방이 따로 있습니다) ----
         let dmThreads = [], dmWith = null, dmChat = [], dmUnsub = null, dmInboxUnsub = null, dmUnread = new Set(), dmInboxReady = false;
         function dmLocal() { try { return JSON.parse(lsGet('dm_local') || '{}'); } catch (e) { return {}; } }
+        // 체험 모드(서버 없음)에서 1:1 대화가 어떻게 보이는지 확인하는 예시 채팅방 3개 (저장하지 않고 화면에만 있음. 서버를 연결하면 나오지 않음)
+        const DM_DEMO = (() => {
+            const t0 = Date.now(), M = 60000, ME = 'me';
+            const mk = (uid, nick, emoji, rows) => ({ uid: uid, nick: nick, emoji: emoji, photo: '', area: '', demo: true,
+                msgs: rows.map((r, i) => ({ id: 'dd_' + uid + '_' + i, uid: r[0] === ME ? 'ME' : uid, text: r[1], ts: t0 - r[2] * M })) });
+            return [
+                mk('demo_u1', '산책하는 다람쥐 (예시)', '🐿️', [['o', '안녕하세요! 공원에서 강아지 산책시키시는 분 맞죠? 프로필 보고 연락드렸어요 😊', 190], [ME, '네 맞아요! 반갑습니다 ㅎㅎ 말티즈 키워요', 185],
+                    ['o', '저희 집 아이는 푸들이에요. 혹시 저녁 7시쯤 산책 같이 하실래요?', 181], [ME, '좋아요! 내일 근린공원 분수대 앞에서 만나요', 176], ['o', '넵 내일 뵐게요~ 🐶🐾', 175]]),
+                mk('demo_u2', '빵순이 (예시)', '🥐', [['o', '안녕하세요, 동네 장터에 올리신 유모차 아직 있나요?', 60], [ME, '네 있어요! 직거래 가능하세요?', 52], ['o', '네! 주민센터 앞에서 만나면 될까요? 3만 원 맞죠?', 50],
+                    [ME, '네 맞아요. 사람 많은 곳에서 만나요 :)', 47]]),
+                mk('demo_u3', '자전거 아빠 (예시)', '🚲', [['o', '주말 아침 라이딩 모임 아직 자리 있어요. 오실래요?', 1500], [ME, '초보도 괜찮을까요?', 1490], ['o', '그럼요, 천천히 달려요. 헬멧만 꼭 챙겨 오세요!', 1485]])
+            ];
+        })();
+        let demoDmChats = {};          // 예시 채팅방의 대화 (이 화면 안에서만 유지)
+        function isDemoDM(uid) { return !FIREBASE_CONFIG && DM_DEMO.some(d => d.uid === uid); }
+        function demoDmMsgs(uid) {
+            if (!demoDmChats[uid]) demoDmChats[uid] = DM_DEMO.find(d => d.uid === uid).msgs.map(m => Object.assign({}, m, { uid: m.uid === 'ME' ? COMM_UID : m.uid }));
+            return demoDmChats[uid];
+        }
         function dmRooms() {
             const rooms = dmThreads.filter(t => !isBlocked(t.uid));
+            if (!FIREBASE_CONFIG && demoOn()) DM_DEMO.forEach(d => { if (!rooms.some(t => t.uid === d.uid)) { const l = demoDmMsgs(d.uid).slice(-1)[0]; rooms.push({ uid: d.uid, nick: d.nick, emoji: d.emoji, photo: '', area: myArea ? myArea() : '', last: l.text, ts: l.ts, demo: true }); } });
+            rooms.sort((a, b) => (b.ts || 0) - (a.ts || 0));
             if (dmWith && !rooms.some(t => t.uid === dmWith.uid)) rooms.unshift({ uid: dmWith.uid, nick: dmWith.nick, emoji: dmWith.emoji, photo: dmWith.photo, area: dmWith.area, last: '', ts: 0 });   // 방금 연 새 채팅방
             return rooms;
         }
@@ -7384,7 +7414,7 @@
         async function openDM(uid, nick, emoji, photo, area) {
             if (uid === COMM_UID) return;
             if (isBlocked(uid)) { showAlertToast({ head: '1:1 대화', title: iBlocked(uid) ? '차단한 이웃입니다. [차단 관리]에서 차단을 풀면 대화할 수 있습니다.' : '이 이웃과는 대화할 수 없습니다.' }); return; }
-            if (!canChat(uid)) {      // 익명 커뮤니티: 상대가 수락해야 대화 시작
+            if (!canChat(uid) && !isDemoDM(uid)) {      // 익명 커뮤니티: 상대가 수락해야 대화 시작
                 if (!profileShown.uid || profileShown.uid !== uid) profileShown = { uid: uid, nick: nick || '이웃', emoji: emoji || '🙂', photo: photo || '', area: area || '' };
                 if (chatSent.has(uid)) { showAlertToast({ head: '💬 대화 요청', title: '이미 대화 요청을 보냈습니다. 상대가 수락하면 알림이 옵니다.' }); return; }
                 askChat(uid); return;
@@ -7403,13 +7433,15 @@
                     dmChat = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
                     renderDMChat();
                 }, err => console.error(err));
-            } else { dmChat = ((dmLocal()[uid] || {}).msgs) || []; dmChat.forEach((m, i) => { if (!m.id) m.id = 'd' + m.ts + '_' + i; }); }
+            } else if (isDemoDM(uid)) { dmChat = demoDmMsgs(uid); }
+            else { dmChat = ((dmLocal()[uid] || {}).msgs) || []; dmChat.forEach((m, i) => { if (!m.id) m.id = 'd' + m.ts + '_' + i; }); }
             renderDM();
         }
         function openDMRoom(uid) { const t = dmRooms().find(x => x.uid === uid); if (t) openDM(t.uid, t.nick, t.emoji, t.photo, t.area); }
         function closeDM() { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } renderDM(); }
         // 채팅방 나가기: 내 목록에서만 지웁니다 (상대의 목록에는 남습니다)
         async function leaveDM(uid) {
+            if (isDemoDM(uid)) { showAlertToast({ head: '1:1 대화', title: '화면 확인용 예시 채팅방이라 지울 수 없어요. 서버를 연결하면 사라져요.' }); return; }
             if (!confirm('이 채팅방을 목록에서 지울까요?')) return;
             try {
                 const db = await commInit();
@@ -7423,6 +7455,15 @@
             const input = document.getElementById('dmText');
             const text = ((input && input.value) || '').trim();
             if (!text || !dmWith) return;
+            if (isDemoDM(dmWith.uid)) {        // 예시 채팅방: 화면에서만 주고받고, 상대가 짧게 답해 줌
+                const peer = dmWith.uid, cur = demoDmMsgs(peer);
+                const mine = { id: 'dd_' + Date.now(), uid: COMM_UID, text: text.slice(0, 500), ts: Date.now() };
+                if (replyTo.dm) mine.replyTo = replyTo.dm;
+                cur.push(mine); dmChat = cur; input.value = ''; clearReply('dm'); renderDMChat(); renderDMRooms();
+                const lines = ['네 좋아요! 😊', '오 감사합니다~', '알겠어요, 그때 봬요!', 'ㅎㅎ 맞아요 맞아요', '확인했어요 👍'];
+                setTimeout(() => { if (!dmWith || dmWith.uid !== peer) return; cur.push({ id: 'dd_' + Date.now(), uid: peer, text: lines[Math.floor(Math.random() * lines.length)], ts: Date.now() }); renderDMChat(); renderDMRooms(); }, 1300);
+                return;
+            }
             if (!canChat(dmWith.uid)) { showAlertToast({ head: '1:1 대화', title: '상대가 대화 요청을 수락해야 메시지를 보낼 수 있습니다.' }); return; }
             if (isBlocked(dmWith.uid)) { showAlertToast({ head: '1:1 대화', title: '이 이웃에게는 메시지를 보낼 수 없습니다.' }); return; }
             const msg = { uid: COMM_UID, text: text.slice(0, 500), ts: Date.now() };
