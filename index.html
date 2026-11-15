@@ -34,16 +34,29 @@
         body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: inherit; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        /* 기사를 많이 불러와도 손잡이가 너무 작아지지 않게 최소 길이를 둠 */
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; min-height: 40px; }
         .dark .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+        /* 왼쪽 기사 목록 스크롤바: 넓고(12px) 손잡이 최소 64px, 칸 조정 막대(회색)와 구분되는 남색 */
+        #newsListContainer::-webkit-scrollbar { width: 12px; }
+        #newsListContainer::-webkit-scrollbar-track { background: #f1f5f9; border-left: 1px solid #e2e8f0; }
+        #newsListContainer::-webkit-scrollbar-thumb { background: #818cf8; border-radius: 999px; border: 2px solid #f1f5f9; min-height: 64px; }
+        #newsListContainer::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+        #newsListContainer::-webkit-scrollbar-thumb:active { background: #4f46e5; }
+        .dark #newsListContainer::-webkit-scrollbar-track { background: #0f172a; border-left-color: #1e293b; }
+        .dark #newsListContainer::-webkit-scrollbar-thumb { background: #6366f1; border-color: #0f172a; }
+        .dark #newsListContainer::-webkit-scrollbar-thumb:hover { background: #818cf8; }
         @keyframes radar-sweep { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-radar-sweep { animation: radar-sweep 3s linear infinite; }
         
         /* 구분선(Resizer) 및 화살표 UI 가이드 */
-        .resizer { width: 6px; cursor: col-resize; transition: background-color 0.2s; flex-shrink: 0; position: relative; z-index: 20; background-color: #cbd5e1; }
-        .dark .resizer { background-color: #1e293b; }
-        .resizer:hover { background-color: #ef4444; }
+        /* 칸 조정 막대: 기사 스크롤바(남색)와 헷갈리지 않게 옅은 회색 + 세로 점선 무늬, 올리면 주황 */
+        .resizer { width: 8px; cursor: col-resize; transition: background-color 0.2s; flex-shrink: 0; position: relative; z-index: 20;
+            background-color: #e2e8f0; background-image: radial-gradient(circle, #94a3b8 1px, transparent 1.4px); background-size: 8px 6px; background-position: center; background-repeat: repeat-y;
+            border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; }
+        .dark .resizer { background-color: #1e293b; background-image: radial-gradient(circle, #475569 1px, transparent 1.4px); border-color: #334155; }
+        .resizer:hover, .resizing .resizer { background-color: #fb923c; background-image: none; border-color: #f97316; }
         .resizer::after {
             content: "⇄";
             position: absolute;
@@ -493,7 +506,7 @@
         // scraper.py 가 news.json 에 stage 를 넣어 주지만, 예전 기사에는 없을 수 있어서 같은 기준으로 제목에서 다시 판정합니다.
         // 재판·판결(court)은 몇 달~몇 년 전 사건의 후속 소식이라 7일 다발 지역 집계·실시간 알림·지도 밀집도에서 빼고,
         // 목록에는 ⚖️ 표시로 보여 주며(끌 수 있음), 안전 브리핑에는 '재판·판결 소식' 칸에 따로 모읍니다.
-        const STAGE_COURT_STRONG = /선고|징역|실형|집행\s*유예|벌금형|무죄|유죄|항소|상고|판결|재판(?!매)|공판|(?:(?<![가-힣])|구속\s*|불구속\s*)기소(?!\s*의견)|법정\s*구속|감형|형량|양형|원심|파기|국민참여재판|[123]심(?![가-힣])/;
+        const STAGE_COURT_STRONG = /선고|징역|실형|집행\s*유예|(?<![가-힣])집유|재심|결심\s*(?:공판|재판)|불구속\s*재판|벌금형|무죄|유죄|항소|상고|판결|재판(?!매)|공판|(?:(?<![가-힣])|구속\s*|불구속\s*)기소(?!\s*의견)|법정\s*구속|감형|형량|양형|원심|파기|국민참여재판|[123]심(?![가-힣])/;
         const STAGE_COURT_WEAK = /법원|판사|재판부|대법원|검찰|지검|고검|대검|공소청/;
         const STAGE_NOW = /화재|불이?\s*나|숨져|숨진|숨졌|추락|충돌|추돌|난동|폭발|붕괴|실종|구조|대피|사고|체포|검거|붙잡|덜미|입건|구속|영장|압수\s*수색|발생|신고|출동/;
         const STAGE_POLICE = /구속|입건|검거|체포|송치|영장|압수\s*수색|수사|조사|붙잡|덜미|지명\s*수배|추적/;
@@ -1279,7 +1292,7 @@
                     <span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[0.625rem] font-extrabold">${i === 0 ? '속보' : (i + 1) + '위'}</span>
                     ${isOverseas(ev.lead) ? '<span class="px-1 py-0.5 rounded bg-zinc-700 text-white text-[0.625rem] font-bold">해외</span>' : ''}
                     <b>${esc(ev.lead.title)}</b>
-                    <span class="text-slate-400">${esc((ev.lead.location || '').replace('대한민국 (세부 위치 미상)', ''))}${ev.items.length > 1 ? ' · 기사 ' + ev.items.length + '개' : ''}</span>
+                    <span class="text-slate-400">${esc((ev.lead.location || '').replace('대한민국 (세부 위치 미상)', '📍 세부 위치 미상 (전국)'))}${ev.items.length > 1 ? ' · 기사 ' + ev.items.length + '개' : ''}</span>
                 </button>`).join('');
             const w = wrap.clientWidth || 600, tw = track.scrollWidth || top.length * 320;
             track.style.setProperty('--ticker-start', w + 'px');
@@ -2375,7 +2388,8 @@
             const item = (fn, icon, label, extra) => `<button onclick="toggleCommMenu(false); ${fn}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid ${icon} w-4 text-center text-emerald-600"></i><span class="flex-1">${label}</span>${extra || ''}</button>`;
             m.innerHTML = myTown ? `
                 <div class="px-2.5 py-1.5 text-[0.6875rem] text-slate-500"><i class="fa-solid fa-circle-check text-emerald-500"></i> ${esc(townName(myTown))} 인증됨</div>
-                ${item(`showProfile('${COMM_UID}')`, 'fa-user', '내 프로필')}
+                ${item(`showProfile('${COMM_UID}')`, 'fa-user', '내 프로필 · 내 일상')}
+                ${item(`setCommTab('popular')`, 'fa-crown', '우리동네 인기쟁이')}
                 ${item(`setCommTab('friends')`, 'fa-user-group', '친구 목록', friendReqs.length ? `<span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${friendReqs.length}</span>` : '')}
                 ${item('inviteNeighbors()', 'fa-user-plus', '이웃 초대하기')}
                 ${item('showBlockList()', 'fa-ban', '차단 관리' + (Object.keys(blocked).length ? ' ' + Object.keys(blocked).length : ''))}
@@ -3369,7 +3383,8 @@
         // 내 프로필을 동네 명단에 기록 (lastSeen 은 명단을 최근 활동 200명으로 끊어 받는 데만 쓰고, 화면에 접속 여부로 보여 주지는 않음)
         async function commTouch() {
             if (!myTown) return;
-            const me = Object.assign({ uid: COMM_UID, intro: commProfile.intro || '', joinedAt: commProfile.joinedAt || Date.now(), lastSeen: Date.now(), photo: myPhoto() }, meFields());
+            const me = Object.assign({ uid: COMM_UID, intro: commProfile.intro || '', joinedAt: commProfile.joinedAt || Date.now(), lastSeen: Date.now(), photo: myPhoto(),
+                feedPublic: commProfile.feedPublic !== false, rankPublic: !!commProfile.rankPublic }, meFields());   // 일상 게시물·인기쟁이 순위 공개 설정
             const db = await commInit();
             if (db) { try { await commDoc(townKey(myTown)).collection('members').doc(COMM_UID).set(me, { merge: true }); } catch (e) { console.error(e); } }
             else { commMembers = [me]; renderCommMembers(); }
@@ -3571,6 +3586,7 @@
             if (PB[commTab]) { renderCommBg(); pbRender(commTab); return; }      // 안전망·이런저런·이사왔어요·아쉬워요·칭찬해요: 게시판 형식
             if (BOARDS[commTab]) { renderCommBg(); renderBoard(commTab); return; }
             if (commTab === 'friends') { renderCommBg(); renderFriends(); return; }
+            if (commTab === 'popular') { renderCommBg(); renderPopular(); return; }
             if (commTab === 'praise') { renderCommBg(); renderPraise(); return; }
             if (commTab === 'market') { renderCommBg(); renderMarket(); return; }
             if (commTab === 'meet') { renderCommBg(); renderMeet(); return; }
@@ -3739,15 +3755,20 @@
             if (!mine && blockedBy.has(uid)) { showAlertToast({ head: '프로필', title: '볼 수 없는 프로필입니다.' }); return; }
             const area = m.area || '';
             const posts = commMessages.filter(x => x.uid === uid).length;
+            // 인스타그램처럼: 위쪽은 프로필(사진·이름·소개·숫자·버튼), 아래쪽은 이 사람이 올린 일상 게시물 격자
             card.innerHTML = `
-                <div class="w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 text-center" onclick="event.stopPropagation()">
-                    <div class="flex justify-center">${avatarHtml(m, 'w-20 h-20', 'text-4xl')}</div>
-                    <div class="mt-2 text-base font-bold text-slate-900 dark:text-white">${esc(displayName(uid, m.nick))}${mine ? ' (나)' : ''}</div>
-                    ${!mine && friendAlias(uid) ? `<div class="text-[0.625rem] text-slate-400">원래 이름: ${esc(m.nick || '이웃')}</div>` : ''}
-                    <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-location-dot"></i> ${esc(area || (myTown ? myArea() : '지역 미상'))}</div>
-                    <div class="text-[0.6875rem] text-slate-500">${area && myTown && area !== myArea() ? '다른 동네 이웃' : (myTown ? esc(myTown.dong) + ' 이웃' : '')}</div>
-                    <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words">${esc(m.intro || '아직 소개가 없습니다.')}</p>
-                    <div class="mt-2 text-[0.6875rem] text-slate-500">작성한 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}</div>
+                <div class="w-full max-w-md max-h-full overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 text-center" onclick="event.stopPropagation()">
+                    <div class="flex items-center gap-4 text-left">
+                        <div class="shrink-0 p-[3px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600"><div class="rounded-full bg-white dark:bg-slate-900 p-[2px]">${avatarHtml(m, 'w-20 h-20', 'text-4xl')}</div></div>
+                        <div class="min-w-0 flex-1">
+                            <div class="text-base font-bold text-slate-900 dark:text-white truncate">${esc(displayName(uid, m.nick))}${mine ? ' (나)' : ''}</div>
+                            ${!mine && friendAlias(uid) ? `<div class="text-[0.625rem] text-slate-400">원래 이름: ${esc(m.nick || '이웃')}</div>` : ''}
+                            <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate"><i class="fa-solid fa-location-dot"></i> ${esc(area || (myTown ? myArea() : '지역 미상'))} <span class="font-normal text-slate-500">${area && myTown && area !== myArea() ? '· 다른 동네 이웃' : (myTown ? '· ' + esc(myTown.dong) + ' 이웃' : '')}</span></div>
+                            <div id="pfStats" class="mt-1.5 grid grid-cols-3 gap-1 text-center">${feedStatsHtml(null)}</div>
+                        </div>
+                    </div>
+                    <p class="mt-3 text-sm text-slate-700 dark:text-slate-200 break-words text-left">${esc(m.intro || '아직 소개가 없습니다.')}</p>
+                    <div class="mt-1 text-[0.6875rem] text-slate-500 text-left">게시판 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}</div>
                     <div id="pfTrust" class="mt-2">${trustHtml(trustCache[uid])}</div>
                     ${mine ? '' : `<div class="mt-2 flex items-center justify-center gap-1.5 text-[0.6875rem] text-slate-500"><span>대화 매너 평가</span><span id="mannerStars">${mannerStars(uid)}</span></div>
                     <div class="mt-3 flex flex-wrap gap-1.5 justify-center">${chatButton(uid)}${friendButtons(uid)}</div>
@@ -3760,13 +3781,372 @@
                         ${mine ? '<button onclick="editProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">프로필 수정</button>' : ''}
                         <button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">닫기</button>
                     </div>
+                    ${mine ? feedPrivacyHtml() : ''}
+                    <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 text-left">
+                        <div class="flex items-center justify-between mb-2">
+                            <b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-cells"></i> ${mine ? '내 일상' : '일상 게시물'}</b>
+                            ${mine ? `<button onclick="openFeedComposer()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-violet-600 text-white text-xs font-bold shadow"><i class="fa-solid fa-plus"></i> 새 게시물</button>` : ''}
+                        </div>
+                        <div id="pfFeed"><div class="text-center py-8 text-xs text-slate-400">게시물을 불러오는 중…</div></div>
+                    </div>
                     ${mine ? '' : `<div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700">${iBlocked(uid)
                         ? `<button onclick="unblockUser('${esc(uid)}')" class="text-[0.6875rem] font-bold text-emerald-600 hover:underline">차단 해제하기</button>`
                         : `<button onclick="blockUser('${esc(uid)}', profileShown.nick, profileShown.emoji)" class="text-[0.6875rem] font-bold text-red-500 hover:underline">🚫 이 이웃 차단하기</button>`}</div>`}
                 </div>`;
             card.classList.remove('hidden');
             profileShown = { uid: uid, nick: m.nick || '이웃', emoji: m.emoji || '🙂', photo: m.photo || '', area: area };
+            feedOpen = null; feedDraft = null; stopFeedComments();
             loadTrust(uid).then(tr => { const el = document.getElementById('pfTrust'); if (el && profileShown.uid === uid) el.innerHTML = trustHtml(tr); });
+            // 상대가 '게시물 비공개'로 해 두었으면 격자 대신 자물쇠 안내
+            const mem = commMembers.find(x => x.uid === uid);
+            if (!mine && mem && mem.feedPublic === false) { document.getElementById('pfFeed').innerHTML = feedLockedHtml(); return; }
+            loadFeed(uid).then(() => { if (profileShown.uid === uid) renderFeedGrid(uid); })
+                .catch(e => { console.error(e); const el = document.getElementById('pfFeed'); if (el) el.innerHTML = '<div class="text-center py-8 text-xs text-slate-400">게시물을 불러오지 못했습니다.</div>'; });
+        }
+
+        // ================= 내 일상 (프로필 게시물 · 인스타그램처럼) =================
+        //  - 내 프로필에서 글·사진(최대 4장)·동영상을 올려 일상을 기록하고, 이웃이 내 프로필에 들어와 게시물을 보며 서로를 알아 갑니다.
+        //  - 게시물마다 ❤ 하트, 감정 표현(😂😮😢👏🔥), 댓글
+        //  - 공개 설정: '게시물 공개'(끄면 나만 봄) · '우리동네 인기쟁이 순위 공개'(켠 사람만 순위에 나옴) — 내 프로필에서 바꿈
+        //  - 저장: 서버(Firebase) 연결 시 feedPosts 컬렉션(댓글은 그 아래 comments), 체험 모드에서는 이 기기에만 저장
+        const FEED_REACTS = ['😂', '😮', '😢', '👏', '🔥'];
+        const FEED_IMG_MAX = 4, FEED_TEXT_MAX = 500, FEED_CMT_MAX = 200;
+        const FEED_VIDEO_RE = /^https:\/\/firebasestorage\.googleapis\.com\//;
+        let feedCache = {};             // uid → 게시물 목록
+        let feedOpen = null;            // 지금 크게 보고 있는 게시물 { uid, id }
+        let feedComments = [], feedCommentsUnsub = null;
+        let feedDraft = null;           // 새 게시물 { imgs: [dataUrl], video: { file, preview } }
+        let feedBusy = false;
+        function feedLocal() { try { return JSON.parse(lsGet('feed_posts') || '[]'); } catch (e) { return []; } }
+        function feedLocalSave(list) {
+            const l = list.slice(0, 60);
+            if (!lsSet('feed_posts', JSON.stringify(l))) lsSet('feed_posts', JSON.stringify(l.map(p => Object.assign({}, p, { media: (p.media || []).slice(0, 1) }))));
+        }
+        function feedCol() { return commDb.collection('feedPosts'); }
+        function feedVisible(p) { return !!p && (p.uid === COMM_UID || (p.pub !== false && !isBlocked(p.uid))); }
+        function feedFind(uid, id) { return (feedCache[uid] || []).find(p => p.id === id) || null; }
+        function feedCount(o) { return o ? Object.keys(o).length : 0; }
+        async function loadFeed(uid) {
+            const db = await commInit();
+            let posts;
+            if (db) {
+                const snap = await feedCol().where('uid', '==', uid).limit(90).get();
+                posts = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+            } else posts = uid === COMM_UID ? feedLocal() : [];
+            feedCache[uid] = posts.filter(feedVisible).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            return feedCache[uid];
+        }
+        function feedStatsHtml(list) {
+            const n = list ? list.length : '–';
+            const hearts = list ? list.reduce((a, p) => a + feedCount(p.hearts) + feedCount(p.reacts), 0) : '–';
+            const cmts = list ? list.reduce((a, p) => a + (p.comments || 0), 0) : '–';
+            const cell = (v, l) => `<div><div class="text-sm font-extrabold text-slate-900 dark:text-white">${v}</div><div class="text-[0.625rem] text-slate-500">${l}</div></div>`;
+            return cell(n, '게시물') + cell(hearts, '받은 ❤·감정') + cell(cmts, '댓글');
+        }
+        function feedLockedHtml() {
+            return `<div class="text-center py-10 text-slate-400"><div class="text-3xl mb-1">🔒</div><div class="text-xs">이 이웃은 일상 게시물을 비공개로 설정했습니다.</div></div>`;
+        }
+        // 내 프로필에서만 보이는 공개 설정 스위치
+        function feedPrivacyHtml() {
+            const sw = (key, on, label, help) => `<label class="flex items-start gap-2 text-left cursor-pointer">
+                <span class="relative mt-0.5 shrink-0"><input type="checkbox" class="peer sr-only" ${on ? 'checked' : ''} onchange="setFeedPrivacy('${key}', this.checked)">
+                    <span class="block w-9 h-5 rounded-full bg-slate-300 dark:bg-slate-600 peer-checked:bg-emerald-500 transition"></span>
+                    <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition peer-checked:translate-x-4"></span></span>
+                <span class="min-w-0"><span class="block text-xs font-bold text-slate-800 dark:text-slate-100">${label}</span><span class="block text-[0.625rem] text-slate-500 leading-snug">${help}</span></span></label>`;
+            return `<div class="mt-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2">
+                ${sw('feedPublic', commProfile.feedPublic !== false, '게시물 공개', '끄면 내 일상 게시물은 나만 볼 수 있습니다.')}
+                ${sw('rankPublic', !!commProfile.rankPublic, '🏆 우리동네 인기쟁이 순위에 공개', '켜면 받은 ❤·감정·댓글로 정해지는 동네 인기 순위에 내 프로필이 나옵니다. (기본: 꺼짐)')}
+            </div>`;
+        }
+        async function setFeedPrivacy(key, on) {
+            commProfile[key] = !!on;
+            lsSet('comm_profile', JSON.stringify(commProfile));
+            commTouch();
+            const flag = key === 'feedPublic' ? 'pub' : 'rank';
+            // 이미 올린 내 게시물에도 바로 적용 (보는 사람·순위 계산이 게시물에 적힌 표시를 보므로)
+            const mine = feedCache[COMM_UID] || await loadFeed(COMM_UID);
+            const db = await commInit();
+            if (db) {
+                try { const b = db.batch(); mine.slice(0, 90).forEach(p => b.update(feedCol().doc(p.id), { [flag]: !!on })); await b.commit(); } catch (e) { console.error(e); }
+            } else feedLocalSave(feedLocal().map(p => Object.assign(p, { [flag]: !!on })));
+            mine.forEach(p => { p[flag] = !!on; });
+            showAlertToast({ head: '공개 설정', title: key === 'feedPublic' ? (on ? '내 일상 게시물을 이웃에게 공개합니다.' : '내 일상 게시물을 나만 보도록 바꿨습니다.') : (on ? '우리동네 인기쟁이 순위에 내 프로필을 공개합니다.' : '인기쟁이 순위에서 내 프로필을 뺐습니다.') });
+            if (commTab === 'popular') { popularLoadedAt = 0; renderPopular(); }
+            // 내 프로필이 열려 있으면 스위치 모양도 맞춤
+            document.querySelectorAll(`#commProfileCard input[onchange*="'${key}'"]`).forEach(x => { x.checked = !!on; });
+        }
+        function feedImgOk(m) { return m && m.k === 'img' && IMG_DATA_RE.test(m.src || ''); }
+        function feedVideoOk(m) { return m && m.k === 'video' && (FEED_VIDEO_RE.test(m.url || '') || /^blob:/.test(m.url || '')); }
+        function renderFeedGrid(uid) {
+            const box = document.getElementById('pfFeed');
+            if (!box) return;
+            const list = feedCache[uid] || [];
+            const st = document.getElementById('pfStats'); if (st) st.innerHTML = feedStatsHtml(list);
+            if (!list.length) {
+                box.innerHTML = `<div class="text-center py-10 text-slate-400"><div class="text-3xl mb-1">📷</div><div class="text-xs">${uid === COMM_UID ? '아직 게시물이 없습니다. [새 게시물]로 오늘의 일상을 기록해 보세요.' : '아직 올린 게시물이 없습니다.'}</div></div>`;
+                return;
+            }
+            box.innerHTML = `<div class="grid grid-cols-3 gap-1">${list.map(p => {
+                const m = (p.media || [])[0];
+                const inner = feedImgOk(m) ? `<img src="${m.src}" alt="" class="w-full h-full object-cover">`
+                    : (feedVideoOk(m) ? `<div class="w-full h-full bg-slate-800 text-white flex items-center justify-center text-2xl"><i class="fa-solid fa-play"></i></div>`
+                    : `<div class="w-full h-full p-2 bg-gradient-to-br from-sky-100 to-violet-100 dark:from-slate-800 dark:to-slate-700 text-[0.6875rem] text-slate-700 dark:text-slate-200 overflow-hidden text-left leading-snug break-words">${esc((p.text || '').slice(0, 90))}</div>`);
+                return `<button onclick="openFeedPost('${esc(uid)}', '${esc(p.id)}')" class="relative aspect-square overflow-hidden rounded-md bg-slate-100 dark:bg-slate-800 group">${inner}
+                    ${(p.media || []).length > 1 ? '<i class="fa-solid fa-clone absolute top-1 right-1 text-white text-xs" style="text-shadow:0 1px 3px rgba(0,0,0,.6)"></i>' : ''}
+                    <span class="absolute inset-0 bg-black/45 text-white text-xs font-bold flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition">❤ ${feedCount(p.hearts)} · 💬 ${p.comments || 0}</span></button>`;
+            }).join('')}</div>`;
+        }
+        // 게시물 크게 보기: 사진·동영상 + 글 + ❤ + 감정 표현 + 댓글
+        function openFeedPost(uid, id) {
+            feedOpen = { uid: uid, id: id };
+            renderFeedPost();
+            subscribeFeedComments(id);
+        }
+        function closeFeedPost() { feedOpen = null; stopFeedComments(); renderFeedGrid(profileShown.uid); }
+        function renderFeedPost() {
+            const box = document.getElementById('pfFeed');
+            if (!box || !feedOpen) return;
+            const p = feedFind(feedOpen.uid, feedOpen.id);
+            if (!p) { closeFeedPost(); return; }
+            const media = (p.media || []).map(m => feedImgOk(m) ? `<img src="${m.src}" alt="" onclick="openMedia(this.src)" class="w-full rounded-lg object-cover max-h-80 cursor-zoom-in">`
+                : (feedVideoOk(m) ? `<video src="${esc(m.url)}" controls playsinline class="w-full rounded-lg max-h-80 bg-black"></video>` : '')).join('');
+            const heartOn = !!(p.hearts && p.hearts[COMM_UID]);
+            const myReact = p.reacts && p.reacts[COMM_UID];
+            const rc = {}; Object.values(p.reacts || {}).forEach(e => { rc[e] = (rc[e] || 0) + 1; });
+            const own = p.uid === COMM_UID;
+            const st = document.getElementById('pfStats'); if (st) st.innerHTML = feedStatsHtml(feedCache[feedOpen.uid] || []);
+            box.innerHTML = `<div class="space-y-2">
+                <div class="flex items-center justify-between"><button onclick="closeFeedPost()" class="text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white"><i class="fa-solid fa-arrow-left"></i> 게시물 목록</button>
+                    <span class="text-[0.625rem] text-slate-400">${timeAgo(p.ts)}${p.pub === false ? ' · 🔒 나만 보기' : ''}</span></div>
+                ${media ? `<div class="space-y-1.5">${media}</div>` : ''}
+                ${p.text ? `<p class="text-sm text-slate-800 dark:text-slate-100 whitespace-pre-wrap break-words">${esc(p.text)}</p>` : ''}
+                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                    <button onclick="feedHeart()" class="px-2.5 py-1 rounded-full border text-xs font-bold transition ${heartOn ? 'border-rose-400 bg-rose-50 dark:bg-rose-950/50 text-rose-600' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-rose-300'}">${heartOn ? '❤️' : '🤍'} ${feedCount(p.hearts)}</button>
+                    ${FEED_REACTS.map(e => `<button onclick="feedReact('${e}')" title="감정 표현" class="px-2 py-1 rounded-full border text-xs transition ${myReact === e ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/50 font-bold' : 'border-slate-200 dark:border-slate-700 hover:border-amber-300'}">${e}${rc[e] ? ' ' + rc[e] : ''}</button>`).join('')}
+                    ${own ? `<button onclick="feedDelete()" class="ml-auto text-[0.6875rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}
+                </div>
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
+                    <div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">💬 댓글 ${p.comments || 0}</div>
+                    <div id="feedCmts" class="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar">${feedCommentsHtml()}</div>
+                    ${myTown ? `<div class="mt-2 flex gap-1.5"><input id="feedCmtIn" maxlength="${FEED_CMT_MAX}" placeholder="댓글 달기 (${FEED_CMT_MAX}자 이내)" onkeydown="if(event.key==='Enter'&&!event.isComposing)feedComment()" class="flex-1 min-w-0 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 dark:text-white">
+                        <button onclick="feedComment()" class="px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold">게시</button></div>` : '<div class="text-[0.625rem] text-slate-400 mt-1">동네 인증을 하면 댓글을 달 수 있습니다.</div>'}
+                </div></div>`;
+        }
+        function feedCommentsHtml() {
+            const list = feedComments.filter(c => !isBlocked(c.uid));
+            return list.length ? list.map(c => `<div class="flex items-start gap-1.5 text-xs"><button onclick="showProfile('${esc(c.uid)}')" class="shrink-0">${avatarHtml(c, 'w-6 h-6', 'text-xs')}</button>
+                <div class="min-w-0 flex-1"><b class="text-slate-800 dark:text-slate-100">${esc(displayName(c.uid, c.nick))}</b> <span class="text-slate-700 dark:text-slate-200 break-words">${esc(c.text)}</span>
+                <span class="text-[0.625rem] text-slate-400"> · ${timeAgo(c.ts)}</span>${c.uid === COMM_UID || (feedOpen && feedOpen.uid === COMM_UID) ? ` <button onclick="feedDeleteComment('${esc(c.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}</div></div>`).join('')
+                : '<div class="text-[0.6875rem] text-slate-400">첫 댓글을 남겨 보세요.</div>';
+        }
+        function stopFeedComments() { if (feedCommentsUnsub) { feedCommentsUnsub(); feedCommentsUnsub = null; } feedComments = []; }
+        async function subscribeFeedComments(id) {
+            stopFeedComments();
+            const db = await commInit();
+            if (db) {
+                feedCommentsUnsub = feedCol().doc(id).collection('comments').orderBy('ts', 'asc').limit(200).onSnapshot(snap => {
+                    feedComments = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                    const el = document.getElementById('feedCmts'); if (el) { el.innerHTML = feedCommentsHtml(); el.scrollTop = el.scrollHeight; }
+                }, err => console.error(err));
+            } else {
+                const p = feedOpen && feedFind(feedOpen.uid, id);
+                feedComments = (p && p.cmts) || [];
+                const el = document.getElementById('feedCmts'); if (el) el.innerHTML = feedCommentsHtml();
+            }
+        }
+        // 게시물 한 개를 고쳐서 저장 (서버면 해당 칸만, 체험 모드면 이 기기 목록 전체)
+        async function feedPatch(p, fields) {
+            const db = await commInit();
+            if (db) await feedCol().doc(p.id).update(fields);
+            else {
+                const list = feedLocal(), i = list.findIndex(x => x.id === p.id);
+                if (i >= 0) { list[i] = Object.assign({}, list[i], p); feedLocalSave(list); }
+            }
+        }
+        async function feedHeart() {
+            const p = feedOpen && feedFind(feedOpen.uid, feedOpen.id);
+            if (!p || !myTown) { if (!myTown) showAlertToast({ head: '내 일상', title: '동네 인증을 하면 하트를 누를 수 있습니다.' }); return; }
+            const on = !(p.hearts && p.hearts[COMM_UID]);
+            p.hearts = Object.assign({}, p.hearts); if (on) p.hearts[COMM_UID] = true; else delete p.hearts[COMM_UID];
+            renderFeedPost();
+            try { await feedPatch(p, commDb ? { ['hearts.' + COMM_UID]: on ? true : firebase.firestore.FieldValue.delete() } : {}); } catch (e) { console.error(e); }
+        }
+        async function feedReact(e) {
+            const p = feedOpen && feedFind(feedOpen.uid, feedOpen.id);
+            if (!p || !myTown || !FEED_REACTS.includes(e)) return;
+            const same = p.reacts && p.reacts[COMM_UID] === e;
+            p.reacts = Object.assign({}, p.reacts); if (same) delete p.reacts[COMM_UID]; else p.reacts[COMM_UID] = e;
+            renderFeedPost();
+            try { await feedPatch(p, commDb ? { ['reacts.' + COMM_UID]: same ? firebase.firestore.FieldValue.delete() : e } : {}); } catch (err) { console.error(err); }
+        }
+        async function feedComment() {
+            const p = feedOpen && feedFind(feedOpen.uid, feedOpen.id);
+            const inp = document.getElementById('feedCmtIn');
+            const text = ((inp && inp.value) || '').trim().slice(0, FEED_CMT_MAX);
+            if (!p || !text || !myTown) return;
+            if (typeof hasBadWords === 'function' && hasBadWords(text)) { showAlertToast({ head: '댓글', title: '이웃이 불쾌할 수 있는 표현이 있어 올리지 않았습니다.' }); return; }
+            inp.value = '';
+            const c = Object.assign({ uid: COMM_UID, text: text, ts: Date.now() }, meFields());
+            const db = await commInit();
+            if (db) {
+                try {
+                    await feedCol().doc(p.id).collection('comments').add(c);
+                    await feedCol().doc(p.id).update({ comments: firebase.firestore.FieldValue.increment(1) });
+                    p.comments = (p.comments || 0) + 1; renderFeedPost();
+                } catch (e) { console.error(e); showAlertToast({ head: '댓글', title: '댓글을 올리지 못했습니다.' }); }
+            } else {
+                c.id = 'c' + Date.now().toString(36);
+                p.cmts = (p.cmts || []).concat(c); p.comments = p.cmts.length;
+                await feedPatch(p, {}); feedComments = p.cmts; renderFeedPost();
+            }
+        }
+        async function feedDeleteComment(cid) {
+            const p = feedOpen && feedFind(feedOpen.uid, feedOpen.id);
+            if (!p || !confirm('댓글을 삭제할까요?')) return;
+            const db = await commInit();
+            if (db) {
+                try { await feedCol().doc(p.id).collection('comments').doc(cid).delete(); await feedCol().doc(p.id).update({ comments: firebase.firestore.FieldValue.increment(-1) }); p.comments = Math.max(0, (p.comments || 1) - 1); renderFeedPost(); } catch (e) { console.error(e); }
+            } else { p.cmts = (p.cmts || []).filter(c => c.id !== cid); p.comments = p.cmts.length; await feedPatch(p, {}); feedComments = p.cmts; renderFeedPost(); }
+        }
+        async function feedDelete() {
+            const p = feedOpen && feedFind(feedOpen.uid, feedOpen.id);
+            if (!p || p.uid !== COMM_UID || !confirm('이 게시물을 삭제할까요? 되돌릴 수 없습니다.')) return;
+            const db = await commInit();
+            if (db) { try { await feedCol().doc(p.id).delete(); } catch (e) { console.error(e); return; } }
+            else feedLocalSave(feedLocal().filter(x => x.id !== p.id));
+            feedCache[COMM_UID] = (feedCache[COMM_UID] || []).filter(x => x.id !== p.id);
+            closeFeedPost();
+        }
+        // 새 게시물 쓰기
+        function openFeedComposer() {
+            if (!myTown) { showAlertToast({ head: '내 일상', title: '동네 인증을 하면 게시물을 올릴 수 있습니다.' }); return; }
+            feedOpen = null; stopFeedComments();
+            feedDraft = feedDraft || { imgs: [], video: null };
+            renderFeedComposer();
+        }
+        function renderFeedComposer() {
+            const box = document.getElementById('pfFeed');
+            if (!box || !feedDraft) return;
+            const keep = (document.getElementById('feedText') || {}).value || feedDraft.text || '';
+            const thumbs = feedDraft.imgs.map((s, i) => `<div class="relative w-16 h-16"><img src="${s}" alt="" class="w-16 h-16 rounded-lg object-cover"><button onclick="feedDraftRemove(${i})" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/70 text-white text-[0.625rem]">✕</button></div>`).join('')
+                + (feedDraft.video ? `<div class="relative w-16 h-16 rounded-lg bg-slate-800 text-white flex items-center justify-center"><i class="fa-solid fa-film"></i><button onclick="feedDraft.video = null; renderFeedComposer()" class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/70 text-white text-[0.625rem]">✕</button></div>` : '');
+            box.innerHTML = `<div class="space-y-2">
+                <div class="flex items-center justify-between"><button onclick="feedDraft = null; renderFeedGrid(COMM_UID)" class="text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white"><i class="fa-solid fa-arrow-left"></i> 취소</button>
+                    <span class="text-[0.625rem] text-slate-400">${commProfile.feedPublic === false ? '🔒 나만 보기로 올라갑니다' : '🌐 이웃에게 공개'}</span></div>
+                <textarea id="feedText" maxlength="${FEED_TEXT_MAX}" rows="4" placeholder="오늘의 일상을 기록해 보세요 (${FEED_TEXT_MAX}자 이내)" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white"></textarea>
+                ${thumbs ? `<div class="flex flex-wrap gap-2">${thumbs}</div>` : ''}
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <input id="feedImgIn" type="file" accept="image/*" multiple class="hidden" onchange="feedPickImages(this)">
+                    <input id="feedVidIn" type="file" accept="video/*" class="hidden" onchange="feedPickVideo(this)">
+                    <button onclick="document.getElementById('feedImgIn').click()" ${feedDraft.imgs.length >= FEED_IMG_MAX || feedDraft.video ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 disabled:opacity-40"><i class="fa-solid fa-image"></i> 사진 (${feedDraft.imgs.length}/${FEED_IMG_MAX})</button>
+                    <button onclick="document.getElementById('feedVidIn').click()" ${feedDraft.imgs.length || feedDraft.video ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 disabled:opacity-40"><i class="fa-solid fa-video"></i> 동영상</button>
+                    <button onclick="feedSubmit()" ${feedBusy ? 'disabled' : ''} class="ml-auto px-4 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-violet-600 text-white text-xs font-bold disabled:opacity-50">${feedBusy ? '올리는 중…' : '공유하기'}</button>
+                </div>
+                <div class="text-[0.625rem] text-slate-400">사진은 최대 ${FEED_IMG_MAX}장(자동으로 줄여 저장), 동영상은 1개 · ${VIDEO_MAX_MB}MB 이하${commDb ? '' : ' (동영상은 서버 연결 후 올릴 수 있습니다)'}</div>
+            </div>`;
+            document.getElementById('feedText').value = keep;
+        }
+        function feedDraftRemove(i) { feedDraft.text = (document.getElementById('feedText') || {}).value; feedDraft.imgs.splice(i, 1); renderFeedComposer(); }
+        async function feedPickImages(input) {
+            const files = Array.from(input.files || []); input.value = '';
+            feedDraft.text = (document.getElementById('feedText') || {}).value;
+            for (const f of files) {
+                if (feedDraft.imgs.length >= FEED_IMG_MAX) break;
+                if (f.type.indexOf('image/') !== 0) continue;
+                try { feedDraft.imgs.push(await compressImage(f, 1080, 150 * 1024)); } catch (e) { showAlertToast({ head: '내 일상', title: '사진을 읽지 못했습니다: ' + f.name }); }
+            }
+            renderFeedComposer();
+        }
+        function feedPickVideo(input) {
+            const f = input.files && input.files[0]; input.value = '';
+            if (!f || f.type.indexOf('video/') !== 0) return;
+            if (!commDb) { showAlertToast({ head: '내 일상', title: '동영상은 서버(Firebase)를 연결한 뒤 올릴 수 있습니다. 체험 모드에서는 사진만 올릴 수 있어요.' }); return; }
+            if (f.size > VIDEO_MAX_MB * 1024 * 1024) { showAlertToast({ head: '내 일상', title: '동영상은 ' + VIDEO_MAX_MB + 'MB 이하만 올릴 수 있습니다.' }); return; }
+            feedDraft.text = (document.getElementById('feedText') || {}).value;
+            feedDraft.video = { file: f };
+            renderFeedComposer();
+        }
+        async function feedSubmit() {
+            if (!feedDraft || feedBusy) return;
+            const text = ((document.getElementById('feedText') || {}).value || '').trim().slice(0, FEED_TEXT_MAX);
+            if (!text && !feedDraft.imgs.length && !feedDraft.video) { showAlertToast({ head: '내 일상', title: '글이나 사진·동영상을 넣어 주세요.' }); return; }
+            if (text && typeof hasBadWords === 'function' && hasBadWords(text)) { showAlertToast({ head: '내 일상', title: '이웃이 불쾌할 수 있는 표현이 있어 올리지 않았습니다.' }); return; }
+            feedBusy = true; feedDraft.text = text; renderFeedComposer();
+            try {
+                const media = feedDraft.imgs.map(s => ({ k: 'img', src: s }));
+                const db = await commInit();
+                if (feedDraft.video && db) media.push({ k: 'video', url: await commUploadVideo(feedDraft.video.file) });
+                const post = Object.assign({ uid: COMM_UID, town: townKey(myTown), text: text, media: media, ts: Date.now(), hearts: {}, reacts: {}, comments: 0,
+                    pub: commProfile.feedPublic !== false, rank: !!commProfile.rankPublic }, meFields());
+                if (db) { const ref = await feedCol().add(post); post.id = ref.id; }
+                else { post.id = 'p' + Date.now().toString(36); post.cmts = []; const list = feedLocal(); list.unshift(post); feedLocalSave(list); }
+                feedCache[COMM_UID] = [post].concat(feedCache[COMM_UID] || []);
+                feedDraft = null;
+                renderFeedGrid(COMM_UID);
+                showAlertToast({ head: '내 일상', title: '게시물을 공유했습니다.' });
+            } catch (e) { console.error(e); showAlertToast({ head: '내 일상', title: '게시물을 올리지 못했습니다. 사진 크기를 줄이거나 잠시 후 다시 시도해 주세요.' }); }
+            feedBusy = false;
+            if (feedDraft) renderFeedComposer();
+        }
+
+        // ================= 우리동네 인기쟁이 (순위) =================
+        //  최근 30일 동안 내 일상 게시물로 받은 ❤(3점)·감정 표현(2점)·댓글(2점)과 올린 게시물(1점)을 더해 순위를 매깁니다.
+        //  '인기쟁이 순위 공개'를 켠 이웃만 나오고, 접속 여부·마지막 접속 시각은 보여 주지 않습니다.
+        let popularPosts = [], popularLoadedAt = 0, popularBusy = false;
+        async function loadPopular(force) {
+            if (popularBusy || (!force && Date.now() - popularLoadedAt < 120000)) return;
+            popularBusy = true;
+            try {
+                const db = await commInit();
+                if (db && myTown) {
+                    const snap = await feedCol().where('town', '==', townKey(myTown)).limit(500).get();
+                    popularPosts = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+                } else popularPosts = feedLocal();
+                popularLoadedAt = Date.now();
+            } catch (e) { console.error(e); }
+            popularBusy = false;
+            if (commTab === 'popular') renderPopular();
+        }
+        function popularRanking() {
+            const since = Date.now() - 30 * 86400000, by = {};
+            popularPosts.forEach(p => {
+                if (!p || (p.ts || 0) < since || isBlocked(p.uid)) return;
+                const isMe = p.uid === COMM_UID;
+                if (!(isMe ? commProfile.rankPublic : p.rank) || p.pub === false) return;   // 순위 공개를 켠 사람, 공개 게시물만
+                const r = by[p.uid] || (by[p.uid] = { uid: p.uid, nick: p.nick, emoji: p.emoji, photo: p.photo, area: p.area, posts: 0, hearts: 0, reacts: 0, comments: 0, ts: 0 });
+                if ((p.ts || 0) > r.ts) Object.assign(r, { nick: p.nick, emoji: p.emoji, photo: p.photo, area: p.area, ts: p.ts || 0 });
+                r.posts++; r.hearts += feedCount(p.hearts); r.reacts += feedCount(p.reacts); r.comments += p.comments || 0;
+            });
+            return Object.values(by).map(r => Object.assign(r, { score: r.hearts * 3 + r.reacts * 2 + r.comments * 2 + r.posts }))
+                .sort((a, b) => b.score - a.score || b.hearts - a.hearts).slice(0, 30);
+        }
+        function renderPopular() {
+            const main = document.getElementById('commMain');
+            if (!main) return;
+            loadPopular(false);
+            const rows = popularRanking();
+            const medal = i => i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `<span class="text-xs font-extrabold text-slate-400">${i + 1}</span>`));
+            main.innerHTML = `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3">
+                <div class="rounded-2xl p-4 bg-gradient-to-br from-amber-400 via-rose-500 to-violet-600 text-white">
+                    <div class="text-base font-extrabold">🏆 ${esc(myTown ? myTown.dong : '우리 동네')} 인기쟁이</div>
+                    <div class="text-[0.6875rem] opacity-90 mt-0.5 leading-snug">최근 30일 동안 '내 일상' 게시물로 받은 ❤·감정 표현·댓글이 많은 이웃 순서입니다. 순위 공개를 켠 이웃만 나옵니다.</div>
+                </div>
+                <div class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                    ${avatarHtml(meFields(), 'w-9 h-9', 'text-lg')}
+                    <div class="min-w-0 flex-1"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">내 순위 공개 ${commProfile.rankPublic ? '<span class="text-emerald-600">켜짐</span>' : '<span class="text-slate-400">꺼짐</span>'}</div>
+                        <div class="text-[0.625rem] text-slate-500">${commProfile.rankPublic ? '내 프로필이 순위에 나옵니다.' : '켜면 내 프로필도 순위에 나옵니다. 언제든 끌 수 있어요.'}</div></div>
+                    <button onclick="setFeedPrivacy('rankPublic', ${!commProfile.rankPublic})" class="px-3 py-1.5 rounded-lg text-xs font-bold ${commProfile.rankPublic ? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200' : 'bg-violet-600 text-white'}">${commProfile.rankPublic ? '비공개로' : '공개하기'}</button>
+                    <button onclick="showProfile('${COMM_UID}')" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200">내 일상</button>
+                </div>
+                ${rows.length ? `<ol class="space-y-1.5">${rows.map((r, i) => `<li><button onclick="showProfile('${esc(r.uid)}')" class="w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition hover:shadow ${i < 3 ? 'border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}">
+                    <span class="w-7 text-center text-xl shrink-0">${medal(i)}</span>
+                    ${avatarHtml(r, 'w-10 h-10', 'text-xl')}
+                    <span class="min-w-0 flex-1"><span class="block text-sm font-bold text-slate-900 dark:text-white truncate">${esc(displayName(r.uid, r.nick))}${r.uid === COMM_UID ? ' (나)' : ''}</span>
+                        <span class="block text-[0.6875rem] text-slate-500">❤ ${r.hearts} · 감정 ${r.reacts} · 💬 ${r.comments} · 게시물 ${r.posts}</span></span>
+                    <span class="text-right shrink-0"><span class="block text-sm font-extrabold text-violet-600 dark:text-violet-300">${r.score}</span><span class="block text-[0.5625rem] text-slate-400">점</span></span></button></li>`).join('')}</ol>`
+                    : `<div class="text-center py-12 text-xs text-slate-400 leading-relaxed">${popularBusy ? '순위를 계산하는 중…' : '아직 순위에 오른 이웃이 없습니다.<br>내 프로필에서 일상 게시물을 올리고 순위 공개를 켜 보세요.'}</div>`}
+                <div class="flex justify-center"><button onclick="loadPopular(true)" class="text-[0.6875rem] font-bold text-slate-500 hover:text-violet-600"><i class="fa-solid fa-rotate"></i> 새로 계산</button></div>
+            </div>`;
         }
         let profileShown = { uid: '', nick: '', emoji: '', photo: '', area: '' };
         let commEditPhoto = null;     // 프로필 수정 중인 사진 (null=그대로, ''=지움, 그 외=새 사진)
@@ -4583,16 +4963,16 @@
         // 안전망은 가장 중요해서 혼자 따로(빨간색), 맛집·명소처럼 성격이 같은 것은 한 묶음으로.
         const COMM_GROUPS = [
             // c: 묶음 색, fa: 아이콘. 안전망은 고르지 않았을 때도 빨간색으로 칠해서 항상 눈에 띄게 (SOS 표시는 실제 SOS 글이 있을 때만 한 번)
-            { k: 'safe', label: '안전망', fa: 'fa-shield-halved', c: 'red', tabs: ['talk'] },
+            { k: 'safe', label: '우리동네 안전망', fa: 'fa-shield-halved', c: 'red', tabs: ['talk'] },
             { k: 'life', label: '동네 이야기', fa: 'fa-house-chimney-user', c: 'sky', tabs: ['free', 'hello', 'wish', 'praise'] },
             { k: 'local', label: '맛집·명소', fa: 'fa-utensils', c: 'orange', tabs: ['food', 'spot'] },
             { k: 'market', label: '동네 장터', fa: 'fa-store', c: 'emerald', tabs: ['market'] },
-            { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['meet', 'friends', 'random', 'dm'] }
+            { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['popular', 'meet', 'friends', 'random', 'dm'] }
         ];
         const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '우리동네 맛집', spot: '우리동네 명소',
-            market: '동네 장터', meet: '동네 친구', friends: '친구', random: '랜덤 채팅', dm: '1:1 대화' };
+            market: '동네 장터', popular: '우리동네 인기쟁이', meet: '동네 친구', friends: '친구', random: '랜덤 채팅', dm: '1:1 대화' };
         const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-hand-holding-heart', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-tree',
-            meet: 'fa-user-plus', friends: 'fa-user-group', random: 'fa-shuffle', dm: 'fa-envelope' };
+            popular: 'fa-crown', meet: 'fa-user-plus', friends: 'fa-user-group', random: 'fa-shuffle', dm: 'fa-envelope' };
         function commGroupOf(tab) { return COMM_GROUPS.find(g => g.tabs.includes(tab)) || COMM_GROUPS[0]; }
         // 묶음 안의 작은 탭 순서: 마우스로 끌어서 바꾸고 저장 (새로 생긴 탭은 맨 뒤에 붙음)
         function groupTabs(g) {
@@ -6786,6 +7166,26 @@
             if (briefCfg.scope === 'dong' && c.dong) return loc.includes(c.dong) || loc.includes(dongStem(c.dong));
             return true;
         }
+        // ---- 예방·대처 정보 기사 (tips.json) ----
+        //  '딥페이크 시대, 가게를 지키는 건 확인 습관'처럼 사건은 아니지만 도움이 되는 예방 기사는 사건 목록에 넣지 않고(scraper.py 가 tips.json 에 따로 모음),
+        //  안전 브리핑에서 같은 분류의 사건 옆에 '관련 예방 정보'로 이어서 보여 줍니다.
+        let safetyTips = [];
+        async function loadSafetyTips() {
+            try {
+                const r = await fetch('tips.json?t=' + Date.now(), { cache: 'no-store' });
+                if (!r.ok) return;
+                const j = await r.json();
+                if (Array.isArray(j)) safetyTips = j.filter(x => x && x.title).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            } catch (e) {}
+        }
+        loadSafetyTips(); setInterval(loadSafetyTips, 10 * 60000);
+        function tipsFor(groups, max) {
+            const gs = new Set(groups);
+            return safetyTips.filter(t => gs.has(t.group)).slice(0, max);
+        }
+        function tipLink(t) {
+            return `<a href="${esc(t.link || '#')}" target="_blank" rel="noopener noreferrer" class="text-emerald-800 dark:text-emerald-200 hover:underline">${esc(t.title)}</a> <span class="text-slate-400">${esc(t.source || '')}</span>`;
+        }
         const IMPACT_RE = /사망|숨져|숨진|숨졌|사상|중상|중태|의식\s*불명|심정지|부상|다쳐|다친|대피|실종|붕괴|폭발|전소|이재민|피해액|\d+\s*억|수백|수십\s*명|일가족|어린이|초등생|아동/;
         function briefAnalyze(days) {
             const c = briefCenter();
@@ -6809,16 +7209,21 @@
         }
         function briefSection(title, a, days) {
             const evRow = (ev, i) => {
-                const n = ev.lead, g = groupOf(n), tip = (BRIEF_TIPS[g] || [])[0];
+                const n = ev.lead, g = groupOf(n), tip = (BRIEF_TIPS[g] || [])[0], art = tipsFor([g], 1)[0];
                 return `<li class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-1">
                     <div class="flex flex-wrap items-center gap-1 text-[0.6875rem]"><b class="text-indigo-600 dark:text-indigo-300">${i + 1}.</b>${tagBadges(n)}<span class="text-slate-400">${esc(shortTime(n))} · ${esc((n.location || '').replace('대한민국 (세부 위치 미상)', '위치 미상'))}${ev.items.length > 1 ? ' · 관련 기사 ' + ev.items.length + '개' : ''}</span></div>
                     <button onclick="closeSheet(); openHeadline(${n.id})" class="block text-left text-sm font-bold text-slate-900 dark:text-white hover:text-indigo-600 leading-snug" style="white-space: normal;">${esc(n.title)}</button>
                     ${n.summary && n.summary !== n.title ? `<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">${esc(n.summary)}</p>` : ''}
                     ${tip ? `<p class="text-[0.6875rem] text-emerald-700 dark:text-emerald-300">🛡 예방·주의: ${esc(tip)}</p>` : ''}
+                    ${art ? `<p class="text-[0.6875rem] text-emerald-700 dark:text-emerald-300">📰 관련 예방 기사: ${tipLink(art)}</p>` : ''}
                 </li>`;
             };
             const groupsTxt = a.topGroups.length ? a.topGroups.map(x => `${CATEGORY_GROUPS[x.g] ? CATEGORY_GROUPS[x.g].label.replace(/^[^\s가-힣]+\s/, '') : x.g} ${x.n}건`).join(', ') : '없음';
             const tips = a.topGroups.slice(0, 3).map(x => (BRIEF_TIPS[x.g] || []).slice(0, 2).map(t => `<li>• <b>${esc(CATEGORY_GROUPS[x.g] ? CATEGORY_GROUPS[x.g].label.replace(/^[^\s가-힣]+\s/, '') : x.g)}</b> — ${esc(t)}</li>`).join('')).join('');
+            // 이 기간에 많았던 사건 유형과 같은 분류의 예방·대처 기사 (주간 보고에서는 더 많이)
+            let tipArts = tipsFor(a.topGroups.map(x => x.g), days === 1 ? 3 : 5);
+            if (!tipArts.length && days !== 1) tipArts = safetyTips.slice(0, 3);     // 같은 분류가 없으면 주간 보고에 최신 예방 정보라도
+            const tipArtsHtml = tipArts.length ? `<div class="rounded-xl border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/30 p-3"><div class="text-xs font-bold text-teal-700 dark:text-teal-300 mb-1">📰 함께 보면 좋은 예방·대처 정보 <span class="font-normal text-slate-400">(사건 기사가 아니라 따로 모은 예방 기사)</span></div><ul class="text-xs text-slate-700 dark:text-slate-200 space-y-1">${tipArts.map(t => `<li>• <span class="text-[0.625rem] px-1 rounded bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200">${esc(t.category || '')}</span> ${tipLink(t)}</li>`).join('')}</ul></div>` : '';
             return `<section class="space-y-3">
                 <h3 class="text-base font-extrabold text-slate-900 dark:text-white border-l-4 border-indigo-500 pl-2">${title}</h3>
                 <div class="rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 p-3 text-sm text-slate-800 dark:text-slate-100 leading-relaxed">
@@ -6828,6 +7233,7 @@
                 ${a.attention.length ? `<div><div class="text-xs font-bold text-slate-500 mb-1.5">🔥 가장 주목받은 사건 (보도가 많은 순)</div><ol class="space-y-2">${a.attention.slice(0, days === 1 ? 3 : 5).map(evRow).join('')}</ol></div>` : ''}
                 ${a.impactful.length ? `<div><div class="text-xs font-bold text-slate-500 mb-1.5">⚠️ 파장이 큰 사건 (인명·재산 피해 중심)</div><ol class="space-y-2">${a.impactful.map(evRow).join('')}</ol></div>` : ''}
                 ${tips ? `<div class="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-3"><div class="text-xs font-bold text-emerald-700 dark:text-emerald-300 mb-1">🛡 이렇게 예방하세요</div><ul class="text-xs text-slate-700 dark:text-slate-200 space-y-0.5">${tips}</ul></div>` : ''}
+                ${tipArtsHtml}
                 ${a.scams.length ? `<div class="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3"><div class="text-xs font-bold text-amber-700 dark:text-amber-300 mb-1">📵 요즘 유행하는 피싱·사기 수법 (전국 보도 기준)</div><ul class="text-xs text-slate-700 dark:text-slate-200 space-y-1">${a.scams.map(s => `<li>• <b>${esc(s.name)}</b> <span class="text-slate-400">기사 ${s.n}건</span><br><span class="text-amber-800 dark:text-amber-200">주의: ${esc(s.tip)}</span></li>`).join('')}</ul></div>` : ''}
             </section>`;
         }
