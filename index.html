@@ -167,6 +167,9 @@
         /* 3칸 영역을 하나의 층으로 묶어서, 칸 안의 버튼(알림·안전시설·지도 모양)이 위에 뜨는 창(커뮤니티 등)을 뚫고 나오지 않게 함 */
         #splitContainer { isolation: isolate; position: relative; z-index: 0; }
         #floatModal { z-index: 1000; }
+        /* 맨 위 제목 줄: 글씨 고정(zoom) 때문에 따로 쌓임 순서(stacking context)가 생겨서, 안의 [화면 설정] 창(z 1200)이
+           아래 본문(분류 버튼·지도)에 가려지던 문제 → 제목 줄 자체를 본문보다 위로 올림 (창·시트 모달 1250 보다는 아래) */
+        body > header, #appHeader { position: relative; z-index: 1001; }
         /* 칸 너비를 줄이거나 늘려도 글자가 세로로 한 글자씩 쪼개지지 않게: 버튼·칩은 한 줄로, 넘치면 옆으로 넘겨 보기 */
         .panel button, .panel select, .nowrap-kids > * { white-space: nowrap; }
         .panel .wrap-ok, .panel .wrap-ok * { white-space: normal; }
@@ -431,9 +434,7 @@
             <div>
                 <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     우리동네 사건사고 
-                    <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-mono shadow-sm">전국 실시간 관제</span>
-                    <span id="staleBadge" class="hidden text-[0.6875rem] px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold whitespace-nowrap" title="수집 서버(GitHub Actions)가 잠시 멈췄을 수 있습니다. 보통 몇 분~수십 분 안에 다시 이어집니다."></span>
-                </h1>
+                    <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-mono shadow-sm">전국 실시간 관제</span>                </h1>
                 <p class="text-xs text-slate-500 dark:text-slate-400">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</p>
             </div>
         </div>
@@ -490,10 +491,12 @@
                     <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1 min-w-0 overflow-hidden">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 전국 지역별 상세 필터
                     </span>
+                    <!-- 평소: 초록 '실시간 업데이트 중' / 수집이 멈추면(최근 기사가 90분 넘게 없거나 news.json 을 못 읽으면): 같은 자리에 노란 '기사 수집 지연 중' -->
                     <span id="liveStatus" title="1초마다 새 기사를 확인하고, 새 기사가 올라오면 새로고침 없이 바로 목록에 추가합니다" class="ml-auto flex items-center gap-1.5 text-[0.6875rem] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
                         <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-500"></span></span>
                         실시간 업데이트 중 <span class="live-dots"><i></i><i></i><i></i></span>
                     </span>
+                    <span id="staleStatus" class="hidden ml-auto items-center gap-1 text-[0.6875rem] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0 whitespace-nowrap" title="수집 서버(GitHub Actions)가 잠시 멈췄을 수 있습니다. 보통 몇 분~수십 분 안에 다시 이어지고, 다시 이어지면 자동으로 '실시간 업데이트 중'으로 돌아갑니다."></span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-1.5">
@@ -1408,15 +1411,25 @@
                 showAlertToast({ head: '🔄 새 버전', title: '웹사이트 화면이 새 버전으로 업데이트되었습니다. 편할 때 누르면 새 화면으로 바뀝니다. (기사 목록은 지금도 자동으로 계속 업데이트됩니다)', reload: true });
             } catch (e) {}
         }
-        // 수집 지연 표시: 가장 최근 기사가 90분 넘게 지났으면 맨 위 제목 옆에 노란 표시 (수집 서버가 멈춘 걸 바로 알 수 있게)
+        // 수집 지연 표시: 가장 최근 기사가 90분 넘게 지났거나 news.json 을 연달아 못 읽으면,
+        //   사건 목록 위 '실시간 업데이트 중'(초록) 자리를 노란 '기사 수집 지연 중'으로 바꿔 보여 줌. 수집이 다시 이어지면 자동으로 초록으로 돌아감
         let newestNewsTs = 0;
+        let newsLoadFails = 0;          // news.json 을 연달아 못 읽은 횟수 (네트워크·서버 문제)
         function updateStaleBadge() {
-            const el = document.getElementById('staleBadge');
-            if (!el || !newestNewsTs) return;
-            const min = Math.floor((Date.now() / 1000 - newestNewsTs) / 60);
-            const stale = min >= 90;
-            el.classList.toggle('hidden', !stale);
-            if (stale) el.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> 기사 수집 지연 · 최근 기사 ${min >= 120 ? Math.floor(min / 60) + '시간 ' + (min % 60) + '분' : min + '분'} 전`;
+            const live = document.getElementById('liveStatus'), warn = document.getElementById('staleStatus');
+            if (!live || !warn) return;
+            const min = newestNewsTs ? Math.floor((Date.now() / 1000 - newestNewsTs) / 60) : 0;
+            const stale = (newestNewsTs && min >= 90) || newsLoadFails >= 30;
+            live.classList.toggle('hidden', !!stale);
+            live.classList.toggle('flex', !stale);
+            warn.classList.toggle('hidden', !stale);
+            warn.classList.toggle('flex', !!stale);
+            if (stale) {
+                warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> 기사 수집 지연 중`;
+                // 몇 분 전 기사인지는 마우스를 올리면 보이게 (좁은 칸에서도 한 줄로 보이도록)
+                warn.title = (newestNewsTs && min >= 90 ? '가장 최근 기사: ' + (min >= 120 ? Math.floor(min / 60) + '시간 ' + (min % 60) + '분' : min + '분') + ' 전. ' : '기사 목록을 읽어 오지 못하고 있습니다. ')
+                    + '수집 서버(GitHub Actions)가 잠시 멈췄을 수 있습니다. 다시 이어지면 자동으로 \'실시간 업데이트 중\'으로 돌아갑니다.';
+            }
         }
         setInterval(updateStaleBadge, 60000);
         async function loadIncidentsFromJSON(isManualRefresh = false) {
@@ -1442,8 +1455,10 @@
                 const res = await fetch('news.json?t=' + Date.now(), { cache: 'no-store' });
                 lastCheckAt = Date.now();
                 try { lastTag = pendingTag || res.headers.get('etag') || res.headers.get('last-modified') || lastTag; } catch (e) {}
+                if (!res.ok) { newsLoadFails++; updateStaleBadge(); }
                 if (res.ok) {
                     let data = await res.json();
+                    newsLoadFails = 0;
                     if (Array.isArray(data) && data.length > 0) {
                         await loadHighways();
                         data.forEach(n => { n.timestamp = Number(n.timestamp) || 0; fixRouteLocation(n); });
@@ -1465,7 +1480,7 @@
                         }
                     }
                 }
-            } catch (e) { console.log("데이터 대기 중..."); }
+            } catch (e) { console.log("데이터 대기 중..."); newsLoadFails++; updateStaleBadge(); }
 
             if (newsData.length === 0) {
                 newsData = [{
@@ -3409,6 +3424,89 @@
         function myArea() { return myTown ? [myTown.sido, myTown.sigungu, myTown.dong].join(' ') : ''; }
         // 글·채팅에 함께 저장하는 내 정보 (닉네임·아이콘·프로필 사진·사는 지역)
         function meFields() { const o = { nick: myNick(), emoji: commProfile.emoji || '🙂', area: myArea() }; if (myPhoto()) o.photo = myPhoto(); return o; }
+
+        // ================= 예시 게시물 (체험 모드 전용) =================
+        //  다른 이웃이 올려야만 보이는 화면(팔로잉 소식·게시판·맛집·장터 등)이 실제로 어떻게 보이는지 확인할 수 있도록
+        //  게시판마다 5개씩 '(예시)' 글을 화면에만 끼워 넣습니다.
+        //  · 서버(Firebase)를 연결하면 자동으로 나오지 않음 (FIREBASE_CONFIG 가 있으면 끔)
+        //  · 이 기기 저장소(localStorage)에는 저장하지 않음 (저장 함수에서 demoStrip 으로 걸러 냄)
+        //  · 내 프로필 ⚙️ 설정에서 '예시 게시물 보기'를 끄면 사라짐
+        const DEMO_PEOPLE = [
+            { uid: 'demo_u1', nick: '산책하는 다람쥐 (예시)', emoji: '🐿️' }, { uid: 'demo_u2', nick: '빵순이 (예시)', emoji: '🥐' },
+            { uid: 'demo_u3', nick: '자전거 아빠 (예시)', emoji: '🚲' }, { uid: 'demo_u4', nick: '고양이 집사 (예시)', emoji: '🐱' },
+            { uid: 'demo_u5', nick: '새벽 러너 (예시)', emoji: '🏃' }
+        ];
+        const DEMO_T0 = Date.now();
+        function demoOn() { return !FIREBASE_CONFIG && lsGet('demo_samples_off') !== '1'; }
+        function demoStrip(list) { return (list || []).filter(x => !x || !x.demo); }
+        function demoMerge(list, kind) {
+            list = demoStrip(list);
+            if (!demoOn()) return list;
+            return list.concat(demoItems(kind));
+        }
+        const demoCache = {};
+        function demoItems(kind) {
+            if (demoCache[kind]) return demoCache[kind];
+            const area = (typeof myArea === 'function' && myArea()) || '우리 동네';
+            const who = i => Object.assign({ area: area, demo: true }, DEMO_PEOPLE[i % 5]);
+            const ago = min => DEMO_T0 - min * 60000;
+            const mk = (i, min, extra) => Object.assign({ id: 'demo-' + kind + '-' + i, ts: ago(min), views: 3 + i * 7 }, who(i), extra);
+            const rows = {
+                talk: [
+                    ['report', '교통사고', '[예시] 사거리 앞 승용차 두 대 접촉사고', '방금 큰 사거리 앞에서 승용차 두 대가 부딪혔어요. 다친 사람은 없어 보이고 경찰이 와서 정리 중이에요. 이쪽 지나가실 분들 참고하세요.'],
+                    ['report', '화재', '[예시] 상가 건물 1층에서 연기 나요', '시장 입구 상가 1층에서 연기가 조금 났는데 소방차 두 대 와서 바로 껐어요. 지금은 정리 중입니다.'],
+                    ['report', '실종', '[예시] 초록색 점퍼 입은 할아버지 찾습니다', '치매가 있으신 80대 할아버지가 오전에 집을 나가셨어요. 초록색 점퍼, 회색 모자. 보신 분은 댓글이나 112로 알려 주세요.'],
+                    ['report', '생활안전', '[예시] 공원 산책로 가로수 쓰러짐', '어젯밤 바람에 산책로 가로수 하나가 쓰러져 길을 막고 있어요. 구청에 신고했고 오후에 치운대요.'],
+                    ['report', '교통', '[예시] 초등학교 앞 도로 공사로 한 차로 통제', '이번 주 금요일까지 초등학교 앞 도로가 한 차로만 다녀요. 등하굣길 조심하세요.']],
+                free: [['일상', '[예시] 오늘 하늘 진짜 맑네요', '퇴근길에 본 노을이 너무 예뻐서 공유해요. 다들 좋은 저녁 보내세요 🙂'],
+                    ['질문', '[예시] 동네에 소아과 추천 부탁드려요', '아이가 감기 기운이 있는데 대기 짧은 소아과 아시는 분 계신가요?'],
+                    ['정보', '[예시] 주민센터 무료 요가 수업 모집', '다음 달부터 화·목 저녁 7시에 주민센터에서 무료 요가 수업 한대요. 선착순 20명이래요.'],
+                    ['추천', '[예시] 새로 생긴 도서관 열람실 좋아요', '조용하고 콘센트도 자리마다 있어요. 주말엔 일찍 가야 자리 있어요.'],
+                    ['모임', '[예시] 주말 아침 배드민턴 같이 치실 분', '토요일 아침 8시 근린공원에서 배드민턴 쳐요. 초보도 환영합니다!']],
+                hello: [['', '[예시] 새로 이사 왔어요 반갑습니다', '지난주에 이사 왔어요. 아이 둘 키우는데 산책 코스 추천해 주세요!'],
+                    ['', '[예시] 직장 때문에 혼자 이사 왔어요', '혼밥하기 좋은 식당 알려 주시면 감사하겠습니다 🙏'],
+                    ['', '[예시] 강아지랑 같이 이사 왔어요', '말티즈 한 마리랑 왔어요. 산책하다 만나면 인사해요 🐶'],
+                    ['', '[예시] 신혼집을 이 동네로 구했어요', '조용하고 공원이 가까워서 좋네요. 잘 부탁드립니다.'],
+                    ['', '[예시] 20년 만에 고향 동네로 돌아왔어요', '많이 바뀌었네요! 요즘 핫한 곳 알려 주세요.']],
+                wish: [['도로·교통', '[예시] 초등학교 앞 횡단보도 신호가 너무 짧아요', '어르신이나 아이들이 다 건너기 전에 신호가 바뀌어요. 신호 시간이 조금 늘었으면 좋겠어요.'],
+                    ['안전·치안', '[예시] 공원 뒷길 가로등이 꺼져 있어요', '밤에 너무 어두워서 무서워요. 가로등 수리가 필요해요.'],
+                    ['쓰레기·청결', '[예시] 분리수거장 주변 무단 투기', '주말마다 대형 쓰레기가 쌓여요. 안내판이라도 있었으면 해요.'],
+                    ['시설·편의', '[예시] 버스 정류장에 의자가 없어요', '어르신들이 서서 오래 기다리세요. 의자랑 햇빛 가림막이 생겼으면 좋겠어요.'],
+                    ['소음·냄새', '[예시] 새벽 공사 소음', '새벽 6시부터 공사 소음이 심해요. 작업 시간을 지켜 주셨으면 해요.']],
+                praise: [['place', '[예시] 하천 산책로가 정말 깨끗해졌어요', '매일 아침 청소해 주시는 분들 덕분이에요. 감사합니다!'],
+                    ['deed', '[예시] 지갑을 찾아 주신 편의점 사장님', '떨어뜨린 지갑을 보관해 두셨다가 돌려주셨어요. 정말 감사합니다.'],
+                    ['neighbor', '[예시] 눈 오는 날 계단 눈 치워 주신 이웃', '아침에 나가 보니 계단 눈이 다 치워져 있었어요. 덕분에 안 미끄러졌어요.'],
+                    ['idea', '[예시] 아파트 나눔 선반 아이디어 좋아요', '안 쓰는 물건을 올려두고 필요한 사람이 가져가는 선반, 우리 동네에도 생겼으면!'],
+                    ['place', '[예시] 새로 생긴 어린이 놀이터', '바닥이 푹신해서 아이들이 넘어져도 안심이에요.']],
+                food: [['한식', '할매 칼국수 (예시)', '시장 입구', 5, '바지락이 듬뿍, 국물이 시원해요. 점심엔 줄을 서요.'],
+                    ['카페·디저트', '골목 끝 카페 (예시)', '주민센터 뒤', 4, '조용하고 디저트가 맛있어요. 공부하기 좋아요.'],
+                    ['분식', '학교 앞 떡볶이 (예시)', '초등학교 앞', 5, '30년 된 집이에요. 어묵 국물이 일품!'],
+                    ['고기·구이', '동네 삼겹살 (예시)', '먹자골목', 4, '고기 질이 좋고 사장님이 친절해요.'],
+                    ['빵집', '아침 빵집 (예시)', '버스정류장 옆', 5, '아침 7시에 나오는 소금빵이 최고예요.']],
+                spot: [['공원·산책길', '하천 벚꽃길 (예시)', '하천변', 5, '4월엔 벚꽃이 장관이에요. 저녁 산책하기 좋아요.'],
+                    ['야경·풍경', '언덕 위 전망대 (예시)', '뒷산 정상', 4, '해 질 녘 노을이 정말 예뻐요.'],
+                    ['아이와 함께', '구립 어린이 도서관 (예시)', '주민센터 2층', 5, '책도 많고 놀이 공간도 있어요.'],
+                    ['운동·체육', '근린공원 배드민턴장 (예시)', '근린공원', 4, '아침마다 동호회 분들이 계세요.'],
+                    ['카페·쉼터', '숲속 쉼터 (예시)', '둘레길 중간', 4, '나무 그늘이 좋아서 여름에도 시원해요.']],
+                market: [['판매', '아기 유모차 (예시)', '50,000원', '1년 사용했어요. 깨끗합니다.'], ['나눔', '화분 3개 무료 나눔 (예시)', '무료', '이사 가면서 나눔해요. 직접 가져가실 분.'],
+                    ['판매', '접이식 자전거 (예시)', '120,000원', '출퇴근용으로 탔어요. 기어 잘 들어가요.'], ['교환', '보드게임 교환해요 (예시)', '교환', '루미큐브 ↔ 다른 보드게임'],
+                    ['구함', '초등 수학 문제집 구해요 (예시)', '협의', '3학년 2학기 문제집 찾아요.']],
+                feed: [['오늘 아침 산책길에 만난 고양이 🐈 동네 고양이들이 다 순해요.', 25], ['새로 생긴 빵집 소금빵 먹어 봤어요. 진짜 맛있어요 🥐', 70],
+                    ['주말에 아이랑 자전거 타고 하천 끝까지 다녀왔어요. 날씨가 딱 좋았어요 🚲', 160], ['집사 3년 차, 우리 집 고양이 생일이에요 🎂', 320], ['새벽 5km 완주! 같이 뛰실 분 구해요 🏃', 600]]
+            };
+            const src = rows[kind] || [];
+            let out;
+            if (kind === 'talk') out = src.map((r, i) => mk(i, 8 + i * 37, { type: r[0], kind: r[1], title: r[2], text: r[3], town: area, likes: i % 2 ? [] : ['x', 'y'] }));
+            else if (kind === 'free') out = src.map((r, i) => mk(i, 15 + i * 53, { type: 'talk', kind: r[0], title: r[1], text: r[2], likes: ['x'] }));
+            else if (kind === 'hello') out = src.map((r, i) => mk(i, 30 + i * 90, { type: 'post', title: r[1], text: r[2], welcome: ['x', 'y', 'z'].slice(0, i % 3 + 1) }));
+            else if (kind === 'wish') out = src.map((r, i) => mk(i, 40 + i * 70, { type: 'post', kind: r[0], title: r[1], text: r[2], welcome: ['x', 'y', 'z', 'w'].slice(0, 4 - (i % 4)) }));
+            else if (kind === 'praise') out = src.map((r, i) => mk(i, 20 + i * 65, { type: 'post', kind: r[0], title: r[1], text: r[2], likes: ['x', 'y'] }));
+            else if (kind === 'food' || kind === 'spot') out = src.map((r, i) => mk(i, 50 + i * 80, { type: 'post', kind: r[0], name: r[1], place: r[2], rating: r[3], text: r[4] }));
+            else if (kind === 'market') out = src.map((r, i) => mk(i, 35 + i * 75, { kind: r[0], title: r[1], price: r[2], desc: r[3], contact: '', img: '', status: 'open', chat: [], townKey: '' }));
+            else if (kind === 'feed') out = src.map((r, i) => mk(i, r[1], { text: r[0], media: [], hearts: { a: 1, b: 1, c: 1 }, reacts: { d: '😂' }, comments: i + 1, pub: true }));
+            else out = [];
+            return (demoCache[kind] = out);
+        }
         // 프로필 그림: 앨범에서 고른 사진이 있으면 사진, 없으면 이모지
         function avatarHtml(o, box, text) {
             const ph = o && o.photo && PHOTO_RE.test(o.photo) ? o.photo : '';
@@ -3717,7 +3815,7 @@
         function commLocalRead(key) { try { return JSON.parse(lsGet('comm_msgs_' + key) || '[]'); } catch (e) { return []; } }
         function commLocalWrite(key, list) {
             // 동영상(임시 주소)은 저장하지 않고, 용량이 넘치면 사진도 빼고 저장
-            const slim = list.slice(0, 200).map(m => m.videoLocal ? Object.assign({}, m, { video: '' }) : m);
+            const slim = demoStrip(list).slice(0, 200).map(m => m.videoLocal ? Object.assign({}, m, { video: '' }) : m);
             if (!lsSet('comm_msgs_' + key, JSON.stringify(slim))) {
                 lsSet('comm_msgs_' + key, JSON.stringify(slim.map(m => Object.assign({}, m, { img: '' }))));
             }
@@ -3747,7 +3845,7 @@
                     renderCommMembers();
                 }, err => console.error(err));
             } else {
-                commMessages = commLocalRead(key);
+                commMessages = demoMerge(commLocalRead(key), 'talk');
                 renderCommMessages();
             }
             subscribeLives();          // 우리 동네 실시간 방송
@@ -4172,10 +4270,18 @@
         }
 
         // 프로필 카드
-        function closeProfile() { const c = document.getElementById('commProfileCard'); if (c) c.classList.add('hidden'); }
+        function closeProfile() {
+            const c = document.getElementById('commProfileCard');
+            const wasOpen = c && !c.classList.contains('hidden');
+            if (c) c.classList.add('hidden');
+            // '내 프로필' 탭 위에 다른 프로필을 띄웠다 닫으면, 탭의 '내 일상' 격자를 다시 그림 (같은 id 를 잠시 넘겨줬으므로)
+            if (wasOpen && commTab === 'me' && document.getElementById('meTab')) { feedOpen = null; feedDraft = null; stopFeedComments(); renderMeTab(); }
+        }
         function showProfile(uid) {
             const card = document.getElementById('commProfileCard');
             if (!card) return;
+            // '내 프로필' 탭에도 같은 id(pfFeed·pfStats)가 있어서, 프로필 창을 띄우는 동안은 탭 쪽 id 를 비켜 둠
+            document.querySelectorAll('#meTab #pfFeed, #meTab #pfStats').forEach(el => { el.id = el.id + 'Tab'; });
             const mine = uid === COMM_UID;
             let m = commMembers.find(x => x.uid === uid);
             if (!m) {
@@ -4190,21 +4296,26 @@
             // 인스타그램처럼: 위쪽은 프로필(사진·이름·소개·숫자·버튼), 아래쪽은 이 사람이 올린 일상 게시물 격자
             card.innerHTML = `
                 <div class="relative w-full max-w-md max-h-full overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 text-center" onclick="event.stopPropagation()">
-                    ${mine ? '' : `<button onclick="openPeerManage('${esc(uid)}')" title="이 이웃 관리: 팔로워 삭제 · 내 게시물 숨기기 · 제한 · 이름 바꾸기 · 차단" class="absolute top-3 right-3 z-10 inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 hover:border-fuchsia-400 hover:text-fuchsia-600"><i class="fa-solid fa-gear"></i> 관리</button>`}
+                    <div class="absolute top-3 right-3 z-10 flex items-center gap-1">
+                        ${mine ? `<button onclick="openMySettings()" title="내 프로필 설정: 게시물 공개 · 인기쟁이 순위 공개 · 차단 관리" class="w-8 h-8 inline-flex items-center justify-center rounded-full text-slate-500 hover:text-fuchsia-600 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-gear"></i></button>`
+                            : `<button onclick="openPeerManage('${esc(uid)}')" title="이 이웃 관리: 팔로워 삭제 · 내 게시물 숨기기 · 제한 · 이름 바꾸기 · 차단" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-600 bg-white/90 dark:bg-slate-800/90 text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300 hover:border-fuchsia-400 hover:text-fuchsia-600"><i class="fa-solid fa-gear"></i> 관리</button>`}
+                        <button onclick="closeProfile()" title="닫기" class="w-8 h-8 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
                     ${!mine && (peerPref(uid, 'hide') || peerPref(uid, 'restrict')) ? `<div class="mb-2 text-[0.625rem] font-bold text-fuchsia-600 text-left">${peerPref(uid, 'hide') ? '👁‍🗨 내 게시물 숨김' : ''}${peerPref(uid, 'hide') && peerPref(uid, 'restrict') ? ' · ' : ''}${peerPref(uid, 'restrict') ? '🔇 제한 중' : ''}</div>` : ''}
-                    <div class="flex items-center gap-4 text-left ${mine ? '' : 'pr-14'}">
-                        <div class="shrink-0 p-[3px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600"><div class="rounded-full bg-white dark:bg-slate-900 p-[2px]">${avatarHtml(m, 'w-20 h-20', 'text-4xl')}</div></div>
+                    <div class="flex items-center gap-3 text-left ${mine ? 'pr-16' : 'pr-24'}">
+                        ${mine ? `<button onclick="editAvatar()" title="눌러서 프로필 사진·아이콘 바꾸기" class="relative shrink-0 p-[2px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 hover:scale-105 transition"><span class="block rounded-full bg-white dark:bg-slate-900 p-[2px]">${avatarHtml(m, 'w-16 h-16', 'text-3xl')}</span><span class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[0.5625rem] inline-flex items-center justify-center border-2 border-white dark:border-slate-900"><i class="fa-solid fa-camera"></i></span></button>`
+                            : `<div class="shrink-0 p-[3px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600"><div class="rounded-full bg-white dark:bg-slate-900 p-[2px]">${avatarHtml(m, 'w-20 h-20', 'text-4xl')}</div></div>`}
                         <div class="min-w-0 flex-1">
-                            <div class="text-base font-bold text-slate-900 dark:text-white truncate">${esc(displayName(uid, m.nick))}${mine ? ' (나)' : ''}</div>
+                            <div class="flex items-center gap-1 min-w-0"><span class="text-base font-bold text-slate-900 dark:text-white truncate">${esc(displayName(uid, m.nick))}</span>${mine ? `<button onclick="editNick()" title="닉네임·한 줄 소개 수정" class="shrink-0 w-5 h-5 inline-flex items-center justify-center rounded text-[0.625rem] text-slate-400 hover:text-fuchsia-600 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-pen"></i></button>` : ''}</div>
                             ${!mine && friendAlias(uid) ? `<div class="text-[0.625rem] text-slate-400">원래 이름: ${esc(m.nick || '이웃')}</div>` : ''}
-                            <div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate"><i class="fa-solid fa-location-dot"></i> ${esc(area || (myTown ? myArea() : '지역 미상'))} <span class="font-normal text-slate-500">${area && myTown && area !== myArea() ? '· 다른 동네 이웃' : (myTown ? '· ' + esc(myTown.dong) + ' 이웃' : '')}</span></div>
-                            <div id="pfStats" class="mt-1.5 grid grid-cols-3 gap-1 text-center">${feedStatsHtml(null)}</div>
+                            ${mine ? '' : `<div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate"><i class="fa-solid fa-location-dot"></i> ${esc(area || '지역 미상')} <span class="font-normal text-slate-500">${area && myTown && area !== myArea() ? '· 다른 동네 이웃' : (myTown ? '· ' + esc(myTown.dong) + ' 이웃' : '')}</span></div>`}
+                            <p class="text-xs text-slate-600 dark:text-slate-300 break-words">${esc(m.intro || (mine ? '한 줄 소개를 적어 보세요.' : '아직 소개가 없습니다.'))}</p>
+                            <div class="mt-1.5 flex flex-wrap items-center gap-1"><span id="pfFollow" class="inline-flex gap-1">${followCountsHtml(uid, followCache[uid] || (mine ? { following: Object.keys(following).map(u => ({ uid: u })), followers: followers } : null))}</span>${mine ? `<span id="pfTrust">${trustChipHtml(trustCache[uid])}</span>` : ''}</div>
                         </div>
                     </div>
-                    <p class="mt-3 text-sm text-slate-700 dark:text-slate-200 break-words text-left">${esc(m.intro || '아직 소개가 없습니다.')}</p>
-                    <div class="mt-1 text-[0.6875rem] text-slate-500 text-left">게시판 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}${!mine && followsMe(uid) ? ' · <b class="text-fuchsia-600">나를 팔로우해요</b>' : ''}</div>
-                    <div id="pfFollow" class="mt-2 flex gap-1.5">${followCountsHtml(uid, followCache[uid] || (mine ? { following: Object.keys(following).map(u => ({ uid: u })), followers: followers } : null))}</div>
-                    <div id="pfTrust" class="mt-2">${trustHtml(trustCache[uid])}</div>
+                    <div id="pfStats" class="mt-2 text-left">${feedStatsHtml(null)}</div>
+                    <div class="mt-0.5 text-[0.625rem] text-slate-400 text-left">게시판 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}${!mine && followsMe(uid) ? ' · <b class="text-fuchsia-600">나를 팔로우해요</b>' : ''}</div>
+                    ${mine ? '' : `<div id="pfTrust" class="mt-2">${trustHtml(trustCache[uid])}</div>`}
                     ${mine ? '' : `<div class="mt-2 flex items-center justify-center gap-1.5 text-[0.6875rem] text-slate-500"><span>대화 매너 평가</span><span id="mannerStars">${mannerStars(uid)}</span></div>
                     <div class="mt-3 flex flex-wrap gap-1.5 justify-center">${followButton(uid)}${chatButton(uid)}</div>
                     <div class="mt-1 text-[0.625rem] text-slate-400">팔로우는 바로 되고, 1:1 대화는 상대가 수락하거나 서로 팔로우(맞팔)하면 시작됩니다</div>
@@ -4213,12 +4324,7 @@
                         <button onclick="closeProfile(); startCall('${esc(uid)}', profileShown.nick, false)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold"><i class="fa-solid fa-phone"></i> 음성 통화</button>
                         <button onclick="closeProfile(); startCall('${esc(uid)}', profileShown.nick, true)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold"><i class="fa-solid fa-video"></i> 영상 통화</button>
                     </div>`}
-                    <div class="mt-3 flex gap-2 justify-center">
-                        ${mine ? '<button onclick="editProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">프로필 수정</button>' : ''}
-                        <button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">닫기</button>
-                    </div>
-                    ${mine ? feedPrivacyHtml() : ''}
-                    <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700 text-left">
+                    <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-left">
                         <div class="flex items-center justify-between mb-2">
                             <b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-cells"></i> ${mine ? '내 일상' : '일상 게시물'}</b>
                             ${mine ? `<button onclick="openFeedComposer()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-violet-600 text-white text-xs font-bold shadow"><i class="fa-solid fa-plus"></i> 새 게시물</button>` : ''}
@@ -4232,7 +4338,7 @@
             card.classList.remove('hidden');
             profileShown = { uid: uid, nick: m.nick || '이웃', emoji: m.emoji || '🙂', photo: m.photo || '', area: area };
             feedOpen = null; feedDraft = null; stopFeedComments();
-            loadTrust(uid).then(tr => { const el = document.getElementById('pfTrust'); if (el && profileShown.uid === uid) el.innerHTML = trustHtml(tr); });
+            loadTrust(uid).then(tr => { const el = document.getElementById('pfTrust'); if (el && profileShown.uid === uid) el.innerHTML = mine ? trustChipHtml(tr) : trustHtml(tr); });
             fillFollowCounts(uid, 'pfFollow');                  // 팔로워 · 팔로잉 숫자 (누르면 목록)
             // 상대가 '게시물 비공개'로 해 두었으면 격자 대신 자물쇠 안내
             const mem = commMembers.find(x => x.uid === uid);
@@ -4270,7 +4376,7 @@
             if (db) {
                 const snap = await feedCol().where('uid', '==', uid).limit(90).get();
                 posts = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
-            } else posts = uid === COMM_UID ? feedLocal() : [];
+            } else posts = uid === COMM_UID ? feedLocal() : (demoOn() ? demoItems('feed').filter(p => p.uid === uid) : []);
             feedCache[uid] = posts.filter(feedVisible).sort((a, b) => (b.ts || 0) - (a.ts || 0));
             return feedCache[uid];
         }
@@ -4278,8 +4384,17 @@
             const n = list ? list.length : '–';
             const hearts = list ? list.reduce((a, p) => a + feedCount(p.hearts) + feedCount(p.reacts), 0) : '–';
             const cmts = list ? list.reduce((a, p) => a + (p.comments || 0), 0) : '–';
-            const cell = (v, l) => `<div><div class="text-sm font-extrabold text-slate-900 dark:text-white">${v}</div><div class="text-[0.625rem] text-slate-500">${l}</div></div>`;
-            return cell(n, '게시물') + cell(hearts, '받은 ❤·감정') + cell(cmts, '댓글');
+            // 한 줄로 작게: '📷 게시물 3 · ❤ 받은 감정 12 · 💬 댓글 4'
+            const cell = (icon, v, l) => `<span class="inline-flex items-center gap-1"><span class="opacity-70">${icon}</span>${l} <b class="text-slate-800 dark:text-slate-100">${v}</b></span>`;
+            return `<div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.6875rem] text-slate-500">${cell('📷', n, '게시물')}${cell('❤', hearts, '받은 감정')}${cell('💬', cmts, '댓글')}</div>`;
+        }
+        // 작게 줄인 신뢰 지수 (내 프로필용): 점수·등급 한 줄. 누르면 신뢰 지수 기준 안내
+        function trustChipHtml(t) {
+            const score = t && t.count ? t.score : TRUST_BASE;
+            const enough = t && t.count >= TRUST_MIN_VOTES;
+            const col = trustColor(score);
+            const grade = enough ? trustLevel(score)[1] : (t && t.count ? '평가 부족' : '평가 없음');
+            return `<button onclick="showReportGuide()" title="${esc(TRUST_HELP)}" class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 border text-[0.6875rem] font-bold" style="border-color:${col[1]}; background:${col[2]}; color:${col[1]};"><i class="fa-solid fa-shield-halved text-[0.625rem]"></i>신뢰 ${score}<span class="font-semibold opacity-80">· ${esc(grade)}</span></button>`;
         }
         function feedLockedHtml() {
             return `<div class="text-center py-10 text-slate-400"><div class="text-3xl mb-1">🔒</div><div class="text-xs">이 이웃은 일상 게시물을 비공개로 설정했습니다.</div></div>`;
@@ -4628,12 +4743,12 @@
         //        여기서는 그 요약을 읽음 (다른 동네 게시판 전체를 읽지 않아 빠르고 가벼움). 체험 모드에서는 이 기기에 저장된 모든 동네 글로 계산.
         const NAT_BOARDS = {
             talk: { e: '🚨', n: '안전망', c: 'red' }, free: { e: '☕', n: '이런저런', c: 'sky' }, hello: { e: '👋', n: '이사왔어요', c: 'sky' },
-            wish: { e: '🙏', n: '아쉬워요', c: 'rose' }, praise: { e: '👏', n: '칭찬해요', c: 'amber' }, food: { e: '🍜', n: '맛집', c: 'orange' }, spot: { e: '🔥', n: '핫플', c: 'emerald' }
+            wish: { e: '🥺', n: '아쉬워요', c: 'rose' }, praise: { e: '👏', n: '칭찬해요', c: 'amber' }, food: { e: '🍜', n: '맛집', c: 'orange' }, spot: { e: '🔥', n: '핫플', c: 'emerald' }
         };
         // 모든 순위는 '전국 모든 동네를 합쳐 이번 달 공감이 가장 많은 것 10개'만 보여 줌 (동네별 1위는 없앰 → 모든 동네 글이 다 올라오는 문제 해결)
         const NAT_TOP = 10;
         const natPeopleInfo = {};            // 이달의 인기 이웃 TOP10 (uid → 닉네임·아이콘·지역). 이 이웃들에게는 동네가 달라도 팔로우·대화 요청 가능
-        const NAT_TABS = [['all', '🏆 종합'], ['posts', '🔥 인기 글'], ['good', '👍 좋았던 곳'], ['bad', '🙏 아쉬웠던 곳'], ['places', '🍜 맛집·핫플'], ['people', '👑 인기 이웃']];
+        const NAT_TABS = [['all', '🏆 종합'], ['posts', '🔥 인기 글'], ['good', '👍 좋았던 곳'], ['bad', '🥺 아쉬웠던 곳'], ['places', '🍜 맛집·핫플'], ['people', '👑 인기 이웃']];
         const NAT_SIDOS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
         const natState = { month: '', tab: 'all', sido: '', q: '', busy: false, data: null, key: '', open: null, where: 'sheet' };
         function monthKey(ms) { const d = kstDate(ms / 1000); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'); }
@@ -4970,7 +5085,7 @@
             else if (tab === 'all') {
                 body = natSection('🔥 전국 인기 글 TOP10', '전국 모든 동네 글 중 공감·댓글·조회가 가장 많은 10개 · 눌러서 내용 보기 (다른 동네 글은 공감만 가능)', 'posts', ol(f.posts, natPostRow, NAT_TOP) || natEmpty('이번 달 아직 공감을 받은 글이 없어요.<br>우리 동네 게시판에 글을 쓰고 이웃의 공감을 받아 보세요!'))
                     + `<div class="nat-duo">${natSection('👍 좋았던 곳', '칭찬해요 · 맛집 · 핫플 TOP10 중 5위까지', 'good', ol(f.good, x => x.kind === 'place' ? natPlaceRow(x, f.good.indexOf(x)) : natPostRow(x, f.good.indexOf(x)), 5) || natEmpty('아직 없어요'))}
-                        ${natSection('🙏 아쉬웠던 곳', '가장 많이 공감한 개선 요청 TOP10 중 5위까지', 'bad', ol(f.bad, natPostRow, 5) || natEmpty('아직 없어요'))}</div>`
+                        ${natSection('🥺 아쉬웠던 곳', '가장 많이 공감한 개선 요청 TOP10 중 5위까지', 'bad', ol(f.bad, natPostRow, 5) || natEmpty('아직 없어요'))}</div>`
                     + natSection('👑 이달의 인기 이웃 TOP10', '내 일상 게시물로 ❤를 가장 많이 받은 이웃 · 동네가 달라도 팔로우·대화 요청을 보낼 수 있어요', 'people', ol(f.people, natPersonRow, 5) || natEmpty('아직 순위에 오른 이웃이 없어요.<br>내 프로필에서 일상을 올리고 순위 공개를 켜 보세요.'));
             }
             else if (tab === 'posts') body = ol(f.posts, natPostRow, NAT_TOP) || natEmpty('조건에 맞는 글이 없어요.');
@@ -5014,17 +5129,21 @@
 
         let profileShown = { uid: '', nick: '', emoji: '', photo: '', area: '' };
         let commEditPhoto = null;     // 프로필 수정 중인 사진 (null=그대로, ''=지움, 그 외=새 사진)
-        function editProfile(keep) {
+        // mode: 'avatar' = 사진·아이콘만 (프로필 사진을 눌렀을 때) / 'nick' = 닉네임·한 줄 소개만 (닉네임 옆 ✏️) / 없으면 전부
+        let commEditMode = '';
+        function editProfile(keep, mode) {
             const card = document.getElementById('commProfileCard');
             const val = id => (document.getElementById(id) || {}).value;
-            const nick = keep ? val('pfNick') : commProfile.nick, intro = keep ? val('pfIntro') : commProfile.intro;
+            if (!keep) commEditMode = mode || '';
+            const showAv = commEditMode !== 'nick', showNick = commEditMode !== 'avatar';
+            const nick = keep && document.getElementById('pfNick') ? val('pfNick') : commProfile.nick, intro = keep && document.getElementById('pfIntro') ? val('pfIntro') : commProfile.intro;
             if (!keep) { commEditEmoji = commProfile.emoji || '🙂'; commEditPhoto = null; }
             const curPhoto = commEditPhoto === null ? myPhoto() : commEditPhoto;
             const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
             card.innerHTML = `
                 <div class="w-full max-w-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-5 space-y-3" onclick="event.stopPropagation()">
-                    <div class="text-sm font-bold text-slate-900 dark:text-white">내 프로필 수정</div>
-                    <div class="flex items-center gap-3">
+                    <div class="text-sm font-bold text-slate-900 dark:text-white">${commEditMode === 'avatar' ? '프로필 사진·아이콘 바꾸기' : (commEditMode === 'nick' ? '닉네임 · 한 줄 소개 수정' : '내 프로필 수정')}</div>
+                    <div class="flex items-center gap-3 ${showAv ? '' : 'hidden'}">
                         ${avatarHtml({ photo: curPhoto, emoji: commEditEmoji }, 'w-16 h-16', 'text-3xl')}
                         <div class="flex flex-col gap-1.5">
                             <input id="pfFile" type="file" accept="image/*" class="hidden" onchange="pickProfilePhoto(this)">
@@ -5032,11 +5151,11 @@
                             ${curPhoto ? '<button onclick="commEditPhoto = \'\'; editProfile(true)" class="text-[0.6875rem] text-red-500 hover:underline text-left">사진 지우고 아이콘 쓰기</button>' : '<span class="text-[0.625rem] text-slate-400">사진이 없으면 아래 아이콘이 쓰입니다</span>'}
                         </div>
                     </div>
-                    <div class="flex flex-wrap gap-1.5 justify-center">
+                    <div class="flex flex-wrap gap-1.5 justify-center ${showAv ? '' : 'hidden'}">
                         ${COMM_EMOJIS.map(e => `<button onclick="pickEmoji('${e}')" class="w-9 h-9 rounded-full text-xl border ${commEditEmoji === e ? 'border-emerald-500 ring-2 ring-emerald-400 bg-emerald-50 dark:bg-emerald-950' : 'border-slate-300 dark:border-slate-600'}">${e}</button>`).join('')}
                     </div>
-                    <input id="pfNick" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" class="${inp}">
-                    <input id="pfIntro" type="text" maxlength="40" placeholder="한 줄 소개 (최대 40자)" class="${inp}">
+                    <input id="pfNick" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" class="${inp} ${showNick ? '' : 'hidden'}">
+                    <input id="pfIntro" type="text" maxlength="40" placeholder="한 줄 소개 (최대 40자)" class="${inp} ${showNick ? '' : 'hidden'}">
                     <div class="flex gap-2 justify-end">
                         <button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">취소</button>
                         <button onclick="saveProfile()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">저장</button>
@@ -5083,49 +5202,75 @@
             const likes = mine.reduce((a, x) => a + pbLikes(x.b, x.p), 0);
             const feed = feedCache[COMM_UID];
             if (!feed) loadFeed(COMM_UID).then(() => { if (commTab === 'me') renderMeTab(); }).catch(() => {});
-            const stat = (v, l) => `<div class="rounded-xl bg-slate-50 dark:bg-slate-800/70 py-2"><div class="text-base font-black text-slate-900 dark:text-white">${v}</div><div class="text-[0.625rem] font-semibold text-slate-500">${l}</div></div>`;
-            const link = (fn, icon, label, n) => `<button onclick="${fn}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-fuchsia-300 dark:hover:border-fuchsia-800 hover:shadow-sm text-left transition">
-                <span class="w-8 h-8 rounded-lg bg-fuchsia-50 dark:bg-fuchsia-950/50 text-fuchsia-600 dark:text-fuchsia-300 flex items-center justify-center shrink-0"><i class="fa-solid ${icon}"></i></span>
-                <span class="flex-1 text-xs font-bold text-slate-800 dark:text-slate-100">${label}</span>${n ? `<span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${n}</span>` : '<i class="fa-solid fa-chevron-right text-[0.625rem] text-slate-300"></i>'}</button>`;
-            main.innerHTML = `<div id="meTab" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3 bg-slate-50/60 dark:bg-slate-950/40">
-                <div class="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                    <div class="h-16 bg-gradient-to-r from-fuchsia-500 via-rose-500 to-amber-400"></div>
-                    <div class="px-4 pb-4 -mt-9">
-                        <div class="flex items-end gap-3">
-                            <div class="shrink-0 p-[3px] rounded-full bg-white dark:bg-slate-900">${avatarHtml(meFields(), 'w-[4.5rem] h-[4.5rem]', 'text-4xl')}</div>
-                            <div class="min-w-0 flex-1 pb-1">
-                                <div class="text-base font-extrabold text-slate-900 dark:text-white truncate">${esc(myNick())}</div>
-                                <div class="text-[0.6875rem] font-semibold text-emerald-600 dark:text-emerald-400 truncate"><i class="fa-solid fa-location-dot"></i> ${esc(myTown ? townName(myTown) : '동네 인증 전')}</div>
+            // 2026-11 개편: 위쪽은 작고 깔끔한 프로필 한 줄(사진 누르면 사진·아이콘 수정, 닉네임 옆 ✏️로 이름 수정, 오른쪽 위 ⚙️ 설정),
+            //   그 아래 '내 일상' 게시물 격자를 바로 크게 보여 줌. 공개 설정·차단 관리·동네 재인증은 ⚙️ 설정 안으로. 위치 표시는 뺌
+            const fCnt = followers.filter(f => !isBlocked(f.uid)).length, gCnt = Object.keys(following).filter(u => !isBlocked(u)).length;
+            const pill = (fn, v, l) => `<button onclick="${fn}" class="inline-flex items-baseline gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/40 text-[0.6875rem] transition"><b class="text-slate-900 dark:text-white">${v}</b><span class="text-slate-500 font-semibold">${l}</span></button>`;
+            const priv = commProfile.feedPublic === false;
+            main.innerHTML = `<div id="meTab" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2.5 bg-slate-50/60 dark:bg-slate-950/40">
+                <div class="relative rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-3">
+                    <button onclick="openMySettings()" title="내 프로필 설정: 게시물 공개 · 인기쟁이 순위 공개 · 차단 관리 · 동네 다시 인증" class="absolute top-2.5 right-2.5 w-8 h-8 inline-flex items-center justify-center rounded-full text-slate-500 hover:text-fuchsia-600 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-gear"></i></button>
+                    <div class="flex items-center gap-3 pr-8">
+                        <button onclick="editAvatar()" title="눌러서 프로필 사진·아이콘 바꾸기" class="relative shrink-0 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 hover:scale-105 transition">
+                            <span class="block rounded-full bg-white dark:bg-slate-900 p-[2px]">${avatarHtml(meFields(), 'w-14 h-14', 'text-3xl')}</span>
+                            <span class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[0.5625rem] inline-flex items-center justify-center border-2 border-white dark:border-slate-900"><i class="fa-solid fa-camera"></i></span>
+                        </button>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1 min-w-0">
+                                <span class="text-[0.9375rem] font-extrabold text-slate-900 dark:text-white truncate">${esc(myNick())}</span>
+                                <button onclick="editNick()" title="닉네임·한 줄 소개 수정" class="shrink-0 w-5 h-5 inline-flex items-center justify-center rounded text-[0.625rem] text-slate-400 hover:text-fuchsia-600 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-pen"></i></button>
+                                ${priv ? '<span class="shrink-0 text-[0.625rem] text-slate-400" title="일상 게시물 비공개 중 (⚙️ 설정에서 바꿀 수 있어요)"><i class="fa-solid fa-lock"></i></span>' : ''}
                             </div>
-                            <button onclick="editProfile()" class="shrink-0 mb-1 px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold"><i class="fa-solid fa-pen"></i> 수정</button>
+                            <p class="text-xs text-slate-600 dark:text-slate-300 truncate">${esc(commProfile.intro || '한 줄 소개를 적어 보세요.')}</p>
+                            <div class="mt-1.5 flex flex-wrap items-center gap-1">
+                                ${pill(`openFollowList('${COMM_UID}', 'followers')`, fCnt, '팔로워')}${pill(`openFollowList('${COMM_UID}', 'following')`, gCnt, '팔로잉')}
+                                <span id="meTrust">${trustChipHtml(trustCache[COMM_UID])}</span>
+                            </div>
                         </div>
-                        <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words" style="white-space: normal;">${esc(commProfile.intro || '한 줄 소개를 적어 보세요.')}</p>
-                        <div class="mt-3 grid grid-cols-4 gap-1.5 text-center">${stat(mine.length, '게시판 글')}${stat(likes, '받은 공감')}
-                            <button onclick="openFollowList('${COMM_UID}', 'followers')" class="rounded-xl bg-slate-50 dark:bg-slate-800/70 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/40 py-2 transition"><div class="text-base font-black text-slate-900 dark:text-white">${followers.filter(f => !isBlocked(f.uid)).length}</div><div class="text-[0.625rem] font-semibold text-slate-500">팔로워</div></button>
-                            <button onclick="openFollowList('${COMM_UID}', 'following')" class="rounded-xl bg-slate-50 dark:bg-slate-800/70 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/40 py-2 transition"><div class="text-base font-black text-slate-900 dark:text-white">${Object.keys(following).filter(u => !isBlocked(u)).length}</div><div class="text-[0.625rem] font-semibold text-slate-500">팔로잉</div></button></div>
-                        <div class="mt-3 flex gap-2">
-                            <button onclick="showProfile('${COMM_UID}')" class="flex-1 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-violet-600 text-white text-xs font-extrabold shadow"><i class="fa-solid fa-table-cells"></i> 내 일상 보기${feed ? ' · ' + feed.length : ''}</button>
-                            <button onclick="showProfile('${COMM_UID}'); setTimeout(() => openFeedComposer(), 120)" class="flex-1 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-extrabold"><i class="fa-solid fa-plus"></i> 새 게시물</button>
-                        </div>
-                        ${feedPrivacyHtml()}
                     </div>
+                    <div id="pfStats" class="mt-2 text-left">${feedStatsHtml(feed || null)}</div>
                 </div>
-                <div class="grid grid-cols-2 gap-1.5">
-                    ${link("setCommTab('friends')", 'fa-newspaper', '팔로잉 소식', commUnseen.feed + commUnseen.follow)}
-                    ${link("setCommTab('dm')", 'fa-envelope', '1:1 대화', chatReqs.length)}
-                    ${link('showBlockList()', 'fa-ban', '차단 관리')}
-                    ${link('showReportGuide()', 'fa-scale-balanced', '신뢰 지수 · 가이드')}
+                <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-cells text-rose-500"></i> 내 일상${feed ? ` <span class="text-xs font-semibold text-slate-400">${feed.length}</span>` : ''}</b>
+                        <button onclick="openFeedComposer()" class="px-2.5 py-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-600 text-white text-[0.6875rem] font-bold shadow"><i class="fa-solid fa-plus"></i> 새 게시물</button>
+                    </div>
+                    <div id="pfFeed"><div class="text-center py-8 text-xs text-slate-400">게시물을 불러오는 중…</div></div>
                 </div>
-                <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
-                    <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white"><i class="fa-regular fa-file-lines"></i> 내가 쓴 글</b><span class="text-[0.6875rem] text-slate-400">${mine.length}개</span></div>
-                    ${mine.length ? mine.slice(0, 30).map(x => { const B = NAT_BOARDS[x.b] || NAT_BOARDS.free; return `<button onclick="setCommTab('${x.b}'); setTimeout(() => pbOpen('${x.b}', '${esc(x.p.id)}'), 30)" class="w-full flex items-center gap-2 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
-                        <span class="nat-board nat-c-${B.c} shrink-0">${B.e} ${B.n}</span><span class="flex-1 min-w-0 text-[0.8125rem] font-bold text-slate-800 dark:text-slate-100 truncate">${esc(pbTitle(x.p))}</span>
+                <div class="flex gap-1.5">
+                    <button onclick="setCommTab('friends')" class="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-fuchsia-300"><i class="fa-solid fa-newspaper text-fuchsia-500"></i> 팔로잉 소식${commUnseen.feed + commUnseen.follow ? ` <span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${commUnseen.feed + commUnseen.follow}</span>` : ''}</button>
+                    <button onclick="setCommTab('dm')" class="flex-1 inline-flex items-center justify-center gap-1.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-fuchsia-300"><i class="fa-solid fa-envelope text-fuchsia-500"></i> 1:1 대화${chatReqs.length ? ` <span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${chatReqs.length}</span>` : ''}</button>
+                </div>
+                <details class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 group">
+                    <summary class="px-4 py-2.5 flex items-center justify-between cursor-pointer list-none"><b class="text-xs text-slate-700 dark:text-slate-200"><i class="fa-regular fa-file-lines"></i> 내가 쓴 게시판 글 <span class="text-slate-400 font-semibold">${mine.length}개 · 받은 공감 ${likes}</span></b><i class="fa-solid fa-chevron-down text-[0.625rem] text-slate-400 group-open:rotate-180 transition"></i></summary>
+                    ${mine.length ? mine.slice(0, 30).map(x => { const B = NAT_BOARDS[x.b] || NAT_BOARDS.free; return `<button onclick="setCommTab('${x.b}'); setTimeout(() => pbOpen('${x.b}', '${esc(x.p.id)}'), 30)" class="w-full flex items-center gap-2 px-4 py-2 border-t border-slate-100 dark:border-slate-800 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                        <span class="nat-board nat-c-${B.c} shrink-0">${B.e} ${B.n}</span><span class="flex-1 min-w-0 text-xs font-bold text-slate-800 dark:text-slate-100 truncate">${esc(pbTitle(x.p))}</span>
                         <span class="shrink-0 text-[0.625rem] text-slate-400">${timeAgo(x.p.ts)} · ❤ ${pbLikes(x.b, x.p)}</span></button>`; }).join('')
-                        : '<div class="text-center py-8 text-xs text-slate-400">아직 쓴 글이 없어요.</div>'}
-                </div>
-                <button onclick="resetTown()" class="w-full py-2 text-[0.6875rem] font-bold text-slate-400 hover:text-red-500"><i class="fa-solid fa-location-crosshairs"></i> 동네 다시 인증하기</button>
+                        : '<div class="text-center py-6 text-xs text-slate-400 border-t border-slate-100 dark:border-slate-800">아직 쓴 글이 없어요.</div>'}
+                </details>
             </div>`;
+            profileShown = { uid: COMM_UID, nick: myNick(), emoji: commProfile.emoji || '🙂', photo: myPhoto(), area: myArea() };
+            if (feed) { if (feedDraft) renderFeedComposer(); else if (feedOpen && feedOpen.uid === COMM_UID) renderFeedPost(); else renderFeedGrid(COMM_UID); }
+            if (!trustCache[COMM_UID]) loadTrust(COMM_UID).then(t => { const el = document.getElementById('meTrust'); if (el) el.innerHTML = trustChipHtml(t); }).catch(() => {});
         }
+        // 내 프로필 ⚙️ 설정: 게시물 공개 · 인기쟁이 순위 공개 · 차단 관리 · 신뢰 지수 안내 · 동네 다시 인증
+        function openMySettings() {
+            const row = (fn, icon, label) => `<button onclick="closeSheet(); ${fn}" class="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-left"><i class="fa-solid ${icon} w-4 text-center text-slate-500"></i><span class="flex-1 text-xs font-bold text-slate-800 dark:text-slate-100">${label}</span><i class="fa-solid fa-chevron-right text-[0.625rem] text-slate-300"></i></button>`;
+            openSheet(sheetHead('⚙️', '내 프로필 설정', '공개 범위와 계정 메뉴') + `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 space-y-3">
+                ${feedPrivacyHtml()}
+                ${FIREBASE_CONFIG ? '' : `<label class="flex items-start gap-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 cursor-pointer">
+                    <input type="checkbox" class="mt-0.5" ${demoOn() ? 'checked' : ''} onchange="lsSet('demo_samples_off', this.checked ? '0' : '1'); location.reload()">
+                    <span><span class="block text-xs font-bold text-slate-800 dark:text-slate-100">예시 게시물 보기 (체험 모드)</span><span class="block text-[0.625rem] text-slate-500 leading-snug">다른 이웃이 올린 글이 어떻게 보이는지 게시판마다 '(예시)' 글 5개를 보여 줍니다. 저장되지 않고, 서버를 연결하면 자동으로 사라집니다.</span></span></label>`}
+                <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-1">
+                    ${row('showBlockList()', 'fa-ban', '차단 관리')}
+                    ${row('showReportGuide()', 'fa-scale-balanced', '신뢰 지수 · 제보 가이드')}
+                    ${row('resetTown()', 'fa-location-crosshairs', '동네 다시 인증하기')}
+                </div></div>`);
+        }
+        // 프로필 사진(아이콘)만 바꾸는 창 — 내 프로필의 사진을 누르면 열림
+        function editAvatar() { editProfile(false, 'avatar'); }
+        // 닉네임·한 줄 소개만 바꾸는 창 — 닉네임 옆 ✏️를 누르면 열림
+        function editNick() { editProfile(false, 'nick'); }
         // Esc: 맨 위에 떠 있는 창부터 하나씩 닫기 (사진 크게 보기 → 프로필 → 공용 창 → 앱 안내 → 떠 있는 패널)
         document.addEventListener('keydown', (e) => {
             if (e.key !== 'Escape' || e.isComposing) return;
@@ -5190,7 +5335,7 @@
         }
         function marketLocalKey() { return 'comm_market_' + townKey(myTown); }
         function marketLocalSave() {
-            const list = marketItems.slice(0, 100);
+            const list = demoStrip(marketItems).slice(0, 100);
             if (!lsSet(marketLocalKey(), JSON.stringify(list))) lsSet(marketLocalKey(), JSON.stringify(list.map(i => Object.assign({}, i, { img: '' }))));
         }
         async function subscribeMarket() {
@@ -5204,6 +5349,7 @@
                 }, err => console.error(err));
             } else {
                 try { marketItems = JSON.parse(lsGet(marketLocalKey()) || '[]'); } catch (e) { marketItems = []; }
+                marketItems = demoMerge(marketItems, 'market');
                 if (commTab === 'market') renderMarket();
             }
         }
@@ -5695,11 +5841,13 @@
                 }, err => console.error(err));
             } else {
                 try { freeMessages = JSON.parse(lsGet(freeLocalKey()) || '[]'); } catch (e) { freeMessages = []; }
+                freeMessages = demoMerge(freeMessages, 'free');
                 renderFreeMessages();
             }
         }
         function freeLocalSave() {
-            if (!lsSet(freeLocalKey(), JSON.stringify(freeMessages.slice(0, 200)))) lsSet(freeLocalKey(), JSON.stringify(freeMessages.slice(0, 200).map(m => Object.assign({}, m, { img: '' }))));
+            const keep = demoStrip(freeMessages);
+            if (!lsSet(freeLocalKey(), JSON.stringify(keep.slice(0, 200)))) lsSet(freeLocalKey(), JSON.stringify(keep.slice(0, 200).map(m => Object.assign({}, m, { img: '' }))));
         }
         async function freePickFile(input) {
             const f = input.files && input.files[0];
@@ -5767,7 +5915,8 @@
         let praiseMessages = [], praiseUnsub = null, praiseAttach = null, praiseKind = 'all', praiseOpen = new Set();
         function praiseLocalKey() { return 'comm_praise_' + townKey(myTown); }
         function praiseLocalSave() {
-            if (!lsSet(praiseLocalKey(), JSON.stringify(praiseMessages.slice(0, 300)))) lsSet(praiseLocalKey(), JSON.stringify(praiseMessages.slice(0, 300).map(m => Object.assign({}, m, { img: '' }))));
+            const keep = demoStrip(praiseMessages);
+            if (!lsSet(praiseLocalKey(), JSON.stringify(keep.slice(0, 300)))) lsSet(praiseLocalKey(), JSON.stringify(keep.slice(0, 300).map(m => Object.assign({}, m, { img: '' }))));
         }
         async function subscribePraise() {
             if (praiseUnsub) { praiseUnsub(); praiseUnsub = null; }
@@ -5780,6 +5929,7 @@
                 }, err => console.error(err));
             } else {
                 try { praiseMessages = JSON.parse(lsGet(praiseLocalKey()) || '[]'); } catch (e) { praiseMessages = []; }
+                praiseMessages = demoMerge(praiseMessages, 'praise');
                 renderPraiseList();
             }
         }
@@ -5914,7 +6064,7 @@
             { k: 'safe', label: '우리동네 안전망', fa: 'fa-shield-halved', c: 'red', tabs: ['talk'] },
             // 동네 이야기: 맨 앞 '우리동네 TOP10'(이번 달 우리 동네 인기 글 TOP10 + 인기쟁이 TOP10)을 함께 둠 (탭 이름 popular 는 예전 저장값과 맞추려고 그대로 씀)
             { k: 'life', label: '동네 이야기', fa: 'fa-house-chimney-user', c: 'sky', tabs: ['popular', 'free', 'hello', 'wish', 'praise'] },
-            { k: 'local', label: '맛집·핫플', fa: 'fa-utensils', c: 'orange', tabs: ['food', 'spot'] },
+            { k: 'local', label: '동네 맛집·핫플', fa: 'fa-utensils', c: 'orange', tabs: ['food', 'spot'] },
             { k: 'market', label: '동네 장터', fa: 'fa-store', c: 'emerald', tabs: ['market'] },
             // 이웃·대화: '팔로잉 소식'을 맨 앞에 (예전에 순서를 저장해 둔 사람도 한 번은 맨 앞으로 옮김 → groupTabs)
             { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['friends', 'meet', 'random', 'dm'] },
@@ -5923,7 +6073,7 @@
         ];
         const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '우리동네 맛집', spot: '우리동네 핫플',
             market: '동네 장터', popular: '우리동네 TOP10', meet: '동네 친구', friends: '팔로잉 소식', random: '랜덤 채팅', dm: '1:1 대화', national: '이달의 전국 TOP10', me: '내 프로필' };
-        const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-hand-holding-heart', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-fire',
+        const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-face-sad-tear', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-fire',
             popular: 'fa-ranking-star', meet: 'fa-user-plus', friends: 'fa-newspaper', random: 'fa-shuffle', dm: 'fa-envelope' };
         function commGroupOf(tab) { return COMM_GROUPS.find(g => g.tabs.includes(tab)) || COMM_GROUPS[0]; }
         // 묶음 안의 작은 탭 순서: 마우스로 끌어서 바꾸고 저장 (새로 생긴 탭은 맨 뒤에 붙음)
@@ -6388,7 +6538,7 @@
                 agree: '👋 환영해요', head: n => `👋 ${n}님이 이사 왔어요`, ph: '안녕하세요! ○○동에 새로 이사 왔어요. 잘 부탁드립니다 🙂', replyPh: '예) 반가워요! 앞으로 잘 지내요 🙂',
                 tip: '예) 지난주 ○○아파트로 이사 왔어요. 아이 둘 키우고 있고, 동네 산책 코스 추천 부탁드려요! (동·호수 같은 자세한 주소는 적지 마세요)', empty: '아직 이사 인사가 없습니다. 새로 오셨다면 첫 인사를 남겨 보세요!' },
             // 아쉬워요: 동네에서 개선됐으면 하는 점 (가로등·도로·쓰레기·소음 등). 공감이 많은 글이 위로
-            wish: { col: 'wish', name: '아쉬워요', icon: '🙏', place: false, btn: 'bg-rose-500 hover:bg-rose-400', ring: 'border-rose-300 dark:border-rose-800', chip: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-200', write: '아쉬운 점 남기기',
+            wish: { col: 'wish', name: '아쉬워요', icon: '🥺', place: false, btn: 'bg-rose-500 hover:bg-rose-400', ring: 'border-rose-300 dark:border-rose-800', chip: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-200', write: '아쉬운 점 남기기',
                 kinds: ['도로·교통', '안전·치안', '쓰레기·청결', '시설·편의', '소음·냄새', '공원·환경', '기타'],
                 agree: '🙋 나도 아쉬워요', head: () => '', ph: '예) ○○초 앞 횡단보도 가로등이 꺼져 있어 밤에 너무 어두워요. 고쳐졌으면 좋겠어요.', replyPh: '예) 저도 지나갈 때마다 불편했어요 / 구청에 민원 넣었어요',
                 tip: '동네에서 불편하거나 개선됐으면 하는 점을 적어 주세요. 이웃의 공감이 많은 글은 위로 올라옵니다. 특정인 비방 대신 상황과 바라는 점을 적어 주세요. (구청·주민센터 민원은 국민신문고·120 다산콜 등으로 함께 넣으면 더 빨리 해결돼요)', empty: '아직 올라온 아쉬운 점이 없습니다. 동네에서 개선됐으면 하는 점을 남겨 보세요.' }
@@ -6403,7 +6553,7 @@
         function boardCol(b) { return commDoc(townKey(myTown)).collection(BOARDS[b].col); }
         function boardLocalKey(b) { return 'comm_board_' + BOARDS[b].col + '_' + townKey(myTown); }
         function boardLocalSave(b) {
-            const l = boardData[b].slice(0, 300);
+            const l = demoStrip(boardData[b]).slice(0, 300);
             if (!lsSet(boardLocalKey(b), JSON.stringify(l))) lsSet(boardLocalKey(b), JSON.stringify(l.map(m => Object.assign({}, m, { img: '' }))));
         }
         async function subscribeBoard(b) {
@@ -6418,6 +6568,7 @@
                 }, err => console.error(err));
             } else {
                 try { boardData[b] = JSON.parse(lsGet(boardLocalKey(b)) || '[]'); } catch (e) { boardData[b] = []; }
+                boardData[b] = demoMerge(boardData[b], b);
                 done();
             }
         }
@@ -6667,7 +6818,7 @@
             const reps = {}; all.filter(m => m.type === 'reply').forEach(r => { (reps[r.parent] = reps[r.parent] || []).push(r); });
             const banner = wish
                 ? `<div class="rounded-2xl bg-gradient-to-r from-rose-500 to-orange-400 text-white p-3 flex items-center gap-3 shadow">
-                    <div class="text-3xl">🙏</div>
+                    <div class="text-3xl">🥺</div>
                     <div class="flex-1 min-w-0" style="white-space: normal;"><div class="font-extrabold">${esc(myTown ? myTown.dong : '우리 동네')}, 이런 점이 아쉬워요</div><div class="text-xs opacity-90">개선됐으면 하는 점을 남기면 이웃이 🙋 공감으로 힘을 보태요. 공감이 많은 글이 위로 올라옵니다.</div></div>
                     ${ui.form ? '' : `<button onclick="boardOpenForm('wish', true)" class="shrink-0 px-3 py-2 rounded-xl bg-white text-rose-600 text-xs font-extrabold shadow">✍ 남기기</button>`}</div>`
                 : `<div class="rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-500 text-white p-3 flex items-center gap-3 shadow">
@@ -7978,7 +8129,8 @@
         // 숫자 두 칸 (누르면 목록)
         function followCountsHtml(uid, r) {
             const n = k => r ? r[k].filter(x => !isBlocked(x.uid)).length : '–';
-            const cell = (k, label) => `<button onclick="openFollowList('${esc(uid)}', '${k}')" class="flex-1 rounded-xl bg-slate-50 dark:bg-slate-800/70 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/40 py-2 transition"><div class="text-base font-black text-slate-900 dark:text-white">${n(k)}</div><div class="text-[0.625rem] font-semibold text-slate-500">${label}</div></button>`;
+            // 작은 알약 모양 (예: '12 팔로워') — 프로필 위쪽 공간을 덜 차지하도록
+            const cell = (k, label) => `<button onclick="openFollowList('${esc(uid)}', '${k}')" class="inline-flex items-baseline gap-1 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/40 text-[0.6875rem] transition"><b class="text-slate-900 dark:text-white">${n(k)}</b><span class="font-semibold text-slate-500">${label}</span></button>`;
             return cell('followers', '팔로워') + cell('following', '팔로잉');
         }
         async function fillFollowCounts(uid, elId) {
@@ -8017,8 +8169,10 @@
         function renderFollowFeed() {
             const main = document.getElementById('commMain');
             if (!main || commTab !== 'friends') return;
-            const people = Object.keys(following).filter(u => !isBlocked(u)).map(u => Object.assign({ uid: u }, following[u])).sort((a, b) => (b.ts || 0) - (a.ts || 0));
-            const posts = followFeed.filter(p => !isBlocked(p.uid));
+            let people = Object.keys(following).filter(u => !isBlocked(u)).map(u => Object.assign({ uid: u }, following[u])).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+            let posts = followFeed.filter(p => !isBlocked(p.uid));
+            // 체험 모드: 다른 이웃의 게시물이 어떻게 보이는지 '(예시)' 게시물 5개를 함께 보여 줌 (저장하지 않음)
+            if (demoOn()) { const d = demoItems('feed'); posts = posts.concat(d).sort((a, b) => (b.ts || 0) - (a.ts || 0)); people = people.concat(DEMO_PEOPLE.map(p => Object.assign({ area: d[0] && d[0].area }, p)).filter(p => !people.some(x => x.uid === p.uid))); }
             const seen = Number(lsGet('follow_feed_seen_prev') || 0);
             const card = p => {
                 const imgs = (p.media || []).filter(feedImgOk), vid = (p.media || []).find(feedVideoOk);
