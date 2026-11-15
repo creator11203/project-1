@@ -300,8 +300,7 @@
         .dark #appHeader { background: rgba(15,23,42,.86); }
         #appHeader button { transition: transform .12s ease, background-color .15s, box-shadow .15s, border-color .15s; }
         #appHeader button:active { transform: scale(.96); }
-        .nat-hdr-btn { background: linear-gradient(135deg, #fde68a, #fbbf24 45%, #f59e0b); color: #78350f; box-shadow: 0 4px 14px -4px rgba(245,158,11,.55), inset 0 1px 0 rgba(255,255,255,.5); }
-        .nat-hdr-btn:hover { filter: brightness(1.05); box-shadow: 0 6px 18px -4px rgba(245,158,11,.65), inset 0 1px 0 rgba(255,255,255,.5); }
+        .theme-btn i { transition: transform .35s ease; } .theme-btn:hover i { transform: rotate(-20deg) scale(1.1); }
         /* 기사 카드: 왼쪽 분류 색 막대 + 올리면 살짝 떠오름 */
         .news-card { position: relative; box-shadow: 0 1px 2px rgba(15,23,42,.04); }
         .news-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent, #94a3b8); opacity: .75; }
@@ -373,6 +372,20 @@
         .dark .nat-detail { color: #cbd5e1; }
         .nat-btn { display: inline-flex; align-items: center; gap: .35rem; font-size: .6875rem; font-weight: 800; color: #fff; background: #4f46e5; padding: .35rem .7rem; border-radius: 999px; }
         .nat-btn:hover { background: #6366f1; }
+        /* TOP10 글 펼침: 공감 버튼 · 댓글(읽기만) · 잠금 안내 */
+        .nat-like-btn { display: inline-flex; align-items: center; gap: .35rem; font-size: .75rem; font-weight: 800; padding: .4rem .85rem; border-radius: 999px; border: 2px solid #fda4af; color: #e11d48; background: #fff; transition: all .15s; }
+        .nat-like-btn:hover:not(:disabled) { background: #fff1f2; }
+        .nat-like-btn.on { background: #e11d48; border-color: #e11d48; color: #fff; }
+        .nat-like-btn:disabled { opacity: .5; cursor: default; }
+        .dark .nat-like-btn { background: transparent; border-color: #9f1239; color: #fda4af; } .dark .nat-like-btn.on { background: #e11d48; color: #fff; }
+        .nat-coms { margin-top: .75rem; padding-top: .6rem; border-top: 1px dashed #e2e8f0; }
+        .dark .nat-coms { border-color: #334155; }
+        .nat-lock { margin-top: .5rem; font-size: .6875rem; font-weight: 700; color: #64748b; background: #f1f5f9; border-radius: 10px; padding: .45rem .65rem; }
+        .dark .nat-lock { background: #1e293b; color: #94a3b8; }
+        .nat-pill { display: inline-flex; align-items: center; gap: .25rem; font-size: .6875rem; font-weight: 800; padding: .25rem .6rem; border-radius: 999px; white-space: nowrap; }
+        .nat-pill-teal { background: #0d9488; color: #fff; } .nat-pill-teal:hover { background: #14b8a6; }
+        .nat-pill-sky { background: #0284c7; color: #fff; } .nat-pill-sky:hover { background: #0ea5e9; }
+        .nat-pill-done { background: #f1f5f9; color: #64748b; } .dark .nat-pill-done { background: #1e293b; color: #94a3b8; }
         .nat-place-ico { width: 2.25rem; height: 2.25rem; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
         .nat-map { font-size: .5625rem; font-weight: 800; padding: .15rem .45rem; border-radius: 6px; border: 1px solid; text-align: center; }
         .nat-map-n { color: #15803d; border-color: #86efac; } .nat-map-k { color: #a16207; border-color: #fde047; }
@@ -427,14 +440,14 @@
                 <span id="fontSizeIndicator" class="px-1 text-xs font-mono text-slate-500 dark:text-slate-400">100%</span>
                 <button onclick="adjustFontSize(1)" class="px-1.5 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A+</button>
             </div>
-            <button onclick="toggleTheme()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-yellow-400 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap">
-                <i id="themeIcon" class="fa-solid fa-moon"></i> <span id="themeText" class="hidden 2xl:inline">다크모드</span>
+            <!-- 다크/라이트 모드: 글씨 없이 아이콘(달 ↔ 해)으로만 구분 -->
+            <button id="themeBtn" onclick="toggleTheme()" title="다크 모드로 바꾸기" aria-label="다크 모드로 바꾸기" class="theme-btn w-8 h-8 inline-flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-indigo-600 dark:text-amber-300 border border-slate-300 dark:border-slate-700 transition">
+                <i id="themeIcon" class="fa-solid fa-moon text-[0.9rem]"></i>
             </button>
             <div class="relative">
                 <button onclick="toggleLayoutPanel()" title="화면 배치 바꾸기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-table-columns"></i> <span class="hidden xl:inline">화면 설정</span></button>
                 <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
             </div>
-            <button onclick="openNational()" title="이달의 전국 랭킹 · 전국 동네에서 가장 핫했던 글·장소·이웃" class="nat-hdr-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[0.8125rem] font-extrabold whitespace-nowrap transition"><i class="fa-solid fa-trophy"></i> <span class="hidden xl:inline">전국 랭킹</span></button>
             <button id="meBtn" onclick="openMyProfile()" title="내 프로필 · 내 일상 바로 가기" class="me-btn flex items-center gap-2 pl-1 pr-1 lg:pr-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-violet-400 hover:shadow-md hover:shadow-violet-500/10 text-slate-800 dark:text-slate-100 transition whitespace-nowrap"><span class="w-7 h-7 rounded-full bg-slate-100 inline-flex items-center justify-center">🙂</span></button>
             <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 transition flex items-center gap-1.5 whitespace-nowrap"><i class="fa-solid fa-mobile-screen-button"></i> <span class="hidden 2xl:inline">앱 다운로드</span></button>
             <!-- 주요 버튼 3개(안전 브리핑 · 우리동네 커뮤니티 · 실시간 제보하기): 왼쪽 끝에서 오른쪽 끝으로 옅은 빛이 한 줄로 지나감 (.hero-sweep / .sweep-btn) -->
@@ -571,8 +584,9 @@
     </div>
 
     <!-- 3칸에 넣지 않은 패널이 뜨는 창 -->
-    <div id="floatModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" onclick="if (event.target === this) closeFloat()">
-        <div id="floatBox" class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden flex flex-col" style="height: 88vh;">
+    <!-- 위아래는 화면 끝까지 꽉 채움(여백 없음), 가로 너비만 사용자가 조절 -->
+    <div id="floatModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-stretch justify-center px-0 sm:px-4 py-0" onclick="if (event.target === this) closeFloat()">
+        <div id="floatBox" class="relative bg-white dark:bg-slate-900 border-x border-slate-200 dark:border-slate-800 w-full max-w-4xl rounded-none shadow-2xl overflow-hidden flex flex-col" style="height: 100%;">
             <div id="floatHead" class="px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/50 shrink-0"></div>
             <div id="floatBody" class="flex-1 min-h-0"></div>
         </div>
@@ -673,8 +687,66 @@
         const ACHIEVE = /(?<![가-힣])성과(?!급)|실적\s*(?:발표|우수|1위|달성|공개|평가)|우수\s*(?:사례|기관|지자체|시책)|인정\s*받|인정받|효과\s*(?:톡톡|입증|거둬|거뒀|봤|확인)|\d+(?:\.\d+)?\s*%\s*(?:감소|증가|줄|늘|하락|상승|↓|↑)|환경\s*조성|(?:여성|어린이|노인)\s*안심|안심\s*(?:마을|귀갓길|골목|환경|비상벨)|(?:대상|최우수상|우수상|장관상|대통령상)\s*(?:수상|받|선정)/;
         const STRICT_FACT = /구속|입건|검거|체포|송치|기소|숨져|숨졌|숨진|다쳐|다쳤|붙잡|덜미|불이?\s*나|들이받|추돌|실형|징역/;
         const PERSON_QUOTE = /[가-힣]{2,4}\s*[“"][^”"]{2,30}[”"]/g;
+        // 정당·정치권 공방·징계·감찰 기사, 정치인의 발언·사과·사퇴 공방 (scraper.py 의 is_party_politics() 와 같은 기준)
+        const PARTY_POLITICS = /민주당|(?<![가-힣])민주(?=\s*["“”'‘’…,·:]|\s*(?:지도부|원내|최고위|당|측|소속))|국민의힘|(?<![가-힣])국힘|조국혁신당|혁신당|개혁신당|진보당|정의당|기본소득당|새로운미래|윤리\s*심판원|윤리\s*위원회|(?<![가-힣])윤리위|당무\s*감사|당\s*지도부|최고\s*위원|원내\s*(?:대표|대변인|수석)|당\s*대표|당대표|비대위|공천|출당|(?<![가-힣])제명|탈당|복당|당권|전당\s*대회|(?<![가-힣])경선|여당|야당|여야|대통령실|국회의장|국무\s*총리|(?<![가-힣])총리(?![가-힣])|대선|총선|지방\s*선거|정치권|국정\s*감사|(?<![가-힣])국감|청문회|탄핵|(?:국회\s*)?의원[^.…]{0,10}(?:징계|감찰|윤리|공방|설전|막말|사퇴|해명)|징계\s*(?:받나|위기|수순|착수|회부|청원)|이첩\s*지시/;
+        const PARTY_EXCEPT = /피습|습격|흉기|폭행|숨져|숨진|숨졌|사망|부상|다쳐|다쳤|화재|불이?\s*나|폭발|교통사고|추돌|들이받|음주\s*운전|무면허|테러|암살|살해|폭파\s*협박|협박\s*(?:문자|전화|편지)|성추행|성폭행|강제\s*추행|불법\s*촬영/;
+        const POLITICIAN_TALK = /(?:의원|시장|군수|구청장|도지사|장관|당\s*대표|원내대표)[^.…]{0,24}(?:발언|망언|막말|실언|사과|사퇴|논란|파장|해명|공방|설전|위문|방문|면담)|(?:발언|망언|막말|실언)[^.…]{0,24}(?:의원|시장|군수|구청장|도지사|장관)|(?:의원|시장|군수|구청장|도지사)[^.…]{0,6}["“][^"”]{2,40}["”]/;
+        const POLITICIAN_HARM = /피습|습격|흉기|폭행\s*(?:당|피해)|테러|암살|살해\s*협박|폭파\s*협박|협박\s*(?:문자|전화|편지)/;
+        function isPartyPolitics(t) {
+            if (POLITICIAN_TALK.test(t) && !POLITICIAN_HARM.test(t) && !/구속|입건|검거|체포|송치|적발/.test(t)) return true;
+            return PARTY_POLITICS.test(t) && !PARTY_EXCEPT.test(t);
+        }
+        // ---- 작품 제목(노래·영화·드라마·예능 등) 판별: scraper.py 의 work_title_spans() · only_in_work_title() 와 같은 기준 ----
+        const WORK_BRACKET = /[《〈<「『]([^》〉>」』]{1,30})[》〉>」』]/g;
+        const WORK_QUOTE = /[‘'"“]([^‘’'"“”]{1,30})[’'"”]/g;
+        const WORK_KIND = '(?:드라마|영화|신작|신곡|노래|곡|타이틀\\s*곡|타이틀곡|선공개\\s*곡|수록곡|앨범|미니\\s*앨범|정규\\s*앨범|싱글|EP|OST|음원|뮤직\\s*비디오|뮤비|MV|뮤지컬|연극|오페라|공연|예능|프로그램|시트콤|웹드라마|웹툰|웹소설|소설|시집|만화|애니(?:메이션)?|시리즈|작품|주연작|출연작|차기작|영화제\\s*초청작|개봉작|단편|다큐|넷플릭스|티빙|TVING|디즈니\\s*\\+?|디즈니플러스|쿠팡\\s*플레이|웨이브|왓챠|tvN|JTBC|KBS\\s*2?|MBC|SBS|ENA|MBN|채널\\s*A|TV\\s*조선|올리브|엠넷|Mnet|유튜브\\s*채널|월화극|수목극|금토극|토일극|일일극|주말극|미니\\s*시리즈|아침\\s*드라마)';
+        const WORK_BEFORE = new RegExp(WORK_KIND + '\\s*(?:[가-힣A-Za-z0-9]{0,6}\\s*)?$', 'i');
+        const WORK_AFTER = /^\s*(?:로|으로|에서|의|와|과|에|속|측|팀|제작진|출연진|배우들?)?\s*(?:컴백|데뷔|출연|주연|조연|특별\s*출연|카메오|캐스팅|합류|촬영|크랭크\s*(?:인|업)|개봉|재개봉|첫\s*방송|첫방|본방|방송|방영|종영|결방|편성|공개|발매|발표|선공개|흥행|관객|만\s*관객|박스\s*오피스|시청률|화제성|OTT\s*1위|넷플릭스\s*1위|차트|1위|역주행|음원\s*강자|올킬|정상|진입|스트리밍|조회수|뮤비|MV|티저|예고편|예고|하이라이트|OST|시즌\s*\d|파트\s*\d|\d+\s*회|\d+\s*화|최종회|마지막\s*회|제작\s*발표회|쇼케이스|시사회|무대\s*인사|기자\s*간담회|간담회|인터뷰|리뷰|비하인드|메이킹|스틸|포스터|열연|호연|연기|변신|캐릭터|역(?:으로|을|을\s*맡|할)|배역|호흡|케미|출격|무대|챌린지|가사|작사|작곡|피처링|리메이크|원작|각색|연출|감독|각본|팬미팅|콘서트|투어|활동|후속곡|후속작|시리즈|속편|제작|투자|판권|수상|노미네이트|초청|상영)/i;
+        const ENT_PERSON = /가수|배우|아이돌|걸그룹|보이그룹|그룹|솔로|멤버|방송인|개그맨|개그우먼|코미디언|MC|래퍼|싱어송라이터|뮤지션|밴드|감독|작가|PD|연출가|성우|아역|신인|톱스타|스타|연예인|셀럽|유튜버|크리에이터|아나운서|트로트/;
+        const ENT_HINT = /스트리밍|스포티파이|멜론|신곡|음원|음반|빌보드|차트|K-?팝|케이팝|팬덤|시청률|첫\s*방|종영|열연|극\s*중|극중/;
+        const WORK_FACT = /구속|입건|검거|체포|송치|기소|징역|실형|선고|적발|숨져|숨졌|숨진|사망|부상|다쳐|다쳤|화재|불이\s*나|불길|폭발(?!적)|압사|붕괴|무너|추락|흉기|칼부림|난동|폭행|피습|살인|살해|납치|유괴|실종|감금|인질|테러|강도|절도|사기|마약|방화|협박|습격|총격|성폭행|성추행|스토킹|학대|참사|참변|암살|저격/;
+        const WORK_PLOT = /장면|극\s*중|극중|역할|배역|열연|호연|연기|캐릭터|줄거리|스포(?:일러)?|엔딩|전개|회차|\d+\s*회|예고|첫\s*방|본방|응징|복수극|스릴러|미스터리|악역|빌런|명장면|시청자|시청률|관객|흥행|OST|뮤비|가사|무대/;
+        const NEWS_TAG_IN =/속보|단독|종합|사진|영상|포토|인터뷰|르포|기획|이슈|현장|[0-9]+보/;
+        function workTitleSpans(t) {
+            const spans = [];
+            for (const m of t.matchAll(WORK_BRACKET)) {
+                if (NEWS_TAG_IN.test(m[1])) continue;
+                spans.push([m.index, m.index + m[0].length, m[1], true]);
+            }
+            const ent = ENT_PERSON.test(t) || IDOL.test(t) || ENT_HINT.test(t);
+            for (const m of t.matchAll(WORK_QUOTE)) {
+                const s = m.index, e = s + m[0].length, inner = m[1];
+                const before = t.slice(Math.max(0, s - 14), s), after = t.slice(e, e + 16);
+                const kb = WORK_BEFORE.test(before), ka = WORK_AFTER.test(after);
+                let isWork = kb || ka;
+                if (!isWork && ent) {
+                    if (/[가-힣]{2,4}\s*$/.test(before) && !/(?:경찰|검찰|소방|당국|주민|시민|피해자|가해자|용의자|피의자|남성|여성|씨)\s*$/.test(before)) isWork = true;
+                    else if (s <= 2 && /^\s*[가-힣]{2,4}(?:\s*[,·]|\s+[가-힣]{2,4}\s*[,·]|\s*(?:이|가|은|는)?\s)/.test(after)) isWork = true;
+                }
+                if (isWork && /(?:다|요|까|냐|라|지|네|죠|자)\s*[.!?]?\s*$/.test(inner) && !ka && !kb) isWork = false;   // 실제 말을 옮긴 따옴표
+                if (isWork) spans.push([s, e, inner, kb]);
+            }
+            return spans;
+        }
+        function onlyInWorkTitle(t) {
+            const spans = workTitleSpans(t);
+            if (!spans.length) return false;
+            const inner = spans.map(s => s[2]).join(' ');
+            let rest = t;
+            spans.slice().sort((a, b) => b[0] - a[0]).forEach(([s, e]) => { rest = rest.slice(0, s) + ' ' + rest.slice(e); });
+            if (!WORK_FACT.test(inner) && !WORK_FACT.test(rest)) return false;
+            if (WORK_FACT.test(inner) && !WORK_FACT.test(rest)) return true;      // 사건 낱말이 작품 이름 안에만 있음
+            // 작품 이름이 있고 나머지가 '줄거리·장면' 이야기면 작품 내용 (예: "'모범택시3' 이제훈, 납치범 응징", "'오징어 게임' 사망 장면 화제")
+            const realNow = /구속|입건|검거|체포|송치|숨져|숨졌|숨진|다쳐|다쳤|부상|중상|이송|병원|경찰|소방|119|112|신고|출동|화재|불이\s*나|촬영\s*(?:중|현장|장)/;
+            if (WORK_PLOT.test(rest) && !/구속|입건|검거|체포|송치|숨져|숨졌|숨진|다쳐|다쳤|부상|중상|이송|경찰|소방|119|112|촬영\s*(?:중|현장|장)/.test(rest)) return true;
+            if (spans.some(s => s[3]) && !realNow.test(rest)) return true;      // '드라마·영화 ○○' 꼴인데 현실의 사건 표시가 없음
+            return false;
+        }
         function notIncidentTitle(t) {
-            if (ENT_TAG.test(t)) return true;                                   // [사진] [Oh!쎈 이슈] 같은 연예·사진 기사
+            if (isPartyPolitics(t)) return true;                                // 정치 공방·징계 기사 (위치와 상관없는 기사)
+            if (onlyInWorkTitle(t)) return true;                                // 사건 낱말이 노래·영화·드라마 제목 안에만 있음
+            if (ENT_TAG.test(t)) return true;                               // 정치 공방·징계 기사 (위치와 상관없는 기사)
+            if (ENT_TAG.test(t)) return true;                                  // [사진] [Oh!쎈 이슈] 같은 연예·사진 기사
             if (IDOL.test(t) && !REAL_FACT.test(t)) return true;                // 아이돌·연예 근황 (실제 입건·사고가 아니면)
             const q = (t.match(PERSON_QUOTE) || []).length;
             if (q >= 2 && !/\[\s*속보\s*\]/.test(t) && !REAL_FACT.test(t.replace(PERSON_QUOTE, ' '))) return true;   // 'A "…"·B "…"' 반응·발언 모음
@@ -2616,7 +2688,7 @@
             m.innerHTML = myTown ? `
                 <div class="px-2.5 py-1.5 text-[0.6875rem] text-slate-500"><i class="fa-solid fa-circle-check text-emerald-500"></i> ${esc(townName(myTown))} 인증됨</div>
                 ${item(`showProfile('${COMM_UID}')`, 'fa-user', '내 프로필 · 내 일상')}
-                ${item(`setCommTab('popular')`, 'fa-crown', '우리동네 인기쟁이')}
+                ${item(`setCommTab('popular')`, 'fa-ranking-star', '우리동네 TOP10 · 인기쟁이')}
                 ${item(`setCommTab('friends')`, 'fa-user-group', '친구 목록', friendReqs.length ? `<span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${friendReqs.length}</span>` : '')}
                 ${item('inviteNeighbors()', 'fa-user-plus', '이웃 초대하기')}
                 ${item('showBlockList()', 'fa-ban', '차단 관리' + (Object.keys(blocked).length ? ' ' + Object.keys(blocked).length : ''))}
@@ -3801,7 +3873,7 @@
                 text: '처음 만나는 사람과 가볍게 대화하는 곳입니다. 불쾌한 대화는 바로 나가고 차단하세요. 개인정보는 알려 주지 마세요.' },
             food: { title: '우리동네 맛집', cls: 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-900',
                 text: '직접 가 본 동네 맛집을 상호명·위치·별점(5점 만점)·짧은 후기·사진으로 소개하는 곳입니다. 같은 가게 후기는 하나로 모여 평균 별점이 보이고, 상호명을 누르면 후기 모음과 지도(네이버·카카오)로 바로 이어집니다. 광고·협찬 후기는 올리지 말아 주세요.' },
-            spot: { title: '우리동네 명소', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900',
+            spot: { title: '우리동네 핫플', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900',
                 text: '산책길·공원·쉼터·전시·아이와 가기 좋은 곳 등 동네에서 가 볼 만한 곳을 추천하는 곳입니다. 장소 이름을 누르면 추천 모음과 지도로 이어집니다.' },
             wish: { title: '아쉬워요', cls: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-900',
                 text: '가로등·도로·쓰레기·소음·시설처럼 동네에서 개선됐으면 하는 점을 이야기하는 곳입니다. 이웃의 🙋 공감이 많은 글이 위로 올라옵니다. 특정인 비방은 삼가 주세요.' },
@@ -3857,6 +3929,7 @@
             if (BOARDS[commTab]) { renderCommBg(); renderBoard(commTab); return; }
             if (commTab === 'friends') { renderCommBg(); renderFriends(); return; }
             if (commTab === 'popular') { renderCommBg(); renderPopular(); return; }
+            if (commTab === 'me') { renderMeTab(); return; }
             if (commTab === 'national') {
                 document.getElementById('commMain').innerHTML = '<div id="natInComm" class="flex-1 min-h-0 flex flex-col"></div>';
                 natState.where = 'comm'; renderNational(); natLoad(false); return;
@@ -4023,8 +4096,9 @@
             let m = commMembers.find(x => x.uid === uid);
             if (!m) {
                 const last = commMessages.concat(freeMessages, marketItems, marketNation).find(x => x.uid === uid) || dmThreads.find(x => x.uid === uid);
-                m = last ? { uid: uid, nick: last.nick, emoji: last.emoji, photo: last.photo, area: last.area } : { uid: uid };
+                m = last ? { uid: uid, nick: last.nick, emoji: last.emoji, photo: last.photo, area: last.area } : (natPeopleInfo[uid] ? Object.assign({ uid: uid }, natPeopleInfo[uid]) : { uid: uid });
             }
+            const natTop = !mine && !!natPeopleInfo[uid];        // 이달의 전국 인기 이웃 TOP10
             if (mine) m = Object.assign({}, m, { nick: myNick(), emoji: commProfile.emoji, intro: commProfile.intro, joinedAt: commProfile.joinedAt, photo: myPhoto(), area: myArea() });
             if (!mine && blockedBy.has(uid)) { showAlertToast({ head: '프로필', title: '볼 수 없는 프로필입니다.' }); return; }
             const area = m.area || '';
@@ -4046,7 +4120,8 @@
                     <div id="pfTrust" class="mt-2">${trustHtml(trustCache[uid])}</div>
                     ${mine ? '' : `<div class="mt-2 flex items-center justify-center gap-1.5 text-[0.6875rem] text-slate-500"><span>대화 매너 평가</span><span id="mannerStars">${mannerStars(uid)}</span></div>
                     <div class="mt-3 flex flex-wrap gap-1.5 justify-center">${chatButton(uid)}${friendButtons(uid)}</div>
-                    <div class="mt-1 text-[0.625rem] text-slate-400">익명 커뮤니티라 대화·친구는 상대가 수락해야 시작됩니다</div>`}
+                    <div class="mt-1 text-[0.625rem] text-slate-400">익명 커뮤니티라 대화·친구는 상대가 수락해야 시작됩니다</div>
+                    ${natTop ? '<div class="mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 text-[0.6875rem] font-bold">👑 이달의 전국 인기 이웃 · 동네가 달라도 친구·대화 요청을 보낼 수 있어요</div>' : ''}`}
                     ${mine || !canChat(uid) ? '' : `<div class="mt-2 flex gap-2 justify-center">
                         <button onclick="closeProfile(); startCall('${esc(uid)}', profileShown.nick, false)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold"><i class="fa-solid fa-phone"></i> 음성 통화</button>
                         <button onclick="closeProfile(); startCall('${esc(uid)}', profileShown.nick, true)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold"><i class="fa-solid fa-video"></i> 영상 통화</button>
@@ -4394,17 +4469,47 @@
             return Object.values(by).map(r => Object.assign(r, { score: r.hearts * 3 + r.reacts * 2 + r.comments * 2 + r.posts }))
                 .sort((a, b) => b.score - a.score || b.hearts - a.hearts).slice(0, 30);
         }
+        // ================= 우리동네 TOP10 (동네 이야기 탭 맨 앞) =================
+        //  ① 이번 달 우리 동네 인기 글 TOP10 (안전망·이런저런·이사왔어요·아쉬워요·칭찬해요 글을 공감×3 + 댓글×2 + 조회×0.1 로 매김 — 전국 TOP10 과 같은 점수)
+        //  ② 우리동네 인기쟁이 TOP10 (최근 30일 '내 일상' 게시물로 받은 ❤·감정·댓글)
+        //  두 가지를 위쪽 전환 버튼으로 골라 봄 (한 화면에 하나씩 → 복잡하지 않게)
+        let townTopView = lsGet('town_top_view') === 'people' ? 'people' : 'posts';
+        function setTownTopView(v) { townTopView = v; lsSet('town_top_view', v); renderPopular(); }
+        function townTopPosts() {
+            if (!myTown) return [];
+            const range = monthRange(monthKey(Date.now()));
+            return natMine(range).filter(x => x.kind === 'post' && !isBlocked(x.uid)).map(x => Object.assign(x, { score: natScore(x) }))
+                .filter(x => x.score > 0).sort((a, b) => b.score - a.score || b.ts - a.ts).slice(0, 10);
+        }
         function renderPopular() {
             const main = document.getElementById('commMain');
             if (!main) return;
             loadPopular(false);
-            const rows = popularRanking();
+            const rows = popularRanking().slice(0, 10);
             const medal = i => i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : `<span class="text-xs font-extrabold text-slate-400">${i + 1}</span>`));
-            main.innerHTML = `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3">
-                <div class="rounded-2xl p-4 bg-gradient-to-br from-amber-400 via-rose-500 to-violet-600 text-white">
-                    <div class="text-base font-extrabold">🏆 ${esc(myTown ? myTown.dong : '우리 동네')} 인기쟁이</div>
-                    <div class="text-[0.6875rem] opacity-90 mt-0.5 leading-snug">최근 30일 동안 '내 일상' 게시물로 받은 ❤·감정 표현·댓글이 많은 이웃 순서입니다. 순위 공개를 켠 이웃만 나옵니다.</div>
+            const dong = esc(myTown ? myTown.dong : '우리 동네'), isPosts = townTopView === 'posts';
+            const seg = (v, icon, label) => `<button onclick="setTownTopView('${v}')" class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[0.8125rem] font-extrabold transition ${townTopView === v ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'}">${icon} ${label}</button>`;
+            const head = `<div class="rounded-2xl p-4 bg-gradient-to-br from-sky-500 via-indigo-500 to-violet-600 text-white">
+                    <div class="text-[0.6875rem] font-bold opacity-90"><i class="fa-solid fa-calendar-days"></i> ${monthLabel(monthKey(Date.now()))} · ${dong}</div>
+                    <div class="text-lg font-extrabold mt-0.5">🏆 우리동네 TOP10</div>
+                    <div class="text-[0.6875rem] opacity-90 mt-0.5 leading-snug">우리 동네에서 이번 달 가장 공감받은 글, 가장 사랑받은 이웃을 10위까지 모았어요.</div>
                 </div>
+                <div class="flex gap-1 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">${seg('posts', '🔥', '인기 글 TOP10')}${seg('people', '👑', '인기쟁이 TOP10')}</div>`;
+            if (isPosts) {
+                const posts = townTopPosts();
+                main.innerHTML = `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3">${head}
+                    ${posts.length ? `<ol class="space-y-1.5">${posts.map((x, i) => { const B = NAT_BOARDS[x.board] || NAT_BOARDS.free; return `<li><button onclick="setCommTab('${x.board}'); setTimeout(() => pbOpen('${x.board}', '${esc(x.pid)}'), 30)" class="w-full flex items-center gap-3 p-2.5 rounded-xl border text-left transition hover:shadow ${i < 3 ? 'border-amber-300 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/30' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}">
+                        <span class="w-7 text-center text-xl shrink-0">${medal(i)}</span>
+                        <span class="min-w-0 flex-1"><span class="flex items-center gap-1.5"><span class="nat-board nat-c-${B.c}">${B.e} ${B.n}</span>${x.type === 'sos' ? '<span class="nat-board nat-c-red">SOS</span>' : ''}</span>
+                            <span class="block text-sm font-bold text-slate-900 dark:text-white truncate mt-0.5">${esc(x.title || '(제목 없음)')}${x.hasImg ? ' <i class="fa-regular fa-image text-slate-400 text-[0.75em]"></i>' : ''}</span>
+                            <span class="block text-[0.6875rem] text-slate-500">${esc(x.nick || '이웃')} · ${timeAgo(x.ts)}</span></span>
+                        <span class="nat-metrics"><span class="nat-like"><i class="fa-solid fa-heart"></i> ${x.likes || 0}</span><span><i class="fa-regular fa-comment"></i> ${x.comments || 0}</span></span></button></li>`; }).join('')}</ol>`
+                        : `<div class="text-center py-12 text-xs text-slate-400 leading-relaxed">이번 달 아직 공감을 받은 글이 없어요.<br>이런저런·칭찬해요 등에 글을 쓰고 이웃의 공감을 받아 보세요!</div>`}
+                </div>`;
+                return;
+            }
+            main.innerHTML = `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3">${head}
+                <div class="text-[0.6875rem] text-slate-500 leading-snug px-1">최근 30일 동안 '내 일상' 게시물로 받은 ❤·감정 표현·댓글이 많은 이웃 순서입니다. 순위 공개를 켠 이웃만 나옵니다.</div>
                 <div class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                     ${avatarHtml(meFields(), 'w-9 h-9', 'text-lg')}
                     <div class="min-w-0 flex-1"><div class="text-xs font-bold text-slate-800 dark:text-slate-100">내 순위 공개 ${commProfile.rankPublic ? '<span class="text-emerald-600">켜짐</span>' : '<span class="text-slate-400">꺼짐</span>'}</div>
@@ -4425,17 +4530,20 @@
         // ================= 이달의 전국 랭킹 =================
         //  전국 모든 동네 커뮤니티에서 '이번 달' 공감을 가장 많이 받은 글·장소·이웃을 한곳에 모아 누구나(동네 인증 없이도) 볼 수 있게 함.
         //  · 인기 글: 안전망·이런저런·이사왔어요·아쉬워요·칭찬해요 글 (공감×3 + 댓글×2 + 조회×0.1)
-        //  · 좋았던 곳 / 아쉬웠던 곳: 칭찬해요·맛집·명소 ↔ 아쉬워요
-        //  · 맛집·명소: 동네별 후기 평균 별점 × 후기 수
+        //  · 좋았던 곳 / 아쉬웠던 곳: 칭찬해요·맛집·핫플 ↔ 아쉬워요
+        //  · 맛집·핫플: 동네별 후기 평균 별점 × 후기 수
         //  · 인기 이웃: '내 일상' 게시물로 받은 ❤·감정·댓글 (순위 공개를 켠 이웃만)
-        //  · 동네별 1위: 각 동에서 가장 인기 있었던 글 하나씩
-        //  저장: 서버(Firebase) 연결 시, 글에 공감·댓글이 생기거나 맛집·명소 후기가 올라올 때 전국용 요약(nationalHot)을 함께 기록하고
+        //  · 모든 순위는 전국을 합쳐 10위(TOP10)까지만 (동네별 1위는 없앰). TOP10 글은 누구나 내용을 볼 수 있고, 다른 동네 사람은 공감만 가능(댓글은 그 동네 주민만)
+        //  저장: 서버(Firebase) 연결 시, 글에 공감·댓글이 생기거나 맛집·핫플 후기가 올라올 때 전국용 요약(nationalHot)을 함께 기록하고
         //        여기서는 그 요약을 읽음 (다른 동네 게시판 전체를 읽지 않아 빠르고 가벼움). 체험 모드에서는 이 기기에 저장된 모든 동네 글로 계산.
         const NAT_BOARDS = {
             talk: { e: '🚨', n: '안전망', c: 'red' }, free: { e: '☕', n: '이런저런', c: 'sky' }, hello: { e: '👋', n: '이사왔어요', c: 'sky' },
-            wish: { e: '🙏', n: '아쉬워요', c: 'rose' }, praise: { e: '👏', n: '칭찬해요', c: 'amber' }, food: { e: '🍜', n: '맛집', c: 'orange' }, spot: { e: '🌳', n: '명소', c: 'emerald' }
+            wish: { e: '🙏', n: '아쉬워요', c: 'rose' }, praise: { e: '👏', n: '칭찬해요', c: 'amber' }, food: { e: '🍜', n: '맛집', c: 'orange' }, spot: { e: '🔥', n: '핫플', c: 'emerald' }
         };
-        const NAT_TABS = [['all', '🏆 종합'], ['posts', '🔥 인기 글'], ['good', '👍 좋았던 곳'], ['bad', '🙏 아쉬웠던 곳'], ['places', '🍜 맛집·명소'], ['people', '👑 인기 이웃'], ['towns', '🗺️ 동네별 1위']];
+        // 모든 순위는 '전국 모든 동네를 합쳐 이번 달 공감이 가장 많은 것 10개'만 보여 줌 (동네별 1위는 없앰 → 모든 동네 글이 다 올라오는 문제 해결)
+        const NAT_TOP = 10;
+        const natPeopleInfo = {};            // 이달의 인기 이웃 TOP10 (uid → 닉네임·아이콘·지역). 이 이웃들에게는 동네가 달라도 친구·대화 요청 가능
+        const NAT_TABS = [['all', '🏆 종합'], ['posts', '🔥 인기 글'], ['good', '👍 좋았던 곳'], ['bad', '🙏 아쉬웠던 곳'], ['places', '🍜 맛집·핫플'], ['people', '👑 인기 이웃']];
         const NAT_SIDOS = ['서울', '부산', '대구', '인천', '광주', '대전', '울산', '세종', '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주'];
         const natState = { month: '', tab: 'all', sido: '', q: '', busy: false, data: null, key: '', open: null, where: 'sheet' };
         function monthKey(ms) { const d = kstDate(ms / 1000); return d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'); }
@@ -4463,7 +4571,7 @@
                 snippet: String(p.text || '').slice(0, 160), likes: natLikes(b, p), comments: (list || []).filter(m => m.parent === p.id).length, views: p.views || 0,
                 uid: p.uid || '', nick: p.nick || '이웃', emoji: p.emoji || '🙂', ts: p.ts || 0, hasImg: !!p.img, type: p.type || '', tag: p.kind || '' }, t);
         }
-        // 맛집·명소 후기들 → 장소별 요약 (같은 동네 · 같은 이름)
+        // 맛집·핫플 후기들 → 장소별 요약 (같은 동네 · 같은 이름)
         function natPlaces(b, list, tk, range) {
             const by = {};
             (list || []).filter(m => m.type !== 'reply' && !m.parent && m.name && (m.ts || 0) >= range[0] && (m.ts || 0) < range[1]).forEach(m => {
@@ -4533,7 +4641,7 @@
             natState.key = mk; natState.busy = false;
             renderNational();
         }
-        // 전국 요약 기록 (서버 연결 시에만). 공감·댓글이 생긴 글, 새 맛집·명소 후기
+        // 전국 요약 기록 (서버 연결 시에만). 공감·댓글이 생긴 글, 새 맛집·핫플 후기
         async function hotMirror(b, p, patch) {
             try {
                 const db = await commInit();
@@ -4574,16 +4682,97 @@
             const people = Object.values(who).map(r => Object.assign(r, { score: r.hearts * 3 + r.reacts * 2 + r.comments * 2 + r.posts, sido: (r.area || '').split(' ')[0] }))
                 .filter(r => (!sd || sidoShort(r.sido) === sd) && (!q || [r.nick, r.area].join(' ').toLowerCase().includes(q)))
                 .sort((a, b) => b.score - a.score || b.hearts - a.hearts);
-            // 동네별 1위 (그 동네에서 점수가 가장 높은 글)
-            const towns = {};
-            posts.forEach(x => { if (!towns[x.town] || x.score > towns[x.town].score) towns[x.town] = x; });
             const townCount = new Set(items.map(x => x.town)).size;
-            return { posts, places, people, towns: Object.values(towns).sort((a, b) => b.score - a.score),
-                good: items.filter(x => x.board === 'praise' || x.kind === 'place'), bad: posts.filter(x => x.board === 'wish'),
+            const top = l => l.slice(0, NAT_TOP);          // 전국 TOP10 만
+            const tp = top(people);
+            tp.forEach(r => { natPeopleInfo[r.uid] = { nick: r.nick, emoji: r.emoji, photo: r.photo, area: r.area }; });   // 인기 이웃: 동네가 달라도 친구·대화 요청 가능
+            return { posts: top(posts), places: top(places), people: tp,
+                good: top(items.filter(x => x.board === 'praise' || x.kind === 'place')), bad: top(posts.filter(x => x.board === 'wish')),
                 stats: { towns: townCount, posts: posts.length, likes: posts.reduce((a, x) => a + (x.likes || 0), 0) } };
         }
         function natSet(k, v) { natState[k] = v; if (k === 'month') { natState.data = null; natState.open = null; natLoad(true); return; } renderNational(); }
-        function natToggle(id) { natState.open = natState.open === id ? null : id; renderNational(); }
+        function natToggle(id) {
+            natState.open = natState.open === id ? null : id;
+            if (natState.open) { const x = natFind(id); if (x && x.kind === 'post') natFetchFull(x); }
+            renderNational();
+        }
+        // ---- 전국 TOP10 글: 동네와 상관없이 누구나 내용을 볼 수 있음 (댓글은 그 동네 주민만, 다른 동네 사람은 공감만) ----
+        const natFull = {};                 // 글 id → { p: 글 전체, coms: 댓글, busy }
+        function natFind(id) { const d = natState.data; return d ? d.items.find(x => x.id === id) : null; }
+        // 그 동네 게시판 저장 위치 (서버) / 이 기기 저장 이름 (체험 모드)
+        function natCol(b, tk) {
+            if (b === 'talk') return commCol(tk);
+            if (b === 'free' || b === 'praise') return commDoc(tk).collection(b);
+            return commDoc(tk).collection(BOARDS[b] ? BOARDS[b].col : b);
+        }
+        function natLocalKey(b, tk) {
+            if (b === 'talk') return 'comm_msgs_' + tk;
+            if (b === 'free') return 'comm_free_' + tk;
+            if (b === 'praise') return 'comm_praise_' + tk;
+            return 'comm_board_' + (BOARDS[b] ? BOARDS[b].col : b) + '_' + tk;
+        }
+        function natLocalList(b, tk) { try { return JSON.parse(localStorage.getItem(natLocalKey(b, tk)) || '[]'); } catch (e) { return []; } }
+        async function natFetchFull(x) {
+            if (natFull[x.id] && (natFull[x.id].p || natFull[x.id].busy)) return;
+            natFull[x.id] = { busy: true, p: null, coms: [] };
+            try {
+                // 우리 동네 글이면 이미 받아 둔 목록에서
+                const mine = myTown && x.town === townKey(myTown) && PB[x.board];
+                const db = mine ? null : await commInit();
+                if (mine) {
+                    const l = PB[x.board].list();
+                    natFull[x.id] = { p: l.find(m => m.id === x.pid) || null, coms: l.filter(m => pbIsComment(m) && m.parent === x.pid) };
+                } else if (db) {
+                    const col = natCol(x.board, x.town);
+                    const d = await col.doc(x.pid).get();
+                    const cs = await col.where('parent', '==', x.pid).limit(100).get();
+                    natFull[x.id] = { p: d.exists ? Object.assign({ id: d.id }, d.data()) : null, coms: cs.docs.map(c => Object.assign({ id: c.id }, c.data())) };
+                } else {
+                    const l = natLocalList(x.board, x.town);
+                    natFull[x.id] = { p: l.find(m => m.id === x.pid) || null, coms: l.filter(m => pbIsComment(m) && m.parent === x.pid) };
+                }
+            } catch (e) { console.error(e); natFull[x.id] = { p: null, coms: [], err: true }; }
+            natFull[x.id].coms = (natFull[x.id].coms || []).filter(c => !isBlocked(c.uid)).sort((a, c) => (a.ts || 0) - (c.ts || 0));
+            if (natState.open === x.id) renderNational();
+        }
+        function natLikeField(b) { return PB[b] ? PB[b].like : 'likes'; }
+        function natLiked(x) { const f = natFull[x.id]; return !!(f && f.p && (f.p[natLikeField(x.board)] || []).includes(COMM_UID)); }
+        // 공감(하트) 누르기 — 다른 동네 글에도 가능
+        async function natLike(id) {
+            const x = natFind(id), f = natFull[id];
+            if (!x || !f || !f.p || f.p.uid === COMM_UID) return;
+            const field = natLikeField(x.board), has = natLiked(x);
+            const arr = f.p[field] || [];
+            f.p[field] = has ? arr.filter(u => u !== COMM_UID) : arr.concat(COMM_UID);
+            x.likes = Math.max(0, (x.likes || 0) + (has ? -1 : 1));
+            renderNational();
+            try {
+                const db = await commInit();
+                if (db) {
+                    const FV = firebase.firestore.FieldValue;
+                    await natCol(x.board, x.town).doc(x.pid).update({ [field]: has ? FV.arrayRemove(COMM_UID) : FV.arrayUnion(COMM_UID) });
+                    await db.collection('nationalHot').doc(x.id.replace(/\//g, '_')).set({ likes: x.likes, updatedAt: Date.now() }, { merge: true });
+                } else {
+                    const l = natLocalList(x.board, x.town), p = l.find(m => m.id === x.pid);
+                    if (p) { p[field] = f.p[field]; try { localStorage.setItem(natLocalKey(x.board, x.town), JSON.stringify(l)); } catch (e) {} }
+                    if (myTown && x.town === townKey(myTown) && PB[x.board]) { const q = PB[x.board].list().find(m => m.id === x.pid); if (q) q[field] = f.p[field]; }
+                }
+                if (!has) showAlertToast({ head: '❤️ 공감', title: `${x.dong || '다른 동네'} 이웃의 글에 공감을 보냈어요.` });
+            } catch (e) { console.error(e); }
+        }
+        // 인기 이웃: 프로필 열기 (동네가 달라도 친구·대화 요청 가능)
+        function natShowPerson(uid) {
+            if (!document.getElementById('commProfileCard') || (!isDocked('community') && document.getElementById('floatModal').classList.contains('hidden'))) {
+                closeSheet(); openCommunity(); setTimeout(() => showProfile(uid), 80); return;
+            }
+            showProfile(uid);
+        }
+        function natAskFriend(uid) { profileShown = Object.assign({ uid: uid }, natPeopleInfo[uid] || {}); addFriend(uid).then(() => renderNational()); }
+        function natAskChat(uid) {
+            profileShown = Object.assign({ uid: uid }, natPeopleInfo[uid] || {});
+            if (!document.getElementById('commProfileCard') || (!isDocked('community') && document.getElementById('floatModal').classList.contains('hidden'))) { closeSheet(); openCommunity(); setTimeout(() => askChat(uid), 80); return; }
+            askChat(uid);
+        }
         function natGoMine(b, pid) {
             closeSheet();
             openCommunity();
@@ -4605,14 +4794,32 @@
                     </span>
                     <span class="nat-metrics"><span class="nat-like"><i class="fa-solid fa-heart"></i> ${x.likes || 0}</span><span><i class="fa-regular fa-comment"></i> ${x.comments || 0}</span></span>
                 </button>
-                ${open ? `<div class="nat-detail">
-                    ${x.snippet ? `<p>${esc(x.snippet)}${x.snippet.length >= 160 ? '…' : ''}</p>` : '<p class="text-slate-400">(내용 미리보기가 없습니다)</p>'}
-                    <div class="flex flex-wrap items-center gap-2 mt-2">
-                        <span class="text-[0.6875rem] text-slate-500">조회 ${x.views || 0} · 점수 ${Math.round(x.score)}</span>
-                        ${mineTown ? `<button onclick="natGoMine('${x.board}', '${esc(x.pid)}')" class="nat-btn"><i class="fa-solid fa-arrow-up-right-from-square"></i> 우리 동네 게시판에서 보기</button>`
-                            : `<span class="text-[0.6875rem] text-slate-400"><i class="fa-solid fa-lock"></i> 댓글·공감은 ${esc(x.dong || '그 동네')} 주민만 남길 수 있어요</span>`}
-                    </div></div>` : ''}
+                ${open ? natDetailHtml(x, B, mineTown) : ''}
             </li>`;
+        }
+        // 펼친 글: 전체 내용 · 사진 · 댓글(읽기만) · 공감 버튼. 다른 동네 사람은 댓글을 달 수 없고 공감만 할 수 있음
+        function natDetailHtml(x, B, mineTown) {
+            const f = natFull[x.id];
+            if (!f || f.busy) return `<div class="nat-detail"><div class="nat-skel" style="height:4.5rem"></div></div>`;
+            const p = f.p;
+            const text = p ? (p.text || '') : (x.snippet || '');
+            const img = p && p.img && IMG_DATA_RE.test(p.img) ? `<img src="${p.img}" onclick="openMedia(this.src)" class="mt-2 rounded-xl max-h-72 max-w-full cursor-zoom-in border border-slate-200 dark:border-slate-700">` : '';
+            const own = p && p.uid === COMM_UID, liked = natLiked(x);
+            const coms = f.coms || [];
+            return `<div class="nat-detail">
+                ${p && p.title ? `<div class="text-[0.9375rem] font-extrabold text-slate-900 dark:text-white mb-1">${esc(p.title)}</div>` : ''}
+                ${text ? `<p style="white-space: pre-line;">${esc(text)}</p>` : '<p class="text-slate-400">(내용이 없습니다)</p>'}${img}
+                ${!p ? '<p class="text-[0.6875rem] text-slate-400 mt-1">원문을 불러오지 못해 미리보기만 보여 드려요.</p>' : ''}
+                <div class="flex flex-wrap items-center gap-2 mt-3">
+                    <button onclick="natLike('${esc(x.id)}')" ${!p || own ? 'disabled' : ''} class="nat-like-btn ${liked ? 'on' : ''}" title="${own ? '내 글에는 누를 수 없어요' : '공감 보내기'}"><i class="fa-${liked ? 'solid' : 'regular'} fa-heart"></i> 공감 <b>${x.likes || 0}</b></button>
+                    <span class="text-[0.6875rem] text-slate-500">조회 ${x.views || 0} · 점수 ${Math.round(x.score)}</span>
+                    ${mineTown ? `<button onclick="natGoMine('${x.board}', '${esc(x.pid)}')" class="nat-btn ml-auto"><i class="fa-solid fa-arrow-up-right-from-square"></i> 우리 동네 게시판에서 보기</button>` : ''}
+                </div>
+                <div class="nat-coms">
+                    <div class="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1">댓글 ${coms.length}</div>
+                    ${coms.length ? coms.slice(0, 30).map(c => `<div class="flex items-start gap-2 py-1.5"><span class="shrink-0">${avatarHtml(c, 'w-6 h-6', 'text-xs')}</span><div class="min-w-0"><b class="text-[0.6875rem] text-slate-700 dark:text-slate-200">${esc(c.nick || '이웃')}</b> <span class="text-[0.625rem] text-slate-400">${timeAgo(c.ts || 0)}</span><div class="text-xs text-slate-700 dark:text-slate-200 break-words" style="white-space: pre-line;">${esc(c.text || '')}</div></div></div>`).join('') : '<div class="text-[0.6875rem] text-slate-400 py-1">아직 댓글이 없어요.</div>'}
+                    ${mineTown ? '' : `<div class="nat-lock"><i class="fa-solid fa-lock"></i> 댓글은 ${esc(x.dong || '그 동네')} 주민만 남길 수 있어요. 공감(❤)으로 마음을 전해 보세요.</div>`}
+                </div></div>`;
         }
         function natPlaceRow(x, i) {
             const B = NAT_BOARDS[x.board] || NAT_BOARDS.food, avg = x.n ? x.sum / x.n : 0;
@@ -4630,23 +4837,20 @@
                     <a target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/?q=${q}" class="nat-map nat-map-k">카카오</a>
                 </span></div></li>`;
         }
+        // 이달의 인기 이웃 TOP10: 동네와 상관없이 누구나 친구 요청 · 대화 요청을 보낼 수 있음
         function natPersonRow(r, i) {
-            return `<li class="nat-row"><button onclick="closeSheet(); openCommunity(); setTimeout(() => showProfile('${esc(r.uid)}'), 80)" class="nat-row-btn">
+            const me = r.uid === COMM_UID, u = esc(r.uid);
+            const fr = me ? '' : (isFriend(r.uid) ? '<span class="nat-pill nat-pill-done">👥 친구</span>'
+                : (friendSent.has(r.uid) ? '<span class="nat-pill nat-pill-done">👥 요청 보냄</span>' : `<button onclick="event.stopPropagation(); natAskFriend('${u}')" class="nat-pill nat-pill-teal">👥 친구 요청</button>`));
+            const ch = me ? '' : (canChat(r.uid) ? `<button onclick="event.stopPropagation(); profileShown = Object.assign({ uid: '${u}' }, natPeopleInfo['${u}'] || {}); openDM('${u}', profileShown.nick, profileShown.emoji, profileShown.photo, profileShown.area)" class="nat-pill nat-pill-sky">💬 대화하기</button>`
+                : (chatSent.has(r.uid) ? '<span class="nat-pill nat-pill-done">💬 요청 보냄</span>' : `<button onclick="event.stopPropagation(); natAskChat('${u}')" class="nat-pill nat-pill-sky">💬 대화 요청</button>`));
+            return `<li class="nat-row"><div role="button" tabindex="0" onclick="natShowPerson('${u}')" class="nat-row-btn cursor-pointer">
                 ${natMedal(i)}
                 <span class="shrink-0 ${i < 3 ? 'p-[2px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600' : ''}"><span class="block rounded-full bg-white dark:bg-slate-900 p-[1px]">${avatarHtml(r, 'w-10 h-10', 'text-xl')}</span></span>
-                <span class="min-w-0 flex-1"><span class="nat-title">${esc(displayName(r.uid, r.nick))}${r.uid === COMM_UID ? ' <span class="text-violet-500 text-[0.75em]">(나)</span>' : ''}</span>
-                    <span class="flex items-center gap-2 flex-wrap">${r.area ? natAreaChip({ sido: r.area.split(' ')[0], sigungu: r.area.split(' ').slice(1, -1).join(' '), dong: r.area.split(' ').slice(-1)[0] }) : ''}<span class="text-[0.625rem] text-slate-400">❤ ${r.hearts} · 감정 ${r.reacts} · 💬 ${r.comments} · 게시물 ${r.posts}</span></span></span>
-                <span class="text-right shrink-0"><b class="block text-base font-black text-violet-600 dark:text-violet-300 leading-none">${r.score}</b><span class="text-[0.5625rem] text-slate-400">점</span></span></button></li>`;
-        }
-        function natTownCard(x) {
-            const B = NAT_BOARDS[x.board] || NAT_BOARDS.free;
-            return `<button onclick="natSet('tab', 'posts'); natToggle('${esc(x.id)}')" class="nat-town">
-                <span class="flex items-center justify-between gap-2"><b class="text-[0.8125rem] text-slate-900 dark:text-white truncate">${esc(x.dong || x.area)}</b><span class="nat-crown">👑 1위</span></span>
-                <span class="text-[0.625rem] text-slate-400 truncate">${esc(sidoShort(x.sido))} ${esc(x.sigungu || '')}</span>
-                <span class="nat-board nat-c-${B.c} self-start mt-1">${B.e} ${B.n}</span>
-                <span class="text-xs font-bold text-slate-700 dark:text-slate-200 leading-snug nat-clamp2 mt-0.5">${esc(x.title)}</span>
-                <span class="mt-auto pt-1 flex items-center gap-2 text-[0.625rem] text-slate-500"><span class="nat-like"><i class="fa-solid fa-heart"></i> ${x.likes || 0}</span><span><i class="fa-regular fa-comment"></i> ${x.comments || 0}</span></span>
-            </button>`;
+                <span class="min-w-0 flex-1"><span class="nat-title">${esc(displayName(r.uid, r.nick))}${me ? ' <span class="text-violet-500 text-[0.75em]">(나)</span>' : ''}</span>
+                    <span class="flex items-center gap-2 flex-wrap">${r.area ? natAreaChip({ sido: r.area.split(' ')[0], sigungu: r.area.split(' ').slice(1, -1).join(' '), dong: r.area.split(' ').slice(-1)[0] }) : ''}<span class="text-[0.625rem] text-slate-400">❤ ${r.hearts} · 감정 ${r.reacts} · 💬 ${r.comments} · 게시물 ${r.posts}</span></span>
+                    ${fr || ch ? `<span class="flex flex-wrap gap-1 mt-1.5">${fr}${ch}</span>` : ''}</span>
+                <span class="text-right shrink-0"><b class="block text-base font-black text-violet-600 dark:text-violet-300 leading-none">${r.score}</b><span class="text-[0.5625rem] text-slate-400">점</span></span></div></li>`;
         }
         function natSection(title, sub, more, inner) {
             return `<section class="nat-sec"><div class="nat-sec-head"><div><h3>${title}</h3>${sub ? `<p>${sub}</p>` : ''}</div>${more ? `<button onclick="natSet('tab', '${more}')" class="nat-more">전체 보기 <i class="fa-solid fa-chevron-right"></i></button>` : ''}</div>${inner}</section>`;
@@ -4674,26 +4878,24 @@
             let body = '';
             if (loading) body = `<div class="space-y-2">${'<div class="nat-skel"></div>'.repeat(6)}</div>`;
             else if (tab === 'all') {
-                body = (f.towns.length ? natSection('🗺️ 동네별 1위', '각 동네에서 이번 달 가장 공감을 많이 받은 글', 'towns', `<div class="nat-towns">${f.towns.slice(0, 8).map(natTownCard).join('')}</div>`) : '')
-                    + natSection('🔥 전국 인기 글 TOP 10', '공감·댓글·조회를 합쳐 매긴 순위', 'posts', ol(f.posts, natPostRow, 10) || natEmpty('이번 달 아직 공감을 받은 글이 없어요.<br>우리 동네 게시판에 글을 쓰고 이웃의 공감을 받아 보세요!'))
-                    + `<div class="nat-duo">${natSection('👍 좋았던 곳', '칭찬해요 · 맛집 · 명소', 'good', ol(f.good, x => x.kind === 'place' ? natPlaceRow(x, f.good.indexOf(x)) : natPostRow(x, f.good.indexOf(x)), 5) || natEmpty('아직 없어요'))}
-                        ${natSection('🙏 아쉬웠던 곳', '이웃들이 가장 많이 공감한 개선 요청', 'bad', ol(f.bad, natPostRow, 5) || natEmpty('아직 없어요'))}</div>`
-                    + natSection('👑 이달의 인기 이웃', '내 일상 게시물로 ❤를 가장 많이 받은 이웃 (순위 공개를 켠 이웃만)', 'people', ol(f.people, natPersonRow, 5) || natEmpty('아직 순위에 오른 이웃이 없어요.<br>내 프로필에서 일상을 올리고 순위 공개를 켜 보세요.'));
+                body = natSection('🔥 전국 인기 글 TOP10', '전국 모든 동네 글 중 공감·댓글·조회가 가장 많은 10개 · 눌러서 내용 보기 (다른 동네 글은 공감만 가능)', 'posts', ol(f.posts, natPostRow, NAT_TOP) || natEmpty('이번 달 아직 공감을 받은 글이 없어요.<br>우리 동네 게시판에 글을 쓰고 이웃의 공감을 받아 보세요!'))
+                    + `<div class="nat-duo">${natSection('👍 좋았던 곳', '칭찬해요 · 맛집 · 핫플 TOP10 중 5위까지', 'good', ol(f.good, x => x.kind === 'place' ? natPlaceRow(x, f.good.indexOf(x)) : natPostRow(x, f.good.indexOf(x)), 5) || natEmpty('아직 없어요'))}
+                        ${natSection('🙏 아쉬웠던 곳', '가장 많이 공감한 개선 요청 TOP10 중 5위까지', 'bad', ol(f.bad, natPostRow, 5) || natEmpty('아직 없어요'))}</div>`
+                    + natSection('👑 이달의 인기 이웃 TOP10', '내 일상 게시물로 ❤를 가장 많이 받은 이웃 · 동네가 달라도 친구·대화 요청을 보낼 수 있어요', 'people', ol(f.people, natPersonRow, 5) || natEmpty('아직 순위에 오른 이웃이 없어요.<br>내 프로필에서 일상을 올리고 순위 공개를 켜 보세요.'));
             }
-            else if (tab === 'posts') body = ol(f.posts, natPostRow, 100) || natEmpty('조건에 맞는 글이 없어요.');
-            else if (tab === 'good') body = ol(f.good, (x, i) => x.kind === 'place' ? natPlaceRow(x, i) : natPostRow(x, i), 100) || natEmpty('조건에 맞는 좋았던 곳이 없어요.');
-            else if (tab === 'bad') body = ol(f.bad, natPostRow, 100) || natEmpty('조건에 맞는 아쉬운 점이 없어요.');
-            else if (tab === 'places') body = ol(f.places, natPlaceRow, 100) || natEmpty('이번 달 올라온 맛집·명소 후기가 없어요.');
-            else if (tab === 'people') body = ol(f.people, natPersonRow, 100) || natEmpty('아직 순위에 오른 이웃이 없어요.');
-            else if (tab === 'towns') body = f.towns.length ? `<div class="nat-towns">${f.towns.map(natTownCard).join('')}</div>` : natEmpty('아직 1위가 정해진 동네가 없어요.');
+            else if (tab === 'posts') body = ol(f.posts, natPostRow, NAT_TOP) || natEmpty('조건에 맞는 글이 없어요.');
+            else if (tab === 'good') body = ol(f.good, (x, i) => x.kind === 'place' ? natPlaceRow(x, i) : natPostRow(x, i), NAT_TOP) || natEmpty('조건에 맞는 좋았던 곳이 없어요.');
+            else if (tab === 'bad') body = ol(f.bad, natPostRow, NAT_TOP) || natEmpty('조건에 맞는 아쉬운 점이 없어요.');
+            else if (tab === 'places') body = ol(f.places, natPlaceRow, NAT_TOP) || natEmpty('이번 달 올라온 맛집·핫플 후기가 없어요.');
+            else if (tab === 'people') body = ol(f.people, natPersonRow, NAT_TOP) || natEmpty('아직 순위에 오른 이웃이 없어요.');
             const inSheet = natState.where !== 'comm';
             root.innerHTML = `
                 <div class="nat-hero shrink-0">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <div class="nat-eyebrow"><i class="fa-solid fa-trophy"></i> 전국 동네 커뮤니티</div>
-                            <h2 class="nat-h">이달의 전국 랭킹</h2>
-                            <p class="nat-sub">내 동네가 아니어도 괜찮아요. 전국 모든 동네에서 이번 달 가장 뜨거웠던 글·장소·이웃을 한눈에.</p>
+                            <h2 class="nat-h">이달의 전국 TOP10</h2>
+                            <p class="nat-sub">전국 모든 동네를 합쳐 이번 달 공감을 가장 많이 받은 글·장소·이웃을 10위까지만 소개해요.</p>
                         </div>
                         ${inSheet ? `<button onclick="closeSheet()" class="nat-x" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>` : ''}
                     </div>
@@ -4781,6 +4983,59 @@
             const b = document.getElementById('meBtn');
             if (!b) return;
             b.innerHTML = `${avatarHtml(meFields(), 'w-7 h-7', 'text-sm')}<span class="hidden lg:flex flex-col items-start leading-tight min-w-0"><span class="text-[0.75rem] font-extrabold max-w-[6.5rem] truncate">${esc(myNick())}</span><span class="text-[0.5625rem] font-semibold text-slate-500 dark:text-slate-400 max-w-[6.5rem] truncate">${esc(myTown ? myTown.dong : '내 프로필')}</span></span>`;
+            if (commTab === 'me' && document.getElementById('meTab')) renderMeTab();     // 커뮤니티 '내 프로필' 탭도 함께 새로
+        }
+        // ================= 커뮤니티 '내 프로필' 탭 =================
+        //  프로필(사진·닉네임·소개) · 숫자 요약 · 공개 설정 · 내가 쓴 글 모아 보기 · 자주 쓰는 메뉴를 한 화면에
+        function renderMeTab() {
+            const main = document.getElementById('commMain');
+            if (!main) return;
+            const mine = [];
+            Object.keys(PB).forEach(b => PB[b].list().forEach(p => { if (p.uid === COMM_UID && !pbIsComment(p)) mine.push({ b: b, p: p }); }));
+            mine.sort((x, y) => (y.p.ts || 0) - (x.p.ts || 0));
+            const likes = mine.reduce((a, x) => a + pbLikes(x.b, x.p), 0);
+            const feed = feedCache[COMM_UID];
+            if (!feed) loadFeed(COMM_UID).then(() => { if (commTab === 'me') renderMeTab(); }).catch(() => {});
+            const stat = (v, l) => `<div class="rounded-xl bg-slate-50 dark:bg-slate-800/70 py-2"><div class="text-base font-black text-slate-900 dark:text-white">${v}</div><div class="text-[0.625rem] font-semibold text-slate-500">${l}</div></div>`;
+            const link = (fn, icon, label, n) => `<button onclick="${fn}" class="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-fuchsia-300 dark:hover:border-fuchsia-800 hover:shadow-sm text-left transition">
+                <span class="w-8 h-8 rounded-lg bg-fuchsia-50 dark:bg-fuchsia-950/50 text-fuchsia-600 dark:text-fuchsia-300 flex items-center justify-center shrink-0"><i class="fa-solid ${icon}"></i></span>
+                <span class="flex-1 text-xs font-bold text-slate-800 dark:text-slate-100">${label}</span>${n ? `<span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${n}</span>` : '<i class="fa-solid fa-chevron-right text-[0.625rem] text-slate-300"></i>'}</button>`;
+            main.innerHTML = `<div id="meTab" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3 bg-slate-50/60 dark:bg-slate-950/40">
+                <div class="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                    <div class="h-16 bg-gradient-to-r from-fuchsia-500 via-rose-500 to-amber-400"></div>
+                    <div class="px-4 pb-4 -mt-9">
+                        <div class="flex items-end gap-3">
+                            <div class="shrink-0 p-[3px] rounded-full bg-white dark:bg-slate-900">${avatarHtml(meFields(), 'w-[4.5rem] h-[4.5rem]', 'text-4xl')}</div>
+                            <div class="min-w-0 flex-1 pb-1">
+                                <div class="text-base font-extrabold text-slate-900 dark:text-white truncate">${esc(myNick())}</div>
+                                <div class="text-[0.6875rem] font-semibold text-emerald-600 dark:text-emerald-400 truncate"><i class="fa-solid fa-location-dot"></i> ${esc(myTown ? townName(myTown) : '동네 인증 전')}</div>
+                            </div>
+                            <button onclick="editProfile()" class="shrink-0 mb-1 px-3 py-1.5 rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold"><i class="fa-solid fa-pen"></i> 수정</button>
+                        </div>
+                        <p class="mt-2 text-sm text-slate-700 dark:text-slate-200 break-words" style="white-space: normal;">${esc(commProfile.intro || '한 줄 소개를 적어 보세요.')}</p>
+                        <div class="mt-3 grid grid-cols-4 gap-1.5 text-center">${stat(mine.length, '게시판 글')}${stat(likes, '받은 공감')}${stat(feed ? feed.length : '–', '내 일상')}${stat(Object.keys(friends || {}).length, '친구')}</div>
+                        <div class="mt-3 flex gap-2">
+                            <button onclick="showProfile('${COMM_UID}')" class="flex-1 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-violet-600 text-white text-xs font-extrabold shadow"><i class="fa-solid fa-table-cells"></i> 내 일상 보기</button>
+                            <button onclick="showProfile('${COMM_UID}'); setTimeout(() => openFeedComposer(), 120)" class="flex-1 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-extrabold"><i class="fa-solid fa-plus"></i> 새 게시물</button>
+                        </div>
+                        ${feedPrivacyHtml()}
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                    ${link("setCommTab('friends')", 'fa-user-group', '친구 목록', friendReqs.length)}
+                    ${link("setCommTab('dm')", 'fa-envelope', '1:1 대화', chatReqs.length)}
+                    ${link('showBlockList()', 'fa-ban', '차단 관리')}
+                    ${link('showReportGuide()', 'fa-scale-balanced', '신뢰 지수 · 가이드')}
+                </div>
+                <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                    <div class="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between"><b class="text-sm text-slate-900 dark:text-white"><i class="fa-regular fa-file-lines"></i> 내가 쓴 글</b><span class="text-[0.6875rem] text-slate-400">${mine.length}개</span></div>
+                    ${mine.length ? mine.slice(0, 30).map(x => { const B = NAT_BOARDS[x.b] || NAT_BOARDS.free; return `<button onclick="setCommTab('${x.b}'); setTimeout(() => pbOpen('${x.b}', '${esc(x.p.id)}'), 30)" class="w-full flex items-center gap-2 px-4 py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                        <span class="nat-board nat-c-${B.c} shrink-0">${B.e} ${B.n}</span><span class="flex-1 min-w-0 text-[0.8125rem] font-bold text-slate-800 dark:text-slate-100 truncate">${esc(pbTitle(x.p))}</span>
+                        <span class="shrink-0 text-[0.625rem] text-slate-400">${timeAgo(x.p.ts)} · ❤ ${pbLikes(x.b, x.p)}</span></button>`; }).join('')
+                        : '<div class="text-center py-8 text-xs text-slate-400">아직 쓴 글이 없어요.</div>'}
+                </div>
+                <button onclick="resetTown()" class="w-full py-2 text-[0.6875rem] font-bold text-slate-400 hover:text-red-500"><i class="fa-solid fa-location-crosshairs"></i> 동네 다시 인증하기</button>
+            </div>`;
         }
         // Esc: 맨 위에 떠 있는 창부터 하나씩 닫기 (사진 크게 보기 → 프로필 → 공용 창 → 앱 안내 → 떠 있는 패널)
         document.addEventListener('keydown', (e) => {
@@ -4796,6 +5051,7 @@
         });
         function openMyProfile() {
             openCommunity();
+            if (myTown) { setCommTab('me'); return; }           // 동네 인증을 했으면 커뮤니티 '내 프로필' 탭으로
             setTimeout(() => showProfile(COMM_UID), 80);
         }
 
@@ -4874,6 +5130,11 @@
             if (tab === 'friends') subscribeFriends();
             if (tab === 'praise') subscribePraise();
             if (BOARDS[tab]) subscribeBoard(tab);
+            // 우리동네 TOP10 · 내 프로필(내가 쓴 글)은 여러 게시판 글을 함께 보므로 모두 받아 옴
+            if (tab === 'popular' || tab === 'me') {
+                subscribeFree(); subscribePraise(); subscribeBoard('hello'); subscribeBoard('wish');
+                setTimeout(() => { if (commTab === 'popular') renderPopular(); else if (commTab === 'me') renderMeTab(); }, 1500);   // 글을 받아 온 뒤 순위·목록 다시 계산
+            }
             if (tab === 'hello') { lsSet('hello_seen', String(Date.now())); }
             lsSet('comm_last_' + commGroupOf(tab).k, tab);      // 묶음마다 마지막으로 본 탭 기억
             if (tab !== 'dm') { dmWith = null; if (dmUnsub) { dmUnsub(); dmUnsub = null; } }
@@ -5556,20 +5817,22 @@
 
         // ================= 커뮤니티 탭 묶음 =================
         // 탭이 11개로 늘어나 한 줄에 다 보이지 않던 문제 → 5개 묶음(큰 버튼)으로 나누고, 묶음 안의 탭은 그 아래 작은 줄에 보여 줌.
-        // 안전망은 가장 중요해서 혼자 따로(빨간색), 맛집·명소처럼 성격이 같은 것은 한 묶음으로.
+        // 안전망은 가장 중요해서 혼자 따로(빨간색), 맛집·핫플처럼 성격이 같은 것은 한 묶음으로.
         const COMM_GROUPS = [
             // c: 묶음 색, fa: 아이콘. 안전망은 고르지 않았을 때도 빨간색으로 칠해서 항상 눈에 띄게 (SOS 표시는 실제 SOS 글이 있을 때만 한 번)
             { k: 'safe', label: '우리동네 안전망', fa: 'fa-shield-halved', c: 'red', tabs: ['talk'] },
-            { k: 'life', label: '동네 이야기', fa: 'fa-house-chimney-user', c: 'sky', tabs: ['free', 'hello', 'wish', 'praise'] },
-            { k: 'local', label: '맛집·명소', fa: 'fa-utensils', c: 'orange', tabs: ['food', 'spot'] },
+            // 동네 이야기: 맨 앞 '우리동네 TOP10'(이번 달 우리 동네 인기 글 TOP10 + 인기쟁이 TOP10)을 함께 둠 (탭 이름 popular 는 예전 저장값과 맞추려고 그대로 씀)
+            { k: 'life', label: '동네 이야기', fa: 'fa-house-chimney-user', c: 'sky', tabs: ['popular', 'free', 'hello', 'wish', 'praise'] },
+            { k: 'local', label: '맛집·핫플', fa: 'fa-utensils', c: 'orange', tabs: ['food', 'spot'] },
             { k: 'market', label: '동네 장터', fa: 'fa-store', c: 'emerald', tabs: ['market'] },
-            { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['popular', 'meet', 'friends', 'random', 'dm'] },
-            { k: 'nation', label: '전국 랭킹', fa: 'fa-trophy', c: 'amber', tabs: ['national'] }
+            { k: 'people', label: '이웃·대화', fa: 'fa-comments', c: 'violet', tabs: ['meet', 'friends', 'random', 'dm'] },
+            { k: 'nation', label: '전국 TOP10', fa: 'fa-trophy', c: 'amber', tabs: ['national'] },
+            { k: 'me', label: '내 프로필', fa: 'fa-circle-user', c: 'fuchsia', tabs: ['me'] }
         ];
-        const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '우리동네 맛집', spot: '우리동네 명소',
-            market: '동네 장터', popular: '우리동네 인기쟁이', meet: '동네 친구', friends: '친구', random: '랜덤 채팅', dm: '1:1 대화', national: '이달의 전국 랭킹' };
-        const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-hand-holding-heart', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-tree',
-            popular: 'fa-crown', meet: 'fa-user-plus', friends: 'fa-user-group', random: 'fa-shuffle', dm: 'fa-envelope' };
+        const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '우리동네 맛집', spot: '우리동네 핫플',
+            market: '동네 장터', popular: '우리동네 TOP10', meet: '동네 친구', friends: '친구', random: '랜덤 채팅', dm: '1:1 대화', national: '이달의 전국 TOP10', me: '내 프로필' };
+        const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-hand-holding-heart', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-fire',
+            popular: 'fa-ranking-star', meet: 'fa-user-plus', friends: 'fa-user-group', random: 'fa-shuffle', dm: 'fa-envelope' };
         function commGroupOf(tab) { return COMM_GROUPS.find(g => g.tabs.includes(tab)) || COMM_GROUPS[0]; }
         // 묶음 안의 작은 탭 순서: 마우스로 끌어서 바꾸고 저장 (새로 생긴 탭은 맨 뒤에 붙음)
         function groupTabs(g) {
@@ -5635,12 +5898,17 @@
                     <span class="text-[0.6875rem] font-extrabold truncate max-w-full leading-none">${g.label}</span>${sosTag}${badge(n)}</button>`;
             }).join('');
             const order = groupTabs(cur), okey = 'comm_order_' + cur.k;
-            // 묶음 안의 탭: 밑줄형 (끌어서 순서 바꾸기)
-            const subs = cur.tabs.length > 1 ? `<div class="hscroll gap-0.5 px-1.5 mt-1 border-t border-slate-100 dark:border-slate-800" title="탭을 마우스로 끌어서 순서를 바꿀 수 있습니다">${order.map(t => {
+            // 묶음 안의 탭: 또렷한 알약(pill) 버튼 — 고른 탭은 묶음 색으로 꽉 채우고, 나머지는 흰 바탕 + 색 아이콘 (끌어서 순서 바꾸기)
+            const c = cur.c;
+            const subs = cur.tabs.length > 1 ? `<div class="hscroll gap-1.5 px-2 py-2 mt-1.5 border-t border-slate-100 dark:border-slate-800 bg-${c}-50/50 dark:bg-slate-900" title="탭을 마우스로 끌어서 순서를 바꿀 수 있습니다">${order.map(t => {
                 const on = t === commTab, b = tabBadge(t);
-                return `<button onclick="setCommTab('${t}')" ${ordAttrs(okey, t, 'groupTabs(commGroupOf(commTab))', 'renderCommTabBar()')} class="ord-item comm-tab relative flex items-center gap-1.5 px-3 py-2 text-xs font-bold whitespace-nowrap border-b-[3px] cursor-grab transition ${on ? `border-${cur.c}-500 text-${cur.c}-700 dark:text-${cur.c}-300` : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'}"><i class="fa-solid ${COMM_TAB_FA[t] || 'fa-circle'} text-[0.6875rem] ${on ? '' : 'opacity-70'}"></i>${COMM_TAB_LABEL[t]}${b ? ` <span class="text-[0.5625rem] bg-red-500 text-white rounded-full px-1.5 leading-4">${b === '●' ? '●' : b}</span>` : ''}</button>`;
+                const cls = on ? `bg-${c}-600 text-white border-${c}-600 shadow-md shadow-${c}-500/25`
+                    : `bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-${c}-400 hover:text-${c}-700 dark:hover:text-${c}-300`;
+                const ico = on ? 'bg-white/25 text-white' : `bg-${c}-100 dark:bg-${c}-950/60 text-${c}-600 dark:text-${c}-300`;
+                return `<button onclick="setCommTab('${t}')" ${ordAttrs(okey, t, 'groupTabs(commGroupOf(commTab))', 'renderCommTabBar()')} aria-pressed="${on}" class="ord-item comm-tab relative shrink-0 flex items-center gap-1.5 pl-1.5 pr-3.5 py-1.5 rounded-full border text-[0.8125rem] font-extrabold whitespace-nowrap cursor-grab transition ${cls}"><span class="w-6 h-6 rounded-full flex items-center justify-center text-[0.6875rem] ${ico}"><i class="fa-solid ${COMM_TAB_FA[t] || 'fa-circle'}"></i></span>${COMM_TAB_LABEL[t]}${b ? ` <span class="text-[0.5625rem] ${on ? 'bg-white text-red-600' : 'bg-red-500 text-white'} rounded-full px-1.5 leading-4">${b === '●' ? '●' : b}</span>` : ''}</button>`;
             }).join('')}</div>` : '';
             bar.innerHTML = `<div class="grid gap-1.5 px-2 pt-2 ${subs ? '' : 'pb-2'}" style="grid-template-columns: repeat(${COMM_GROUPS.length}, minmax(0, 1fr));">${groups}</div>${subs}`;
+            const on = bar.querySelector('.comm-tab[aria-pressed="true"]'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });   // 고른 탭이 가려지지 않게
         }
 
         // ================= 게시판 (네이버 카페처럼: 글 목록 → 글 보기 → 댓글) =================
@@ -5726,6 +5994,13 @@
             if (b === 'talk') renderLiveBar();
         }
         function pbSetSort(b, s) { pbUi[b].sort = s; lsSet('pb_sort_' + b, s); pbRefresh(b, true); }
+        // ---- 게시글 보기 방식 (모든 게시판 공통, 저장됨) ----
+        //  list  = 목록형(기본): 제목 위주로 한 줄씩, 많은 글을 빠르게 훑기
+        //  album = 앨범형: 사진을 크게 격자로 (사진 없는 글은 색 카드에 제목)
+        //  card  = 카드형: 글쓴이·본문 미리보기·사진을 카드로 (SNS 피드처럼 내용까지 한눈에)
+        const PB_LAYOUTS = [['list', 'fa-list', '목록'], ['album', 'fa-table-cells-large', '앨범'], ['card', 'fa-rectangle-list', '카드']];
+        let pbLayout = (() => { const v = lsGet('pb_layout'); return PB_LAYOUTS.some(l => l[0] === v) ? v : 'list'; })();
+        function pbSetLayout(b, v) { pbLayout = v; lsSet('pb_layout', v); pbRefresh(b, true); }
         function pbSetFilter(b, f) { pbUi[b].filter = f; pbRefresh(b, true); }
         function pbBack(b) { pbUi[b].view = 'list'; pbUi[b].id = null; pbRefresh(b, true); }
         // ---- 목록 ----
@@ -5755,18 +6030,49 @@
                             <span class="shrink-0">${timeAgo(p.ts)}</span><span class="shrink-0">조회 ${p.views || 0}</span><span class="shrink-0">공감 ${lk}</span></div>
                     </div>${thumb}</button>`;
             };
+            // 앨범형: 정사각 격자. 사진이 있으면 사진, 없으면 게시판 색 바탕에 제목·본문 첫 줄
+            const tile = (p, pin) => {
+                const n = cc[p.id] || 0, lk = pbLikes(b, p), fresh = now - p.ts < 3 * 3600000, hasImg = p.img && IMG_DATA_RE.test(p.img);
+                const bg = hasImg ? `<img src="${p.img}" alt="" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition duration-300 group-hover:scale-105">`
+                    : (p.video ? '<span class="absolute inset-0 bg-slate-900 text-white flex items-center justify-center text-3xl">▶</span>'
+                        : `<span class="absolute inset-0 bg-gradient-to-br from-${c}-100 to-${c}-200 dark:from-${c}-950 dark:to-slate-900 px-3 pt-9 pb-7 flex flex-col"><span class="text-[0.8125rem] font-extrabold text-${c}-900 dark:text-${c}-100 leading-snug line-clamp-3 break-words" style="white-space: normal;">${esc(pbTitle(p))}</span><span class="mt-1 text-[0.6875rem] text-${c}-800/80 dark:text-${c}-200/80 leading-snug line-clamp-3 break-words" style="white-space: normal;">${esc(String(p.text || '').slice(0, 120))}</span></span>`);
+                return `<button onclick="pbOpen('${b}', '${esc(p.id)}')" class="group relative aspect-square rounded-xl overflow-hidden text-left border ${pin ? 'border-red-400 ring-2 ring-red-400/60' : 'border-slate-200 dark:border-slate-700'} bg-slate-100 dark:bg-slate-800 hover:shadow-lg transition">
+                    ${bg}
+                    <span class="absolute top-1.5 left-1.5 right-1.5 flex items-center gap-1">${pin ? '<span class="px-1.5 py-0.5 rounded bg-red-600 text-white text-[0.5625rem] font-black">📌 고정</span>' : ''}${pbBadge(b, p)}${fresh ? '<span class="ml-auto shrink-0 w-4 h-4 rounded-full bg-orange-500 text-white text-[0.5625rem] font-black flex items-center justify-center">N</span>' : ''}</span>
+                    <span class="absolute inset-x-0 bottom-0 px-2 pt-6 pb-1.5 ${hasImg || p.video ? 'bg-gradient-to-t from-black/75 to-transparent text-white' : 'text-slate-600 dark:text-slate-300'}">
+                        ${hasImg || p.video ? `<span class="block text-xs font-bold truncate">${esc(pbTitle(p))}</span>` : ''}
+                        <span class="flex items-center gap-2 text-[0.625rem] font-bold opacity-90"><span><i class="fa-solid fa-heart"></i> ${lk}</span><span><i class="fa-regular fa-comment"></i> ${n}</span><span class="ml-auto truncate">${timeAgo(p.ts)}</span></span></span></button>`;
+            };
+            // 카드형: 글쓴이 · 제목 · 본문 미리보기 · 사진 · 공감/댓글/조회
+            const card = (p, pin) => {
+                const n = cc[p.id] || 0, lk = pbLikes(b, p), fresh = now - p.ts < 3 * 3600000, hasImg = p.img && IMG_DATA_RE.test(p.img);
+                return `<button onclick="pbOpen('${b}', '${esc(p.id)}')" class="w-full text-left rounded-2xl border ${pin ? 'border-red-300 dark:border-red-900 bg-red-50/80 dark:bg-red-950/30' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'} hover:shadow-md hover:-translate-y-px transition overflow-hidden">
+                    <div class="px-3.5 pt-3 flex items-center gap-2">${avatarHtml(p, 'w-8 h-8', 'text-base')}
+                        <div class="min-w-0 flex-1 leading-tight"><div class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">${esc(displayName(p.uid, p.nick))}${p.uid === COMM_UID ? ' (나)' : ''}</div><div class="text-[0.625rem] text-slate-400">${timeAgo(p.ts)}${p.place ? ' · 📍' + esc(p.place) : ''}</div></div>
+                        ${pin ? '<i class="fa-solid fa-thumbtack text-red-500 text-xs"></i>' : ''}${fresh ? '<span class="shrink-0 w-4 h-4 rounded-full bg-orange-500 text-white text-[0.5625rem] font-black flex items-center justify-center">N</span>' : ''}</div>
+                    <div class="px-3.5 pt-2"><div class="flex items-center gap-1.5 flex-wrap">${pbBadge(b, p)}</div>
+                        <div class="mt-1 text-[0.9375rem] font-extrabold text-slate-900 dark:text-white leading-snug break-words" style="white-space: normal;">${esc(pbTitle(p))}</div>
+                        ${p.text ? `<div class="mt-1 text-[0.8125rem] text-slate-600 dark:text-slate-300 leading-relaxed line-clamp-3 break-words" style="white-space: normal;">${esc(String(p.text).slice(0, 300))}</div>` : ''}</div>
+                    ${hasImg ? `<img src="${p.img}" alt="" loading="lazy" class="mt-2.5 w-full max-h-64 object-cover border-y border-slate-100 dark:border-slate-800">` : (p.video ? '<div class="mt-2.5 h-32 bg-slate-900 text-white flex items-center justify-center text-3xl">▶</div>' : '')}
+                    <div class="px-3.5 py-2.5 flex items-center gap-4 text-[0.75rem] font-bold text-slate-500 dark:text-slate-400"><span class="text-rose-500"><i class="fa-solid fa-heart"></i> ${lk}</span><span><i class="fa-regular fa-comment"></i> ${n}</span><span><i class="fa-regular fa-eye"></i> ${p.views || 0}</span></div></button>`;
+            };
+            const all = pinned.map(p => [p, true]).concat(rest.map(p => [p, false]));
+            const itemsHtml = !all.length ? '' : (pbLayout === 'album' ? `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-2">${all.map(a => tile(a[0], a[1])).join('')}</div>`
+                : (pbLayout === 'card' ? `<div class="p-2.5 space-y-2.5 max-w-2xl mx-auto">${all.map(a => card(a[0], a[1])).join('')}</div>` : all.map(a => row(a[0], a[1])).join('')));
+            const layoutSeg = `<div class="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 shrink-0" role="group" aria-label="보기 방식">${PB_LAYOUTS.map(l => `<button onclick="pbSetLayout('${b}', '${l[0]}')" title="${l[2]}형으로 보기" aria-pressed="${pbLayout === l[0]}" class="flex items-center gap-1 px-2 py-1 rounded-md text-[0.6875rem] font-bold whitespace-nowrap transition ${pbLayout === l[0] ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100'}"><i class="fa-solid ${l[1]}"></i><span class="hide-narrow">${l[2]}</span></button>`).join('')}</div>`;
             const chip = (k, label) => `<button onclick="pbSetFilter('${b}', '${esc(k)}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold whitespace-nowrap border transition ${ui.filter === k ? `bg-${c}-600 text-white border-transparent` : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-400'}">${esc(label)}</button>`;
             return `<div class="shrink-0 px-3 pt-2 pb-2 space-y-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
                         <div class="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5">${PB_SORTS.map(s => `<button onclick="pbSetSort('${b}', '${s[0]}')" class="px-2 py-1 rounded-md text-[0.6875rem] font-bold whitespace-nowrap transition ${ui.sort === s[0] ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}">${s[1]}</button>`).join('')}</div>
-                        <span class="text-[0.6875rem] text-slate-400 hide-narrow">글 ${posts.length}개</span>
+                        ${layoutSeg}
+                        <span class="text-[0.6875rem] text-slate-400 hide-narrow whitespace-nowrap">글 ${posts.length}개</span>
                         <button onclick="pbWrite('${b}')" class="ml-auto shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg ${pbBtn(b)} text-white text-xs font-extrabold shadow-sm"><i class="fa-solid fa-pen"></i> 글쓰기</button>
                     </div>
                     ${P.filters ? `<div class="hscroll gap-1">${chip('all', '전체')}${P.filters.map(f => chip(f[0], f[1])).join('')}</div>` : ''}
                 </div>
                 ${b === 'talk' ? '<div id="commLiveBar" class="shrink-0"></div>' : ''}
                 <div id="pbList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
-                    ${pinned.length || rest.length ? pinned.map(p => row(p, true)).join('') + rest.map(p => row(p, false)).join('')
+                    ${all.length ? itemsHtml
                         : `<div class="text-center py-16 px-6 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${esc(P.empty)}<br><button onclick="pbWrite('${b}')" class="mt-3 px-4 py-2 rounded-lg ${pbBtn(b)} text-white text-xs font-bold"><i class="fa-solid fa-pen"></i> 첫 글 쓰기</button></div>`}
                 </div>`;
         }
@@ -5972,14 +6278,14 @@
             } catch (e) { console.error(e); say('등록에 실패했습니다. 잠시 후 다시 시도해 주세요.'); }
         }
 
-        // ================= 우리동네 맛집 · 명소 · 이사왔어요 =================
-        //  맛집·명소: 같은 가게(장소) 후기는 이름으로 하나로 묶어 평균 별점·후기 수를 보여 주고, 이름을 누르면 후기 모음 + 지도(네이버·카카오)로 이어짐
+        // ================= 우리동네 맛집 · 핫플 · 이사왔어요 =================
+        //  맛집·핫플: 같은 가게(장소) 후기는 이름으로 하나로 묶어 평균 별점·후기 수를 보여 주고, 이름을 누르면 후기 모음 + 지도(네이버·카카오)로 이어짐
         //  이사왔어요: 새 이웃의 인사 글 + 👋 환영해요 + 짧은 댓글
         const BOARDS = {
             food: { col: 'food', name: '우리동네 맛집', icon: '🍜', place: true, kinds: ['한식', '중식', '일식', '양식', '분식', '고기·구이', '카페·디저트', '빵집', '술집', '기타'],
                 nameLabel: '상호명', namePh: '예) ○○칼국수', textPh: '예) 바지락이 듬뿍, 국물이 시원해요. 점심엔 줄을 서요.', ratingLabel: '별점', btn: 'bg-orange-500 hover:bg-orange-400', ring: 'border-orange-300 dark:border-orange-800', chip: 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-200', write: '맛집 후기 쓰기' },
-            spot: { col: 'spots', name: '우리동네 명소', icon: '🌳', place: true, kinds: ['공원·산책길', '카페·쉼터', '문화·전시', '아이와 함께', '운동·체육', '야경·풍경', '기타'],
-                nameLabel: '장소 이름', namePh: '예) ○○천 벚꽃길', textPh: '예) 저녁 산책하기 좋아요. 4월엔 벚꽃이 장관이에요.', ratingLabel: '추천도', btn: 'bg-emerald-600 hover:bg-emerald-500', ring: 'border-emerald-300 dark:border-emerald-800', chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200', write: '명소 추천하기' },
+            spot: { col: 'spots', name: '우리동네 핫플', icon: '🔥', place: true, kinds: ['공원·산책길', '카페·쉼터', '문화·전시', '아이와 함께', '운동·체육', '야경·풍경', '기타'],
+                nameLabel: '장소 이름', namePh: '예) ○○천 벚꽃길', textPh: '예) 저녁 산책하기 좋아요. 4월엔 벚꽃이 장관이에요.', ratingLabel: '추천도', btn: 'bg-emerald-600 hover:bg-emerald-500', ring: 'border-emerald-300 dark:border-emerald-800', chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200', write: '핫플 추천하기' },
             hello: { col: 'hello', name: '이사왔어요', icon: '👋', place: false, btn: 'bg-sky-600 hover:bg-sky-500', ring: 'border-sky-300 dark:border-sky-800', chip: 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-200', write: '이사 인사 남기기',
                 agree: '👋 환영해요', head: n => `👋 ${n}님이 이사 왔어요`, ph: '안녕하세요! ○○동에 새로 이사 왔어요. 잘 부탁드립니다 🙂', replyPh: '예) 반가워요! 앞으로 잘 지내요 🙂',
                 tip: '예) 지난주 ○○아파트로 이사 왔어요. 아이 둘 키우고 있고, 동네 산책 코스 추천 부탁드려요! (동·호수 같은 자세한 주소는 적지 마세요)', empty: '아직 이사 인사가 없습니다. 새로 오셨다면 첫 인사를 남겨 보세요!' },
@@ -6099,7 +6405,7 @@
                 const db = await commInit();
                 if (db) await boardCol(b).add(msg);
                 else { msg.id = 'b' + Date.now() + Math.random().toString(36).slice(2, 7); boardData[b].unshift(msg); boardLocalSave(b); }
-                if (db && B.place) hotMirrorPlace(b, msg);      // 맛집·명소 후기 → 전국 랭킹 요약
+                if (db && B.place) hotMirrorPlace(b, msg);      // 맛집·핫플 후기 → 전국 랭킹 요약
                 showAlertToast({ head: B.name, title: '올렸어요! 이웃의 공감을 많이 받으면 이달의 전국 랭킹에 올라가요.' });
                 boardDraft = { rating: 0, img: null };
                 boardUi[b].form = false;
@@ -6151,7 +6457,7 @@
             const s = document.getElementById('boardScroll'); if (s) s.style.background = commBg;
             renderBoardBody(b);
         }
-        // 글쓰기 상자 (맛집·명소: 상호명·위치·종류·별점·짧은 평가·사진 / 이사왔어요: 인사말·사진)
+        // 글쓰기 상자 (맛집·핫플: 상호명·위치·종류·별점·짧은 평가·사진 / 이사왔어요: 인사말·사진)
         function boardFormHtml(b) {
             const B = BOARDS[b], pre = boardDraft.preset || {};
             const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white placeholder:text-slate-400';
@@ -6251,7 +6557,7 @@
                         ${latest && latest.text ? `<div class="text-[0.6875rem] text-slate-700 dark:text-slate-300 line-clamp-2" style="white-space: normal;">“${esc(latest.text)}”</div>` : ''}
                     </div>
                 </div>`;
-            }).join('') : `<div class="col-span-full text-center py-14 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${boardPlaces(b).length ? '조건에 맞는 곳이 없습니다.' : `아직 등록된 ${b === 'food' ? '맛집' : '명소'}이 없습니다.<br>[${B.write}]를 눌러 첫 ${b === 'food' ? '후기' : '추천'}를 남겨 보세요.`}</div>`;
+            }).join('') : `<div class="col-span-full text-center py-14 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${boardPlaces(b).length ? '조건에 맞는 곳이 없습니다.' : `아직 등록된 ${b === 'food' ? '맛집' : '핫플'}이 없습니다.<br>[${B.write}]를 눌러 첫 ${b === 'food' ? '후기' : '추천'}를 남겨 보세요.`}</div>`;
         }
         // 이사왔어요 · 아쉬워요 (글 + 공감 버튼 + 짧은 댓글) 공용 화면
         function renderSocialHtml(b) {
@@ -7325,7 +7631,7 @@
         }
         function friendInfo(uid) {
             if (profileShown.uid === uid) return { nick: profileShown.nick, emoji: profileShown.emoji, photo: profileShown.photo, area: profileShown.area };
-            const m = commMembers.concat(commMessages, freeMessages).find(x => x.uid === uid) || dmThreads.find(x => x.uid === uid) || {};
+            const m = commMembers.concat(commMessages, freeMessages).find(x => x.uid === uid) || dmThreads.find(x => x.uid === uid) || natPeopleInfo[uid] || {};
             return { nick: m.nick || '이웃', emoji: m.emoji || '🙂', photo: m.photo || '', area: m.area || '' };
         }
         function friendButtons(uid) {
@@ -7958,9 +8264,9 @@
         // 라이트/다크 모드: 마지막으로 고른 모드를 저장해서 새로고침하거나 다시 접속해도 그대로 유지 (처음 접속은 라이트 모드)
         function syncThemeUi() {
             const dark = document.documentElement.classList.contains('dark');
-            const ic = document.getElementById('themeIcon'), tx = document.getElementById('themeText');
-            if (ic) ic.className = dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-            if (tx) tx.textContent = dark ? '라이트모드' : '다크모드';
+            const ic = document.getElementById('themeIcon'), btn = document.getElementById('themeBtn');
+            if (ic) ic.className = (dark ? 'fa-solid fa-sun' : 'fa-solid fa-moon') + ' text-[0.9rem]';   // 다크일 때 해(→ 라이트로), 라이트일 때 달(→ 다크로)
+            if (btn) { const lb = dark ? '라이트 모드로 바꾸기' : '다크 모드로 바꾸기'; btn.title = lb; btn.setAttribute('aria-label', lb); }
         }
         function toggleTheme() {
             const dark = document.documentElement.classList.toggle('dark');
