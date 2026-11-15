@@ -918,6 +918,31 @@ def is_court_news(title):
         return True
     return bool(STAGE_COURT_WEAK_RE.search(t) and not STAGE_NOW_RE.search(t) and not STAGE_POLICE_RE.search(t))
 POLITICS_RE = re.compile(r"대통령|국회|의원|장관|정당|여당|야당|민주당|국민의힘|특검|청문회|탄핵|선거|국정감사|총리|비대위|시장|군수|구청장|도지사|공천|당원")
+# 정당·정치권 내부 소식 (징계·감찰·윤리위·공천·당 지도부 발언 등) — 지역과 상관없는 정치 분쟁 기사라 아예 올리지 않음
+#   예) '[속보]최민희 징계받나… 민주 "김민석, 감찰 결과 보고받고 윤리심판원 이첩 지시"'
+#   (본문에 의원 지역구(남양주 등)가 나와 엉뚱한 동네에 찍히던 문제도 함께 막음)
+PARTY_POLITICS_RE = re.compile(
+    r"민주당|(?<![가-힣])민주(?=\s*[\"“”'‘’…,·:]|\s*(?:지도부|원내|최고위|당|측|소속))|국민의힘|(?<![가-힣])국힘|조국혁신당|혁신당|개혁신당|진보당|정의당|기본소득당|새로운미래|"
+    r"윤리\s*심판원|윤리\s*위원회|(?<![가-힣])윤리위|당무\s*감사|당\s*지도부|최고\s*위원|원내\s*(?:대표|대변인|수석)|당\s*대표|당대표|비대위|공천|출당|(?<![가-힣])제명|탈당|복당|당권|전당\s*대회|"
+    r"(?<![가-힣])경선|여당|야당|여야|대통령실|국회의장|국무\s*총리|(?<![가-힣])총리(?![가-힣])|대선|총선|지방\s*선거|정치권|국정\s*감사|(?<![가-힣])국감|청문회|탄핵|"
+    r"(?:국회\s*)?의원[^.…]{0,10}(?:징계|감찰|윤리|공방|설전|막말|사퇴|해명)|징계\s*(?:받나|위기|수순|착수|회부|청원)|이첩\s*지시")
+# 정치인 기사라도 실제로 몸이 다치거나 사고가 난 경우는 사건으로 남김 (예: '○○ 의원 피습', '의원 음주운전 적발')
+#   (정치인 개인이 저지른 성범죄·폭행·음주운전도 정치 공방이 아닌 실제 사건이므로 남김)
+PARTY_EXCEPT_RE = re.compile(r"피습|습격|흉기|폭행|숨져|숨진|숨졌|사망|부상|다쳐|다쳤|화재|불이?\s*나|폭발|교통사고|추돌|들이받|음주\s*운전|무면허|테러|암살|살해|폭파\s*협박|협박\s*(?:문자|전화|편지)|"
+                             r"성추행|성폭행|강제\s*추행|불법\s*촬영")
+# 정치인(의원·단체장)의 발언·망언·사과·사퇴 요구 기사: 사건(사망사고 등)을 두고 벌어진 '말싸움'이라 실시간 사건이 아님
+#   예) '환경미화원 사망 책임 전가 망언 신현광 충북도의원 사퇴 요구' · '○○ 의원, 부상 장병 위문'
+POLITICIAN_TALK_RE = re.compile(r"(?:의원|시장|군수|구청장|도지사|장관|당\s*대표|원내대표)[^.…]{0,24}(?:발언|망언|막말|실언|사과|사퇴|논란|파장|해명|공방|설전|위문|방문|면담)|"
+                                r"(?:발언|망언|막말|실언)[^.…]{0,24}(?:의원|시장|군수|구청장|도지사|장관)|(?:의원|시장|군수|구청장|도지사)[^.…]{0,6}[\"“][^\"”]{2,40}[\"”]")
+POLITICIAN_HARM_RE = re.compile(r"피습|습격|흉기|폭행\s*(?:당|피해)|테러|암살|살해\s*협박|폭파\s*협박|협박\s*(?:문자|전화|편지)")
+
+
+def is_party_politics(title):
+    """정당·정치권 내부 소식이거나, 정치인의 발언·사과·사퇴 공방 기사이면 True (올리지 않음)"""
+    t = title or ""
+    if POLITICIAN_TALK_RE.search(t) and not POLITICIAN_HARM_RE.search(t) and not re.search(r"구속|입건|검거|체포|송치|적발", t):
+        return True
+    return bool(PARTY_POLITICS_RE.search(t) and not PARTY_EXCEPT_RE.search(t))
 METAPHOR_RE = re.compile(r"논란|갈등|파문|후폭풍|반발|공방|파장|감찰|집단행동|비판|압박|이해\s*충돌|국감|의혹")
 # 비유로도 자주 쓰이는 낱말(폭발·붕괴·충돌·한파...)이 들어 있는 분류
 SOFT_GROUPS = {"화재·사고", "교통사고", "자연재해", "감염병·보건", "실종·변사", "생활안전·소동"}
@@ -1253,6 +1278,105 @@ MUSIC_RE = re.compile(r"스트리밍|스포티파이|Spotify|멜론|지니\s*뮤
                       r"엔하이픈|제로베이스원|라이즈|RIIZE|베이비몬스터|키스오브라이프|하이브|플레이리스트|음악방송|음방|쇼케이스", re.I)
 _QUOTED_SEG = re.compile(r"[‘'\"“]([^‘’'\"“”]{1,20})[’'\"”]")
 
+# ── 작품 제목(노래·영화·드라마·예능·웹툰·소설 등) 판별 ──
+#   연예인 기사 제목에서 사건 낱말(살인·체포·폭발·실종·습격…)이 '작품 이름' 안에만 있으면 실제 사건이 아님
+#   예) "아이유 신곡 '살인자의 고백' 차트 1위" · "드라마 '모범택시3' 이제훈, 납치범 응징" · "《실종》 배우 김OO 열연"
+#   판별 방법 (하나라도 맞으면 그 따옴표 구간을 작품 제목으로 봄)
+#     ① 《》〈〉<>「」『』 괄호 안 → 거의 항상 작품 이름
+#     ② 따옴표 바로 앞에 작품 종류(드라마·영화·신곡·앨범·OST·방송사·OTT…)가 있음
+#     ③ 따옴표 바로 뒤에 작품 활동 낱말(컴백·주연·출연·개봉·종영·시청률·OST·뮤비·1위·시즌·○회·제작발표회…)이 이어짐
+#     ④ 제목에 연예인·연예 활동 표시가 있고, 따옴표가 사람 이름 바로 뒤/앞에 붙어 있음 ("배우 김OO '실종' 촬영")
+_WORK_BRACKET_RX = re.compile(r"[《〈<「『]([^》〉>」』]{1,30})[》〉>」』]")
+_WORK_QUOTE_RX = re.compile(r"[‘'\"“]([^‘’'\"“”]{1,30})[’'\"”]")
+_WORK_KIND = (r"(?:드라마|영화|신작|신곡|노래|곡|타이틀\s*곡|타이틀곡|선공개\s*곡|수록곡|앨범|미니\s*앨범|정규\s*앨범|싱글|EP|OST|음원|뮤직\s*비디오|뮤비|MV|뮤지컬|연극|오페라|공연|"
+              r"예능|프로그램|시트콤|웹드라마|웹툰|웹소설|소설|시집|만화|애니(?:메이션)?|시리즈|작품|주연작|출연작|차기작|영화제\s*초청작|개봉작|단편|다큐|"
+              r"넷플릭스|티빙|TVING|디즈니\s*\+?|디즈니플러스|쿠팡\s*플레이|웨이브|왓챠|tvN|JTBC|KBS\s*2?|MBC|SBS|ENA|MBN|채널\s*A|TV\s*조선|MBN|올리브|엠넷|Mnet|유튜브\s*채널|"
+              r"월화극|수목극|금토극|토일극|일일극|주말극|미니\s*시리즈|아침\s*드라마)")
+_WORK_BEFORE_RX = re.compile(_WORK_KIND + r"\s*(?:[가-힣A-Za-z0-9]{0,6}\s*)?$", re.I)
+_WORK_AFTER_RX = re.compile(r"^\s*(?:로|으로|에서|의|와|과|에|속|측|팀|제작진|출연진|배우들?)?\s*(?:"
+                            r"컴백|데뷔|출연|주연|조연|특별\s*출연|카메오|캐스팅|합류|촬영|크랭크\s*(?:인|업)|개봉|재개봉|첫\s*방송|첫방|본방|방송|방영|종영|결방|편성|공개|발매|발표|선공개|"
+                            r"흥행|관객|만\s*관객|박스\s*오피스|시청률|화제성|OTT\s*1위|넷플릭스\s*1위|차트|1위|역주행|음원\s*강자|올킬|정상|진입|스트리밍|조회수|뮤비|MV|티저|예고편|예고|하이라이트|"
+                            r"OST|시즌\s*\d|파트\s*\d|\d+\s*회|\d+\s*화|최종회|마지막\s*회|제작\s*발표회|쇼케이스|시사회|무대\s*인사|기자\s*간담회|간담회|인터뷰|리뷰|비하인드|메이킹|스틸|포스터|"
+                            r"열연|호연|연기|변신|캐릭터|역(?:으로|을|을\s*맡|할)|배역|호흡|케미|출격|무대|챌린지|가사|작사|작곡|피처링|리메이크|원작|각색|연출|감독|각본|"
+                            r"팬미팅|콘서트|투어|활동|후속곡|후속작|시리즈|속편|제작|투자|판권|수상|노미네이트|초청|상영)", re.I)
+_ENT_PERSON_RX = re.compile(r"가수|배우|아이돌|걸그룹|보이그룹|그룹|솔로|멤버|방송인|개그맨|개그우먼|코미디언|MC|래퍼|싱어송라이터|뮤지션|밴드|감독|작가|PD|연출가|성우|"
+                            r"아역|신인|톱스타|스타|연예인|셀럽|유튜버|크리에이터|아나운서|트로트")
+
+
+def work_title_spans(title):
+    """제목에서 작품 이름으로 보이는 구간 [(시작, 끝, 내용)] 을 돌려줌"""
+    t = title or ""
+    spans = []
+    for m in _WORK_BRACKET_RX.finditer(t):
+        inner = m.group(1).strip()
+        if inner in _NOT_PROGRAM_TAGS or re.search(r"속보|단독|종합|사진|영상|포토|인터뷰|르포|기획|이슈|현장|[0-9]+보", inner):
+            continue                         # <속보> <단독> 같은 기사 머리표는 작품 이름이 아님
+        spans.append((m.start(), m.end(), m.group(1), True))
+    ent = bool(_ENT_PERSON_RX.search(t) or IDOL_RE.search(t) or MUSIC_RE.search(t) or ENT_STRONG_RE.search(t))
+    for m in _WORK_QUOTE_RX.finditer(t):
+        before, after, inner = t[max(0, m.start() - 14):m.start()], t[m.end():m.end() + 16], m.group(1)
+        if len(inner.strip()) < 1:
+            continue
+        kb, ka = bool(_WORK_BEFORE_RX.search(before)), bool(_WORK_AFTER_RX.search(after))
+        is_work = kb or ka
+        if not is_work and ent:
+            # ④ 연예인 기사: '이름 + 따옴표' 또는 '따옴표 + 이름' 꼴 (예: "배우 김OO '실종' 촬영 중", "'추적자' 손현주")
+            if re.search(r"[가-힣]{2,4}\s*$", before) and not re.search(r"(?:경찰|검찰|소방|당국|주민|시민|피해자|가해자|용의자|피의자|남성|여성|씨)\s*$", before):
+                is_work = True
+            elif m.start() <= 2 and re.match(r"^\s*[가-힣]{2,4}(?:\s*[,·]|\s+[가-힣]{2,4}\s*[,·]|\s*(?:이|가|은|는)?\s)", after):
+                is_work = True
+        # 실제 말을 옮긴 따옴표(…하겠다·…했다·…해라·…냐 처럼 말끝이 있는 문장)는 작품 이름이 아님
+        if is_work and re.search(r"(?:다|요|까|냐|라|지|네|죠|자)\s*[.!?]?\s*$", inner) and not ka and not kb:
+            is_work = False
+        if is_work:
+            spans.append((m.start(), m.end(), inner, kb))     # kb: 앞에 '드라마·영화·신곡…'이 붙은 확실한 작품 이름
+    return spans
+
+
+# 작품 '줄거리·장면' 이야기 (예: "'모범택시3' 이제훈, 납치범 응징", "'오징어 게임' 사망 장면 화제")
+_WORK_PLOT_RX = re.compile(r"장면|극\s*중|극중|역할|배역|열연|호연|연기|캐릭터|줄거리|스포(?:일러)?|엔딩|전개|회차|\d+\s*회|예고|첫\s*방|본방|응징|복수극|스릴러|미스터리|악역|빌런|명장면|"
+                           r"시청자|시청률|관객|흥행|OST|뮤비|가사|무대")
+# 작품 기사라도 '현실에서' 일어난 일임을 보여 주는 표시 (예: "배우 김OO, 영화 '살인자' 촬영 중 부상")
+_REAL_NOW_RX = re.compile(r"구속|입건|검거|체포|송치|숨져|숨졌|숨진|다쳐|다쳤|부상|중상|이송|병원|경찰|소방|119|112|신고|출동|화재|불이\s*나|촬영\s*(?:중|현장|장)")
+_REAL_NOW_STRICT_RX = re.compile(r"구속|입건|검거|체포|송치|숨져|숨졌|숨진|다쳐|다쳤|부상|중상|이송|경찰|소방|119|112|촬영\s*(?:중|현장|장)")
+
+
+def strip_work_titles(title):
+    """작품 이름 구간을 지운 제목 (작품 이름이 없으면 그대로)"""
+    spans = work_title_spans(title)
+    if not spans:
+        return title
+    out, last = [], 0
+    for s, e, _, _ in sorted(spans):
+        if s < last:
+            continue
+        out.append(title[last:s])
+        out.append(" ")
+        last = e
+    out.append(title[last:])
+    return "".join(out)
+
+
+def only_in_work_title(title):
+    """사건 낱말이 작품 이름 안에만 있는지 (True 면 사건 기사가 아님)"""
+    spans = work_title_spans(title)
+    if not spans:
+        return False
+    inner = " ".join(s[2] for s in spans)
+    rest = PRE_CLEAN.sub(" ", strip_work_titles(title))
+    _hit = lambda s: bool(LEGAL_FACT_RE.search(s) or HARD_FACT_RE.search(s) or EVENT_INCIDENT_RE.search(s)
+                          or any(rx.search(s) for _, _, rx, _ in RULES))
+    hit_inner, hit_rest = _hit(inner), _hit(rest)
+    if not hit_inner and not hit_rest:
+        return False
+    if hit_inner and not hit_rest:
+        return True                      # 사건 낱말이 작품 이름 안에만 있음
+    if _WORK_PLOT_RX.search(rest) and not _REAL_NOW_STRICT_RX.search(rest):
+        return True                      # 작품 줄거리·장면 이야기
+    if any(s[3] for s in spans) and not _REAL_NOW_RX.search(rest):
+        return True                      # '드라마·영화 ○○' 꼴인데 현실의 사건 표시가 없음
+    return False
+
 
 def _unquote(t):
     """따옴표 안의 짧은 말(노래 제목·비유 표현)을 지운 제목"""
@@ -1277,12 +1401,19 @@ def classify(title, content):
     #   비유 표현을 지운 뒤에도 실제 사건 낱말(구속·입건·사망·화재·부상…)이 없으면 사건이 아님
     if (IDOL_RE.search(title) or ENT_SPORT_RE.search(title)) and not _fact(PRE_CLEAN.sub(" ", _unquote(title))):
         return None
-    t = PRE_CLEAN.sub(" ", title)
+    # 사건 낱말이 노래·영화·드라마·예능 등 '작품 이름' 안에만 있으면 사건이 아님 (예: "신곡 '살인자' 1위", "드라마 '실종' 첫방")
+    if only_in_work_title(title):
+        return None
+    # 작품 이름은 지우고 분류함 (작품 이름 속 '납치'·'폭발' 때문에 엉뚱한 분류로 들어가지 않도록)
+    t = PRE_CLEAN.sub(" ", strip_work_titles(title))
     full = PRE_CLEAN.sub(" ", title + " " + (content or ""))
     if NON_NEWS_RE.search(title) or AD_RE.search(full):
         return None
     # 재판 과정·판결 결과(기소·공판·구형·선고·항소…)는 '지금 일어난 사건'이 아니므로 올리지 않음 (실시간 사건사고 알리미 취지)
     if is_court_news(title):
+        return None
+    # 정당·정치권 공방·징계·감찰 기사는 사건사고가 아님 (위치와도 상관없음)
+    if is_party_politics(title):
         return None
     # 드라마·예능 줄거리 (예: "'문무' 김강우·이현욱 父子, 시체밭서 습격") — 실제로 입건·구속된 경우만 예외
     if is_drama(title) and not (LEGAL_FACT_RE.search(title) or STRICT_FACT_RE.search(title)):
