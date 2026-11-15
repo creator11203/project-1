@@ -2234,6 +2234,59 @@ NATIONAL_INST_ALIASES = {a for marks in INSTITUTIONS_NATIONAL.values() for a in 
 MILITARY_GENERIC_RE = re.compile(r"군대|현역병|장병|병사들?(?![가-힣])|군\s*간부|초급\s*간부|부사관|병영|군\s*복무|복무\s*중인|입대|전역\s*(?:자|병)|군인들?(?![가-힣])|국군")
 
 
+# 플랫폼·통신사 등 기업의 해킹·개인정보 유출·서비스 장애 기사: 기사에 다른 지명이 없으면 그 기업 본사 위치로 표시
+#   (예: '번개장터, 고객 정보 유출 가능성 공지' → 서울 서초구 번개장터 본사)
+#   (회사 이름, 시·도, 시·군·구, 정규식)
+COMPANY_HQ = [
+    ("번개장터", "서울특별시", "서초구", r"번개장터|번장(?=\s*(?:이용자|회원|앱|측))"),
+    ("당근", "서울특별시", "서초구", r"당근마켓|당근\s*(?:앱|이용자|회원|플랫폼|거래|측)|당근페이"),
+    ("쿠팡", "서울특별시", "송파구", r"쿠팡(?!이츠\s*배달원)"),
+    ("우아한형제들(배달의민족)", "서울특별시", "송파구", r"배달의\s*민족|(?<![가-힣])배민(?![가-힣])|우아한형제들"),
+    ("무신사", "서울특별시", "성동구", r"무신사"),
+    ("야놀자", "서울특별시", "강남구", r"야놀자"),
+    ("비바리퍼블리카(토스)", "서울특별시", "강남구", r"비바리퍼블리카|토스\s*(?:뱅크|증권|앱|이용자|회원|페이)"),
+    ("11번가", "서울특별시", "중구", r"11번가"),
+    ("G마켓", "서울특별시", "강남구", r"G마켓|지마켓|옥션(?=\s*(?:이용자|회원|앱))"),
+    ("컬리", "서울특별시", "강남구", r"마켓컬리|(?<![가-힣])컬리(?![가-힣])"),
+    ("예스24", "서울특별시", "영등포구", r"예스24|YES24"),
+    ("SK텔레콤", "서울특별시", "중구", r"SK텔레콤|SKT(?![A-Za-z])|SK\s*텔레콤"),
+    ("LG유플러스", "서울특별시", "용산구", r"LG유플러스|LGU\+|LG\s*U\+|엘지유플러스"),
+    ("KT", "경기도", "성남시 분당구", r"(?<![A-Za-z])KT(?![A-Za-z&])"),
+    ("카카오", "경기도", "성남시 분당구", r"카카오(?:톡|페이|뱅크|워크|T|맵)?"),
+    ("네이버", "경기도", "성남시 분당구", r"네이버"),
+    ("넥슨", "경기도", "성남시 분당구", r"넥슨"),
+    ("엔씨소프트", "경기도", "성남시 분당구", r"엔씨소프트|NC소프트"),
+]
+_COMPANY_RX = [(n, s, g, re.compile(rx)) for n, s, g, rx in COMPANY_HQ]
+# 본사 위치를 써도 되는 기사: 회사 서비스 자체에서 난 일 (해킹·정보 유출·장애). 배송 사고·물류센터 화재처럼 현장이 따로 있는 기사는 제외
+COMPANY_EVENT_RE = re.compile(r"해킹|유출|개인\s*정보|고객\s*정보|회원\s*정보|정보\s*(?:노출|탈취)|침해|랜섬|디도스|DDoS|접속\s*(?:장애|오류|불가)|서비스\s*(?:장애|중단|먹통)|먹통|전산\s*(?:장애|오류)|결제\s*(?:장애|오류)|해커|도용|부정\s*(?:결제|접속|로그인)")
+
+
+def _sgg_center(sido, sgg):
+    for name, la, ln in SIGUNGU.get(sido, []):
+        if name == sgg or name.replace(" ", "") == sgg.replace(" ", ""):
+            return la, ln
+    head = sgg.split(" ")[0]
+    for name, la, ln in SIGUNGU.get(sido, []):
+        if name.startswith(head):
+            return la, ln
+    return SIDO_CENTER.get(sido)
+
+
+def find_company_hq(title, full):
+    """회사 서비스에서 난 사건(해킹·유출·장애)이면 (위치이름, 위도, 경도, 정보), 아니면 None"""
+    if not COMPANY_EVENT_RE.search(title):
+        return None
+    for name, sido, sgg, rx in _COMPANY_RX:
+        if rx.search(title) or (rx.search(full) and not any(r2.search(title) for _, _, _, r2 in _COMPANY_RX)):
+            c = _sgg_center(sido, sgg)
+            if not c:
+                continue
+            dy, dx = _jitter(title, 0.01)
+            return f"{sido} {sgg}", round(c[0] + dy, 4), round(c[1] + dx, 4), {"prec": "sgg", "sgg": sgg, "dong": None, "center": c, "place": f"{name} 본사", "company": name}
+    return None
+
+
 def locate(title, content, hint_sido=None, overseas=False):
     """(위치이름, 위도, 경도, 정밀도정보) 반환. 모르면 (미상, None, None, …)"""
     key = title
@@ -2263,7 +2316,8 @@ def locate(title, content, hint_sido=None, overseas=False):
             label, lat, lng, rad, inst_alias, sgg, dong = res
             if inst_alias and inst_alias in NATIONAL_INST_ALIASES and not find_sidos(scope.replace(inst_alias, " ")):
                 # 금감원·국방부·경찰청(본청)·부처 같은 '전국 단위 기관' 발표·통계: 사건이 그 건물에서 일어난 게 아니므로 특정 지역에 찍지 않음
-                return unknown
+                #   단, 기업 해킹·정보 유출 기사면 그 기업 본사로 (예: '개인정보위, 번개장터 유출 조사' → 번개장터 본사)
+                return find_company_hq(title, full) or unknown
             if inst_alias:
                 # 기관명으로만 찾은 경우: 기사에 다른 시·도가 따로 적혀 있으면 그쪽을 우선
                 other = find_sidos(scope.replace(inst_alias, " "))
@@ -2286,10 +2340,14 @@ def locate(title, content, hint_sido=None, overseas=False):
             la, ln = SIDO_CENTER[sido]
             dy, dx = _jitter(key, 0.10)
             return sido, round(la + dy, 4), round(ln + dx, 4), {"prec": "sido", "sido": sido, "center": (la, ln), "place": place}
-    if hint_sido:
-        la, ln = SIDO_CENTER[hint_sido]
-        dy, dx = _jitter(key, 0.10)
-        return hint_sido, round(la + dy, 4), round(ln + dx, 4), {"prec": "sido", "sido": hint_sido, "center": (la, ln), "place": place}
+    # 기업 서비스 사건(해킹·정보 유출·장애): 본사 위치
+    hq = find_company_hq(title, full)
+    if hq:
+        return hq
+    # ※ 예전에는 여기서 hint_sido(구글 뉴스 '지역 검색어'의 시·도)를 위치로 썼는데,
+    #   구글 지역 검색('대전 사건 OR 사고 OR …')은 본문 어딘가에 '대전'만 있어도, 또는 지역과 상관없는 기사도 돌려주기 때문에
+    #   지명이 하나도 없는 기사가 엉뚱한 시·도에 찍혔음 (예: 번개장터 정보 유출 기사 → 대전광역시). 이제는 위치 미상으로 둠.
+    #   (hint_sido 는 위의 match_sigungu 에서 '중구·동구' 같은 같은 이름 구를 가리는 데만 씀)
     return "대한민국 (세부 위치 미상)", None, None, {"prec": None, "place": place}
 
 
@@ -2822,6 +2880,17 @@ def load_existing():
         return []
 
 
+# 기사 처리 중 난 오류를 모아 로그에 보여 줌 (예전에는 조용히 건너뛰어서, 분류 코드에 버그가 생기면 기사가 '아무 말 없이' 빠졌음)
+ERRORS = {"count": 0, "samples": []}
+
+
+def note_error(where, title, e):
+    ERRORS["count"] += 1
+    if len(ERRORS["samples"]) < 5:
+        import traceback
+        ERRORS["samples"].append(f"{where} | {str(title)[:50]} | {type(e).__name__}: {e} | {traceback.format_exc(limit=2).strip().splitlines()[-2:]}")
+
+
 def reprocess_existing(old):
     """기존 기사를 최신 분류/위치 규칙으로 다시 계산 (규칙을 고치면 과거 기사에도 적용됨)"""
     out = {}
@@ -2858,8 +2927,11 @@ def reprocess_existing(old):
             if it.get("loctext"):
                 item["loctext"] = it["loctext"]
             out[norm_key(title)] = item
-        except Exception:
-            continue
+        except Exception as e:
+            note_error("기존 기사 재분류", it.get("title", ""), e)
+            # 코드 오류로 다시 계산하지 못한 기사는 지우지 않고 예전 모습 그대로 둠 (버그 하나로 기사가 통째로 사라지지 않도록)
+            if isinstance(it, dict) and it.get("title") and it.get("timestamp"):
+                out[norm_key(it["title"])] = it
     return out
 
 
@@ -2899,7 +2971,8 @@ def main():
         for entry in entries[:300]:
             try:
                 it = build_item(entry, feed, now_ts)
-            except Exception:
+            except Exception as e:
+                note_error("새 기사 처리", entry.get("title", ""), e)
                 it = None
             if not it or it["timestamp"] < cutoff_ts:
                 continue
@@ -3029,6 +3102,14 @@ def main():
     unknown = sum(1 for v in final if v["lat"] is None)
     print(f"같은 사건 묶기: 기사 {len(final)}개 → 사건 {n_events}건")
     print(f"=== 완료: 저장 {len(final)}건 (이번 신규 {new_count}건) / RSS 성공 {ok_feeds} 실패 {fail_feeds} ===")
+    if ERRORS["count"]:
+        # Actions 로그에서 눈에 띄도록 ::warning:: 으로 출력 (분류·위치 코드 버그로 기사가 빠지는지 바로 확인 가능)
+        print(f"::warning::기사 처리 중 코드 오류 {ERRORS['count']}건 — 아래 예시를 확인하세요")
+        for s in ERRORS["samples"]:
+            print("  [오류 예시]", s)
+    newest = max((v["timestamp"] for v in final), default=0)
+    if newest and now_ts - newest > 3600:
+        print(f"::warning::가장 최근 기사가 {int((now_ts - newest) // 60)}분 전입니다 — RSS 실패 {fail_feeds}곳, 구글 검색 {'실행' if do_google else '건너뜀'}. 위 [실패] 목록을 확인하세요")
     print("날짜별:", dict(sorted(by_day.items())))
     print("언론사 상위:", dict(sorted(by_src.items(), key=lambda x: -x[1])[:15]))
     print(f"위치 미상: {unknown}건 / 장소 단위 {n_poi}건 · 읍면동 단위 {n_dong}건 (이번 실행 지오코딩 요청 {_geo['used']}건)")
