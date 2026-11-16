@@ -38,6 +38,17 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: inherit; }
         /* 기사를 많이 불러와도 손잡이가 너무 작아지지 않게 최소 길이를 둠 */
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; min-height: 40px; }
+        /* 7일간 전국 사건사고 다발 지역(190위까지 이어지는 긴 목록): 스크롤 막대를 굵고 길게, 커서를 대면 빨간색으로 눈에 띄게 */
+        #detailViewContainer:has(#hotspotList)::-webkit-scrollbar { width: 18px; }
+        #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 9px; }
+        #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 9px; min-height: 140px; border: 4px solid transparent; background-clip: content-box; }
+        #detailViewContainer:has(#hotspotList):hover::-webkit-scrollbar-thumb { background-color: #fb7185; }
+        #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb:hover { background-color: #e11d48; }
+        .dark #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-track { background: #1e293b; }
+        .dark #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb { background-color: #64748b; }
+        .dark #detailViewContainer:has(#hotspotList):hover::-webkit-scrollbar-thumb { background-color: #fb7185; }
+        #detailViewContainer:has(#hotspotList) { scrollbar-width: auto; scrollbar-color: #94a3b8 #e2e8f0; }
+        #detailViewContainer:has(#hotspotList):hover { scrollbar-color: #e11d48 #e2e8f0; }
         .dark .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
         /* 왼쪽 기사 목록 스크롤바: 넓고(12px) 손잡이 최소 64px, 칸 조정 막대(회색)와 구분되는 남색 */
@@ -810,7 +821,11 @@
         const FORTUNE_REAL = /검거|구속|체포|입건|송치|적발|붙잡|사기|횡령|성추행|폭행/;
         const TOURISM_TITLE = /관광\s*(?:도시|객|지|산업|명소|수요|활성화|벨트|단지|코스|상품|공사)|방문객|탐방객|관람객|여행객|상춘객|행락객|단풍객|나들이객|성수기|성황|흥행|도약|활성화|북적|인기몰이|발길\s*(?:이어|잇|끊)|핫플|명소|단풍\s*(?:절정|명소|구경)|(?:벚꽃|꽃)\s*(?:축제|구경|명소)|축제|개장|개막|오픈런|맛집|힐링|관광/;
         const TOURISM_REAL = /불법|단속|범행|혐의|범죄|살해|살인|강도|추행|성폭|마약|방화|해킹|사고|부상|다쳐|다친|다쳤|쓰러|이송|압사|사망|숨|대피|구조|실신|심정지|추락|화재|불이|폭발|붕괴|난동|소동|폭행|경찰|소방|119|112|통제|정체|마비|검거|구속|입건|체포|적발|피해|사기|바가지|절도|소매치기|납치|실종|익사|조난|고립|침수|주의보|경보|특보|산불|충돌|추돌|전복|감염|식중독|확진|정전|단전|고장|중단|취소|폐쇄|차질|지연|결항|파손|훼손|무너|균열|낙석|싱크홀|지진|태풍|호우|폭설|한파|혼잡|포화|대란|체증|만차|극심/;
+        // 연예인·개인의 과거사·경험담·근황 ('서수남 전처, 17억 빚 남기고 잠적…"생사도 모른다"') — scraper.py 의 PERSONAL_STORY_RE 와 같은 기준
+        const PERSONAL_STORY = /전처|전\s*남편|전\s*아내|전\s*부인|전\s*연인|전\s*여친|전\s*남친|생사도\s*모른|근황|고백|털어놨|털어놓|털어놔|토로|회상|사연|경험담|체험담|후기|과거\s*(?:사|이야기|고백|시절)|그\s*시절|가족사|인생\s*(?:스토리|이야기|역경)|눈물\s*(?:의|고백|펑펑)|심경|(?:빚|부채|채무)\s*(?:을\s*)?(?:남기|떠안|갚)|이혼\s*(?:후|사유|이유|고백)|재혼|사별|\d+\s*년\s*만에\s*(?:만난|재회|고백|공개|밝혀)|토크쇼|예능에서|방송에서|라디오에서|유튜브\s*(?:채널|영상)?에서|인터뷰에서|(?:가수|배우|개그맨|개그우먼|코미디언|탤런트|방송인|아나운서|트로트\s*가수|국민\s*가수|원로\s*가수|원로\s*배우)[^.…]{0,20}(?:빚|이혼|전처|전남편|사연|고백|근황|생사|과거)/;
+        const PERSONAL_FACT = /경찰|수사|입건|체포|검거|구속|송치|사망했|숨졌|숨진|숨져|화재|폭행|흉기|추락|사고\s*(?:로|가|발생)|부상|다쳐|다쳤|신고|출동|대피|실종\s*신고|납치|살해|협박|사기\s*(?:혐의|피해)/;
         function notIncidentTitle(t) {
+            if (PERSONAL_STORY.test(t) && !PERSONAL_FACT.test(t)) return true;   // 개인사·경험담·근황은 실시간 사건사고가 아님
             if (FORTUNE_TITLE.test(t) && !FORTUNE_REAL.test(t)) return true;     // 무속인·점쟁이 예언은 근거 없는 발언
             if (TOURISM_TITLE.test(t) && !TOURISM_REAL.test(t)) return true;     // 관광지가 인기라는 홍보·경제 기사
             if (isPartyPolitics(t)) return true;                              // 정치 공방·징계 기사 (위치와 상관없는 기사)
@@ -2442,6 +2457,10 @@
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">오늘 포함 최근 7일 동안 서로 다른 사건마다 1건으로 셉니다. 같은 사건을 다룬 기사 여러 개는 1건으로 묶고, 사건 하나는 위치가 가장 자세한 지역 한 곳에만 셉니다. 해외·위치 미상·시·도까지만 알려진 기사, 그리고 ⚖️ 재판·판결 소식(예전 사건의 후속 보도)과 법원·검찰 소재지로만 위치가 잡힌 기사는 빠집니다.${selCats.size || exCats.size ? ' <b class="text-rose-600">지금 고른 분류 기준으로 집계 중입니다.</b>' : ''} 지역을 누르면 왼쪽에 그 지역 사건이 정리됩니다.</p>
                         ${hsNote}
                     </div>
+                    ${hsData.length > 15 ? `<div class="sticky -top-4 z-20 -mx-1 px-1 py-1.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 flex flex-wrap gap-1" title="순위 바로가기">
+                        <span class="text-[0.625rem] font-bold text-slate-500 self-center mr-1">순위 바로가기</span>
+                        ${Array.from({ length: Math.ceil(hsData.length / 10) }, (_, i) => `<button onclick="jumpHotspotRank(${i * 10 + 1})" class="px-1.5 py-0.5 rounded border border-slate-300 dark:border-slate-600 text-[0.625rem] font-bold text-slate-600 dark:text-slate-300 hover:bg-rose-600 hover:text-white hover:border-rose-600">${i * 10 + 1}위</button>`).join('')}
+                    </div>` : ''}
                     <div id="hotspotList" class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
                 </div>
             `;
@@ -2451,6 +2470,14 @@
             if (keepTop) newList.scrollTop = Math.min(keepTop, newList.scrollHeight);
         }
 
+        function jumpHotspotRank(rank) {
+            const list = document.getElementById('hotspotList');
+            const row = list && list.children[rank - 1];
+            if (!row) return;
+            const container = document.getElementById('detailViewContainer');
+            container.scrollTop += row.getBoundingClientRect().top - container.getBoundingClientRect().top - 60;   // 위에 붙어 있는 '순위 바로가기' 줄 높이만큼 여유
+            hotspotScrollTop = container.scrollTop; hotspotScrollAt = Date.now();
+        }
         function selectHotspotRegion(region, lat, lng) {
             selectedHotspotRegion = region;
             renderLimit = 100;
