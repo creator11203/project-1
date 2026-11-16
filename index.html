@@ -4537,6 +4537,7 @@
             }
             return loadedScripts[src];
         }
+        let commLoginLost = false;
         const FB_VER = 'https://www.gstatic.com/firebasejs/10.12.2/';
         function commInit() {
             if (commReady) return commReady;
@@ -4547,12 +4548,20 @@
                 await loadScript(FB_VER + 'firebase-auth-compat.js');
                 firebase.initializeApp(FIREBASE_CONFIG);
                 commAuth = firebase.auth();
+                // 로그아웃을 누르기 전에는 로그인이 계속 유지되도록 '이 기기에 오래 저장'으로 고정하고, 브라우저가 저장 공간을 임의로 비우지 않게 요청
+                try { await commAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch (e) { console.error(e); }
+                try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
                 // 구글 로그인 상태를 먼저 확인 (이전에 로그인했으면 그대로 이어짐). 로그인했으면 이용자 식별자를 계정 uid 로 바꿈
                 const first = await new Promise(res => { const un = commAuth.onAuthStateChanged(u => { un(); res(u); }); });
                 commUser = first; commAuthState = first ? 'in' : 'out';
+                if (first) { lsSet('comm_was_in', '1'); lsSet('comm_lost_at', ''); }
+                else if (lsGet('comm_was_in') === '1') commLoginLost = true;      // 로그인했던 기기인데 풀려 있음 → 안내 문구를 보여 줌
                 if (first) COMM_UID = first.uid;
                 commAuth.onAuthStateChanged(u => {           // 다른 탭에서 로그아웃하는 등 나중에 바뀌면 새로 불러옴
-                    if ((u ? u.uid : null) !== (commUser ? commUser.uid : null)) location.reload();
+                    if ((u ? u.uid : null) !== (commUser ? commUser.uid : null)) {
+                        if (!u && commUser) lsSet('comm_lost_at', String(Date.now()));       // 열어 둔 채로 로그인이 풀린 때를 기록 (원인 확인용)
+                        location.reload();
+                    }
                 });
                 commDb = firebase.firestore();
                 return commDb;
@@ -4829,6 +4838,7 @@
                     <b>구글 로그인</b>을 하면 커뮤니티를 이용할 수 있어요.<br>
                     <span class="text-xs text-slate-500">로그인은 이용자를 구분하기 위한 용도예요. 구글 이름·사진은 가져오지 않고, 다른 이웃에게는 내가 정한 닉네임만 보여요. <a href="privacy.html" target="_blank" rel="noopener" class="underline">개인정보처리방침</a></span>
                 </div>
+                ${commLoginLost ? `<div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-slate-800 dark:text-slate-100 leading-relaxed"><b>로그인이 풀렸어요.</b>${lsGet('comm_lost_at') ? ` <span class="text-slate-500">(${new Date(Number(lsGet('comm_lost_at'))).toLocaleString('ko-KR')}에 사이트를 열어 둔 채로 풀림)</span>` : ''} 브라우저가 저장된 정보를 지우면 이렇게 될 수 있어요(방문 기록·쿠키 삭제, 시크릿 모드, 앱 안 브라우저 등). 다시 로그인해 주세요.</div>` : ''}
                 ${app ? `<div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-slate-800 dark:text-slate-100 leading-relaxed">
                     <b>${esc(app)} 앱 안의 브라우저에서는 구글 로그인이 막혀 있어요.</b> 오른쪽 위(또는 아래) 메뉴에서 <b>[다른 브라우저로 열기]</b>를 누르거나, 아래 [주소 복사] 후 Chrome·Safari 주소창에 붙여넣어 주세요.
                     <button onclick="copySiteUrl(this)" class="mt-2 w-full py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs font-bold">주소 복사</button></div>` : ''}
@@ -4869,6 +4879,7 @@
         });
         async function commLogout() {
             if (!confirm('로그아웃할까요?')) return;
+            lsSet('comm_was_in', '');
             try { await commInit(); if (commAuth) await commAuth.signOut(); } catch (e) { console.error(e); }
             location.reload();
         }
