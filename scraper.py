@@ -555,7 +555,7 @@ RULES_SRC = [
                     r"(?:엔진|기체|랜딩\s*기어|바퀴)\s*(?:결함|고장|이상|화재)[^.…]{0,12}(?:회항|결항|지연|착륙|대피)|"
                     r"(?:어선|선박|여객선|화물선|낚싯배|요트|유람선|바지선)[^.…]{0,8}(?:전복|침몰|좌초|충돌|화재|사고|표류)"),
     # ※ '전소'는 사람 이름(전소영·전소민 등)에 자주 들어가서 '전소됐다·전소된' 처럼 쓰인 경우만 인정. '화제(話題)'는 화재가 아님
-    ("화재", r"화재(?!\s*의\s*인물)|불이\s*나|(?<![가-힣])불(?:…|\.{2,}|\s*나|\s*붙)|불길|화마|(?:건물|주택|공장|차량|창고|점포|가옥|[0-9]+\s*(?:채|동|곳|대))?\s*전소(?=됐|돼|된|되|했|해|\s*피해|[\s.,…'\"]|$)|잿더미|(?:에서|서)\s*불(?![가-힣])|합선|스파크|누전|전선\s*(?:끊어|절단)|불꽃(?!\s*(?:놀이|축제|쇼|조명))|"
+    ("화재", r"화재(?!\s*의\s*인물)|불이\s*나|(?<![가-힣])불(?:…|\.{2,}|\s*나|\s*붙)|불길|화마|(?:(?:건물|주택|공장|차량|창고|점포|가옥|[0-9]+\s*(?:채|동|곳|대))\s*|(?<![가-힣]))전소(?=됐|돼|된|되|했|해|\s*피해|[\s.,…'\"]|$)|잿더미|(?:에서|서)\s*불(?![가-힣])|합선|스파크|누전|전선\s*(?:끊어|절단)|불꽃(?!\s*(?:놀이|축제|쇼|조명))|"
             r"(?<![가-힣])불\s*(?:번져|번지|번졌|확산|옮겨\s*붙|옮겨붙)|불씨|연기\s*나와|연기가\s*(?:나|났)|연기\s*냄새|타는\s*냄새|탄\s*냄새|(?:검은|하얀|흰|짙은)\s*연기|연기가\s*(?:치솟|피어|가득|자욱)|연기\s*치솟아|진화\s*(?:작업|완료)|(?:불|화재)[^.…]{0,6}진화|진화\s*(?:됐|했)|초진|완진|대응\s*[1-3]\s*단계"),
     ("폭발·가스누출", r"폭발(?!적)|가스\s*(?:누출|유출)|폭발음|유독\s*가스|(?:화학|유해)\s*물질\s*유출|화학\s*물질\s*누출|암모니아\s*누출|염소\s*누출"),
     # 일터(공장·공사장·물류센터·광산·선박 작업…)에서 일하는 사람이 다치거나 숨진 사고 전반: 끼임·추락·깔림·질식·감전·중독·화상·절단·과로사·중대재해
@@ -582,7 +582,7 @@ RULES_SRC = [
               r"(?:사냥개|진돗개|풍산개|핏불|로트와일러|반려견|고양이|말벌|벌|독사|독거미|지네|원숭이|고라니|야생\s*동물)에?\s*(?:물려|물린|물렸|쏘여|쏘인|쏘였|공격)|말벌|맨홀|포트홀|(?:탐방로|등산로|둘레길|산행로|등산\s*코스|국립공원|입산)[^.…]{0,12}(?:통제|금지|폐쇄|중단|제한|출입)|입산\s*(?:통제|금지)|탐방\s*(?:통제|금지)|산악\s*사고|산행\s*(?:중|사고)|등반\s*(?:중|사고)|암벽\s*등반|(?:멧돼지|고라니|너구리|야생\s*동물|맹수|곰|뱀|벌떼|들개|유기견|원숭이)[^.…]{0,8}(?:출몰|출현|나타|난입)|"
               r"수도관\s*(?:파열|터져|파손|누수)|상수도\s*(?:파열|누수)|배수관|단수(?![가-힣])|급수\s*중단|난방\s*(?:중단|끊)|가스\s*공급\s*중단|전기\s*공급\s*중단|"
               r"낚시\s*(?:사고|중|하다)|등산\s*(?:사고|중|하다)|조난|물놀이|캠핑\s*(?:사고|중)|일산화\s*탄소|화상\s*입|놀이\s*기구|정전(?!\s*협정|기)|단수\s*(?:사태|피해|조치|돼|됐)|수돗물\s*끊|통신\s*장애", True),
-    ("구조·안전사고", r"구조(?!조정|적|물|개편|개혁|화|론|상|계획)|안전\s*사고|익사|물에\s*빠|고립|누출|참변|중상|사망\s*사고|숨져|숨졌|사망|"
+    ("구조·안전사고", r"구조(?:됐|돼|된|되어|대|요청|작업|중|해|했|를\s*요청|견|헬기|활동|\s*(?:당|신호|요청|작업|대원|인력|중|됐|돼|된)|에\s*(?:나서|착수|투입))|119\s*구조|(?<![가-힣])구조(?=\s*(?:[…·,.!?\]\)]|$))|(?:명|사람|주민|승객|환자|인명|시민|등산객|어린이|아이|운전자|선원|해경|근로자|작업자)\s*구조|구출|안전\s*사고|익사|물에\s*빠|고립|누출|참변|중상|사망\s*사고|숨져|숨졌|사망|"
                  r"쓰러져(?!\s*가)|쓰러진|심정지|심폐\s*소생|응급\s*(?:이송|환자)|병원\s*이송|이송(?:됐|돼|되었|했|된)|의식\s*(?:잃|불명)|실신|호흡\s*곤란|심장\s*마비", True),
     # 범죄는 아니지만 사람이 몰리거나 경찰·소방이 출동한 일
     ("혼잡·인파", r"오픈런|인파|몰려|줄\s*섰|긴\s*줄|대기\s*줄|북새통|혼잡|대란|마비|아수라장|교통\s*통제|전면\s*통제|도로\s*통제|차로\s*통제|통행\s*(?:제한|금지|불가|통제)|우회\s*(?:하세요|바랍니다|권고)|출근길\s*정체|퇴근길\s*정체|도로\s*(?:점거|막아|막고|봉쇄)|(?:집회|시위|파업)[^.…]{0,8}(?:교통\s*(?:혼잡|마비|통제)|도로\s*(?:통제|점거|막))", True),
@@ -725,7 +725,7 @@ METHOD_EXPLAIN_RE = re.compile(r"(?:수법|장비|기법|기술|수단|도구|�
                                r"진화하는\s*(?:범죄|수법|사기|피싱|해킹|도박|마약)|(?:갈수록|날로|점점)\s*(?:교묘|진화|지능화|고도화)|"
                                r"(?:→|->)[^.…]{0,12}(?:→|->)|(?:^|[\s…])(?:어떻게|왜)\s*(?:…|\.\.\.|\?|$)|수법\s*(?:은|이)\s*(?:어떻게|무엇|뭐)|어떻게\s*(?:속였|당했|빼돌|훔쳤|작동|이뤄)")
 # 기관 행사·인사·표창 (경찰서·소방서 이름만 들어간 기사)
-ORG_EVENT_RE = re.compile(r"수료식|선정|강연|표창|위촉|임명|취임|이임|퇴임|개소|개청|준공|착공|기공|수상|시상|공로|감사패|봉사|기부|성금|기탁|후원|견학|체험|워크숍|포럼|학술|"
+ORG_EVENT_RE = re.compile(r"개관|개원|개장식|첫\s*문|문\s*열|수료식|선정|강연|표창|위촉|임명|취임|이임|퇴임|개소|개청|준공|착공|기공|수상|시상|공로|감사패|봉사|기부|성금|기탁|후원|견학|체험|워크숍|포럼|학술|"
                           r"대회\s*개최|우수\s*기관|최우수|협의회|의용\s*소방대|자율\s*방범대|특별\s*승진|승진|인사\s*발령|"
                           r"(?:화재|사고|재난|상황)\s*(?:를|을)?\s*가정(?:해|한|하고|하여)|가상\s*(?:화재|상황|훈련|재난)|집중\s*점검|점검\s*(?:한다|돌입|착수)|"
                           r"(?:국장|이사장|청장|본부장|서장|관장|원장|사장)에\s|인사\s*$|\[인사\]|프로필|약력|동정|안전\s*교육|교육\s*(?:실시|진행)|치안\s*마스터|\d+위|\[출동")
@@ -1007,13 +1007,47 @@ ORG_COMPLAINT_RE = re.compile(r"(?:협회|협의회|단체|연대|연합|노조|
 RETRO_RE = re.compile(r"(?<![가-힣])역대|되짚|돌아보|짚어\s*보|총\s*\d+\s*차례|사례\s*(?:를|는)\s*(?:보면|살펴)|그동안|지금까지|전례|이래\s*처음")
 LEGISLATION_RE = re.compile(r"(?:민주당|국민의\s*힘|국민의힘|혁신당|개혁신당|진보당|정의당|[가-힣]{2,4}\s*의원)[^.…]{0,40}(?:금지|의무화|도입|신설|개정|입법|법안|발의|추진)|(?:법안|개정안|특별법|조례안)\s*(?:발의|제출|대표\s*발의|통과|추진)|대표\s*발의|발의했다")
 LIFESTYLE_RE = re.compile(r"(?:일상|하루|삶|풍경|학교\s*생활|등하교|여름방학|급식)[^.…]{0,10}(?:빼앗|달라|바뀌|변화|무너|사라)|누가\s*[^.…]{0,10}(?:줄까|할까|될까)|[가-힣]까\s*\??\s*$|트렌드|라이프\s*스타일")
+# 점쟁이·무속인·역술인의 예언·장담 (예능 방송에서 나온 근거 없는 발언: '北김정은 2년 안에 사망…무속인 1000만원 걸었다') / 영화·드라마 리뷰
+FORTUNE_RE = re.compile(r"무속인|점쟁이|역술인|점술가|(?<![가-힣])무당(?![가-힣])|신점|타로|운명전쟁|사주\s*(?:풀이|팔자|궁합|카페|를\s*보)|사주풀이|예언|신통|점괘|(?<![가-힣])도사(?![가-힣])|예지몽|\d+\s*만원\s*걸")
+FILM_REVIEW_RE = re.compile(r"\[[^\]]{0,8}리뷰\]|\[(?:영화|드라마|시사회|공연|전시)[^\]]{0,8}\]|[가-힣]{2,4}\s*[·Xx×]\s*[가-힣]{2,4}\s*['‘\"“][^'’\"”]{1,14}['’\"”]|개봉\s*(?:첫|\d)|관객\s*\d+만|시사회|박스\s*오피스")
+# ── 연예·예술 기사 걸러내기 강화 (2026-11-16) ──
+#   예능 프로그램·드라마·영화 제목과 출연진의 발언·근황은 제목에 '사고·폭행·추락·화재·납치' 같은 사건 낱말이 나와도 실제 사건이 아님.
+#   ① 알려진 예능·드라마·음악 프로그램 이름  ② '작품명' + 방송·촬영·장면·시즌 같은 제작 낱말  ③ 연예 직업 + 근황·발언·열애 낱말
+#   단, 구속·체포·입건·검거·사망·대피·압사·병원 이송처럼 '진짜 일이 일어났다'는 낱말이 있으면 그대로 사건으로 남김 ('부상 투혼'·'추락 연기'는 진짜 부상이 아님)
+ENT_REAL_RE = re.compile(r"성폭행|성추행|피의자|피해자|고소장|구속|체포|입건|검거|송치|붙잡|현행범|영장|기소|숨져|숨진|숨졌|사망(?!\s*장면)|중태|의식\s*불명|심정지|압사|화재\s*(?:발생|로|가\s*나)|불이\s*나|대피|폭발\s*사고|구급차|병원\s*이송|이송됐|이송돼|소방|경찰\s*(?:조사|수사|출동)|마약\s*투약")
+PROGRAM_NAMES_RE = re.compile(r"나\s*혼자\s*산다|나혼산|미운\s*우리\s*새끼|미우새|런닝맨|1박\s*2일|놀면\s*뭐하니|전지적\s*참견|전참시|유\s*퀴즈|유퀴즈|나는\s*솔로|나는\s*SOLO|골\s*때리는|골때녀|아는\s*형님|아형|동상이몽|신서유기|삼시\s*세끼|환승\s*연애|피지컬\s*100|라디오\s*스타|불후의\s*명곡|복면가왕|쇼\s*미\s*더\s*머니|쇼미더머니|슈퍼밴드|현역가왕|미스\s*트롯|미스터\s*트롯|싱어\s*게인|스트릿\s*우먼|스트릿\s*댄스|대탈출|지구마불|구해줘!?\s*홈즈|편스토랑|신상\s*출시|살림하는\s*남자|아내의\s*맛|호적\s*메이트|고딩\s*엄빠|이혼\s*숙려|결혼\s*지옥|세상에\s*이런\s*일이|서프라이즈|TV\s*동물농장|동물농장|생활의\s*달인|6시\s*내고향|전국\s*노래자랑|열린\s*음악회|뭉쳐야|최강\s*야구|오징어\s*게임|더\s*글로리|사냥개들|파묘|범죄도시|서울의\s*봄|신과함께|7번방의\s*선물|연애\s*남매|솔로\s*지옥|흑백\s*요리사|냉장고를\s*부탁|맛남의\s*광장|해피투게더|개그\s*콘서트|웃찾사|SNL|코미디\s*빅리그|인간극장|다큐\s*3일|그것이\s*알고\s*싶다|꼬리에\s*꼬리를\s*무는|꼬꼬무|실화탐사대|궁금한\s*이야기\s*Y|제보자들|PD수첩")
+ENT_JOB_RE = re.compile(r"배우|가수|아이돌|걸그룹|보이그룹|개그맨|개그우먼|코미디언|방송인|래퍼|트로트|탤런트|연기자|성우|아나운서|뮤지컬|유튜버|BJ|스트리머|출연자|출연진|패널|연습생|소속사")
+ENT_TALK_RE = re.compile(r"근황|고백|폭로|비하인드|입담|폭소|웃음|감동|눈물|열애|결별|이혼|재결합|컴백|신곡|앨범|팬미팅|인증샷|화보|예고편|티저|캐스팅|크랭크\s*(?:인|업)|제작\s*발표회|무대\s*인사|시상식|레드\s*카펫|수상\s*소감|차트|뮤비|뮤직\s*비디오|시청률|첫\s*방송|첫방|종영|재방|녹화|촬영\s*(?:현장|중|비하인드)|장면|명장면|엔딩|결말|스포|고증|시즌\s*\d|회차|\d+\s*회|열연|연기\s*(?:변신|호평|논란)|호평|혹평|논란\s*(?:해명|사과)|해명|입장|발언|사칭|악플|팬\s*(?:들|덤)|사생|팬카페|흥행|관객|개봉|박스\s*오피스|OTT|넷플릭스|티빙|웨이브|디즈니|쿠팡\s*플레이")
+ENT_QUOTED_WORK_RE = re.compile(r"['‘\"“《〈][^'’\"”》〉]{1,14}['’\"”》〉]\s*[^.…]{0,30}?(?:장면|촬영지|촬영장|출연|시즌|엔딩|비하인드|고증|결말|스포|명장면|열연|제작진|방영|예고|녹화|캐스팅|시청률|첫방|종영|재방|OTT|넷플릭스|티빙|웨이브|개봉|관객)")
+
+
+def is_entertainment_talk(title):
+    t = title or ""
+    if ENT_REAL_RE.search(t):
+        return False
+    if PROGRAM_NAMES_RE.search(t):
+        return True
+    if ENT_QUOTED_WORK_RE.search(t):
+        return True
+    return bool(ENT_JOB_RE.search(t) and ENT_TALK_RE.search(t))
+
+
 STATEMENT_END_RE = re.compile(r"(?:중점을\s*두고|노력하고|주력하고|힘쓰고|계획하고|준비하고|추진하고|검토하고|강조하고)\s*(?:있습니다|있다)\.?\s*$")
 
 
 def is_nonrealtime_extra(title):
     t = title or ""
+    # 점쟁이·무속인 예언은 '사망' 같은 낱말이 있어도 근거 없는 발언 (실제 검거·사기 피해가 있으면 예외)
+    if FORTUNE_RE.search(t) and not re.search(r"검거|구속|체포|입건|송치|적발|붙잡|사기|횡령|성추행|폭행", t):
+        return True
+    if is_entertainment_talk(t):                       # 연예·예능·영화·드라마 이야기 ('부상 투혼'·'추락 연기'처럼 약한 사건 낱말은 무시)
+        return True
     if NEW_ARREST_RE.search(t) or NEW_HARM_STRONG_RE.search(t):
         return bool(STATEMENT_END_RE.search(t))        # 새 검거·사망이 있으면 대부분 실제 사건 (입장 설명 문장만 예외)
+    if FORTUNE_RE.search(t) or FILM_REVIEW_RE.search(t):
+        return True
+    if is_entertainment_talk(t):
+        return True
     if ENT_GOSSIP_RE.search(t) or ORG_COMPLAINT_RE.search(t) or RETRO_RE.search(t) or LEGISLATION_RE.search(t) or LIFESTYLE_RE.search(t) or STATEMENT_END_RE.search(t):
         return True
     return False
@@ -1035,7 +1069,7 @@ def is_not_incident(title, content):
     if is_nonrealtime_extra(title):
         return True
     text = title + " " + (content or "")
-    if REVIEW_RE.search(title) or (REVIEW_RE.search(text) and re.search(r"지음|옮김|\d+쪽|출판사|펴냄", text)):
+    if (REVIEW_RE.search(title) and not ENT_REAL_RE.search(title)) or (REVIEW_RE.search(text) and re.search(r"지음|옮김|\d+쪽|출판사|펴냄", text)):
         return True
     if AD_RE.search(text):
         return True
@@ -1106,7 +1140,7 @@ INCIDENT_FACT_RE = re.compile(r"침범|침투|추락|충돌|사망|숨져|숨졌
 #   (예: 과학 기사 본문의 '무너진', 인물 기사 본문의 '문화재' 때문에 잘못 분류되는 것 방지)
 TITLE_HINT_RE = re.compile(r"사고|사망|숨져|숨진|숨졌|부상|다쳐|다쳤|화재|(?<![가-힣])불(?![가-힣])|불이|폭발|붕괴|추락|구속|입건|검거|체포|적발|송치|혐의|경찰|소방|119|112|신고|피해|실종|수색|"
                            r"구조|대피|통제|확진|감염|발생|긴급|속보|참변|중상|의식\s*불명|심정지|덜미|징역|실형|집행\s*유예|벌금|선고|(?<!경)기소|압수\s*수색|범행|도주|흉기|주의보|경보|특보|발령|침수|정전|고립|전복|추돌|충돌")
-FINANCE_RE = re.compile(r"황제주|반토막|국민주|종목|상한가|하한가|폭락|급락|52주|주가|증시|코스피|코스닥|나스닥|다우|환율|금리|비트코인|이더리움|가상자산|암호화폐|코인|시황|목표주가|상장|배당|펀드|매수|매도|실적|달러|원화|엔화|위안화|유로화|유가|금값|금\s*시세|시총|시가\s*총액|지수|채권|국채|집값|전셋값|아파트값|분양가|영업이익|매출|물가|수출|무역|관세|투자자|개미|외국인\s*매도|\d[\d,.]*\s*(천|만|억|조)?\s*(달러|원|엔|선|포인트|p|%)\s*(선\s*)?(붕괴|추락|폭락|급락|무너|침몰|폭발|돌파|회복)")
+FINANCE_RE = re.compile(r"계좌|보유\s*물량|ETF|펀드|절세|연금저축|IRP|양도세|배당|리밸런싱|포트폴리오|주식|증권사|황제주|반토막|국민주|종목|상한가|하한가|폭락|급락|52주|주가|증시|코스피|코스닥|나스닥|다우|환율|금리|비트코인|이더리움|가상자산|암호화폐|코인|시황|목표주가|상장|배당|펀드|매수|매도|실적|달러|원화|엔화|위안화|유로화|유가|금값|금\s*시세|시총|시가\s*총액|지수|채권|국채|집값|전셋값|아파트값|분양가|영업이익|매출|물가|수출|무역|관세|투자자|개미|외국인\s*매도|\d[\d,.]*\s*(천|만|억|조)?\s*(달러|원|엔|선|포인트|p|%)\s*(선\s*)?(붕괴|추락|폭락|급락|무너|침몰|폭발|돌파|회복)")
 # 돈·시장 낱말이 있어도 통과시키는 분류 (실제 범죄)
 FINANCE_OK_GROUPS = {"재산 범죄", "경제·금융범죄", "공무·사법 범죄", "사이버범죄", "마약·보건범죄"}
 FINANCE_OK_SUBS = {"살인"}
@@ -3046,9 +3080,48 @@ class _BodyParser(HTMLParser):
             self.parts.append(d)
 
 
+class PageGone(Exception):
+    """기사 페이지가 지워졌음 (404·410, 또는 언론사 첫 화면·오류 화면으로 돌려보내짐)"""
+
+
+def _redirected_away(url, final):
+    """원래 주소는 기사 깊은 경로였는데 최종 주소가 언론사 첫 화면이거나 오류 화면이면 True (삭제된 기사)"""
+    try:
+        a, b = urllib.parse.urlparse(url), urllib.parse.urlparse(final)
+    except Exception:
+        return False
+    if not final or final == url:
+        return False
+    deep = len([x for x in a.path.split("/") if x]) >= 1 or bool(a.query)
+    if deep and b.path.strip("/") == "" and not b.query:
+        return True
+    return bool(re.search(r"/(?:404|error|errors|notfound|not-found|nopage|deleted|removed)(?:[/.?]|$)|[?&](?:error|notfound)", final, re.I))
+
+
+def probe_link(url):
+    """기사 주소가 아직 살아 있는지: 'gone'(지워짐) / 'ok' / 'unknown'(차단·일시 오류 — 지우지 않음)"""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,*/*"})
+        with urllib.request.urlopen(req, timeout=7) as r:
+            r.read(2000)
+            return "gone" if _redirected_away(url, r.geturl()) else "ok"
+    except urllib.error.HTTPError as e:
+        return "gone" if e.code in (404, 410) else "unknown"
+    except Exception:
+        return "unknown"
+
+
 def fetch_article_text(url):
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,*/*"})
-    with urllib.request.urlopen(req, timeout=8) as r:
+    try:
+        r = urllib.request.urlopen(req, timeout=8)
+    except urllib.error.HTTPError as e:
+        if e.code in (404, 410):
+            raise PageGone(str(e.code))
+        raise
+    with r:
+        if _redirected_away(url, r.geturl()):
+            raise PageGone("redirect")
         raw = r.read(800_000)
         ctype = r.headers.get("Content-Type", "")
     m = re.search(r"charset=([\w-]+)", ctype, re.I) or re.search(rb"charset=[\"']?([\w-]+)", raw[:4000], re.I)
@@ -3462,6 +3535,41 @@ def body_verdict(item, text):
     return v
 
 
+LINK_RECHECK_SEC = 6 * 3600     # 같은 기사 주소를 다시 확인하는 간격
+MAX_LINK_CHECK = 30             # 한 번 실행에 확인할 기사 수
+
+
+def check_links(items, started):
+    """이미 올라가 있는 최근 기사의 원문 주소가 지워졌는지 확인해 지워진 기사는 목록에서 뺌 (눌렀더니 언론사 첫 화면으로 가는 기사 방지)"""
+    from concurrent.futures import ThreadPoolExecutor
+    now = time.time()
+    cands = []
+    for v in sorted(items.values(), key=lambda x: -x["timestamp"]):
+        if len(cands) >= MAX_LINK_CHECK:
+            break
+        link = v.get("link") or ""
+        if not link or link.startswith("https://news.google.com") or v.get("source") == "시민 직접 제보":
+            continue
+        if now - (v.get("ots") or v["timestamp"]) > 3 * 86400:
+            continue                                   # 3일 지난 기사는 확인하지 않음
+        if now - (v.get("lc") or 0) < LINK_RECHECK_SEC:
+            continue
+        cands.append(v)
+    if not cands or time.time() - started > 420:
+        return 0
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        res = list(ex.map(lambda v: (v, probe_link(v["link"])), cands))
+    gone = 0
+    for v, st in res:
+        v["lc"] = now
+        if st == "gone":
+            key = norm_key(v["title"])
+            items.pop(key, None)
+            BLOCKED[key] = v.get("ots") or v["timestamp"]
+            gone += 1
+    return gone
+
+
 INFECT_BODY_RE = re.compile(r"개선충|사람(?:도|에게도?)\s*(?:감염|옮)|인수\s*공통|감염\s*(?:될\s*수|위험|우려)|전염\s*(?:될\s*수|위험|우려)")
 _INFECT_FROM = {"생활 사고", "소동·해프닝", "경찰·소방 출동", "구조·안전사고", "시민제보"}
 
@@ -3484,12 +3592,20 @@ def check_bodies(items, started, cutoff_ts=0):
     def one(v):
         try:
             return v, fetch_article_text(v["link"])
+        except PageGone:
+            return v, "__GONE__"
         except Exception:
             return v, ""
     with ThreadPoolExecutor(max_workers=8) as ex:
         res = list(ex.map(one, cands))
     dropped = moved = 0
     for v, text in res:
+        if text == "__GONE__":                         # 지워진 기사 (언론사 첫 화면으로 돌아가는 기사)
+            key = norm_key(v["title"])
+            items.pop(key, None)
+            BLOCKED[key] = v.get("ots") or v["timestamp"]
+            dropped += 1
+            continue
         if len(text) < 60:
             v["bf"] = (v.get("bf") or 0) + 1       # 본문을 못 읽음 (두 번까지만 다시 시도)
             continue
@@ -3973,7 +4089,7 @@ def reprocess_existing(old):
                 continue                                           # 외국 매체의 현지 소식
             item = make_item(title, content[:400], cls[0], cls[1], source, it.get("link", ""), ts, it.get("hint"), None, it.get("loctext"))
             item["embed"] = it.get("embed")
-            for k in ("bc", "bf", "sd", "ots", "evd", "inf"):  # 본문 확인 기록 (한 번 읽은 기사는 다시 열지 않음) · 지난 사건 날짜 보정 기록 · 본문 감염 판정
+            for k in ("bc", "bf", "sd", "ots", "evd", "inf", "lc"):  # 본문 확인 기록 (한 번 읽은 기사는 다시 열지 않음) · 지난 사건 날짜 보정 기록 · 본문 감염 판정
                 if it.get(k):
                     item[k] = it[k]
             if item.get("inf") and item.get("category") in _INFECT_FROM:
@@ -4179,6 +4295,8 @@ def main():
     # 새 국내 기사의 본문 앞부분을 읽어 해외 기사·배우 연기 이야기·홍보 비유를 한 번 더 걸러냄
     n_drop, n_move = check_bodies(items, started, cutoff_ts)
     print(f"본문 확인: 해외·비사건·지난 사건으로 지운 기사 {n_drop}건 / 해외 분류로 옮긴 기사 {n_move}건")
+    n_gone = check_links(items, started)
+    print(f"원문이 지워진 기사 {n_gone}건을 목록에서 뺌")
     print(f"지난 사건 날짜 보정: 사건 날짜로 옮긴 기사 {STALE['shift']}건 / 보관 기간 밖이라 지운 기사 {STALE['drop']}건")
 
     # 언론사별로 '사이트 안에 띄우기'가 되는지 확인 (한 번 확인한 언론사는 다시 확인하지 않음)
@@ -4362,6 +4480,23 @@ def selftest():
         ("지역난방 배관 파열 뜨거운 물 분출 행인 화상", True),
         ("펜션 일산화탄소 중독 투숙객 숨져", True),
         ("교각 파손 교통 통제", True),
+        # 2026-11-16 7차: 무속인 예언·영화 리뷰·개관·주식 계좌 기사 제외
+        ("\"北김정은 2년 안에 사망\"...'운명전쟁49' 무속인, 1000만원 걸었다", False),
+        ("어르신을 위한 아지트… 서울시, '9988 서울 활력충전소' 첫 개관", False),
+        ("김윤석·구교환 '폭설', 까마귀 날자 눈 떨어진다 [Q리뷰]", False),
+        ("보유 물량은 지키고 계좌 구조는 바꾸고 싶다면?", False),
+        ("고립된 등산객 구조 요청 119 출동", True),
+        # 2026-11-16 8차: 예능·드라마·영화·연예인 발언 기사 걸러내기 강화
+        ("'런닝맨' 유재석 추락 연기 폭소 현장", False),
+        ("'사냥개들2' 폭행 장면 수위 논란", False),
+        ("'골때녀' 출연자 부상 투혼 감동", False),
+        ("배우 송중기 \"교통사고 후유증\" 고백", False),
+        ("'나는 SOLO' 17기 출연자 폭행 혐의 입건", True),
+        ("콘서트장 압사 사고 관객 부상", True),
+        ("영화 촬영장 화재 스태프 부상 대피", True),
+        ("가수 음주운전 사고로 입건", True),
+        ("해운대 해수욕장 익사 사고 구조", True),
+        ("기생충 감염 너구리 출몰 주민 불안", True),
         ("절도 있는 군무 선보인 무용단", False),
         ("직장 내 괴롭힘 예방 교육 실시", False),
         ("왕따 방지 프로그램 운영 시작", False),
