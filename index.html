@@ -2285,7 +2285,7 @@
                     <p class="text-[0.6875rem] text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">${esc(news.summary)}</p>
                     <div class="flex items-center justify-between gap-2 text-[0.625rem] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
                         <span class="truncate"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}</span>
-                        <span class="font-medium shrink-0">${esc(news.source)}</span>
+                        <span class="font-medium shrink-0 flex items-center gap-1.5">${esc(news.source)}<button type="button" onclick="event.stopPropagation(); openShare(${news.id})" title="이웃·커뮤니티에 공유" class="px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold"><i class="fa-solid fa-share-nodes"></i> 공유</button></span>
                     </div>`;
                 card.appendChild(main);
 
@@ -2494,6 +2494,7 @@
                     <div class="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900 text-[0.6875rem] text-slate-600 dark:text-slate-300">
                         <i class="fa-solid fa-circle-info text-blue-500"></i>
                         <span class="flex-1 min-w-0 truncate">기사가 안 보이거나 <b>'${esc(host || '언론사')}에서 연결을 거부했습니다'</b>가 뜨면 → 오른쪽 버튼으로 원문을 여세요</span>
+                        <button onclick="openShare(${news.id})" title="이 사건을 이웃·커뮤니티에 공유" class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold whitespace-nowrap"><i class="fa-solid fa-share-nodes"></i> 공유하기</button>
                         <a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold whitespace-nowrap"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문으로 이동</a>
                         <button onclick="renderDetailView(${news.id}, true)" title="이 화면에서 기사 요약으로 보기" class="shrink-0 px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-800 font-bold whitespace-nowrap">요약 보기</button>
                     </div>
@@ -2527,9 +2528,92 @@
                     ${news.orig ? `<p class="text-sm text-slate-500 dark:text-slate-400 italic">원문 제목: ${esc(news.orig)}</p>` : ''}
                     ${news.summary && news.summary !== news.title ? `<p class="text-lg text-slate-700 dark:text-slate-200 leading-relaxed">${esc(news.content && news.content.length > news.summary.length ? news.content : news.summary)}</p>` : ''}
                     <p class="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">${notice}</p>
+                    <button onclick="openShare(${news.id})" class="w-full flex items-center justify-center gap-1.5 text-base font-bold text-white bg-emerald-600 hover:bg-emerald-500 px-4 py-3 rounded-lg shadow"><i class="fa-solid fa-share-nodes"></i> 이웃·커뮤니티에 공유하기</button>
                     ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-1.5 text-base font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-3 rounded-lg shadow"><i class="fa-solid fa-arrow-up-right-from-square"></i> 기사 원문 새 창으로 열기</a>` : ''}
                     ${link && !isGoogle && (forceCard || news.orig) ? `<button onclick="tryEmbedArticle(${news.id})" class="w-full text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800">이 화면 안에서 원문 열어 보기 (언론사가 막아 두면 빈 화면이 뜹니다)</button>` : ''}
                 </div>`);
+        }
+
+        // ================= 사건 공유하기 =================
+        //  ① 📱 이웃에게 바로 공유: 휴대폰의 공유창(카카오톡·문자·밴드·메일 등)을 엶 — 공유창이 없는 PC 에서는 내용을 복사
+        //  ② 💬 문자로 보내기  ③ 🔗 내용 복사
+        //  ④ 🏘️ 우리동네 커뮤니티(안전망 게시판)에 바로 올리기 — 동네 인증을 한 이웃에게만 보임
+        //  공유 내용에는 기사 제목·위치·시각·원문 주소·이 사이트 주소만 들어가고, 내 이름·동네 같은 개인 정보는 넣지 않습니다.
+        function siteUrl() { try { return /^https?:$/.test(location.protocol) ? location.origin + location.pathname : ''; } catch (e) { return ''; } }
+        function shareTextOf(n) {
+            const link = safeUrl(n.link), site = siteUrl();
+            return ['🚨 [우리동네 사건사고] ' + n.title,
+                n.location ? '📍 ' + n.location : '',
+                '🕒 ' + [n.time, n.source].filter(Boolean).join(' · '),
+                link ? '원문: ' + link : '',
+                site ? '실시간 확인: ' + site : ''].filter(Boolean).join('\n');
+        }
+        function openShare(id) {
+            const n = newsData.find(x => x.id === id);
+            if (!n) return;
+            const canNative = typeof navigator.share === 'function';
+            const btn = 'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left text-sm font-bold transition';
+            openSheet(`
+                <div class="p-5 space-y-3 max-w-md w-full">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0"><div class="text-xs font-bold text-blue-600"><i class="fa-solid fa-share-nodes"></i> 이 사건 공유하기</div>
+                            <div class="mt-1 text-sm font-extrabold text-slate-900 dark:text-white leading-snug line-clamp-3">${esc(n.title)}</div>
+                            <div class="text-[0.6875rem] text-slate-500 mt-0.5">${esc(n.location || '')} · ${esc(n.time || '')}</div></div>
+                        <button onclick="closeSheet()" class="shrink-0 w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <button onclick="shareNative(${id})" class="${btn} border-blue-300 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100"><span class="text-xl">📱</span><span class="flex-1">이웃에게 바로 공유<span class="block text-[0.6875rem] font-normal text-slate-500">${canNative ? '카카오톡·문자·밴드 등 공유창이 열립니다' : '이 기기에는 공유창이 없어 내용을 복사합니다'}</span></span></button>
+                    <a href="sms:?&body=${encodeURIComponent(shareTextOf(n))}" class="${btn} border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100"><span class="text-xl">💬</span><span class="flex-1">문자로 보내기</span></a>
+                    <button onclick="shareCopy(${id})" class="${btn} border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100"><span class="text-xl">🔗</span><span class="flex-1">내용·링크 복사</span></button>
+                    <div class="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 p-3 space-y-2">
+                        <div class="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">🏘️ 우리동네 커뮤니티에 바로 공유</div>
+                        <textarea id="shareNote" maxlength="200" rows="2" placeholder="이웃에게 한마디 (선택) 예) 우리 동네 근처예요. 조심하세요!" class="w-full text-xs p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"></textarea>
+                        <button onclick="shareToCommunity(${id})" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">커뮤니티 안전망에 올리기</button>
+                        <div id="shareMsg" class="text-[0.6875rem] text-slate-500"></div>
+                    </div>
+                </div>`);
+        }
+        async function shareNative(id) {
+            const n = newsData.find(x => x.id === id);
+            if (!n) return;
+            if (typeof navigator.share === 'function') {
+                try { await navigator.share({ title: '[우리동네 사건사고] ' + n.title, text: shareTextOf(n) }); closeSheet(); }
+                catch (e) { /* 사용자가 공유창을 닫은 경우 */ }
+            } else shareCopy(id);
+        }
+        async function shareCopy(id) {
+            const n = newsData.find(x => x.id === id);
+            if (!n) return;
+            const text = shareTextOf(n);
+            let ok = false;
+            try { await navigator.clipboard.writeText(text); ok = true; }
+            catch (e) {
+                try { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); ok = document.execCommand('copy'); ta.remove(); } catch (e2) {}
+            }
+            showAlertToast({ head: '공유', title: ok ? '내용을 복사했습니다. 카카오톡·문자에 붙여넣어 보내세요.' : '복사하지 못했습니다. 직접 선택해 복사해 주세요.' });
+            if (ok) closeSheet();
+        }
+        async function shareToCommunity(id) {
+            const n = newsData.find(x => x.id === id);
+            const say = t => { const el = document.getElementById('shareMsg'); if (el) el.textContent = t; };
+            if (!n) return;
+            if (!myTown) { say('먼저 [우리동네 커뮤니티]에서 동네 인증을 해 주세요.'); return; }
+            const note = ((document.getElementById('shareNote') || {}).value || '').trim().slice(0, 200);
+            const link = safeUrl(n.link);
+            const title = ('📰 ' + n.title).slice(0, 60);
+            const text = [note, '📍 ' + (n.location || '위치 미상') + ' · ' + [n.time, n.source].filter(Boolean).join(' · '), link ? '원문: ' + link : ''].filter(Boolean).join('\n').slice(0, 1000);
+            const P = PB.talk;
+            const msg = Object.assign({ title: title, text: text, ts: Date.now(), uid: COMM_UID, views: 0 }, meFields());
+            msg[P.like] = [];
+            msg.type = 'report'; msg.town = myTown.dong; msg.kind = guessReportKind(n.title); msg.shared = 1;
+            if (link) msg.shareLink = link;
+            try {
+                const db = await commInit();
+                if (db) await P.col().add(msg);
+                else { msg.id = 'p' + Date.now() + Math.random().toString(36).slice(2, 7); P.list().unshift(msg); P.save(); }
+                closeSheet();
+                showAlertToast({ head: '공유', title: '우리동네 커뮤니티 안전망에 공유했습니다.', foot: '[우리동네 커뮤니티] → 안전망에서 볼 수 있어요' });
+                if (isDocked('community') || !document.getElementById('floatModal').classList.contains('hidden')) { try { pbRefresh('talk', true); } catch (e) {} }
+            } catch (e) { console.error(e); say('공유에 실패했습니다. 잠시 후 다시 시도해 주세요.'); }
         }
 
         function tryEmbedArticle(id) {
