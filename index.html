@@ -3249,7 +3249,7 @@
                 <div class="px-2.5 py-1.5 text-[0.6875rem] text-slate-500"><i class="fa-solid fa-circle-check text-emerald-500"></i> ${esc(townName(myTown))} 인증됨</div>
                 ${item(`showProfile('${COMM_UID}')`, 'fa-user', '내 프로필 · 내 일상')}
                 ${item(`setCommTab('popular')`, 'fa-ranking-star', '우리동네 TOP10 · 인기쟁이')}
-                ${item(`setCommTab('friends')`, 'fa-newspaper', '팔로잉 소식', commUnseen.feed + commUnseen.follow ? `<span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${commUnseen.feed + commUnseen.follow}</span>` : '')}
+                ${commOpen('people') ? item(`setCommTab('friends')`, 'fa-newspaper', '팔로잉 소식', commUnseen.feed + commUnseen.follow ? `<span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${commUnseen.feed + commUnseen.follow}</span>` : '') : ''}
                 ${item('inviteNeighbors()', 'fa-user-plus', '이웃 초대하기')}
                 ${item('showBlockList()', 'fa-ban', '차단 관리' + (Object.keys(blocked).length ? ' ' + Object.keys(blocked).length : ''))}
                 ${item('showReportGuide()', 'fa-scale-balanced', '제보 가이드라인 · 신뢰 지수')}
@@ -3992,7 +3992,7 @@
                     <span>📢 이웃의 사건사고 제보 알림 받기</span>
                     <input type="checkbox" ${alertCfg.report !== false ? 'checked' : ''} onchange="setAlertCfg('report', this.checked)">
                 </label>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
+                ${!commOpen('people') ? '' : `<label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
                     <span>✉ 1:1 메시지 알림 받기</span>
                     <input type="checkbox" ${alertCfg.dm !== false ? 'checked' : ''} onchange="setAlertCfg('dm', this.checked)">
                 </label>
@@ -4007,7 +4007,7 @@
                 <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
                     <span>📰 팔로잉 새 게시물 알림 받기</span>
                     <input type="checkbox" ${alertCfg.feed !== false ? 'checked' : ''} onchange="setAlertCfg('feed', this.checked)">
-                </label>
+                </label>`}
                 <div class="text-[0.6875rem] text-slate-500 mt-2 mb-1">커뮤니티 알림 표시 방법 <span class="text-slate-400">(커뮤니티를 칸에 띄워 두지 않았을 때)</span></div>
                 <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
                     <span>🔴 커뮤니티 버튼에 빨간 숫자 표시</span>
@@ -5106,15 +5106,15 @@
                             ${!mine && friendAlias(uid) ? `<div class="text-[0.625rem] text-slate-400">원래 이름: ${esc(m.nick || '이웃')}</div>` : ''}
                             ${mine ? '' : `<div class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate"><i class="fa-solid fa-location-dot"></i> ${esc(area || '지역 미상')} <span class="font-normal text-slate-500">${area && myTown && area !== myArea() ? '· 다른 동네 이웃' : (myTown ? '· ' + esc(myTown.dong) + ' 이웃' : '')}</span></div>`}
                             <p class="text-xs text-slate-600 dark:text-slate-300 break-words">${esc(m.intro || (mine ? '한 줄 소개를 적어 보세요.' : '아직 소개가 없습니다.'))}</p>
-                            <div class="mt-1.5 flex flex-wrap items-center gap-1"><span id="pfFollow" class="inline-flex gap-1">${followCountsHtml(uid, followCache[uid] || (mine ? { following: Object.keys(following).map(u => ({ uid: u })), followers: followers } : null))}</span>${mine ? `<span id="pfTrust">${trustChipHtml(trustCache[uid])}</span>` : ''}</div>
+                            <div class="mt-1.5 flex flex-wrap items-center gap-1"><span id="pfFollow" class="inline-flex gap-1">${!commOpen('people') ? '' : followCountsHtml(uid, followCache[uid] || (mine ? { following: Object.keys(following).map(u => ({ uid: u })), followers: followers } : null))}</span>${mine ? `<span id="pfTrust">${trustChipHtml(trustCache[uid])}</span>` : ''}</div>
                         </div>
                     </div>
                     <div id="pfStats" class="mt-2 text-left">${feedStatsHtml(null)}</div>
                     <div class="mt-0.5 text-[0.625rem] text-slate-400 text-left">게시판 글 ${posts}개${m.joinedAt ? ' · ' + timeAgo(m.joinedAt) + ' 가입' : ''}${!mine && followsMe(uid) ? ' · <b class="text-fuchsia-600">나를 팔로우해요</b>' : ''}</div>
                     ${mine ? '' : `<div id="pfTrust" class="mt-2">${trustHtml(trustCache[uid])}</div>`}
-                    ${mine ? '' : `<div class="mt-2 flex items-center justify-center gap-1.5 text-[0.6875rem] text-slate-500"><span>대화 매너 평가</span><span id="mannerStars">${mannerStars(uid)}</span></div>
+                    ${mine ? '' : `${!commOpen('people') ? '' : `<div class="mt-2 flex items-center justify-center gap-1.5 text-[0.6875rem] text-slate-500"><span>대화 매너 평가</span><span id="mannerStars">${mannerStars(uid)}</span></div>`}
                     <div class="mt-3 flex flex-wrap gap-1.5 justify-center">${followButton(uid)}${chatButton(uid)}</div>
-                    <div class="mt-1 text-[0.625rem] text-slate-400">팔로우는 바로 되고, 1:1 대화는 상대가 수락하거나 서로 팔로우(맞팔)하면 시작됩니다</div>
+                    ${commOpen('people') ? '<div class="mt-1 text-[0.625rem] text-slate-400">팔로우는 바로 되고, 1:1 대화는 상대가 수락하거나 서로 팔로우(맞팔)하면 시작됩니다</div>' : ''}
                     ${natTop ? '<div class="mt-2 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-200 text-[0.6875rem] font-bold">👑 이달의 전국 인기 이웃 · 동네가 달라도 팔로우·대화 요청을 보낼 수 있어요</div>' : ''}`}
                     ${mine || !canChat(uid) ? '' : `<div class="mt-2 flex gap-2 justify-center">
                         <button onclick="closeProfile(); startCall('${esc(uid)}', profileShown.nick, false)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold"><i class="fa-solid fa-phone"></i> 음성 통화</button>
@@ -6143,7 +6143,8 @@
         });
         function openMyProfile() {
             openCommunity();
-            if (myTown) { setCommTab('me'); return; }           // 동네 인증을 했으면 커뮤니티 '내 프로필' 탭으로
+            if (myTown && commOpen('me')) { setCommTab('me'); return; }           // 동네 인증을 했으면 커뮤니티 '내 프로필' 탭으로 (탭을 열어 둔 때만)
+            if (myTown) { setTimeout(() => showProfile(COMM_UID), 80); return; }
             setTimeout(() => showProfile(COMM_UID), 80);
         }
 
@@ -6214,6 +6215,7 @@
         }
         function stopMarketChat() { if (marketChatUnsub) { marketChatUnsub(); marketChatUnsub = null; } }
         function setCommTab(tab) {
+            if (!COMM_GROUPS.some(g => g.tabs.includes(tab))) tab = 'talk';      // 아직 열지 않은 탭(알림·옛 링크로 들어온 경우)은 안전망으로
             commTab = tab; marketOpen = null; marketForm = false; stopMarketChat();
             commSeen(tab);                                       // 이 탭의 '안 본 알림' 지우기 (커뮤니티 버튼 빨간 표시) — 화면 그리기 전에
             meetChatWith = null; meetMsg = '';
@@ -6392,7 +6394,7 @@
                             <div class="text-sm font-extrabold text-emerald-600">${esc(it.price || (it.kind === '나눔' ? '무료 나눔' : '가격 문의'))}</div>
                             <div class="mt-1 text-[0.6875rem] text-slate-500 flex flex-wrap items-center gap-1.5"><button onclick="showProfile('${esc(it.uid)}')" class="hover:underline inline-flex items-center gap-1">${avatarHtml(it, 'w-5 h-5', 'text-xs')} ${esc(it.nick || '이웃')}</button> · ${timeAgo(it.ts)}
                                 <span class="px-1.5 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold"><i class="fa-solid fa-location-dot"></i> ${esc(it.area || myArea())}</span>
-                                ${mine ? '' : `<button onclick="openDM('${esc(it.uid)}', marketFind('${esc(it.id)}').nick, marketFind('${esc(it.id)}').emoji, marketFind('${esc(it.id)}').photo, marketFind('${esc(it.id)}').area)" class="px-2 py-0.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-bold"><i class="fa-solid fa-comment"></i> 글쓴이와 1:1 대화</button>`}
+                                ${mine || !commOpen('people') ? '' : `<button onclick="openDM('${esc(it.uid)}', marketFind('${esc(it.id)}').nick, marketFind('${esc(it.id)}').emoji, marketFind('${esc(it.id)}').photo, marketFind('${esc(it.id)}').area)" class="px-2 py-0.5 rounded bg-sky-600 hover:bg-sky-500 text-white font-bold"><i class="fa-solid fa-comment"></i> 글쓴이와 1:1 대화</button>`}
                             </div>
                             ${it.area && myTown && it.area !== myArea() ? '<div class="mt-1 text-[0.6875rem] text-amber-700 dark:text-amber-300">다른 동네에 올라온 물건입니다. 택배 거래를 할 때는 먼저 돈을 보내 달라는 요구를 특히 조심하세요.</div>' : ''}
                         </div>
@@ -6429,7 +6431,7 @@
                     <div class="mk-chips flex flex-wrap items-center gap-1.5">${['전체'].concat(MARKET_KINDS).map(chip).join('')}</div>
                     <input id="mkSearch" type="search" placeholder="${nation ? '전국에서 물건 찾기 (물건 이름·지역)' : '우리 동네에서 물건 찾기'}" onchange="setMarketQuery(this.value)" onkeydown="if (event.key === 'Enter') setMarketQuery(this.value)" class="flex-1 min-w-[8rem] bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-white">
                 </div>
-                ${nation ? `<div class="px-3 py-1.5 text-[0.6875rem] bg-sky-50 dark:bg-sky-950/30 text-sky-800 dark:text-sky-200 border-b border-sky-200 dark:border-sky-800 shrink-0">전국 모든 동네에 올라온 물건입니다. 물건마다 올린 사람의 지역이 표시되고, 물건을 누르면 다른 동네 이웃과도 문의 채팅·1:1 대화를 할 수 있습니다.${FIREBASE_CONFIG ? '' : ' (체험 모드에서는 이 기기에서 올린 물건만 보입니다)'}</div>` : ''}
+                ${nation ? `<div class="px-3 py-1.5 text-[0.6875rem] bg-sky-50 dark:bg-sky-950/30 text-sky-800 dark:text-sky-200 border-b border-sky-200 dark:border-sky-800 shrink-0">전국 모든 동네에 올라온 물건입니다. 물건마다 올린 사람의 지역이 표시되고, 물건을 누르면 다른 동네 이웃과도 문의 채팅을 할 수 있습니다.${FIREBASE_CONFIG ? '' : ' (체험 모드에서는 이 기기에서 올린 물건만 보입니다)'}</div>` : ''}
                 <div class="mk-list flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
                     ${list.length ? `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">` + list.map(x => `
                         <button onclick="openMarketItem('${esc(x.id)}')" class="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:border-emerald-500 transition ${x.status === 'done' ? 'opacity-50' : ''}">
@@ -7263,7 +7265,11 @@
         // ================= 커뮤니티 탭 묶음 =================
         // 탭이 11개로 늘어나 한 줄에 다 보이지 않던 문제 → 5개 묶음(큰 버튼)으로 나누고, 묶음 안의 탭은 그 아래 작은 줄에 보여 줌.
         // 안전망은 가장 중요해서 혼자 따로(빨간색), 맛집·핫플처럼 성격이 같은 것은 한 묶음으로.
-        const COMM_GROUPS = [
+        // ★ 단계별 공개 (2026-11-16): 지금은 안전망 · 동네 이야기 · 동네 장터만 엽니다. 나머지(맛집·핫플 / 이웃·대화 / 전국 TOP10 / 내 프로필 탭)는 화면에서만 숨겼고 코드는 그대로 있습니다.
+        //   나중에 열 때는 아래 목록에 이름만 더하면 됩니다. 예) ['safe', 'life', 'market', 'local']  (people 을 열면 팔로우·1:1 대화 버튼도 함께 보입니다)
+        const COMM_OPEN = ['safe', 'life', 'market'];
+        function commOpen(k) { return COMM_OPEN.includes(k); }
+        const COMM_GROUPS_ALL = [
             // c: 묶음 색, fa: 아이콘. 안전망은 고르지 않았을 때도 빨간색으로 칠해서 항상 눈에 띄게 (SOS 표시는 실제 SOS 글이 있을 때만 한 번)
             { k: 'safe', label: '우리동네 안전망', fa: 'fa-shield-halved', c: 'red', tabs: ['talk'] },
             // 동네 이야기: 맨 앞 '우리동네 TOP10'(이번 달 우리 동네 인기 글 TOP10 + 인기쟁이 TOP10)을 함께 둠 (탭 이름 popular 는 예전 저장값과 맞추려고 그대로 씀)
@@ -7275,6 +7281,7 @@
             { k: 'nation', label: '전국 TOP10', fa: 'fa-trophy', c: 'amber', tabs: ['national'] },
             { k: 'me', label: '내 프로필', fa: 'fa-circle-user', c: 'fuchsia', tabs: ['me'] }
         ];
+        const COMM_GROUPS = COMM_GROUPS_ALL.filter(g => COMM_OPEN.includes(g.k));
         const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '우리동네 맛집', spot: '우리동네 핫플',
             market: '동네 장터', popular: '우리동네 TOP10', meet: '친구해요', friends: '팔로잉 소식', random: '랜덤 채팅', dm: '1:1 대화', national: '이달의 전국 TOP10', me: '내 프로필' };
         const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-face-sad-tear', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-fire',
@@ -8203,6 +8210,7 @@
         }
         // 프로필 카드의 대화·친구 버튼 (서로 동의해야 진행)
         function chatButton(uid) {
+            if (!commOpen('people')) return '';          // 1:1 대화는 아직 열지 않음
             const b = 'px-3 py-1.5 rounded-lg text-xs font-bold';
             if (canChat(uid)) return `<button onclick="openDM('${esc(uid)}', profileShown.nick, profileShown.emoji, profileShown.photo, profileShown.area)" class="${b} bg-sky-600 hover:bg-sky-500 text-white"><i class="fa-solid fa-comment"></i> 대화하기</button>`;
             if (chatReqs.some(r => r.uid === uid)) return `<button onclick="closeProfile(); acceptChat('${esc(uid)}')" class="${b} bg-sky-600 hover:bg-sky-500 text-white">대화 요청 수락</button><button onclick="closeProfile(); declineChat('${esc(uid)}')" class="${b} border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300">거절</button>`;
@@ -8276,7 +8284,7 @@
             }, err => console.error(err));
         }
         async function openDM(uid, nick, emoji, photo, area) {
-            if (uid === COMM_UID) return;
+            if (uid === COMM_UID || !commOpen('people')) return;
             if (isBlocked(uid)) { showAlertToast({ head: '1:1 대화', title: iBlocked(uid) ? '차단한 이웃입니다. [차단 관리]에서 차단을 풀면 대화할 수 있습니다.' : '이 이웃과는 대화할 수 없습니다.' }); return; }
             if (!canChat(uid) && !isDemoDM(uid)) {      // 익명 커뮤니티: 상대가 수락해야 대화 시작
                 if (!profileShown.uid || profileShown.uid !== uid) profileShown = { uid: uid, nick: nick || '이웃', emoji: emoji || '🙂', photo: photo || '', area: area || '' };
@@ -9305,9 +9313,9 @@
                     <button onclick="closeProfile()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white"><i class="fa-solid fa-xmark"></i></button>
                 </div>
                 <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
-                    <div class="px-4 pt-3 pb-1 text-[0.6875rem] font-bold text-slate-400">팔로우</div>
-                    ${followsMe(uid) ? act(`removeFollower('${u}')`, 'fa-user-minus', '팔로워에서 삭제', '이 사람이 나를 팔로우한 기록을 지워요. 내 소식이 이 사람의 팔로잉 소식에 더 이상 올라가지 않아요.') : ''}
-                    ${isFollowing(uid) ? act(`unfollowUser('${u}').then(renderPeerManage)`, 'fa-user-xmark', '팔로우 취소', '이 사람의 새 게시물이 내 팔로잉 소식에 더 이상 올라오지 않아요.') : act(`followUser('${u}').then(renderPeerManage)`, 'fa-user-plus', '팔로우하기', '이 사람의 새 게시물을 팔로잉 소식에서 받아 봐요.')}
+                    ${!commOpen('people') ? '' : `<div class="px-4 pt-3 pb-1 text-[0.6875rem] font-bold text-slate-400">팔로우</div>`}
+                    ${!commOpen('people') ? '' : followsMe(uid) ? act(`removeFollower('${u}')`, 'fa-user-minus', '팔로워에서 삭제', '이 사람이 나를 팔로우한 기록을 지워요. 내 소식이 이 사람의 팔로잉 소식에 더 이상 올라가지 않아요.') : ''}
+                    ${!commOpen('people') ? '' : isFollowing(uid) ? act(`unfollowUser('${u}').then(renderPeerManage)`, 'fa-user-xmark', '팔로우 취소', '이 사람의 새 게시물이 내 팔로잉 소식에 더 이상 올라오지 않아요.') : act(`followUser('${u}').then(renderPeerManage)`, 'fa-user-plus', '팔로우하기', '이 사람의 새 게시물을 팔로잉 소식에서 받아 봐요.')}
                     <div class="px-4 pt-3 pb-1 text-[0.6875rem] font-bold text-slate-400">내 게시물 공개 범위</div>
                     ${sw('hide', peerPref(uid, 'hide'), 'fa-eye-slash', '이 사람에게 내 게시물 숨기기', '이 사람에게만 내 일상 게시물이 보이지 않아요. 다른 이웃에게는 그대로 공개돼요.')}
                     ${sw('restrict', peerPref(uid, 'restrict'), 'fa-comment-slash', '제한하기', '이 사람은 내 게시물에 댓글을 달 수 없고, 이 사람의 대화 요청·메시지 알림이 오지 않아요.')}
@@ -9370,6 +9378,7 @@
             if (commTab === 'national') renderNational();
         }
         function followButton(uid) {
+            if (!commOpen('people')) return '';          // 팔로우는 아직 열지 않음
             const b = 'px-3 py-1.5 rounded-lg text-xs font-bold';
             if (isFollowing(uid)) return `<button onclick="unfollowUser('${esc(uid)}')" title="눌러서 팔로우 취소" class="${b} bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:border-red-300 hover:text-red-600"><i class="fa-solid fa-check"></i> 팔로잉</button>`;
             return `<button onclick="followUser('${esc(uid)}')" class="${b} bg-fuchsia-600 hover:bg-fuchsia-500 text-white"><i class="fa-solid fa-user-plus"></i> ${followsMe(uid) ? '맞팔로우' : '팔로우'}</button>`;
@@ -10180,7 +10189,7 @@
             // ── 여기서부터 커뮤니티 설명 (안내의 마지막 부분) ──
             //  묶음(큰 탭)마다 2단계: ① 그 큰 탭만 비춤(part: 'tile') ② 아래 작은 탭들과 게시물을 한 번에 비춤(part: 'rest')
             { icon: '💬', title: '우리동네 커뮤니티', text: '동네 인증을 하면 같은 동네 이웃과 소통하는 게시판을 쓸 수 있어요. 다음 단계부터 커뮤니티를 열어 두고 기능을 하나씩 소개할게요. (동네 인증 전에는 예시 게시물로 보여 드려요)', target: () => tourPanel('community'),
-                bullets: ['↔️ 커뮤니티 맨 위 큰 탭(동네 이야기·동네 장터·맛집·이웃 등)과 그 아래 작은 탭은 마우스로 끌어서 원하는 순서로 바꿀 수 있어요 (순서는 저장돼요)'] },
+                bullets: ['↔️ 커뮤니티 맨 위 큰 탭(안전망·동네 이야기·동네 장터)과 그 아래 작은 탭은 마우스로 끌어서 원하는 순서로 바꿀 수 있어요 (순서는 저장돼요)'] },
             { icon: '🚨', title: '우리동네 안전망', comm: 'safe', part: 'tile', text: '우리 동네 사건·사고를 이웃에게 바로 알리는 곳이에요. 빨간색으로 표시된 이 탭은 항상 맨 앞에 있어요.' },
             { icon: '📢', title: '안전망 · 글 종류와 게시물', comm: 'safe', part: 'rest', text: '안전망 게시판은 이렇게 보여요. 글머리로 종류를 나눠 볼 수 있고, 글을 누르면 댓글·공감이 열려요.',
                 bullets: ['📢 실시간 제보: 목격한 사고·위험 상황을 사진·영상과 함께 올려요 (언론사·방송사에도 함께 보낼 수 있어요)', '🆘 SOS: 아이를 잃어버리는 등 급한 일에 이웃에게 긴급 도움을 요청해요', '🔴 실시간 방송: 현장을 바로 생중계해요', '⚠️ 생명이 위급하면 먼저 112·119에 신고하세요'] },
@@ -10200,7 +10209,7 @@
             { icon: '👤', title: '내 프로필', comm: 'me', part: 'tile', text: '나만의 공간이에요.' },
             { icon: '📸', title: '내 프로필 · 게시물', comm: 'me', part: 'rest', text: '내가 올린 게시물과 활동이 모이는 곳이에요.',
                 bullets: ['📸 내 일상: 사진·글 게시물을 올려 이웃과 공유해요', '➕ 팔로우: 마음에 드는 이웃을 팔로우하면 그 사람의 게시물을 [팔로잉 소식]에서 볼 수 있어요', '❤ 공감·감정·댓글을 받으면 순위와 신뢰 지수가 올라가요', '☰ 오른쪽 위 [메뉴]에서 이웃 초대, 차단 관리, 배경색, 동네 다시 인증을 할 수 있어요'] }
-        ];
+        ].filter(s => !s.comm || commOpen(s.comm));     // 아직 열지 않은 커뮤니티 탭(맛집·이웃·전국 TOP10·내 프로필) 설명은 뺌 (모두 맨 뒤 단계라 앞 단계 번호는 그대로)
         // 휴대폰용 안내: 칸 3개가 없고 아래 탭으로 한 화면씩 보여 주므로, 단계마다 알맞은 탭으로 넘겨서 그 부분을 비추고, 설명 카드는 비추는 곳을 가리지 않게 위/아래로 옮김
         //  · PC 전용인 [화면 설정] 단계는 빼고, 글씨 크기 단계는 다크 모드 단계로 바꿈
         const TOUR_TAB = { 1: 'list', 2: 'list', 3: 'article', 4: 'map' };
