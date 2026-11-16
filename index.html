@@ -1474,7 +1474,13 @@
         //  (사용자가 브라우저 새로고침을 누르지 않아도 새 기사가 목록·지도·속보 줄에 자동으로 추가됩니다)
         let loadBusy = false, lastCheckAt = 0, lastFullFetch = 0, freshEventKeys = new Set(), siteTag = null;
         function startLivePolling() {
-            setInterval(() => { if (!document.hidden) loadIncidentsFromJSON(false); updateLiveClock(); }, 1000);
+            //  다른 창·탭에서 작업 중(이 탭이 가려진 상태)에도 새 사건 알림이 오도록 계속 확인 (가려진 동안은 10초에 한 번만 가볍게 확인)
+            let bgTick = 0;
+            setInterval(() => {
+                if (!document.hidden) loadIncidentsFromJSON(false);
+                else if (++bgTick % 10 === 0) loadIncidentsFromJSON(false);
+                updateLiveClock();
+            }, 1000);
             document.addEventListener('visibilitychange', () => { if (!document.hidden) loadIncidentsFromJSON(false); });
             checkSiteUpdate();
             setInterval(checkSiteUpdate, 60000);   // 웹사이트(index.html) 자체가 새 버전으로 바뀌면 자동으로 새로고침
@@ -2583,7 +2589,6 @@
         function openShare(id) {
             const n = newsData.find(x => x.id === id);
             if (!n) return;
-            const canNative = typeof navigator.share === 'function';
             const btn = 'w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left text-sm font-bold transition';
             openSheet(`
                 <div class="p-5 space-y-3 max-w-md w-full">
@@ -2593,8 +2598,6 @@
                             <div class="text-[0.6875rem] text-slate-500 mt-0.5">${esc(n.location || '')} · ${esc(n.time || '')}</div></div>
                         <button onclick="closeSheet()" class="shrink-0 w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-xmark"></i></button>
                     </div>
-                    <button onclick="shareNative(${id})" class="${btn} border-blue-300 bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100"><span class="text-xl">📱</span><span class="flex-1">이웃에게 바로 공유<span class="block text-[0.6875rem] font-normal text-slate-500">${canNative ? '카카오톡·문자·밴드 등 공유창이 열립니다' : '이 기기에는 공유창이 없어 내용을 복사합니다'}</span></span></button>
-                    <a href="sms:?&body=${encodeURIComponent(shareTextOf(n))}" class="${btn} border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100"><span class="text-xl">💬</span><span class="flex-1">문자로 보내기</span></a>
                     <button onclick="shareCopy(${id})" class="${btn} border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100"><span class="text-xl">🔗</span><span class="flex-1">내용·링크 복사</span></button>
                     <div class="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 p-3 space-y-2">
                         <div class="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">🏘️ 우리동네 커뮤니티에 바로 공유</div>
@@ -3591,6 +3594,45 @@
         }
         window.addEventListener('load', () => setTimeout(alertLogBadge, 300));
 
+        // ================= 바탕화면(컴퓨터 화면 오른쪽 아래) 알림 =================
+        //  이 사이트 탭이 열려 있어도 다른 창·탭에서 작업 중이면 페이지 안의 알림창은 보이지 않으므로,
+        //  브라우저 알림(윈도우는 화면 오른쪽 아래)으로도 띄움. 알림을 누르면 이 사이트 창으로 돌아와 해당 사건을 엶.
+        function desktopNoticeState() {
+            if (typeof Notification === 'undefined') return 'unsupported';
+            return Notification.permission;   // granted / denied / default
+        }
+        function pageIsBackground() { return document.hidden || !document.hasFocus(); }
+        function showDesktopNotice(o, toastEl) {
+            if (alertCfg.desktop === false) return;
+            if (desktopNoticeState() !== 'granted') return;
+            if (!pageIsBackground()) return;
+            if (!(o.test || o.newsId || o.danger || o.here || o.commTab || o.openCommunity || o.live || o.briefing)) return;   // 단순 안내는 제외
+            const nt = new Notification(String(o.head || '알림').replace(/^[^\w가-힣]+/, ''), {
+                body: (o.badge ? '[' + o.badge + '] ' : '') + (o.title || '') + (o.foot ? '\n' + o.foot : ''),
+                tag: o.newsId ? 'news-' + o.newsId : undefined,
+                requireInteraction: !!(o.danger || o.here),
+                silent: false
+            });
+            nt.onclick = () => {
+                try { window.focus(); } catch (e) {}
+                try { toastEl && toastEl.onclick && toastEl.onclick({}); } catch (e) {}
+                nt.close();
+            };
+        }
+        async function setDesktopNotice(on) {
+            alertCfg.desktop = !!on; saveAlertCfg();
+            if (on && desktopNoticeState() === 'default') { try { await Notification.requestPermission(); } catch (e) {} }
+            renderAlertPanel();
+        }
+        function desktopNoticeHint() {
+            const s = desktopNoticeState();
+            if (s === 'unsupported') return '이 브라우저는 바탕화면 알림을 지원하지 않아요.';
+            if (alertCfg.desktop === false) return '꺼져 있어요.';
+            if (s === 'granted') return '켜짐 · 다른 창에서 작업 중이어도 화면 오른쪽 아래에 알림이 떠요.';
+            if (s === 'denied') return '브라우저에서 차단되어 있어요. 주소창 왼쪽 자물쇠 → 알림 → 허용으로 바꿔 주세요.';
+            return '아래 [허용하기]를 누르고, 브라우저가 묻는 알림 권한을 [허용]해 주세요.';
+        }
+
         function showAlertToast(o) {
             const box = document.getElementById('alertToasts');
             if (!box) return;
@@ -3637,6 +3679,7 @@
                 else if (o.reload) { location.reload(); }
                 close();
             };
+            try { showDesktopNotice(o, el); } catch (e) {}
             box.appendChild(el);
             // 최대 5개: 넘치면 가장 오래된 알림부터 닫음 (새 알림이 계속 들어오면 순서대로 갱신)
             const live = Array.from(box.querySelectorAll('.toast-card:not(.toast-out)'));
@@ -3754,14 +3797,21 @@
                     <input type="checkbox" ${alertCfg.commToast !== false ? 'checked' : ''} onchange="setAlertCfg('commToast', this.checked)">
                 </label>
                 <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
+                    <span>🖥️ 다른 창에서 작업 중에도 알림 (바탕화면 오른쪽 아래)</span>
+                    <input type="checkbox" ${alertCfg.desktop !== false ? 'checked' : ''} onchange="setDesktopNotice(this.checked)">
+                </label>
+                <div class="text-[0.625rem] ${desktopNoticeState() === 'granted' && alertCfg.desktop !== false ? 'text-emerald-600' : 'text-slate-500'} mb-1 leading-relaxed">${esc(desktopNoticeHint())}</div>
+                ${(desktopNoticeState() === 'default' && alertCfg.desktop !== false) ? '<button onclick="setDesktopNotice(true)" class="w-full mb-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">허용하기</button>' : ''}
+                <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
                 <div class="text-[0.6875rem] text-slate-500 mb-1">알림 소리</div>
                 <select onchange="setAlertCfg('sound', this.value); playAlertSound();" class="${inp} mb-2">
                     ${Object.keys(ALERT_SOUNDS).map(k => `<option value="${k}" ${alertCfg.sound === k ? 'selected' : ''}>${ALERT_SOUNDS[k]}</option>`).join('')}
                 </select>
                 <div class="flex items-center justify-between text-[0.6875rem] text-slate-500 mb-1"><span>볼륨</span><span id="alertVolText">${alertCfg.volume}%</span></div>
                 <input type="range" min="0" max="100" step="5" value="${alertCfg.volume}" oninput="setAlertCfg('volume', Number(this.value)); document.getElementById('alertVolText').textContent = this.value + '%';" onchange="playAlertSound()" class="w-full mb-2">
-                <button onclick="testAlert()" class="w-full py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold">알림 미리 보기 (소리 테스트)</button>
-                <p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">이 화면을 열어 둔 동안에만 알림이 옵니다. 새 기사는 10초마다 확인합니다. 기사에 읍·면·동이나 장소(요금소·역 등)가 적혀 있으면 그 지점 기준으로 알립니다.</p>`;
+                <button onclick="testAlert()" class="w-full py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold">알림 미리 보기 (소리 테스트 · 5초 뒤 바탕화면 알림도 확인)</button>
+                <p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">이 사이트 탭을 닫지 않고 열어 둔 동안 알림이 옵니다(다른 창에서 작업 중이어도 됩니다). 새 기사는 보고 있을 때 1초, 가려져 있을 때 10초마다 확인합니다. 기사에 읍·면·동이나 장소(요금소·역 등)가 적혀 있으면 그 지점 기준으로 알립니다.</p>`;
         }
         function setAlertCfg(key, value) { alertCfg[key] = value; saveAlertCfg(); if (key === 'scope' || key === 'enabled' || key === 'useLocation') renderAlertPanel(); updateAlertButton(); if (typeof updateCommBadge === 'function') updateCommBadge(); }
         function setAlertRegionFromTown() {
@@ -3786,6 +3836,8 @@
         function testAlert() {
             showAlertToast({ head: '🔔 우리 동네 새 사건사고', badge: '알림 미리 보기', title: '이런 모양으로 알림이 표시됩니다.', foot: alertRegionText() });
             playAlertSound();
+            // 다른 창으로 옮겨 가 있으면 5초 뒤 바탕화면 알림도 한 번 띄워 확인
+            setTimeout(() => { try { showDesktopNotice({ test: true, head: '🔔 우리 동네 새 사건사고', badge: '알림 미리 보기', title: '다른 창에서 작업 중에도 이렇게 보입니다.', foot: alertRegionText() }, null); } catch (e) {} }, 5000);
         }
         function updateAlertButton() {
             const b = document.getElementById('alertButton');
