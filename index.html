@@ -854,7 +854,9 @@
         }
         let selectedHotspotRegion = null;
         let hotspotStat = null;           // 최근 7일 사건 중 몇 건이 다발 지역 집계에 들어갔는지
-        let hotspotScrollTop = 0;        // 다발 지역 순위 목록의 스크롤 위치 (기사 보고 돌아와도 유지)
+        const HOTSPOT_SCROLL_KEEP_MIN = 10;   // 다발 지역 순위 스크롤 위치를 기억하는 시간(분). 이 시간이 지나면 버튼을 눌렀을 때 1위부터 다시 보임
+        let hotspotScrollAt = 0;          // 순위를 마지막으로 스크롤한 시각
+        let hotspotScrollTop = 0;       // 다발 지역 순위 목록의 스크롤 위치 (기사 보고 돌아와도 유지)
         let selectedNewsId = null;
         let map, markersLayer;
         let currentFontSizePx = 16;
@@ -2398,11 +2400,13 @@
             const oldList = document.getElementById('hotspotList');
             // 실제로 스크롤되는 칸은 순위 목록이 아니라 바깥 칸(detailViewContainer)이라 거기의 위치를 기억함
             //  (기사를 보러 갔다 와도, 다발 지역 버튼을 다시 눌러도 보던 순위 위치로 돌아가도록)
-            if (oldList) hotspotScrollTop = Math.max(container.scrollTop, oldList.scrollTop);
+            if (oldList) { hotspotScrollTop = Math.max(container.scrollTop, oldList.scrollTop); hotspotScrollAt = Date.now(); }
+            // 마지막으로 순위를 스크롤한 지 HOTSPOT_SCROLL_KEEP_MIN 분이 지났으면 기억을 버리고 1위부터 다시 보여 줌
+            if (Date.now() - hotspotScrollAt > HOTSPOT_SCROLL_KEEP_MIN * 60000) hotspotScrollTop = 0;
             const keepTop = keepScroll ? hotspotScrollTop : 0;
             if (!container._hotspotScrollBound) {
                 container._hotspotScrollBound = true;
-                container.addEventListener('scroll', () => { if (document.getElementById('hotspotList')) hotspotScrollTop = container.scrollTop; }, { passive: true });
+                container.addEventListener('scroll', () => { if (document.getElementById('hotspotList')) hotspotScrollTop = container.scrollTop; hotspotScrollAt = Date.now(); }, { passive: true });
             }
             let listHTML = '';
             const hsData = getCrimeHotspotsData();       // (이 안에서 hotspotStat 이 갱신됨)
@@ -2437,7 +2441,7 @@
                 </div>
             `;
             const newList = document.getElementById('hotspotList');
-            newList.addEventListener('scroll', () => { hotspotScrollTop = newList.scrollTop || hotspotScrollTop; }, { passive: true });
+            newList.addEventListener('scroll', () => { hotspotScrollTop = newList.scrollTop || hotspotScrollTop; hotspotScrollAt = Date.now(); }, { passive: true });
             container.scrollTop = keepTop;
             if (keepTop) newList.scrollTop = Math.min(keepTop, newList.scrollHeight);
         }
@@ -2459,6 +2463,7 @@
         // ================= 가운데: 기사 원문 (가운데 정렬, 양옆 여백) =================
         function setDetailHTML(html) {
             const container = document.getElementById('detailViewContainer');
+            if (document.getElementById('hotspotList') && container.scrollTop) { hotspotScrollTop = container.scrollTop; hotspotScrollAt = Date.now(); }   // 순위 화면을 떠나기 직전 위치 저장
             container.style.padding = '';
             container.innerHTML = html;
         }
