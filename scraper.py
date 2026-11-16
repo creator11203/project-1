@@ -3062,11 +3062,33 @@ def is_national_scope(title):
     return bool(_NAT_ACTOR_RE.search(t) and _NAT_SCOPE_RE.search(t))
 
 
+# ── 여러 지역에 걸친 기사 (2026-11-16 사용자 지적) ──
+#   '스마트안경 국가자격시험 부정행위 12건'(한국산업인력공단 발표): 제목에 지명이 없고, 본문에 울산·인천·부산 사례가 함께 나오는데
+#   예전에는 가장 먼저 나온 '울산'만 찍혔음. → 제목에 지명이 없고 본문에 서로 다른 시·도가 여럿 나오면
+#   2~3곳: 나온 지역을 모두 표시(예: '울산광역시·인천광역시·부산광역시' — 어느 지역 필터에서도 보임, 지도에는 찍지 않음)
+#   4곳 이상: 전국 단위 문제로 보고 '전국'
+_DATELINE_RE = re.compile(r"\(?[가-힣]{2,5}\s*=\s*[가-힣A-Za-z]{0,10}\)?")
+
+
+def multi_regions(title, content):
+    if find_sidos(title) or _has_domestic_place(title):
+        return []
+    t = _DATELINE_RE.sub(" ", _INST_WORD_RE.sub(" ", content or ""))
+    s = find_sidos(t)
+    return [k for k, _ in sorted(s.items(), key=lambda kv: kv[1])]
+
+
 def locate(title, content, hint_sido=None, overseas=False):
     """(위치이름, 위도, 경도, 정밀도정보) 반환. 모르면 (미상, None, None, …)"""
     key = title
     if not overseas and is_national_scope(title):
         return "전국", None, None, {"prec": "nation", "place": None}
+    if not overseas:
+        _mr = multi_regions(title, content)
+        if len(_mr) >= 4:
+            return "전국", None, None, {"prec": "nation", "place": None}
+        if len(_mr) >= 2:
+            return "·".join(_mr), None, None, {"prec": "multi", "place": None, "regions": _mr}
     _mil = (not overseas and MILITARY_GENERIC_RE.search(title) and not find_sidos(title)) and match_sigungu(title, None)
     if not overseas and MILITARY_GENERIC_RE.search(title) and not find_sidos(title) and (not _mil or _mil[4] in NATIONAL_INST_ALIASES) and not find_landmark(title):
         return "대한민국 (세부 위치 미상)", None, None, {"prec": None, "place": None}   # 군 전체 이야기 → 특정 지역에 찍지 않음
@@ -3168,7 +3190,7 @@ def clean_text(s):
 #   RSS·구글 뉴스에는 제목(과 짧은 요약)만 있어서 '○○1동', '○○리', '○○로 12', '○○아파트' 같은 자세한 위치를 놓치기 쉽습니다.
 #   그래서 위치가 시·군·구 이하로 확인되지 않은 최신 기사는 언론사 기사 페이지를 한 번 열어 본문에서 위치가 나오는 문장만 골라 둡니다(loctext).
 MAX_ENRICH_PER_RUN = 30
-ENRICH_VER = 2        # 본문 위치 찾기 방식을 고치면 숫자를 올립니다 (2: 시·군·구 이름만 있는 문장도 위치 문장으로 인정)
+ENRICH_VER = 3        # 본문 위치 찾기 방식을 고치면 숫자를 올립니다 (2: 시·군·구 이름만 있는 문장도 위치 문장으로 인정, 3: 여러 지역에 걸친 기사 표시)
 _LOC_CUE_RE = re.compile(r"[가-힣]{1,6}\d{0,2}(?:가)?\d?동(?![가-힣])|[가-힣]{1,5}(?:읍|면)\s*[가-힣]{1,4}리(?![가-힣])|[가-힣]{1,5}(?:읍|면)(?![가-힣])|"
                          r"[가-힣0-9]{2,10}(?:대로|로|길)\s*\d|사거리|교차로|삼거리|오거리|[가-힣]{2,6}역(?![가-힣])|아파트|빌라|오피스텔|상가|IC|나들목|요금소|톨게이트|터널|휴게소|"
                          r"초등학교|중학교|고등학교|공원|시장|해수욕장|항구|부두|인근|일대|앞\s*도로|소재|번지")
@@ -3318,8 +3340,8 @@ def enrich_locations(items, started):
             continue
         if not v.get("link") or v["link"].startswith("https://news.google.com"):
             continue
-        if v.get("location") == "전국" or v.get("prec") == "nation":
-            continue                                # 전국 단위 소식은 본문에서 지역을 찾지 않음
+        if v.get("location") == "전국" or v.get("prec") in ("nation", "multi"):
+            continue                                # 전국 단위·여러 지역 소식은 본문에서 지역을 더 찾지 않음
         if foreign_src(v.get("source"), v.get("link")):
             continue                                # 외국 매체 본문은 위치를 찾지 않음
         if v.get("prec") in ("poi",) or g.get("place") or g.get("dong"):
@@ -3341,6 +3363,10 @@ def enrich_locations(items, started):
         lt = location_sentences(text, prefer=_RESIDENCE_RE if v.get("exoff") else None) if text else ""
         if not lt:
             continue
+        # 제목에 지명이 없고 본문에 서로 다른 시·도가 여럿 나오는 기사: 위치 문장(최대 3문장)에 다 안 담길 수 있어, 지역 이름을 따로 적어 둠
+        _mr = multi_regions(v["title"], text)
+        if len(_mr) >= 2 and not all(r in lt for r in _mr):
+            lt = (lt + " [본문 속 지역: " + ", ".join(_mr[:8]) + "]")[:400]
         v["loctext"] = lt
         # 본문 위치 문장에서 '○○경찰서·지검·법원·구청' 같은 기관 이름 속 지명은 사건 장소가 아닐 수 있음 (예: '마포경찰서에 범행도구 제출')
         #  → 기관 이름을 뺀 문장으로 먼저 찾고, 그래도 못 찾고 기관 이름으로만 찾아지면 '기관 소재지(inst)' 정밀도로 낮춰 지도 집계에서 뺌
@@ -3350,6 +3376,10 @@ def enrich_locations(items, started):
             loc2, lat2, lng2, geo2 = locate(v["title"], (v.get("content") or "") + " " + lt, v.get("hint"), False)
             if lat2 is not None:
                 loc, lat, lng, geo = loc2, lat2, lng2, dict(geo2, prec="inst")
+        if geo.get("prec") in ("multi", "nation"):          # 여러 지역·전국: 지도에는 찍지 않고 위치 이름만 바꿈
+            v["location"], v["lat"], v["lng"], v["prec"], v["_geo"], v["route"] = loc, None, None, geo.get("prec"), geo, None
+            better += 1
+            continue
         old_g = v.get("_geo") or {}
         new_rank = _PREC_RANK.get(geo.get("prec"), 0) + (0.5 if (geo.get("place") or geo.get("dong")) else 0)
         old_rank = _PREC_RANK.get(v.get("prec"), 0) + (0.5 if (old_g.get("place") or old_g.get("dong")) else 0)
@@ -4282,6 +4312,25 @@ def stations_due(now_ts):
     return age > STATIONS_MAX_AGE
 
 
+# 2026-11-16 원인 발견: Overpass(overpass-api.de)는 '브라우저인 척하는' User-Agent(Mozilla/5.0 …)로 온 자동 요청에 406(Not Acceptable)을 돌려줌.
+#   scraper.py 는 다른 곳과 같은 UA(Mozilla/5.0 …)를 써서 계속 거절당했고, 그래서 stations.json 이 한 번도 만들어지지 않았음.
+#   → Overpass 에는 프로그램 이름을 밝히는 UA 를 씀 (개인 정보는 넣지 않음)
+OVERPASS_UA = "townalert-stations/1.0"
+
+
+def clean_station_name(name):
+    """OSM 이름에 섞인 영문 병기·괄호 정리 예) '(청주동부소방서) (( Cheongjudongbu Fire Station' → '청주동부소방서'"""
+    n = (name or "").strip()
+    if not n:
+        return ""
+    if re.search(r"[A-Za-z]{3,}", n):
+        ko = re.sub(r"\(+[^()가-힣]*\)*|[A-Za-z][A-Za-z .'-]*", " ", n)         # 영문만 든 괄호·영문 낱말 제거
+        ko = re.sub(r"[()\[\]]+", " ", ko)
+        ko = re.sub(r"\s+", " ", ko).strip(" -,/")
+        n = ko
+    return n[:40]
+
+
 def build_stations(started):
     """전국 경찰·소방 시설을 받아 stations.json 으로 저장. 성공하면 건수, 실패하면 0 (한 번에 서버 두 곳까지만 시도)"""
     for url in OVERPASS_SERVERS[:2]:
@@ -4289,7 +4338,7 @@ def build_stations(started):
             break
         try:
             req = urllib.request.Request(url, data=urllib.parse.urlencode({"data": STATIONS_QUERY}).encode("utf-8"),
-                                         headers={"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"})
+                                         headers={"User-Agent": OVERPASS_UA, "Content-Type": "application/x-www-form-urlencoded"})
             with urllib.request.urlopen(req, timeout=100) as r:
                 data = json.loads(r.read().decode("utf-8"))
             recs, seen = [], set()
@@ -4304,7 +4353,7 @@ def build_stations(started):
                 if key in seen:
                     continue
                 seen.add(key)
-                name = (t.get("name:ko") or t.get("name") or "")[:40]
+                name = clean_station_name(t.get("name:ko") or t.get("name") or "")
                 phone = (t.get("phone") or t.get("contact:phone") or "")[:30]
                 recs.append([kind, round(lat, 5), round(lng, 5), name, phone])
             if len(recs) < 500:                       # 전국이면 수천 건이어야 정상 → 너무 적으면 서버가 덜 준 것이니 버림
@@ -4773,6 +4822,18 @@ def selftest():
         got = locate(t, t)[0]
         if (got == "전국") != (loc_want == "전국"):
             print(f"[selftest 주의] 전국 단위 소식 위치 판별이 예상과 다름: {t} → {got}")
+    # 여러 지역이 본문에 나오는 기사: 2~3곳은 모두 표기, 4곳 이상은 전국, 제목에 지명이 있으면 그 지명 우선
+    _body = ("지난달 울산 건축기사 시험에서 적발됐고, 인천 공인중개사 시험에서도 적발됐다. 이달 부산 소방설비기사 시험에서는 시험장을 이탈했다.")
+    for t, c, want in (("'스마트안경' 국가자격시험 부정행위 12건…확인 요구에 시험장 이탈도", _body, "울산광역시·인천광역시·부산광역시"),
+                       ("서울 강남 마약 사범 3명 검거", _body, "서울"),):
+        try:
+            got = locate(t, c)[0]
+            if (want not in got) if want == "서울" else (got != want):
+                print(f"[selftest 주의] 여러 지역 표기가 예상과 다름: {t[:20]} → {got}")
+        except Exception:
+            bad += 1
+            print(f"[selftest 실패] 여러 지역 표기: {t}")
+            traceback.print_exc()
     for title, content, want in stale_samples:
         try:
             got = stale_days(title + " " + content, pub, title)
