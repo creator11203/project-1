@@ -1295,7 +1295,7 @@
             '기타 특별법 범죄': { label: '기타 특별법 범죄', color: '#78716c', badge: badgeOf('stone'), law: '가정폭력처벌법, 아동학대처벌법, 중대재해처벌법, 동물보호법, 폐기물관리법, 병역법, 집시법, 출입국관리법 등',
                 subs: ['가정폭력·아동학대', '산업안전·중대재해법', '괴롭힘·가혹행위', '환경·동물 범죄', '병역·집시·출입국', '기타 범죄'] },
             '화재·사고': { label: '🔥 화재·사고', color: '#f59e0b', badge: badgeOf('amber'), law: '범죄가 아닌 사고: 화재, 폭발, 붕괴·추락, 산업재해, 안전사고',
-                subs: ['화재', '폭발·가스누출', '붕괴·추락', '인파·압사 사고', '산업재해', '구조·안전사고'] },
+                subs: ['화재', '폭발·가스누출', '붕괴·추락', '인파·압사 사고', '산업재해', '군 사건·사고', '구조·안전사고'] },
             '교통사고': { label: '🚗 교통사고', color: '#10b981', badge: badgeOf('emerald'), law: '도로·철도·항공·선박 사고',
                 subs: ['교통사고', '철도·항공·선박 사고'] },
             '자연재해': { label: '🌧 자연재해', color: '#0ea5e9', badge: badgeOf('sky'), law: '재난안전법상 자연재난: 태풍·호우·대설·한파·폭염·지진·산사태·해일 등 (특보·경보 발령 포함)',
@@ -1384,6 +1384,17 @@
                 const k = evOf(n);
                 if (!map.has(k)) map.set(k, { key: k, lead: n, items: [] });
                 map.get(k).items.push(n);
+            });
+            // 대표 기사: 무조건 가장 늦은 기사가 아니라, 최신 기사로부터 12시간 안의 기사 중 '가장 정확한' 기사
+            //  (위치를 더 자세히 아는 기사 > 원문 링크가 있는 기사 > 내용이 더 긴 기사 > 더 최신 기사 순). 나머지는 '같은 사건 관련 기사'로 묶여 보임
+            const PS = { poi: 5, dong: 4, sgg: 3, road: 2, sido: 1 };
+            const score = n => (PS[precOf(n)] || 0) * 1000 + (n.link && !String(n.link).startsWith('https://news.google.com') ? 150 : 0) + Math.min(((n.content || '').length + (n.title || '').length), 400);
+            map.forEach(ev => {
+                if (ev.items.length < 2) return;
+                const newest = ev.items.reduce((m, n) => Math.max(m, n.timestamp || 0), 0);
+                let best = ev.items[0];
+                ev.items.forEach(n => { if ((n.timestamp || 0) >= newest - 12 * 3600 && score(n) > score(best) + 0.5) best = n; });
+                ev.lead = best;
             });
             return Array.from(map.values());
         }
