@@ -1390,6 +1390,8 @@
             const PS = { poi: 5, dong: 4, sgg: 3, road: 2, sido: 1 };
             const score = n => (PS[precOf(n)] || 0) * 1000 + (n.link && !String(n.link).startsWith('https://news.google.com') ? 150 : 0) + Math.min(((n.content || '').length + (n.title || '').length), 400);
             map.forEach(ev => {
+                // 목록에 보이는 시각·날짜·순서는 '가장 늦게 올라온 기사' 기준 (대표 기사가 더 이른 시각 기사여도 시간 흐름이 어긋나 보이지 않게)
+                ev.latest = ev.items.reduce((m, n) => ((n.timestamp || 0) > (m.timestamp || 0) ? n : m), ev.items[0]);
                 if (ev.items.length < 2) return;
                 const newest = ev.items.reduce((m, n) => Math.max(m, n.timestamp || 0), 0);
                 let best = ev.items[0];
@@ -2229,12 +2231,12 @@
 
             const showHeaders = selectedDate === 'all' || (currentCategory === '범죄 다발 지역' && !!selectedHotspotRegion);
             const perDay = {};
-            events.forEach(ev => { const k = dateKey(ev.lead.timestamp || Date.now() / 1000); perDay[k] = (perDay[k] || 0) + 1; });
+            events.forEach(ev => { const k = dateKey((ev.latest || ev.lead).timestamp || Date.now() / 1000); perDay[k] = (perDay[k] || 0) + 1; });
 
             let lastKey = null;
             events.slice(0, renderLimit).forEach(ev => {
                 const news = ev.lead;
-                const ts = news.timestamp || Date.now() / 1000;
+                const ts = (ev.latest || news).timestamp || Date.now() / 1000;
                 const k = dateKey(ts);
                 if (showHeaders && k !== lastKey) {
                     lastKey = k;
@@ -2265,7 +2267,7 @@
                             ${isCourt(news) ? courtBadge() : ''}
                             ${tagBadges(news)}
                         </span>
-                        <span class="text-[0.625rem] text-slate-500 whitespace-nowrap shrink-0 font-mono" title="${esc(news.time)}">${esc(shortTime(news))}</span>
+                        <span class="text-[0.625rem] text-slate-500 whitespace-nowrap shrink-0 font-mono" title="${esc(ev.latest && ev.latest !== news ? '가장 최근 기사 ' + ev.latest.time + ' · 대표 기사(내용이 가장 자세한 기사) ' + news.time : news.time)}">${esc(shortTime(ev.latest || news))}</span>
                     </div>
                     <h3 class="text-[0.8125rem] leading-snug font-bold text-slate-900 dark:text-white line-clamp-2 mb-1 tracking-tight">${esc(news.title)}</h3>
                     <p class="text-[0.6875rem] text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">${esc(news.summary)}</p>
