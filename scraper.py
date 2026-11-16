@@ -514,10 +514,10 @@ RULES_SRC = [
                  r"(?:소|돼지|닭|오리)\s*(?:수천|수만|\d[\d,]*)\s*마리\s*(?:살처분|폐사|매몰)"),
     # ※ '수두'는 '수두룩'(=매우 많음)에 들어 있어서 스포츠·일반 기사가 감염병으로 잘못 분류되던 문제 → 뒤에 '룩'이 오면 제외
     # 동물에게 퍼지지만 사람도 옮을 수 있는 병(개선충·옴·진드기·광견병…)은 생활 사고가 아니라 감염병 (예: '털 빠진 너구리 출몰' → 개선충 감염)
-    ("감염병", _INFECT_NAMES + r"|개선충|옴\s*(?:진드기|감염|환자|발생)|털\s*빠진\s*(?:너구리|야생|동물|고양이|개)|(?:너구리|고양이|개|야생\s*동물)[^.…]{0,10}(?:피부병|피부\s*질환|감염\s*(?:증|돼|됐|된|우려))|인수\s*공통|사람(?:도|에게도?)\s*(?:감염|옮)|"
+    ("감염병", _INFECT_NAMES + r"|폐렴\s*(?:환자|급증|집단|발생|유행|감염)|(?:겨울철|소아|급성|세균성|바이러스성)\s*폐렴|결막염|눈병|대상포진|급성\s*호흡기|호흡기\s*질환|개선충|옴\s*(?:진드기|감염|환자|발생)|털\s*빠진\s*(?:너구리|야생|동물|고양이|개)|(?:너구리|고양이|개|야생\s*동물)[^.…]{0,10}(?:피부병|피부\s*질환|감염\s*(?:증|돼|됐|된|우려))|인수\s*공통|사람(?:도|에게도?)\s*(?:감염|옮)|"
              r"확진|감염병|전염병|판데믹|팬데믹|코로나|독감|인플루엔자|말라리아|뎅기열|홍역|백일해|결핵|(?<![가-힣])수두(?!룩)|엠폭스|원숭이\s*두창|메르스|에볼라|콜레라|장티푸스|"
              r"일본뇌염|SFTS|쯔쯔가무시|살인\s*진드기|비브리오|레지오넬라|성홍열|수족구|A형\s*간염|집단\s*감염|집단\s*발병|역학\s*조사|유행\s*주의보|니파\s*바이러스"),
-    ("식중독·위생", r"식중독|노로\s*바이러스|살모넬라|대장균|집단\s*(?:설사|구토|복통)|이물질\s*(?:검출|발견|나와|나온|혼입)|급식\s*(?:이물질|사고)|벌레\s*(?:나와|나온|발견)|머리카락\s*(?:나와|나온)|회수\s*조치|유해\s*물질\s*검출"),
+    ("식중독·위생", r"식중독|장염|급성\s*위장관염|집단\s*구토|독버섯|야생\s*버섯|복어\s*(?:독|중독)|패류\s*독소|마비성\s*패류|테트로도톡신|식품\s*알레르기|노로\s*바이러스|살모넬라|대장균|집단\s*(?:설사|구토|복통)|이물질\s*(?:검출|발견|나와|나온|혼입)|급식\s*(?:이물질|사고)|벌레\s*(?:나와|나온|발견)|머리카락\s*(?:나와|나온)|회수\s*조치|유해\s*물질\s*검출"),
     # ── 자연재해 ──
     ("기상특보·경보", r"(?:특보|주의보|경보|예비\s*특보)[^.…]{0,8}(?:발령|발효|확대|격상|상향|해제)|(?:발령|발효)[^.…]{0,6}(?:특보|주의보|경보)|"
                   r"(?:태풍|호우|대설|한파|폭염|강풍|풍랑|건조|황사|해일|안개|미세\s*먼지|오존|산불|산사태|홍수|적조|녹조|지진\s*해일|폭풍|폭풍\s*해일|저수온|고수온|수온|가뭄|열대야|결빙|도로\s*결빙|서리|동파|"
@@ -534,8 +534,8 @@ RULES_SRC = [
     ("태풍·호우·홍수", r"호우|폭우|장마|물\s*폭탄|태풍|허리케인|사이클론|침수|홍수|범람|수위\s*(?:상승|급상승|높아)|물\s*(?:불어|넘쳐|차올)|하천\s*(?:범람|월류)|집중\s*호우|제방\s*(?:유실|붕괴)|배수\s*불량|도로\s*(?:물바다|잠겨)"),
     ("대설·한파·결빙", r"폭설|대설|눈보라|블리자드|한파|혹한|동파|빙판|블랙\s*아이스|결빙|서리\s*피해|눈길\s*(?:사고|교통사고|미끄|운전|낙상|추돌|고립)|눈길에\s*(?:미끄|넘어|고립)|눈\s*폭탄|저체온|동상\s*(?:환자|입|걸)|얼음\s*(?:깨|낚시|판)|빙어\s*낚시|얼음낚시|살얼음|냉해"),
     ("강풍·낙뢰·우박", r"강풍|돌풍|용오름|토네이도|낙뢰|벼락|우박"),
-    ("폭염·가뭄", r"폭염|열파|히트\s*웨이브|열대야|온열\s*질환|열사병|일사병|가뭄"),
-    ("황사·미세먼지", r"황사|초?미세\s*먼지"),
+    ("폭염·가뭄", r"냉방병|열탈진|열경련|열성\s*질환|폭염|열파|히트\s*웨이브|열대야|온열\s*질환|열사병|일사병|가뭄"),
+    ("황사·미세먼지", r"황사|초?미세\s*먼지|꽃가루|알레르기\s*(?:환자|비염|주의|급증)"),
     ("우주·생물 재난", r"태양\s*폭풍|지자기\s*폭풍|흑점\s*폭발|태양\s*플레어|소행성\s*충돌|운석\s*(?:낙하|추락)|유성우\s*낙하|우주\s*방사선|병충해|메뚜기\s*떼|과수\s*화상병|재선충|러브버그|벌레\s*떼"),
     # ── 사고 ──
     ("철도·항공·선박 사고", r"탈선\s*사고|(?:열차|지하철|전철|전동차|KTX|SRT|무궁화호|ITX|경전철|도시철도|\d\s*호선)[^.…]{0,14}(?:사고|충돌|추돌|멈춰|멈춤|고장|탈선|운행\s*(?:중단|지연|차질|중지)|신호\s*(?:장애|고장|오류)|지연|단전|인명\s*사고|선로\s*(?:사고|침입|추락))|"
@@ -686,7 +686,7 @@ FACT2_RE = re.compile(r"구조(?!조정|적|물|개편|개혁|화|론|상|계획
 HARD_FACT_RE = re.compile(r"사망|숨져|숨진|숨졌|부상|중상|경상|다쳐|다쳤|다친|구속|입건|검거|체포|송치|(?<!경)기소|징역|실형|집행\s*유예|벌금형|선고|피의자|붙잡|덜미|불이?\s*나|화재로|들이받|추돌|대피했|진화\s*(?:중|완료)|"
                           r"실종\s*신고|의식\s*불명|심정지|이재민|침수됐|침수돼|무너져|무너졌|전소|매몰|압수\s*수색|확진|살처분")
 # 정책·대책·발언·촉구 (사건 자체가 아니라 '무엇을 하겠다/해야 한다'는 기사)
-POLICY_RE = re.compile(r"해야|하겠다|할\s*것|필요|촉구|강조|당부|주문|제안|약속|추진|검토|마련|강화|대책|보강|지원|구제|개선|방안|계획|공약|조례|법안|개정|발의|예산|토론회|정책|투입|확대|도입|신설|협의|논의|점검\s*나서|특별\s*단속|집중\s*단속|근절|종합\s*대책")
+POLICY_RE = re.compile(r"해야|하겠다|할\s*것|필요|촉구|강조|당부|주문|제안|약속|추진|검토|마련|강화|대책|보강|지원|구제|개선|방안|계획|공약|조례|법안|개정|발의|예산|토론회|정책|(?<!임시\s)(?<!긴급\s)(?<!추가\s)(?<!즉시\s)투입|확대|도입|신설|협의|논의|점검\s*나서|특별\s*단속|집중\s*단속|근절|종합\s*대책")
 # 대비·예방·예정 (아직 일어나지 않은 일): 대응반 편성, 비상근무 돌입, 사전 점검, 훈련, 캠페인 등
 STRONG_PREP_RE = re.compile(r"대응반|대책반|상황반|점검반|순찰대|편성|대비|예방(?!\s*접종)|사전\s*점검|안전\s*점검|합동\s*점검|특별\s*점검|일제\s*점검|점검\s*(?:실시|나서|강화|완료|나선)|"
                             r"훈련(?!\s*(?:중|도중|하다|하던|기|병|장|소|생))|비상\s*근무|상황실\s*운영|캠페인|앞두고|대응\s*(?:체계|태세|계획|나서)|선제|월동|해빙기|주의\s*당부|주의\s*필요|주의해야|유의|조심|"
@@ -793,7 +793,7 @@ EVENT_OCCUR_RE = re.compile(
     r"특보|주의보|경보|발령|발효|재난\s*문자|속보|긴급|참변|참사|아수라장|날벼락|"
     r"회항|비상\s*착륙|불시착|운항\s*중단|운행\s*중단|난투|패싸움|"
     r"동파|파열|운행\s*(?:지연|차질)|운항\s*(?:지연|차질)|신호\s*(?:장애|고장)|항공편|덮쳐|덮친|극단\s*(?:적\s*)?선택|스스로\s*목숨|투신|이송(?:됐|돼|되었|했)|절단|협착|압착|과로사|중독|"
-    r"환자\s*(?:발생|급증|증가|늘|속출|\d)|격리|발병|유행\s*(?:기준|조짐|주의|시작|확산)|재유행|체불|작업\s*중지|연기\s*흡입|연기가\s*(?:치솟|가득)|불\s*번|진화|몸싸움|출몰|출현|균열|적재물\s*쏟|쏟아진\s*(?:적재물|화물|짐)|화물\s*쏟|"
+    r"혼잡|정체(?!성|불명)|포화|몰려|폐쇄|확산|만차|북새통|임시\s*(?:투입|운행)|응급실|집단\s*(?:구토|설사)|구토|이송|환자\s*(?:발생|급증|증가|늘|속출|\d)|격리|발병|유행\s*(?:기준|조짐|주의|시작|확산)|재유행|체불|작업\s*중지|연기\s*흡입|연기가\s*(?:치솟|가득)|불\s*번|진화|몸싸움|출몰|출현|균열|적재물\s*쏟|쏟아진\s*(?:적재물|화물|짐)|화물\s*쏟|"
     r"열차\s*지연|지하철\s*지연|운행\s*지연|연기\s*(?:가\s*)?(?:나와|났)|이물질\s*(?:나와|나온|혼입)|"
     r"비상\s*저감|중대본|비상\s*[1-3]\s*단계|영향\s*예보|위기\s*경보|(?:주의|경계|심각)\s*단계|침하|꺼짐|꺼져|주저앉|내려앉|함몰|(?:응급|긴급)?\s*복구\s*(?:중|작업|공사)|유실|"
     r"침수\s*(?:$|[…·,])|(?<![가-힣])전도(?![가-힣])|전도(?:돼|됐|된)|뒤집혀|수위\s*(?:상승|급상승)|끊어져|끊어진|합선|스파크|누전|고장|"
@@ -862,6 +862,9 @@ def not_realtime(title):
     # AI 합성·가짜 영상 진위 확인, 팩트체크 기사
     if FACTCHECK_RE.search(title):
         return True
+    # 피의자·검거자 연령대 통계 ('[속보]'가 붙어 있어도 통계는 실시간 사건이 아님)
+    if STAT_PROFILE_RE.search(title) and not re.search(r"긴급\s*체포|현행범|붙잡혔|숨져|숨진", title):
+        return True
     strict = STRICT_FACT_RE.search(title)
     # 사건 뒤의 분석·재구성·제도 비판 기사 (예: '…보호체계 구멍', '…충격적 범죄 전말', '반복되는 비극')
     #   단, '구제역 또 발생'처럼 새로 일어난 일이 있거나 구속·검거 같은 확실한 사건 낱말이 있으면 남김
@@ -873,7 +876,10 @@ def not_realtime(title):
     #   → 사고 낱말('해킹사고')이 있어도 지금 막 일어난 일이 아니라 사고 이후의 점검·제도 기사. 단, 사람이 다치거나 숨졌다는 등 새 피해가 제목에 있으면 남김
     #   감독기관이 제목 앞머리의 주어일 때만 ('A사 고객정보 유출…금융당국 긴급 점검'처럼 사고가 주어이고 점검은 뒤따르는 반응이면 새 사건이므로 남김)
     _oa = OVERSIGHT_ACTOR_RE.search(title)
-    if _oa and _oa.start() <= 12 and OVERSIGHT_ACT_RE.search(title) and not NEW_HARM_RE.search(title) and not BREAKING_RE.search(title):
+    if _oa and _oa.start() <= 12 and OVERSIGHT_ACT_RE.search(title) and not NEW_HARM_STRONG_RE.search(title) and not BREAKING_RE.search(title):
+        return True
+    # 예방·사전 차단·지원 사업 기사 (실제로 불이 났다·숨졌다 같은 새 사실이 없을 때만)
+    if PREVENT_MEASURE_RE.search(title) and not NEW_FACT_RE.search(title) and not STRICT_FACT_RE.search(title) and not BREAKING_RE.search(title):
         return True
     # 앞으로 할 일·수사 일정 기사 ('고경표 소환조사 방침…수사 이달 내 마무리') — 새로 일어난 사건이 아니라 예정·방침 소식
     if PLAN_RE.search(title) and not STRICT_FACT_RE.search(title) and not NEW_HARM_RE.search(title) and not BREAKING_RE.search(title):
@@ -899,7 +905,8 @@ def not_realtime(title):
     if not warn and (OPINION_RE.search(title) or (OPINION_WEAK_RE.search(title) and not hard)):
         return True
     # 통계·추세: 단, '구제역 추가 발생…올해 16건으로 늘어'처럼 새로 발생한 일이 있으면 남김 (감염병 환자 발생·급증도 실시간 소식)
-    if STATS2_RE.search(title) and not NEW_OCCUR_RE.search(title) and not (INFECT_NAME_RE.search(title) and INFECT_CONFIRMED_RE.search(title)):
+    if STATS2_RE.search(title) and not NEW_OCCUR_RE.search(title) and not (INFECT_NAME_RE.search(title) and INFECT_CONFIRMED_RE.search(title)) \
+            and not (SEASON_NAMES_RE.search(title) and SEASON_CASUALTY_RE.search(title) and not SEASON_EXCL_RE.search(title)):
         return True
     # 예방 성공·예방 활동: 단, '소화기로 화재 확산 막아'처럼 실제로 불·사고가 난 경우는 남김
     if PREVENTED_RE.search(title) and not PHYSICAL_EVENT_RE.search(title):
@@ -922,6 +929,21 @@ PLAN_RE = re.compile(r"(?:소환|출석|조사|수사|영장\s*청구|영장\s*�
                      r"소환\s*조사\s*(?:방침|예정)|출석\s*(?:요구|통보|요청)|"
                      r"(?:수사|조사|심사|결론|발표|결과)[^.…]{0,6}(?:이달|이번\s*주|다음\s*주|내주|조만간|연내|연말|곧)[^.…]{0,6}(?:마무리|종결|발표|결론|나올|공개)|"
                      r"(?:이달|이번\s*주|다음\s*주|내주|조만간|곧)\s*(?:내|중)?\s*(?:마무리|종결|소환|송치|결론|발표)")
+# 피의자·검거자 '연령대·비율'을 분석한 통계 기사 (예: '유포자, 잡아보니 절반 이상이 10대') — 새로 일어난 사건이 아니라 통계
+STAT_PROFILE_RE = re.compile(r"잡아보니|(?:피의자|검거자|가해자|적발자|유포자|사범|피해자)[^.…]{0,10}(?:절반|과반|\d+\s*%|\d+\s*명\s*중|10명\s*중|비중|비율|가장\s*많)|"
+                             r"(?:절반|과반|대다수|대부분|\d+\s*%)[^.…]{0,8}(?:이\s*)?(?:10대|20대|30대|40대|50대|60대|청소년|미성년)|연령(?:대)?\s*(?:분석|분포|비중|별)|\d+\s*명\s*중\s*\d+\s*명")
+# 국토부 등이 '이미 사고 낸 업체의 다른 현장'을 점검한다는 기사에 나오는 과거 사고 표현
+PAST_ACCIDENT_REF_RE = re.compile(r"(?:사망\s*사고|사고|재해)\s*(?:를\s*)?낸|(?:사고|재해)\s*(?:가\s*)?(?:잦은|많은|발생한|났던)|다른\s*현장|전\s*현장|전국\s*(?:현장|사업장)|동종\s*(?:업체|현장)|사업장\s*(?:일제|전수)")
+NEW_HARM_STRONG_RE = re.compile(r"숨져|숨진|숨졌|화재\s*발생|폭발\s*(?:사고\s*)?발생|붕괴\s*(?:사고\s*)?발생|대피|긴급\s*체포|현행범|붙잡|매몰")
+# 예방·사전 차단·지원 사업 같은 '대비책' 기사 (예: '영농부산물 파쇄 지원…소각산불 발생 사전 차단')
+PREVENT_MEASURE_RE = re.compile(r"사전\s*(?:차단|예방|점검|방지)|발생\s*(?:을\s*)?(?:사전\s*)?(?:차단|예방|방지)|(?:차단|예방|방지)\s*(?:을\s*)?(?:위해|위한|하기\s*위)|파쇄\s*지원|(?:지원|보급)\s*(?:사업|확대|나선다)|"
+                                r"감시원\s*(?:배치|운영)|배치\s*확대|(?:금지|단속)\s*(?:홍보|계도)|철저히|당부|강화한다|나선다|추진한다|실시한다|운영한다|시행한다|미리\s*(?:막|대비)|사고\s*줄이|피해\s*줄이")
+NEW_FACT_RE = re.compile(r"숨져|숨진|숨졌|사망|부상|다쳐|불이?\s*나|화재\s*발생|(?:이|가)\s*발생했|발생해|발생\s*\d+\s*건|대피|구조\s*(?:됐|돼|중)|진화\s*중|확산\s*중|확진|검거|구속|체포|입건|통제\s*중|폐쇄")
+# 계절성 질환·사고 이름 (여름 온열질환·식중독, 겨울 저체온·동상·일산화탄소·난방기 화재, 봄 꽃가루·황사, 가을 진드기·쯔쯔가무시 …)
+SEASON_NAMES_RE = re.compile(r"온열\s*질환|열사병|열탈진|열경련|일사병|냉방병|저체온증?|동상|일산화\s*탄소|연탄가스|난방기|전기\s*장판|전기\s*히터|화목\s*보일러|뇌졸중|심근경색|심뇌혈관|폐렴|장염|위장관염|"
+                             r"결막염|눈병|꽃가루|알레르기|천식|독버섯|야생\s*버섯|복어|패류\s*독소|식중독|말벌|벌\s*쏘|뱀\s*물|진드기|빙판|낙상|골절|익사|물놀이")
+SEASON_CASUALTY_RE = re.compile(r"의심\s*(?:신고|환자|증상)|증상|사망|숨져|숨졌|숨진|응급실|이송|집단\s*(?:구토|설사|발생|발병)|구토|환자\s*(?:발생|급증|증가|늘|속출|\d)|일가족|의식\s*불명|심정지")
+SEASON_EXCL_RE = re.compile(r"예방|수칙|요령|안내|대비|캠페인|홍보|당부|주의\s*당부|전망|예측|연구|논문|개발|지원\s*사업|설명회")
 NO_CHARGE_RE = re.compile(r"불송치|불기소|무혐의|혐의\s*없음|각하\s*(?:결정|처분)|내사\s*종결")
 FACTCHECK_RE = re.compile(r"(?:AI|인공\s*지능|딥페이크|합성|가짜|조작)\s*(?:영상|사진|이미지)(?:일까|인가|이었|였|으로\s*밝혀|논란|확인)|팩트\s*체크|사실일까|진짜일까|사실\s*아냐|사실무근|가짜\s*뉴스")
 ANALYSIS_RE = re.compile(r"(?:보호|관리|안전|감시|대응|신고|돌봄)\s*체계\s*(?:구멍|허점|부실|필요|점검|개선)|사각\s*지대|허점|구멍\s*(?:뚫린|난)|반복되는\s*(?:비극|사고|참사)|되풀이되는|악순환|"
@@ -949,10 +971,12 @@ def is_not_incident(title, content):
         return True
     # 감독기관의 사후 점검·쇄신 기사 / 앞으로 할 조사·수사 일정 기사 (해킹·사이버 분류가 아래에서 먼저 '사건'으로 통과시키기 전에 거름)
     _oa = OVERSIGHT_ACTOR_RE.search(title)
-    if not BREAKING_RE.search(title) and not NEW_HARM_RE.search(title):
-        if _oa and _oa.start() <= 12 and OVERSIGHT_ACT_RE.search(title):
+    if not BREAKING_RE.search(title):
+        if _oa and _oa.start() <= 12 and OVERSIGHT_ACT_RE.search(title) and not NEW_HARM_STRONG_RE.search(title):
             return True
-        if PLAN_RE.search(title) and not STRICT_FACT_RE.search(title):
+        if _oa and _oa.start() <= 12 and OVERSIGHT_ACT_RE.search(title) and PAST_ACCIDENT_REF_RE.search(title):
+            return True
+        if PLAN_RE.search(title) and not STRICT_FACT_RE.search(title) and not NEW_HARM_RE.search(title):
             return True
     text = title + " " + (content or "")
     if REVIEW_RE.search(title) or (REVIEW_RE.search(text) and re.search(r"지음|옮김|\d+쪽|출판사|펴냄", text)):
@@ -1042,7 +1066,7 @@ ENT_SPORT_RE = re.compile(r"열애|결혼|이혼|스캔들|아이돌|드라마|�
                           r"개념\s*발언|소신\s*발언|사이다\s*발언|(?:발언|과거|소신|개념|명언|일화|인터뷰|어록)\s*(?:이|가)?\s*(?:다시\s*)?(?:재)?소환|소환\s*(?:된|되는)\s*(?:발언|과거|명언|어록)|"
                           r"누리꾼\s*(?:반응|갑론을박|시끌)|갑론을박|네티즌|팬들\s*(?:응원|분노|걱정|반응)|공개\s*응원|일침|저격|"
                           r"애정\s*전선|의미\s*심장|[♥♡❤]|열애설|결별설|불화설|재결합|럽스타|부부\s*(?:싸움|갈등)|전\s*(?:남편|아내)|"
-                          r"안대\s*(?:낀|쓴|착용)|눈병|다래끼|민낯|셀카|입국\s*패션|공항\s*패션|(?:Oh!?\s*쎈|OSEN)")   # ※ 괄호 하나가 더 있어 스크립트가 시작하자마자 멈추던 오류 수정
+                          r"안대\s*(?:낀|쓴|착용)|다래끼|민낯|셀카|입국\s*패션|공항\s*패션|(?:Oh!?\s*쎈|OSEN)")   # ※ 괄호 하나가 더 있어 스크립트가 시작하자마자 멈추던 오류 수정
 # 유명인 여러 명의 말을 따옴표로 옮긴 기사 (예: '성시경 "…"·김희철 "…"') — 사건 자체가 아니라 반응·의견 기사
 #   (작은따옴표 ‘쾅’ 같은 강조 표현은 세지 않고, 큰따옴표로 옮긴 말만 셈)
 PERSON_QUOTE_RE = re.compile(r"[가-힣]{2,4}\s*[“\"][^”\"]{2,30}[”\"]")
@@ -3700,6 +3724,62 @@ def reprocess_existing(old):
     return out
 
 
+# ── 전국 경찰·소방 시설 목록 (stations.json) ──
+#   지도의 [경찰·소방 표시]는 예전에 사용자가 지도를 움직일 때마다 공개 지도 서버(Overpass)에 물어서, 서버가 붐비면(502·504·무응답) 몇십 초씩 '찾는 중'이었음.
+#   그래서 수집기가 하루에 한 번쯤 전국 목록을 미리 받아 stations.json 으로 저장하고, 사이트는 그 파일을 바로 읽어 즉시 표시합니다.
+#   형식: [["p"(경찰)|"f"(소방), 위도, 경도, 이름, 전화], ...]   실패해도 기사 수집에는 영향 없음 (직전 파일을 그대로 둠)
+STATIONS_JSON = "stations.json"
+STATIONS_MAX_AGE = 3 * 86400
+STATIONS_QUERY = ('[out:json][timeout:110];area["ISO3166-1"="KR"][admin_level=2]->.k;'
+                  '(nwr["amenity"="police"](area.k);nwr["amenity"="fire_station"](area.k););out center tags;')
+OVERPASS_SERVERS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter",
+                    "https://maps.mail.ru/osm/tools/overpass/api/interpreter", "https://overpass.private.coffee/api/interpreter"]
+
+
+def stations_due(now_ts):
+    try:
+        age = now_ts - os.path.getmtime(STATIONS_JSON)
+    except OSError:
+        return True                                  # 아직 없음
+    return age > STATIONS_MAX_AGE
+
+
+def build_stations(started):
+    """전국 경찰·소방 시설을 받아 stations.json 으로 저장. 성공하면 건수, 실패하면 0 (한 번에 서버 두 곳까지만 시도)"""
+    for url in OVERPASS_SERVERS[:2]:
+        if time.time() - started > 360:
+            break
+        try:
+            req = urllib.request.Request(url, data=urllib.parse.urlencode({"data": STATIONS_QUERY}).encode("utf-8"),
+                                         headers={"User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded"})
+            with urllib.request.urlopen(req, timeout=100) as r:
+                data = json.loads(r.read().decode("utf-8"))
+            recs, seen = [], set()
+            for el in data.get("elements", []):
+                t = el.get("tags") or {}
+                kind = "p" if t.get("amenity") == "police" else ("f" if t.get("amenity") == "fire_station" else None)
+                lat = el.get("lat") if el.get("lat") is not None else (el.get("center") or {}).get("lat")
+                lng = el.get("lon") if el.get("lon") is not None else (el.get("center") or {}).get("lon")
+                if not kind or lat is None or lng is None:
+                    continue
+                key = (el.get("type"), el.get("id"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                name = (t.get("name:ko") or t.get("name") or "")[:40]
+                phone = (t.get("phone") or t.get("contact:phone") or "")[:30]
+                recs.append([kind, round(lat, 5), round(lng, 5), name, phone])
+            if len(recs) < 500:                       # 전국이면 수천 건이어야 정상 → 너무 적으면 서버가 덜 준 것이니 버림
+                print(f"[경찰·소방 목록] {url.split('/')[2]} 응답이 너무 적음({len(recs)}건) — 건너뜀")
+                continue
+            with open(STATIONS_JSON, "w", encoding="utf-8") as f:
+                f.write("[" + ",".join(json.dumps(x, ensure_ascii=False, separators=(",", ":")) for x in recs) + "]\n")
+            return len(recs)
+        except Exception as e:      # noqa
+            print(f"[경찰·소방 목록] {url.split('/')[2]} 실패: {type(e).__name__} {str(e)[:60]}")
+    return 0
+
+
 def main():
     now = datetime.now(KST)
     now_ts = now.timestamp()
@@ -3864,6 +3944,13 @@ def main():
         f.write("[\n" + ",\n".join(json.dumps(v, ensure_ascii=False) for v in final) + "\n]\n")
     print(f"안전 브리핑용 예방·대처 정보: {save_tips(cutoff_ts)}건 (tips.json)")
     print(f"본문 확인으로 걸러 둔 기사 목록: {save_blocked(cutoff_ts)}건 (blocked.json)")
+    # 경찰·소방 시설 목록: 없거나 3일이 지났을 때만, 30분에 한 번꼴로만 시도 (공개 서버가 바쁘면 다음에 다시)
+    try:
+        if stations_due(now_ts) and now.minute % 30 < 7:
+            n_st = build_stations(started)
+            print(f"경찰·소방 시설 목록: {n_st}건 저장 (stations.json)" if n_st else "경찰·소방 시설 목록: 이번엔 받지 못함 (다음에 다시 시도)")
+    except Exception as e:      # noqa
+        print(f"[경찰·소방 목록] 오류: {type(e).__name__} {e}")
 
     by_day = {}
     by_src = {}
@@ -3956,6 +4043,16 @@ def selftest():
         ("홍역 재유행 우려…전문가 \"가능성 낮지만 대비해야\"", False),
         ("독감 백신 무료 접종 시작 어르신 대상", False),
         ("미국 홍역 확진 1000명 넘어 올해 최다", False),
+        # 2026-11-16 3차: 통계·점검·예방 기사 제외, 통제·계절성 질환 포함
+        ("[속보] 딥페이크, 아동·청소년 성착취물 유포자, 잡아보니 절반 이상이 10대", False),
+        ("국토부, 사망사고 낸 건설사 다른 현장도 특별점검", False),
+        ("북부지방산림청, 영농부산물 파쇄 지원…소각산불 발생 사전 차단", False),
+        ("주왕산 단풍철 탐방객 몰려 혼잡…주차장 포화", True),
+        ("지하철 5호선 일부 구간 운행 중단 버스 임시 투입", True),
+        ("산불 확산 국립공원 탐방로 전면 폐쇄", True),
+        ("온열질환자 급증 열사병 사망 폭염 속 야외 작업", True),
+        ("유행성 결막염 환자 증가 눈병 주의", True),
+        ("겨울철 난방기 화재 급증 일가족 사망", True),
         ("절도 있는 군무 선보인 무용단", False),
         ("직장 내 괴롭힘 예방 교육 실시", False),
         ("왕따 방지 프로그램 운영 시작", False),
