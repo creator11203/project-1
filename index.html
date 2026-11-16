@@ -221,7 +221,7 @@
             /* 커뮤니티 맨 위 큰 탭(안전망·동네 이야기·장터…): 한 줄에 억지로 넣지 않고, 탭마다 글씨가 다 보이는 크기로 두고 옆으로 밀어서 봄 */
             #commTabBar > .grid, #commSampleBar > .grid { position: relative; display: flex !important; overflow-x: auto; overflow-y: hidden; gap: 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
             #commTabBar > .grid::-webkit-scrollbar, #commSampleBar > .grid::-webkit-scrollbar { display: none; }
-            #commTabBar > .grid > button, #commSampleBar > .grid > div { flex: 0 0 auto; min-width: 78px; padding: 8px 10px 7px; scroll-snap-align: center; gap: 4px; }
+            #commTabBar > .grid > button, #commSampleBar > .grid > div { flex: 1 0 auto; min-width: 78px; padding: 8px 10px 7px; scroll-snap-align: center; gap: 4px; }
             #commTabBar > .grid > button > span:nth-child(2), #commSampleBar > .grid > div > span:nth-child(2) { font-size: 12px; max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap; }
             #commTabBar > .grid > button > span:first-child, #commSampleBar > .grid > div > span:first-child { width: 30px; height: 30px; font-size: 14px; }
             /* 커뮤니티를 열면 맨 위 로고 줄과 '지난 알림' 버튼은 숨겨서 글 읽을 자리를 넓힘 (돌아가기는 ← 사건 목록) */
@@ -3255,11 +3255,7 @@
             const item = (fn, icon, label, extra) => `<button onclick="toggleCommMenu(false); ${fn}" class="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs text-left hover:bg-slate-100 dark:hover:bg-slate-700"><i class="fa-solid ${icon} w-4 text-center text-emerald-600"></i><span class="flex-1">${label}</span>${extra || ''}</button>`;
             m.innerHTML = myTown ? `
                 <div class="px-2.5 py-1.5 text-[0.6875rem] text-slate-500"><i class="fa-solid fa-circle-check text-emerald-500"></i> ${esc(townName(myTown))} 인증됨</div>
-                ${item(`showProfile('${COMM_UID}')`, 'fa-user', '내 프로필 · 내 일상')}
-                ${item(`setCommTab('popular')`, 'fa-ranking-star', '우리동네 TOP10 · 인기쟁이')}
                 ${commOpen('people') ? item(`setCommTab('friends')`, 'fa-newspaper', '팔로잉 소식', commUnseen.feed + commUnseen.follow ? `<span class="text-[0.625rem] font-bold text-white bg-red-500 rounded-full px-1.5">${commUnseen.feed + commUnseen.follow}</span>` : '') : ''}
-                ${item('inviteNeighbors()', 'fa-user-plus', '이웃 초대하기')}
-                ${item('showBlockList()', 'fa-ban', '차단 관리' + (Object.keys(blocked).length ? ' ' + Object.keys(blocked).length : ''))}
                 ${item('showReportGuide()', 'fa-scale-balanced', '제보 가이드라인 · 신뢰 지수')}
                 <div class="px-2.5 py-1.5 flex items-center gap-1.5 text-[0.6875rem] text-slate-500">배경 <span id="commBgDots" class="flex items-center gap-1"></span></div>
                 ${item('resetTown()', 'fa-location-crosshairs', '동네 다시 인증')}
@@ -6230,7 +6226,7 @@
                     <input type="checkbox" class="mt-0.5" ${demoOn() ? 'checked' : ''} onchange="lsSet('demo_samples_off', this.checked ? '0' : '1'); location.reload()">
                     <span><span class="block text-xs font-bold text-slate-800 dark:text-slate-100">예시 게시물 보기 (체험 모드)</span><span class="block text-[0.625rem] text-slate-500 leading-snug">다른 이웃이 올린 글이 어떻게 보이는지 게시판마다 '(예시)' 글 5개를 보여 줍니다. 저장되지 않고, 서버를 연결하면 자동으로 사라집니다.</span></span></label>`}
                 <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-1">
-                    ${row('showBlockList()', 'fa-ban', '차단 관리')}
+                    ${row('showBlockList()', 'fa-ban', '차단 관리' + (Object.keys(blocked).length ? ' (' + Object.keys(blocked).length + '명)' : ''))}
                     ${row('showReportGuide()', 'fa-scale-balanced', '신뢰 지수 · 제보 가이드')}
                     ${row('resetTown()', 'fa-location-crosshairs', '동네 다시 인증하기')}
                 </div></div>`);
@@ -7663,10 +7659,10 @@
                 const bar = b === 'talk' ? ` style="border-left: 5px solid ${p.type === 'sos' ? '#dc2626' : kindColor(p.kind || guessReportKind((p.title || '') + ' ' + (p.text || '')))}"` : '';
                 return `<button onclick="pbOpen('${b}', '${esc(p.id)}')"${bar} class="w-full text-left flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 transition ${pin ? 'bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/60' : 'bg-white/80 dark:bg-slate-900/70 hover:bg-slate-50 dark:hover:bg-slate-800/70'}">
                     <div class="min-w-0 flex-1">
-                        <div class="flex items-center gap-1.5 min-w-0">${pin ? '<i class="fa-solid fa-thumbtack text-red-500 text-[0.6875rem] shrink-0"></i>' : ''}${pbBadge(b, p)}
-                            <span class="text-[0.875rem] font-bold text-slate-900 dark:text-white truncate">${esc(pbTitle(p))}</span>
-                            ${n ? `<span class="shrink-0 text-xs font-extrabold text-${c}-600 dark:text-${c}-400">[${n}]</span>` : ''}
-                            ${fresh ? '<span class="shrink-0 w-4 h-4 rounded-full bg-orange-500 text-white text-[0.5625rem] font-black flex items-center justify-center">N</span>' : ''}</div>
+                        ${pin || pbBadge(b, p) || n || fresh ? `<div class="flex items-center flex-wrap gap-1.5 min-w-0 mb-0.5">${pin ? '<i class="fa-solid fa-thumbtack text-red-500 text-[0.6875rem] shrink-0"></i>' : ''}${pbBadge(b, p)}
+                            ${n ? `<span class="shrink-0 text-xs font-extrabold text-${c}-600 dark:text-${c}-400">댓글 ${n}</span>` : ''}
+                            ${fresh ? '<span class="shrink-0 w-4 h-4 rounded-full bg-orange-500 text-white text-[0.5625rem] font-black flex items-center justify-center">N</span>' : ''}</div>` : ''}
+                        <div class="text-[0.875rem] font-bold text-slate-900 dark:text-white leading-snug break-words line-clamp-2" style="white-space: normal;">${esc(pbTitle(p))}</div>
                         <div class="mt-1 flex items-center gap-2 text-[0.6875rem] text-slate-500 dark:text-slate-400 min-w-0">
                             <span class="truncate font-medium text-slate-600 dark:text-slate-300">${esc(displayName(p.uid, p.nick))}${p.uid === COMM_UID ? ' (나)' : ''}</span>
                             <span class="shrink-0">${timeAgo(p.ts)}</span><span class="shrink-0">조회 ${p.views || 0}</span><span class="shrink-0">공감 ${lk}</span></div>
@@ -7713,7 +7709,7 @@
                     ${P.filters ? `<div class="hscroll gap-1">${chip('all', '전체')}${P.filters.map(f => chip(f[0], f[1])).join('')}</div>` : ''}
                 </div>
                 ${b === 'talk' ? '<div id="commLiveBar" class="shrink-0"></div>' : ''}
-                <div id="pbList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                <div id="pbList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar" style="padding-bottom: 5rem;">
                     ${all.length ? itemsHtml
                         : `<div class="text-center py-16 px-6 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${esc(P.empty)}<br><button onclick="pbWrite('${b}')" class="mt-3 px-4 py-2 rounded-lg ${pbBtn(b)} text-white text-xs font-bold"><i class="fa-solid fa-pen"></i> 첫 글 쓰기</button></div>`}
                 </div>`;
