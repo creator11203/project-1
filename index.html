@@ -107,6 +107,18 @@
         .station-pin { width: 26px; height: 26px; border-radius: 50%; border: 2.5px solid; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
         .station-toggle { background: #fff; color: #0f172a; font-size: 11px; font-weight: 700; padding: 4px 8px; cursor: pointer; white-space: nowrap; border-radius: 6px; }
         .station-toggle.off { color: #94a3b8; text-decoration: line-through; }
+        /* 경찰·소방 찾는 동안: 돌아가는 아이콘 + 흐르는 빛 + 깜빡이는 점으로 '지금 찾는 중'임이 한눈에 보이게 / 끝나면 초록 '완료' 표시 */
+        .station-toggle.busy { color: #fff; background: linear-gradient(100deg, #2563eb 0%, #7c3aed 50%, #2563eb 100%); background-size: 200% 100%; animation: stationShimmer 1.2s linear infinite; box-shadow: 0 0 0 3px rgba(37,99,235,.35); }
+        .station-toggle.done { color: #065f46; background: #d1fae5; box-shadow: 0 0 0 2px #10b981; }
+        .dark .station-toggle.done { color: #a7f3d0; background: #064e3b; }
+        .busy-spin { display: inline-block; width: .8rem; height: .8rem; border: 2px solid rgba(255,255,255,.45); border-top-color: #fff; border-radius: 50%; vertical-align: -2px; margin-right: .25rem; animation: busySpin .7s linear infinite; }
+        .busy-dots::after { content: ''; animation: busyDots 1.2s steps(4, end) infinite; }
+        @keyframes busySpin { to { transform: rotate(360deg); } }
+        @keyframes busyDots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75%, 100% { content: '...'; } }
+        @keyframes stationShimmer { to { background-position: -200% 0; } }
+        .find-busy { display: flex; align-items: center; gap: .4rem; padding: .35rem .6rem; border-radius: 8px; background: #eff6ff; color: #1d4ed8; font-weight: 800; border: 1px solid #93c5fd; }
+        .dark .find-busy { background: #172554; color: #bfdbfe; border-color: #1d4ed8; }
+        .find-busy .busy-spin { border-color: rgba(37,99,235,.3); border-top-color: #2563eb; }
         .dark .station-toggle { background: #1e293b; color: #e2e8f0; }
         .dark .leaflet-container { background: #0b1220; }
         .leaflet-popup-content { margin: 10px 12px; }
@@ -654,7 +666,12 @@
     <div id="callIncoming" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-white dark:bg-slate-900 border-2 border-emerald-500 rounded-2xl shadow-2xl px-5 py-3 text-center" style="z-index: 1280;"></div>
 
     <!-- 알림 창 (화면 오른쪽 아래. 지도가 어느 칸에 있든 항상 보임) -->
-    <div id="alertToasts" class="fixed bottom-5 right-4 flex flex-col gap-2 items-end" style="z-index: 1300;"></div>
+    <div id="alertToasts" class="fixed right-4 flex flex-col gap-2 items-end" style="z-index: 1300; bottom: 4.75rem;"></div>
+    <!-- 지난 알림 보기: 오른쪽 아래 확성기 버튼. 알림창을 못 보고 지나가도 여기서 다시 볼 수 있음 -->
+    <button id="alertLogBtn" onclick="toggleAlertLog()" title="지난 알림 보기 (놓친 알림 다시 확인)" aria-label="지난 알림 보기" class="fixed bottom-4 right-4 w-12 h-12 rounded-full text-white text-lg flex items-center justify-center shadow-xl border-2 border-white" style="z-index: 1301; background: linear-gradient(135deg,#6366f1,#7c3aed);">
+        <i class="fa-solid fa-bullhorn"></i><span id="alertLogBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[1.2rem] h-[1.2rem] px-1 rounded-full bg-rose-500 text-white text-[0.625rem] font-black leading-[1.2rem] text-center ring-2 ring-white"></span>
+    </button>
+    <div id="alertLogPanel" class="hidden fixed right-4 w-[22rem] max-w-[calc(100vw-2rem)] max-h-[60vh] flex flex-col rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden" style="z-index: 1302; bottom: 4.75rem;"></div>
 
     <!-- 안전 브리핑 · 언론사 제보 · 제보 가이드라인 등을 띄우는 창 -->
     <div id="sheetModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3" style="z-index: 1250;" onclick="if (event.target === this) closeSheet()">
@@ -1719,7 +1736,11 @@
             const show = stationOn && zoomOk;
             if (stationCtl && stationCtl._b) {
                 const b = stationCtl._b;
-                b.innerHTML = `🚓🚒 <span>${stationOn ? (zoomOk ? (stationBusy ? '찾는 중…' : '경찰·소방 표시 중') : '확대하면 경찰·소방 표시') : '경찰·소방 숨김'}</span>`;
+                const busyNow = stationOn && zoomOk && stationBusy;
+                b.innerHTML = busyNow ? '<span class="busy-spin"></span><span class="busy-dots">경찰·소방 찾는 중</span>'
+                    : `🚓🚒 <span>${stationOn ? (zoomOk ? '경찰·소방 표시 완료' : '확대하면 경찰·소방 표시') : '경찰·소방 숨김'}</span>`;
+                b.classList.toggle('busy', busyNow);
+                b.classList.toggle('done', stationOn && zoomOk && !stationBusy);
                 b.title = stationOn ? '누르면 경찰서·소방서 표시를 끕니다' : '누르면 경찰서·소방서를 지도에 표시합니다 (확대했을 때)';
                 b.classList.toggle('off', !stationOn);
             }
@@ -1767,7 +1788,13 @@
                 .catch(() => {})                       // 서버가 모두 바쁘면 다음에 지도를 움직일 때 다시 시도
                 .finally(() => { ctls.forEach(x => { try { x.abort(); } catch (e) {} }); stationBusy = false; syncStationLayer(); });
         }
-        function syncStationLabel() { if (stationCtl && stationCtl._b) stationCtl._b.querySelector('span').textContent = '찾는 중…'; }
+        function syncStationLabel() { syncStationLayerLabelOnly(); }
+        function syncStationLayerLabelOnly() {
+            if (!stationCtl || !stationCtl._b) return;
+            const b = stationCtl._b;
+            b.innerHTML = '<span class="busy-spin"></span><span class="busy-dots">경찰·소방 찾는 중</span>';
+            b.classList.add('busy'); b.classList.remove('done');
+        }
 
         // 지도 안내(범례): 지도에 실제로 그려지는 모양 그대로 보여 줌. 접어 둘 수 있고 상태는 기억됨
         let legendOpen = (() => { try { return localStorage.getItem('legend_open') !== '0'; } catch (e) { return true; } })();
@@ -2109,8 +2136,19 @@
             const container = document.getElementById('newsListContainer');
             const prevScroll = container.scrollTop;
             const oldHeight = container.scrollHeight;
+            // 지금 화면 맨 위에 보이던 기사 카드(기준 카드)와 그 위치 · 직전에 목록에 있던 사건들을 기억해 둠
+            //  → 새로 그린 뒤 같은 카드가 같은 자리에 오도록 맞추고, '진짜 새로 생긴 기사가 보던 자리 위에 있을 때만' 알림을 띄움
+            //  (예전에는 3분 안에 들어온 새 기사 수를 매번 세어서, 이미 본 기사나 아래쪽에 끼어든 기사 때문에 '새 기사'가 떴는데 맨 위는 그대로였음)
+            let anchorKey = null, anchorOff = 0;
+            if (anchor && prevScroll > 20) {
+                const ctop = container.getBoundingClientRect().top;
+                const first = Array.from(container.querySelectorAll('.news-card')).find(c => c.getBoundingClientRect().bottom > ctop + 4);
+                if (first) { anchorKey = first.dataset.evk || null; anchorOff = first.getBoundingClientRect().top - ctop; }
+            }
+            const prevShown = window._shownKeys || new Set();
             const filtered = getFilteredNews();
             const events = groupEvents(filtered);
+            window._shownKeys = new Set(events.map(e => e.key));
             document.getElementById('listCount').textContent = '사건 ' + events.length + '건' + (filtered.length > events.length ? ' · 기사 ' + filtered.length + '개' : '');
             container.innerHTML = '';
 
@@ -2159,6 +2197,7 @@
                 const open = expandedEvents.has(ev.key);
                 const card = document.createElement('div');
                 card.className = `news-card ${freshEventKeys.has(ev.key) ? 'news-new ' : ''}${hasSelected ? 'is-sel ' : ''}rounded-xl border transition text-left overflow-hidden ${hasSelected ? 'bg-white dark:bg-slate-800/90 border-red-400/70' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`;
+                card.dataset.evk = ev.key;
                 card.style.setProperty('--accent', (CATEGORY_GROUPS[groupOf(news)] || {}).color || '#94a3b8');
 
                 const main = document.createElement('div');
@@ -2211,9 +2250,17 @@
                 container.appendChild(more);
             }
             if (anchor && prevScroll > 20) {
-                container.scrollTop = prevScroll + Math.max(0, container.scrollHeight - oldHeight);
+                let freshN = 0;
+                const anchorCard = anchorKey ? Array.from(container.querySelectorAll('.news-card')).find(c => c.dataset.evk === anchorKey) : null;
+                if (anchorCard) {
+                    const ctop = container.getBoundingClientRect().top;
+                    container.scrollTop += (anchorCard.getBoundingClientRect().top - ctop) - anchorOff;      // 보던 카드가 그 자리에 그대로 있게
+                    const idx = events.findIndex(ev => ev.key === anchorKey);
+                    freshN = events.slice(0, Math.max(0, idx)).filter(ev => !prevShown.has(ev.key)).length;  // 보던 자리 위에 새로 생긴 사건만
+                } else {
+                    container.scrollTop = prevScroll + Math.max(0, container.scrollHeight - oldHeight);
+                }
                 // 아래쪽을 보고 있었다면: 위에 새 기사가 왔다는 작은 알림 (누르면 맨 위로)
-                const freshN = events.filter(ev => freshEventKeys.has(ev.key)).length;
                 if (freshN) {
                     const pill = document.createElement('button');
                     pill.className = 'new-pill sticky top-1 z-30 mx-auto w-max';
@@ -3069,7 +3116,7 @@
             return `<div class="mb-2 pb-2 border-b-2 border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-200">
                 <div class="flex items-center justify-between gap-3 mb-1"><b>🆘 안전시설 표시 중</b><button onclick="safetyClear()" class="text-[0.6875rem] text-slate-400 hover:text-red-500">지우기 ✕</button></div>
                 <div class="grid grid-cols-2 gap-x-2">${kinds.map(t => { const n = safety.results.filter(f => f.kind === t.k).length; return `<div class="flex items-center gap-1.5 py-0.5 ${n ? '' : 'opacity-50'}"><span class="inline-flex items-center justify-center w-5 h-5 rounded bg-white border-2 text-[0.75rem] shrink-0" style="border-color:${t.color};">${t.icon}</span><span class="flex-1 truncate">${esc(t.name.split(' (')[0].split('·')[0])}</span><b class="font-mono" style="color:${t.color};">${n}</b></div>`; }).join('')}</div>
-                <div class="text-[0.625rem] text-slate-400 mt-0.5">${esc(safety.originText || '')} · 반경 ${safety.radius}km${safety.busy ? ' · 찾는 중…' : ''}</div></div>`;
+                <div class="text-[0.625rem] text-slate-400 mt-0.5">${esc(safety.originText || '')} · 반경 ${safety.radius}km${safety.busy ? ' · <span class="busy-dots">찾는 중</span>' : ' · 표시 완료'}</div></div>`;
         }
         function safetyGo(i) { const f = safety.results[i]; if (!f) return; map.flyTo([f.lat, f.lng], 17, { duration: 0.8 }); if (f._m) setTimeout(() => f._m.openPopup(), 850); }
         function safetyClear() { safetySeq++; safety.busy = false; safety.results = []; safety.origin = null; safety.originText = ''; safety.msg = ''; if (safetyLayer) safetyLayer.clearLayers(); renderSafetyLegend(); renderSafetyPanel(); }
@@ -3103,7 +3150,9 @@
                     <button onclick="safetyClear()" class="py-1 px-2 rounded border border-slate-300 dark:border-slate-600 text-[0.6875rem] text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">지우기</button>
                 </div>
                 ${safety.originText && safety.results.length ? `<div class="text-[0.625rem] text-slate-500">${esc(safety.originText)} · 가까운 순</div>` : ''}
-                ${safety.msg ? `<div class="text-[0.6875rem] text-amber-600 dark:text-amber-400 mt-1">${esc(safety.msg)}</div>` : ''}
+                ${safety.busy ? `<div class="find-busy text-[0.6875rem] mt-1"><span class="busy-spin"></span><span class="busy-dots">${esc((safety.msg || '찾는 중').replace(/[.…]+$/, '').replace(/입니다$/, ''))}</span></div>`
+                    : (safety.msg ? `<div class="text-[0.6875rem] text-amber-600 dark:text-amber-400 mt-1">${esc(safety.msg)}</div>` : '')}
+                ${!safety.busy && safety.origin && safety.results.length ? `<div class="text-[0.6875rem] font-bold text-emerald-600 dark:text-emerald-400 mt-1">✅ 찾기 완료 · ${safety.results.length}곳 표시했어요</div>` : ''}
                 ${list}
                 <div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700 text-[0.625rem] text-slate-500 leading-relaxed">
                     공개 지도에 등록된 시설만 나오므로 빠진 곳이 있을 수 있습니다. 정확한 목록은 공식 사이트에서 확인하세요.<br>
@@ -3270,9 +3319,74 @@
         function clearToasts() {
             document.querySelectorAll('#alertToasts .toast-card').forEach(el => el._close && el._close());
         }
+        // ================= 지난 알림 목록 (오른쪽 아래 확성기 버튼) =================
+        //  알림창은 몇 초 뒤 사라져서 못 보고 지나갈 수 있으므로, 뜬 알림을 이 기기에 최근 100건까지 기록해 두고 다시 볼 수 있게 함
+        const ALERT_LOG_KEY = 'alert_log_v1', ALERT_LOG_SEEN = 'alert_log_seen';
+        function alertLogLoad() { try { const a = JSON.parse(localStorage.getItem(ALERT_LOG_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+        function alertLogSave(a) { try { localStorage.setItem(ALERT_LOG_KEY, JSON.stringify(a.slice(0, 100))); } catch (e) {} }
+        function alertLogAdd(o) {
+            if (!(o.newsId || o.danger || o.here || o.commTab || o.live || o.openCommunity || o.briefing)) return;   // '안내·확인' 같은 단순 알림은 기록하지 않음
+            const a = alertLogLoad();
+            a.unshift({ ts: Date.now(), head: o.head || '알림', title: o.title || '', badge: o.badge || '', foot: o.foot || '', danger: !!o.danger, here: !!o.here,
+                newsId: o.newsId || null, commTab: o.commTab || null, openCommunity: !!o.openCommunity, live: o.live || null, briefing: !!o.briefing });
+            alertLogSave(a);
+            alertLogBadge();
+            const p = document.getElementById('alertLogPanel');
+            if (p && !p.classList.contains('hidden')) renderAlertLog();
+        }
+        function alertLogUnread() { const seen = Number(localStorage.getItem(ALERT_LOG_SEEN) || 0); return alertLogLoad().filter(x => x.ts > seen).length; }
+        function alertLogBadge() {
+            const b = document.getElementById('alertLogBadge'); if (!b) return;
+            const n = alertLogUnread();
+            b.textContent = n > 99 ? '99+' : String(n); b.classList.toggle('hidden', !n);
+        }
+        function toggleAlertLog(show) {
+            const p = document.getElementById('alertLogPanel'); if (!p) return;
+            const want = (typeof show === 'boolean') ? show : p.classList.contains('hidden');
+            if (want) {
+                try { localStorage.setItem(ALERT_LOG_SEEN, String(Date.now())); } catch (e) {}
+                renderAlertLog(); p.classList.remove('hidden'); alertLogBadge();
+                const t = document.getElementById('alertToasts'); if (t) t.style.right = 'calc(22rem + 2rem)';   // 열려 있는 동안 새 알림창은 목록 왼쪽에 뜸
+            } else {
+                p.classList.add('hidden');
+                const t = document.getElementById('alertToasts'); if (t) t.style.right = '';
+            }
+        }
+        function alertAgo(ts) {
+            const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+            if (s < 60) return '방금'; if (s < 3600) return Math.floor(s / 60) + '분 전'; if (s < 86400) return Math.floor(s / 3600) + '시간 전';
+            return Math.floor(s / 86400) + '일 전';
+        }
+        function renderAlertLog() {
+            const p = document.getElementById('alertLogPanel'); if (!p) return;
+            const a = alertLogLoad();
+            p.innerHTML = `<div class="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700 shrink-0">
+                    <b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-bullhorn text-indigo-500"></i> 지난 알림 <span class="text-[0.6875rem] font-normal text-slate-400">${a.length}건</span></b>
+                    <span class="flex items-center gap-2">${a.length ? '<button onclick="alertLogClear()" class="text-[0.6875rem] text-slate-400 hover:text-rose-500">모두 지우기</button>' : ''}<button onclick="toggleAlertLog(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white" aria-label="닫기">✕</button></span></div>
+                <div class="overflow-y-auto custom-scrollbar p-2 space-y-1.5">${a.length ? a.map((x, i) => `
+                    <button onclick="alertLogOpen(${i})" class="w-full text-left rounded-xl border p-2 ${x.danger ? 'border-rose-300 bg-rose-50 dark:bg-rose-950/30 dark:border-rose-800' : (x.here ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-800' : 'border-slate-200 bg-slate-50 dark:bg-slate-800/60 dark:border-slate-700')} hover:brightness-95">
+                        <div class="flex items-center justify-between gap-2 text-[0.625rem] font-bold text-slate-500"><span class="truncate">${esc(x.head)}${x.badge ? ' · ' + esc(x.badge) : ''}</span><span class="shrink-0">${alertAgo(x.ts)}</span></div>
+                        <div class="text-xs font-bold text-slate-900 dark:text-white leading-snug mt-0.5 line-clamp-2">${esc(x.title)}</div>
+                        ${x.foot ? `<div class="text-[0.625rem] text-slate-500 truncate mt-0.5">${esc(x.foot)}</div>` : ''}</button>`).join('') : '<div class="text-center text-xs text-slate-400 py-8 leading-relaxed">아직 받은 알림이 없어요.<br>새 알림이 뜨면 여기에 차곡차곡 쌓여요.</div>'}</div>`;
+        }
+        function alertLogClear() { alertLogSave([]); renderAlertLog(); alertLogBadge(); }
+        function alertLogOpen(i) {
+            const x = alertLogLoad()[i]; if (!x) return;
+            if (x.newsId) {
+                const n = newsData.find(v => v.id === x.newsId);
+                if (n) { currentCategory = 'all'; currentSub = null; showInFilter(n); selectedHotspotRegion = null; hotspotArticleOpen = false; selectedDate = dateKey(n.timestamp); dateFollowToday = (selectedDate === todayKey()); renderCategoryBar(); selectNews(n.id); toggleAlertLog(false); }
+                else alert('이 기사는 보관 기간(7일)이 지나 더는 목록에 없어요.');
+            } else if (x.commTab) { openCommunity(); if (myTown) setTimeout(() => setCommTab(x.commTab), 30); toggleAlertLog(false); }
+            else if (x.openCommunity) { openCommunity(); toggleAlertLog(false); }
+            else if (x.live) { watchLive(x.live); toggleAlertLog(false); }
+            else if (x.briefing) { openBriefing('report'); toggleAlertLog(false); }
+        }
+        window.addEventListener('load', () => setTimeout(alertLogBadge, 300));
+
         function showAlertToast(o) {
             const box = document.getElementById('alertToasts');
             if (!box) return;
+            try { alertLogAdd(o); } catch (e) {}
             const tone = o.danger ? 'danger' : (o.here ? 'here' : 'info');
             const ms = o.ms || ((o.danger || o.here || o.live) ? TOAST_LONG_MS : TOAST_MS);
             const icon = o.danger ? 'fa-triangle-exclamation' : (o.here ? 'fa-location-dot' : (o.newsId ? 'fa-bell' : 'fa-circle-check'));
@@ -9471,7 +9585,7 @@
             { icon: '📋', title: '안전 브리핑', text: '오늘·이번 주 주요 사건을 비서처럼 요약해 드려요. 바쁠 때 이것만 눌러도 오늘 동네 분위기를 알 수 있어요.', target: () => isDocked('briefing') ? panelEl('briefing') : document.querySelector('#heroBtns > button:first-child') },
             { icon: '📢', title: '실시간 제보하기', text: '목격한 사고나 위험 상황은 이 버튼으로 바로 제보할 수 있어요. 우리동네 안전망의 실시간 제보 작성 화면이 열려요.', target: () => document.querySelector('#heroBtns > button:last-child') },
             { icon: '⚙️', title: '내 화면으로 꾸미기', text: '[화면 설정]에서 화면을 2칸 또는 3칸으로 나누고, 칸마다 사건 목록·기사 원문·사건 지도·커뮤니티·안전 브리핑 중 원하는 화면을 배치할 수 있어요. 커뮤니티를 칸에 넣어 두면 항상 열어 두고 볼 수 있어요.', target: () => document.getElementById('layoutBtn') },
-            { icon: '🔤', title: '글씨 크기 · 다크 모드', text: 'A- / A+ 버튼으로 글씨 크기를 조절하고, 옆의 달 모양 버튼으로 다크 모드를 켜고 끌 수 있어요. 이 안내는 상단 [사용 안내]에서 언제든 다시 볼 수 있어요.', target: () => {   // 글씨 크기 박스 + 다크 모드(달) 버튼을 함께 감싸서 하이라이트
+            { icon: '🔤', title: '글씨 크기 · 라이트/다크 모드', text: 'A- / A+ 버튼으로 글씨 크기를 조절하고, 옆의 달 모양 버튼으로 라이트(밝은) 모드와 다크(어두운) 모드를 바꿀 수 있어요. 이 안내는 상단 [사용 안내]에서 언제든 다시 볼 수 있어요.', target: () => {   // 글씨 크기 박스 + 다크 모드(달) 버튼을 함께 감싸서 하이라이트
                 const f = document.getElementById('fontSizeIndicator'), t = document.getElementById('themeBtn');
                 if (!f || !t) return f && f.parentElement;
                 const a = f.parentElement.getBoundingClientRect(), b = t.getBoundingClientRect();
