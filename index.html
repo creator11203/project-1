@@ -2769,9 +2769,9 @@
                     </div>
                     <button onclick="shareCopy(${id})" class="${btn} border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100"><span class="text-xl">🔗</span><span class="flex-1">내용·링크 복사</span></button>
                     <div class="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 p-3 space-y-2">
-                        <div class="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">🏘️ 우리동네 커뮤니티에 바로 공유</div>
-                        <textarea id="shareNote" maxlength="200" rows="2" placeholder="이웃에게 한마디 (선택) 예) 우리 동네 근처예요. 조심하세요!" class="w-full text-xs p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"></textarea>
-                        <button onclick="shareToCommunity(${id})" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">커뮤니티 안전망에 올리기</button>
+                        <div class="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">🏘️ 우리동네 커뮤니티 · 동네 이야기에 공유</div>
+                        <div class="text-[0.6875rem] text-slate-600 dark:text-slate-300 leading-relaxed">기사 제목과 원문 링크가 자동으로 채워진 <b>글쓰기 화면</b>으로 이동해요. 이웃에게 하고 싶은 말을 덧붙여 [등록]을 누르면 올라갑니다.</div>
+                        <button onclick="shareToCommunity(${id})" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold"><i class="fa-solid fa-pen"></i> 글 쓰러 가기</button>
                         <div id="shareMsg" class="text-[0.6875rem] text-slate-500"></div>
                     </div>
                 </div>`);
@@ -2800,24 +2800,29 @@
             const n = newsData.find(x => x.id === id);
             const say = t => { const el = document.getElementById('shareMsg'); if (el) el.textContent = t; };
             if (!n) return;
-            if (!myTown) { say('먼저 [우리동네 커뮤니티]에서 동네 인증을 해 주세요.'); return; }
-            const note = ((document.getElementById('shareNote') || {}).value || '').trim().slice(0, 200);
+            closeSheet();
+            if (!myTown) {   // 로그인·동네 인증이 아직이면 커뮤니티를 열어 안내
+                try { openCommunity(); } catch (e) {}
+                showAlertToast({ head: '공유', title: '먼저 구글 로그인과 동네 인증을 해 주세요. 끝나면 다시 [공유하기]를 눌러 주세요.' });
+                return;
+            }
             const link = safeUrl(n.link);
             const title = ('📰 ' + n.title).slice(0, 60);
-            const text = [note, '📍 ' + (n.location || '위치 미상') + ' · ' + [n.time, n.source].filter(Boolean).join(' · '), link ? '원문: ' + link : ''].filter(Boolean).join('\n').slice(0, 1000);
-            const P = PB.talk;
-            const msg = Object.assign({ title: title, text: text, ts: Date.now(), uid: COMM_UID, views: 0 }, meFields());
-            msg[P.like] = [];
-            msg.type = 'report'; msg.town = myTown.dong; msg.kind = guessReportKind(n.title); msg.shared = 1;
-            if (link) msg.shareLink = link;
+            // 링크까지 자동으로 채우고, 그 아래에서 이웃에게 한마디를 이어 쓰게 함 (바로 올라가지 않고 글쓰기 화면으로 이동)
+            const text = [(n.location ? '📍 ' + n.location + ' · ' : '') + [n.time, n.source].filter(Boolean).join(' · '), link ? '원문: ' + link : ''].filter(Boolean).join('\n').slice(0, 900) + '\n\n';
             try {
-                const db = await commInit();
-                if (db) await P.col().add(msg);
-                else { msg.id = 'p' + Date.now() + Math.random().toString(36).slice(2, 7); P.list().unshift(msg); P.save(); }
-                closeSheet();
-                showAlertToast({ head: '공유', title: '우리동네 커뮤니티 안전망에 공유했습니다.', foot: '[우리동네 커뮤니티] → 안전망에서 볼 수 있어요' });
-                if (isDocked('community') || !document.getElementById('floatModal').classList.contains('hidden')) { try { pbRefresh('talk', true); } catch (e) {} }
-            } catch (e) { console.error(e); say('공유에 실패했습니다. 잠시 후 다시 시도해 주세요.'); }
+                openCommunity();
+                setCommTab('free');
+                pbWrite('free', '', { title: title, text: text, kind: '정보' });
+            } catch (e) { console.error(e); showAlertToast({ head: '공유', title: '글쓰기 화면을 열지 못했습니다. 잠시 후 다시 시도해 주세요.' }); }
+        }
+        // 글 속의 http(s) 주소를 눌러서 바로 새 탭으로 열 수 있게 함 (esc 처리된 글에만 사용)
+        function linkifyHtml(h) {
+            return String(h).replace(/(https?:\/\/[^\s<>"']+)/g, (m) => {
+                let u = m, tail = '';
+                const t = u.match(/[).,!?;:\]]+$/); if (t) { tail = t[0]; u = u.slice(0, -tail.length); }
+                return `<a href="${u}" target="_blank" rel="noopener noreferrer" class="text-blue-600 dark:text-blue-400 underline break-all">${u}</a>${tail}`;
+            });
         }
 
         function tryEmbedArticle(id) {
@@ -7815,7 +7820,7 @@
                             <div class="min-w-0 leading-tight"><button onclick="showProfile('${esc(p.uid)}')" class="text-sm font-bold text-slate-800 dark:text-slate-100 hover:underline">${esc(displayName(p.uid, p.nick))}${mine ? ' (나)' : ''}</button>
                                 <div class="text-[0.6875rem] text-slate-400">${timeAgo(p.ts)} · 조회 ${p.views || 0}${p.place ? ' · 📍' + esc(p.place) : ''}</div></div>
                         </div>
-                        ${p.text ? `<div class="mt-3 text-[0.9375rem] leading-relaxed text-slate-800 dark:text-slate-100 break-words" style="white-space: pre-line;">${esc(p.text)}</div>` : ''}
+                        ${p.text ? `<div class="mt-3 text-[0.9375rem] leading-relaxed text-slate-800 dark:text-slate-100 break-words" style="white-space: pre-line;">${linkifyHtml(esc(p.text))}</div>` : ''}
                         ${media}${liveBtn}${sosNote}
                         ${b === 'talk' ? factRow('talk', p, mine) : ''}
                         <div class="mt-4 flex flex-wrap items-center gap-2">
@@ -7830,7 +7835,7 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-2"><b class="text-xs text-slate-800 dark:text-slate-100">${esc(displayName(r.uid, r.nick))}${r.uid === p.uid ? ' <span class="text-[0.5625rem] px-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">글쓴이</span>' : ''}</b><span class="text-[0.625rem] text-slate-400">${timeAgo(r.ts)}</span>
                                         ${r.uid === COMM_UID ? `<button onclick="pbDelete('${b}', '${esc(r.id)}', true)" class="ml-auto text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : reportBtn('comment:' + b, r.id, r.uid, 'ml-auto text-[0.625rem] text-slate-400 hover:text-red-500')}</div>
-                                    <div class="text-[0.8125rem] text-slate-700 dark:text-slate-200 break-words mt-0.5" style="white-space: pre-line;">${esc(r.text)}</div>
+                                    <div class="text-[0.8125rem] text-slate-700 dark:text-slate-200 break-words mt-0.5" style="white-space: pre-line;">${linkifyHtml(esc(r.text))}</div>
                                 </div></div>`).join('')
                             : '<div class="text-xs text-slate-400 py-4 text-center">첫 댓글을 남겨 보세요.</div>'}
                     </section>
@@ -7888,13 +7893,18 @@
             showReportGuide({ kind: p.type === 'sos' ? 'SOS(긴급)' : (p.kind || guessReportKind(p.text)), place: p.place || '', text: (p.title ? p.title + '\n' : '') + (p.text || ''), ts: p.ts, hasMedia: !!(p.img || p.video) });
         }
         // ---- 글쓰기 ----
-        function pbWrite(b, type) {
+        function pbWrite(b, type, pre) {
             if (!myTown) return;
             const P = PB[b];
             pbDraft = { type: type || (b === 'talk' ? 'report' : ''), kind: P.filterKey === 'kind' && P.filters ? P.filters[0][0] : '', img: null, video: null };
+            if (pre) { pbDraft.pre = pre; if (pre.kind) pbDraft.kind = pre.kind; }   // 기사 공유처럼 미리 채워 둘 제목·내용
             pbUi[b].view = 'write';
             pbRefresh(b, true);
-            setTimeout(() => { const t = document.getElementById('pbTitle'); if (t) t.focus(); }, 30);
+            setTimeout(() => {
+                const t = document.getElementById('pbTitle'), x = document.getElementById('pbText');
+                if (pre && x) { x.focus(); x.setSelectionRange(x.value.length, x.value.length); x.scrollTop = x.scrollHeight; }
+                else if (t) t.focus();
+            }, 60);
         }
         function pbSetType(t) {
             if (t === 'live') { pbUi.talk.view = 'list'; pbRefresh('talk', true); openLiveStart(); return; }   // 실시간 방송은 방송 시작 창으로
@@ -7934,8 +7944,8 @@
                 <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3 bg-slate-50 dark:bg-slate-950/40">
                     ${typeCards}${kinds}${b === 'talk' ? `<div><div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">어떤 일인가요? <span class="font-normal text-slate-400">(고르지 않으면 내용을 보고 자동으로 붙어요)</span></div><div id="pbThemes" class="flex flex-wrap gap-1.5">${pbThemesHtml()}</div></div>` : ''}
                     ${P.tip ? `<div class="text-[0.6875rem] text-slate-500 leading-relaxed" style="white-space: normal;">${esc(P.tip)}</div>` : ''}
-                    <input id="pbTitle" maxlength="60" placeholder="제목을 입력하세요" class="${inp} font-bold">
-                    <textarea id="pbText" rows="8" maxlength="1000" placeholder="${esc(ph)}" class="${inp} resize-y leading-relaxed" style="min-height: 9rem;"></textarea>
+                    <input id="pbTitle" maxlength="60" placeholder="제목을 입력하세요" value="${esc((pbDraft.pre && pbDraft.pre.title) || '')}" class="${inp} font-bold">
+                    <textarea id="pbText" rows="8" maxlength="1000" placeholder="${esc(ph)}" class="${inp} resize-y leading-relaxed" style="min-height: 9rem;">${esc((pbDraft.pre && pbDraft.pre.text) || '')}</textarea>
                     <div class="flex flex-wrap items-center gap-2">
                         <input id="pbFile" type="file" accept="${P.video ? 'image/*,video/*' : 'image/*'}" class="hidden" onchange="pbPickFile('${b}', this)">
                         <button type="button" onclick="document.getElementById('pbFile').click()" class="px-3 py-2 rounded-xl border border-dashed border-slate-400 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800"><i class="fa-regular fa-image"></i> ${P.video ? '사진·동영상' : '사진'} 올리기</button>
