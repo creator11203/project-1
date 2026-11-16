@@ -17,6 +17,13 @@
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>우리동네 사건사고 - 전국 실시간 관제 시스템</title>
+    <meta name="description" content="우리동네 사건사고는 전국의 화재·교통사고·범죄·실종·재난 등 국내 사건사고 기사를 지역별로 분류해 지도와 목록으로 보여 주고, 내 동네에서 일어난 사건을 빠르게 알려 주는 실시간 안전 정보 서비스입니다.">
+    <link rel="canonical" href="https://www.townalert.kr/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="우리동네 사건사고">
+    <meta property="og:title" content="우리동네 사건사고 - 전국 실시간 관제 시스템">
+    <meta property="og:description" content="내 동네에서 지금 일어난 사건사고를 지도와 목록으로 빠르게 확인하세요.">
+    <meta property="og:url" content="https://www.townalert.kr/">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -531,6 +538,23 @@
         <div id="resizer2" class="resizer hidden lg:block"></div>
         <section id="rightPane" style="flex: 1; min-width: 240px;" class="bg-white dark:bg-slate-900 h-full relative overflow-hidden"></section>
     </main>
+
+    <!-- 사이트 정보 링크 (소개·이용 가이드·개인정보처리방침·이용약관·문의) -->
+    <footer id="siteFooter" class="shrink-0 flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 px-3 py-1 text-[0.6875rem] text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
+        <a href="about.html" target="_blank" rel="noopener" class="hover:underline">서비스 소개</a>
+        <a href="guide.html" target="_blank" rel="noopener" class="hover:underline">사건사고 대처 가이드</a>
+        <a href="privacy.html" target="_blank" rel="noopener" class="font-bold hover:underline">개인정보처리방침</a>
+        <a href="terms.html" target="_blank" rel="noopener" class="hover:underline">이용약관</a>
+        <a href="contact.html" target="_blank" rel="noopener" class="hover:underline">문의·신고</a>
+        <span class="hidden sm:inline">© 우리동네 사건사고 · 기사는 각 언론사 소유이며 제목과 원문 링크만 제공합니다</span>
+    </footer>
+    <noscript>
+        <div style="padding:16px;font-size:14px;line-height:1.7">
+            <h1 style="font-size:18px;font-weight:bold">우리동네 사건사고</h1>
+            <p>전국의 화재·교통사고·범죄·실종·재난 등 국내 사건사고 기사를 지역별로 분류해 지도와 목록으로 보여 주는 실시간 안전 정보 서비스입니다. 이 서비스는 JavaScript가 필요합니다.</p>
+            <p><a href="about.html">서비스 소개</a> · <a href="guide.html">사건사고 대처 가이드</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="terms.html">이용약관</a> · <a href="contact.html">문의·신고</a></p>
+        </div>
+    </noscript>
 
     <!-- 패널 4개 (화면 설정에 따라 위의 3칸 또는 떠 있는 창으로 옮겨집니다) -->
     <div id="panelStore" class="hidden">
@@ -4013,6 +4037,54 @@
             refreshAfterBlock();
             showAlertToast({ head: '차단', title: (nick || '이웃') + '님을 차단했습니다.', foot: '커뮤니티 위쪽의 [차단 관리]에서 풀 수 있습니다' });
         }
+        // ================= 신고하기 (글·댓글·일상 게시물·이웃) =================
+        //  부적절한 글(욕설·혐오·허위 제보·개인정보 노출·음란·광고·불법 정보)을 운영자에게 알림.
+        //  서버(Firebase) 연결 시 reports 컬렉션에 저장되고, 연결 전 체험 모드에서는 이 기기에만 기록됨.
+        //  신고한 글은 신고한 사람 화면에서 바로 가려지고, 같은 이웃을 바로 차단할 수도 있음.
+        const REPORT_REASONS = ['욕설·혐오·비방', '허위 사실·가짜 제보', '개인정보 노출·사생활 침해', '음란·선정적 내용', '광고·스팸·도배', '불법 정보·범죄 조장', '기타'];
+        let reportedIds = (() => { try { return new Set(JSON.parse(lsGet('comm_reported') || '[]')); } catch (e) { return new Set(); } })();
+        function reportBtn(kind, id, uid, cls) {
+            if (!id || !uid || uid === COMM_UID) return '';
+            return `<button onclick="openContentReport('${kind}', '${esc(id)}', '${esc(uid)}')" title="부적절한 글 신고하기" class="${cls || 'text-[0.625rem] text-slate-400 hover:text-red-500'}">🚩 신고</button>`;
+        }
+        function reportSnippet(kind, id) {
+            try {
+                const [k, b] = kind.split(':');
+                let o = null;
+                if (k === 'msg') o = commMessages.concat(freeMessages).find(x => x.id === id);
+                else if (k === 'post') o = PB[b].list().find(x => x.id === id);
+                else if (k === 'comment') o = pbComments(b, openedPbId(b)).find(x => x.id === id);
+                else if (k === 'feed') o = feedFind(feedOpen.uid, feedOpen.id);
+                return o ? String(o.title || o.text || '(사진·동영상)').slice(0, 200) : '';
+            } catch (e) { return ''; }
+        }
+        function openedPbId(b) { try { return pbUi[b].id; } catch (e) { return ''; } }
+        function openContentReport(kind, id, uid) {
+            openSheet(`
+                <div class="p-5 space-y-3 max-w-md w-full">
+                    <div class="flex items-start justify-between gap-2">
+                        <div><div class="text-sm font-extrabold text-slate-900 dark:text-white">🚩 신고하기</div>
+                            <div class="text-[0.6875rem] text-slate-500 mt-0.5">운영자가 확인해 사이트 규칙에 어긋나면 글을 숨기거나 삭제합니다. 신고한 사람은 상대에게 알려지지 않아요.</div></div>
+                        <button onclick="closeSheet()" class="shrink-0 w-8 h-8 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="space-y-1.5">${REPORT_REASONS.map((r, i) => `<label class="flex items-center gap-2 text-sm text-slate-800 dark:text-slate-100 cursor-pointer"><input type="radio" name="reportReason" value="${esc(r)}" ${i === 0 ? 'checked' : ''}> ${esc(r)}</label>`).join('')}</div>
+                    <textarea id="reportDetail" maxlength="300" rows="2" placeholder="자세한 내용 (선택)" class="w-full text-xs p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"></textarea>
+                    <div class="text-[0.625rem] text-slate-400 leading-relaxed">생명이 위급하거나 범죄 피해를 입었다면 먼저 <b>112·119</b>에 신고하세요. 이 신고는 사이트 운영자에게만 전달됩니다.</div>
+                    <button onclick="submitContentReport('${esc(kind)}', '${esc(id)}', '${esc(uid)}')" class="w-full py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-bold">신고 접수</button>
+                </div>`);
+        }
+        async function submitContentReport(kind, id, uid) {
+            const sel = document.querySelector('input[name="reportReason"]:checked');
+            const rec = { kind: kind, targetId: id, targetUid: uid, reason: sel ? sel.value : '기타', detail: (document.getElementById('reportDetail') || {}).value || '', snippet: reportSnippet(kind, id),
+                town: myTown ? townName(myTown) : '', reporter: COMM_UID, ts: Date.now() };
+            let sent = false;
+            try { const db = await commInit(); if (db) { await db.collection('reports').add(rec); sent = true; } } catch (e) { console.error(e); }
+            if (!sent) { try { const l = JSON.parse(lsGet('comm_reports') || '[]'); l.unshift(rec); lsSet('comm_reports', JSON.stringify(l.slice(0, 100))); } catch (e) {} }
+            reportedIds.add(id); lsSet('comm_reported', JSON.stringify(Array.from(reportedIds).slice(-500)));
+            closeSheet();
+            showAlertToast({ head: '🚩 신고 접수', title: sent ? '신고가 접수되었습니다. 운영자가 확인합니다.' : '신고를 기록했습니다. (서버 연결 전에는 이 기기에만 저장됩니다)', foot: '이 글은 내 화면에서 숨겨집니다. 이웃 프로필의 [차단하기]로 서로 안 보이게 할 수도 있어요.' });
+            try { renderCommMessages(); if (typeof renderFreeMessages === 'function') renderFreeMessages(); if (typeof pbRefresh === 'function') { ['talk', 'free', 'praise', 'hello', 'wish'].forEach(b => { try { if (PB[b] && pbUi[b] && pbUi[b].view === 'post' && pbUi[b].id === id) pbBack(b); } catch (e) {} }); } } catch (e) {}
+        }
         async function unblockUser(uid) {
             delete blocked[uid];
             await saveBlocks();
@@ -4551,7 +4623,7 @@
                     <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
                         <div class="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                             <b>동네 인증</b>을 하면 우리 동(洞) 이웃끼리 사건·사고를 제보·공유하고, 아이를 잃어버렸을 때처럼 급한 일에는 <b class="text-red-600">SOS</b>를 보낼 수 있습니다.<br>
-                            <span class="text-xs text-slate-500">예) 개포1동에 살면 ‘개포동’ 전체 이웃이 함께 보는 게시판에 들어갑니다. 위치는 동네 확인과 지도의 ‘내 위치’ 표시에만 쓰이고, 이 기기에만 저장됩니다.</span>
+                            <span class="text-xs text-slate-500">예) 개포1동에 살면 ‘개포동’ 전체 이웃이 함께 보는 게시판에 들어갑니다. 위치(좌표)는 동네 확인과 지도의 ‘내 위치’ 표시에만 쓰이고 이 기기에만 저장됩니다. 다만 동네 이름을 찾으려고 인증하는 순간 좌표가 지도 서비스(OpenStreetMap)에 한 번 전달됩니다. <a href="privacy.html" target="_blank" rel="noopener" class="underline">자세히</a></span>
                         </div>
                         <button onclick="verifyTown()" id="commVerifyBtn" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow"><i class="fa-solid fa-location-crosshairs"></i> 현재 위치로 동네 인증하기</button>
                         <p id="commStatus" class="text-xs text-amber-600 dark:text-amber-400"></p>
@@ -4730,6 +4802,7 @@
 
         // 글 목록 (대화창 형태: 오래된 글이 위, 새 글이 아래)
         function renderCommMsg(m, delFn) {
+            if (reportedIds.has(m.id)) return '';      // 내가 신고한 글은 내 화면에서 숨김
             const ctx = delFn === 'freeDelete' ? 'free' : 'talk';
             const mine = m.uid === COMM_UID, sos = m.type === 'sos', rep = m.type === 'report', lv = m.type === 'live';
             const lvOn = lv && liveIsOn(m.liveId);
@@ -4759,7 +4832,7 @@
                         </div>
                         ${factRow(ctx, m, mine)}
                         ${reactRow(ctx, m, mine)}
-                        ${mine ? `<button onclick="${delFn || 'commDelete'}('${esc(m.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500 mt-0.5 px-1 rounded bg-white/70 dark:bg-slate-900/70">삭제</button>` : ''}
+                        ${mine ? `<button onclick="${delFn || 'commDelete'}('${esc(m.id)}')" class="text-[0.625rem] text-slate-400 hover:text-red-500 mt-0.5 px-1 rounded bg-white/70 dark:bg-slate-900/70">삭제</button>` : reportBtn('msg', m.id, m.uid, 'text-[0.625rem] text-slate-400 hover:text-red-500 mt-0.5 px-1 rounded bg-white/70 dark:bg-slate-900/70')}
                     </div>
                 </div>`;
         }
@@ -4863,7 +4936,7 @@
                     </div>
                     ${mine ? '' : `<div class="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700">${iBlocked(uid)
                         ? `<button onclick="unblockUser('${esc(uid)}')" class="text-[0.6875rem] font-bold text-emerald-600 hover:underline">차단 해제하기</button>`
-                        : `<button onclick="blockUser('${esc(uid)}', profileShown.nick, profileShown.emoji)" class="text-[0.6875rem] font-bold text-red-500 hover:underline">🚫 이 이웃 차단하기</button>`}</div>`}
+                        : `<button onclick="blockUser('${esc(uid)}', profileShown.nick, profileShown.emoji)" class="text-[0.6875rem] font-bold text-red-500 hover:underline">🚫 이 이웃 차단하기</button> <button onclick="openContentReport('user','${esc(uid)}', '${esc(uid)}')" class="ml-3 text-[0.6875rem] font-bold text-slate-500 hover:underline">🚩 신고하기</button>`}</div>`}
                 </div>`;
             card.classList.remove('hidden');
             profileShown = { uid: uid, nick: m.nick || '이웃', emoji: m.emoji || '🙂', photo: m.photo || '', area: area };
@@ -5007,7 +5080,7 @@
                 <div class="flex flex-wrap items-center gap-1.5 pt-1">
                     <button onclick="feedHeart()" class="px-2.5 py-1 rounded-full border text-xs font-bold transition ${heartOn ? 'border-rose-400 bg-rose-50 dark:bg-rose-950/50 text-rose-600' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-rose-300'}">${heartOn ? '❤️' : '🤍'} ${feedCount(p.hearts)}</button>
                     ${FEED_REACTS.map(e => `<button onclick="feedReact('${e}')" title="감정 표현" class="px-2 py-1 rounded-full border text-xs transition ${myReact === e ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/50 font-bold' : 'border-slate-200 dark:border-slate-700 hover:border-amber-300'}">${e}${rc[e] ? ' ' + rc[e] : ''}</button>`).join('')}
-                    ${own ? `<button onclick="feedDelete()" class="ml-auto text-[0.6875rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}
+                    ${own ? `<button onclick="feedDelete()" class="ml-auto text-[0.6875rem] text-slate-400 hover:text-red-500">삭제</button>` : reportBtn('feed', p.id, p.uid, 'ml-auto text-[0.6875rem] text-slate-400 hover:text-red-500')}
                 </div>
                 <div class="pt-2 border-t border-slate-100 dark:border-slate-800">
                     <div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">💬 댓글 ${p.comments || 0}</div>
@@ -7144,8 +7217,8 @@
         let pbDraft = { type: 'report', kind: '', img: null, video: null };
         const pbViewed = new Set();          // 이번 접속에서 이미 조회수를 올린 글
         function pbIsComment(m) { return !!m.parent || m.type === 'reply' || m.type === 'comment'; }
-        function pbPosts(b) { return PB[b].list().filter(m => !pbIsComment(m) && !isBlocked(m.uid)); }
-        function pbComments(b, id) { return PB[b].list().filter(m => pbIsComment(m) && m.parent === id && !isBlocked(m.uid)).sort((a, c) => a.ts - c.ts); }
+        function pbPosts(b) { return PB[b].list().filter(m => !pbIsComment(m) && !isBlocked(m.uid) && !reportedIds.has(m.id)); }
+        function pbComments(b, id) { return PB[b].list().filter(m => pbIsComment(m) && m.parent === id && !isBlocked(m.uid) && !reportedIds.has(m.id)).sort((a, c) => a.ts - c.ts); }
         function pbLikes(b, p) {
             const n = (p[PB[b].like] || []).length;
             if (PB[b].like !== 'likes') return n;
@@ -7306,7 +7379,7 @@
             return `<div class="shrink-0 flex items-center gap-2 px-2 py-1.5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                     <button onclick="pbBack('${b}')" class="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-chevron-left"></i> 목록</button>
                     <span class="text-xs text-slate-400 truncate">${esc(P.name)}</span>
-                    ${mine ? `<button onclick="pbDelete('${b}', '${esc(p.id)}')" class="ml-auto px-2 py-1 rounded-lg text-[0.6875rem] text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"><i class="fa-regular fa-trash-can"></i> 삭제</button>` : ''}
+                    ${mine ? `<button onclick="pbDelete('${b}', '${esc(p.id)}')" class="ml-auto px-2 py-1 rounded-lg text-[0.6875rem] text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40"><i class="fa-regular fa-trash-can"></i> 삭제</button>` : reportBtn('post:' + b, p.id, p.uid, 'ml-auto px-2 py-1 rounded-lg text-[0.6875rem] text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/40')}
                 </div>
                 <div id="pbPostScroll" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900">
                     <article class="px-4 pt-4 pb-3">
@@ -7331,7 +7404,7 @@
                                 <button onclick="showProfile('${esc(r.uid)}')" class="shrink-0">${avatarHtml(r, 'w-7 h-7', 'text-sm')}</button>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-2"><b class="text-xs text-slate-800 dark:text-slate-100">${esc(displayName(r.uid, r.nick))}${r.uid === p.uid ? ' <span class="text-[0.5625rem] px-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">글쓴이</span>' : ''}</b><span class="text-[0.625rem] text-slate-400">${timeAgo(r.ts)}</span>
-                                        ${r.uid === COMM_UID ? `<button onclick="pbDelete('${b}', '${esc(r.id)}', true)" class="ml-auto text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : ''}</div>
+                                        ${r.uid === COMM_UID ? `<button onclick="pbDelete('${b}', '${esc(r.id)}', true)" class="ml-auto text-[0.625rem] text-slate-400 hover:text-red-500">삭제</button>` : reportBtn('comment:' + b, r.id, r.uid, 'ml-auto text-[0.625rem] text-slate-400 hover:text-red-500')}</div>
                                     <div class="text-[0.8125rem] text-slate-700 dark:text-slate-200 break-words mt-0.5" style="white-space: pre-line;">${esc(r.text)}</div>
                                 </div></div>`).join('')
                             : '<div class="text-xs text-slate-400 py-4 text-center">첫 댓글을 남겨 보세요.</div>'}
@@ -10034,7 +10107,7 @@
             document.addEventListener('keydown', tourKey); window.addEventListener('resize', tourRender);
             tourRender();
         }
-        window.addEventListener('load', () => { setTimeout(() => { if (!tourSkipped()) openTour(0); }, 700); });
+        // 첫 방문 때 사용 안내를 자동으로 띄우지 않음 (처음 보는 사람도 바로 사건 목록·지도를 볼 수 있게). 상단 [사용 안내] 버튼을 눌렀을 때만 열림
 
         // 맨 위 제목 줄(속보 바 포함)의 아래쪽 위치를 재서, 가운데 창(커뮤니티 등)이 제목 줄·속보 바 밑에서 시작하게 함
         // (창이 화면 맨 위부터 꽉 차 있어서 윗부분이 제목 줄과 겹치던 문제)
