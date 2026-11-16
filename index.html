@@ -210,13 +210,13 @@
             #siteFooter > .m-only { flex-basis: 100%; text-align: center; font-size: 9px; line-height: 1.3; color: #94a3b8; }
             #mobileTabs { display: flex; flex-shrink: 0; background: #fff; border-top: 1px solid #e2e8f0; padding-bottom: env(safe-area-inset-bottom); }
             .dark #mobileTabs { background: #0f172a; border-top-color: #1e293b; }
-            #mobileTabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 5px; font-size: 11px; font-weight: 700; color: #64748b; }
-            #mobileTabs button i { font-size: 17px; }
+            #mobileTabs button { flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px 0; color: #64748b; }
+            #mobileTabs button i { font-size: 20px; }
             #mobileTabs button.on { color: #4f46e5; box-shadow: inset 0 2px 0 #4f46e5; }
             .dark #mobileTabs button.on { color: #a5b4fc; box-shadow: inset 0 2px 0 #818cf8; }
             #layoutPanel { display: none !important; }
             /* 커뮤니티 맨 위 큰 탭(안전망·동네 이야기·장터…): 한 줄에 억지로 넣지 않고, 탭마다 글씨가 다 보이는 크기로 두고 옆으로 밀어서 봄 */
-            #commTabBar > .grid, #commSampleBar > .grid { display: flex !important; overflow-x: auto; overflow-y: hidden; gap: 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+            #commTabBar > .grid, #commSampleBar > .grid { position: relative; display: flex !important; overflow-x: auto; overflow-y: hidden; gap: 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
             #commTabBar > .grid::-webkit-scrollbar, #commSampleBar > .grid::-webkit-scrollbar { display: none; }
             #commTabBar > .grid > button, #commSampleBar > .grid > div { flex: 0 0 auto; min-width: 78px; padding: 8px 10px 7px; scroll-snap-align: center; gap: 4px; }
             #commTabBar > .grid > button > span:nth-child(2), #commSampleBar > .grid > div > span:nth-child(2) { font-size: 12px; max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap; }
@@ -256,8 +256,8 @@
             #groupButtons button[data-cat="범죄 다발 지역"] { display: none; }
             #groupButtons > span.ml-auto { flex-wrap: wrap; width: 100%; margin-left: 0; padding-left: 0; border-left: 0; }
             /* 오른쪽 아래 '지난 알림' 버튼: 맨 아래 모서리에 붙임 (아래 탭 바로 위, 푸터 오른쪽 빈 자리) */
-            #alertLogBtn { bottom: calc(50px + env(safe-area-inset-bottom)) !important; right: 6px !important; width: 42px !important; height: 42px !important; font-size: 16px !important; }
-            #alertLogPanel { right: 8px !important; bottom: calc(98px + env(safe-area-inset-bottom)) !important; }
+            #alertLogBtn { bottom: calc(42px + env(safe-area-inset-bottom)) !important; right: 6px !important; width: 42px !important; height: 42px !important; font-size: 16px !important; }
+            #alertLogPanel { right: 8px !important; bottom: calc(90px + env(safe-area-inset-bottom)) !important; }
         }        /* 3칸 영역을 하나의 층으로 묶어서, 칸 안의 버튼(알림·안전시설·지도 모양)이 위에 뜨는 창(커뮤니티 등)을 뚫고 나오지 않게 함 */
         #splitContainer { isolation: isolate; position: relative; z-index: 0; }
         #floatModal { z-index: 1000; top: var(--hdr-h, 0px); }   /* 제목 줄·속보 바 아래에서 시작 → 창이 속보 바와 겹치지 않음 */
@@ -626,9 +626,9 @@
     </footer>
     <!-- 휴대폰 전용 아래 탭 (PC에서는 숨김) -->
     <nav id="mobileTabs" aria-label="화면 전환">
-        <button type="button" data-mt="list" class="on" onclick="setMobTab('list')"><i class="fa-solid fa-list-ul"></i><span>사건 목록</span></button>
-        <button type="button" data-mt="article" onclick="setMobTab('article')"><i class="fa-solid fa-newspaper"></i><span>분류·기사</span></button>
-        <button type="button" data-mt="map" onclick="setMobTab('map')"><i class="fa-solid fa-map-location-dot"></i><span>지도</span></button>
+        <button type="button" data-mt="list" class="on" onclick="setMobTab('list')" aria-label="사건 목록" title="사건 목록"><i class="fa-solid fa-list-ul"></i></button>
+        <button type="button" data-mt="article" onclick="setMobTab('article')" aria-label="분류·기사" title="분류·기사"><i class="fa-solid fa-newspaper"></i></button>
+        <button type="button" data-mt="map" onclick="setMobTab('map')" aria-label="지도" title="지도"><i class="fa-solid fa-map-location-dot"></i></button>
     </nav>
     <noscript>
         <div style="padding:16px;font-size:14px;line-height:1.7">
@@ -10135,11 +10135,16 @@
         const TOUR_TAB = { 1: 'list', 2: 'list', 3: 'article', 4: 'map' };
         function tourBuildSteps() {
             if (!isMobile()) return TOUR_ALL;
-            return TOUR_ALL.map((s, i) => Object.assign({}, s, { tab: TOUR_TAB[i], _i: i })).filter(s => s._i !== 7).map(s => {
+            const steps = TOUR_ALL.map((s, i) => Object.assign({}, s, { tab: TOUR_TAB[i], _i: i })).filter(s => s._i !== 7).map(s => {
                 if (s._i === 3) return Object.assign(s, { title: '분류 버튼 · 기사 원문', text: '[분류] 줄을 누르면 펼쳐져요. 교통·화재·범죄 같은 종류만 골라서 볼 수 있고, 다시 누르면 접혀서 기사 원문을 넓게 볼 수 있어요. 목록에서 기사를 누르면 원문 요약이 열려요.', target: () => document.getElementById('catToggleRow') });
                 if (s._i === 8) return Object.assign(s, { icon: '🌙', title: '라이트 / 다크 모드', text: '오른쪽 위 달 모양 버튼으로 밝은 화면과 어두운 화면을 바꿀 수 있어요. 이 안내는 왼쪽의 [?] 버튼으로 언제든 다시 볼 수 있어요.', target: () => document.getElementById('themeBtn') });
                 return s;
             });
+            // 환영 다음에: 맨 아래 탭 3개(아이콘만 있음)가 각각 무엇인지 설명. 이 단계만 설명 카드를 위쪽에 둠
+            steps.splice(1, 0, { icon: '👇', title: '아래 아이콘으로 화면 옮기기', pos: 'top', target: () => document.getElementById('mobileTabs'), _i: 'tabs',
+                text: '휴대폰에서는 화면이 좁아서 한 번에 한 화면씩 보여 드려요. 맨 아래 아이콘 3개를 눌러 화면을 옮겨 다니세요.',
+                bullets: ['📋 왼쪽 [목록 모양]: 사건 목록. 지역·날짜를 고르고 사건을 훑어봐요', '📰 가운데 [신문 모양]: 분류 버튼으로 종류를 거르고, 기사 원문 요약과 7일간 다발 지역 순위를 봐요', '🗺️ 오른쪽 [지도 모양]: 사건이 일어난 위치를 지도로 확인해요'] });
+            return steps;
         }
         let TOUR_STEPS = TOUR_ALL;
         const tourState = { i: 0, open: false, commOpen: false, tok: 0 };
@@ -10179,6 +10184,9 @@
             const tile = myTown
                 ? (() => { const i = commGroupsOrdered().findIndex(g => g.k === group); return bar.firstElementChild && bar.firstElementChild.children[i]; })()
                 : bar.querySelector('[data-g="' + group + '"]');
+            // 휴대폰: 큰 탭 줄이 옆으로 밀리는 줄이라, 비출 탭이 화면 밖이면 줄 가운데로 가져옴
+            const trow = tile && tile.parentElement;
+            if (trow && trow.scrollWidth > trow.clientWidth + 2) trow.scrollLeft = Math.max(0, tile.offsetLeft - (trow.clientWidth - tile.offsetWidth) / 2);
             if (part === 'rest') {
                 const subs = myTown ? bar.children[1] : document.getElementById('commSampleSubs');
                 const posts = myTown ? document.getElementById('commMain') : document.getElementById('commSamplePosts');
@@ -10210,7 +10218,7 @@
             // 커뮤니티 창은 열릴 때 .22초 동안 아래에서 올라오며(pop-in) 자리가 움직이므로, 첫 계산 값은 어긋나 있음
             //  → 움직임이 끝날 때까지 몇 번 다시 재서 테두리를 정확한 자리에 맞춤 (이전 단계에서 넘어올 때 테두리가 겹쳐 보이던 문제)
             const tok = ++tourState.tok;
-            [60, 160, 320, 600, 1000].forEach(ms => setTimeout(() => { if (tourState.open && tok === tourState.tok) tourPlace(); }, ms));
+            [60, 160, 320, 600, 1000, 1600, 2400].forEach(ms => setTimeout(() => { if (tourState.open && tok === tourState.tok) tourPlace(); }, ms));
             const card = document.getElementById('tourCard');
             card.innerHTML = `
                 <button onclick="tourClose()" class="tour-x" aria-label="안내 닫기" title="닫기"><i class="fa-solid fa-xmark"></i></button>
@@ -10241,7 +10249,8 @@
             // 휴대폰: 비추는 곳이 화면 아래쪽이면 설명 카드를 위로, 위쪽이면 아래로 (비추는 곳을 가리지 않게)
             const cardEl = document.getElementById('tourCard');
             if (cardEl) {
-                if (isMobile()) { const low = r && (r.top + r.height / 2) > innerHeight * 0.5; cardEl.style.top = low ? '.5rem' : 'auto'; cardEl.style.bottom = low ? 'auto' : '.5rem'; }
+                // 설명 카드는 단계마다 자리가 정해져 있어 왔다 갔다 하지 않음: 맨 아래 탭을 설명할 때만 위쪽, 나머지는 모두 아래쪽 고정
+                if (isMobile()) { const top = s.pos === 'top'; cardEl.style.top = top ? '.5rem' : 'auto'; cardEl.style.bottom = top ? 'auto' : '.5rem'; }
                 else { cardEl.style.top = ''; cardEl.style.bottom = ''; }
             }
             const spot = document.getElementById('tourSpot'), dim = document.getElementById('tourDim');
@@ -10320,6 +10329,7 @@
             const h = document.getElementById('appHeader');
             if (!h) return;
             document.documentElement.style.setProperty('--hdr-h', Math.max(0, Math.round(h.getBoundingClientRect().bottom)) + 'px');
+            if (typeof tourState !== 'undefined' && tourState.open) setTimeout(tourPlace, 50);     // 제목 줄이 숨거나 나타나서 자리가 밀리면 안내 테두리도 다시 맞춤
         }
         window.addEventListener('resize', syncHeaderH);
         window.addEventListener('load', () => { syncHeaderH(); setTimeout(syncHeaderH, 400); });
