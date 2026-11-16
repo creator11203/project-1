@@ -1373,9 +1373,14 @@
             tagsOf(news).forEach(s => { const g = SUB_TO_GROUP[s]; if (g && g !== OVERSEAS && !gs.includes(g)) gs.push(g); });
             return gs;
         }
+        // 출소한 성범죄자가 어느 동네에 거주하게 됐다는 소식 (scraper.py 의 EXOFF 와 같은 기준 · 예전 기사에도 바로 적용)
+        const EXOFF_TITLE = /(?:성범죄자?|성폭행범|성폭력범|성범죄\s*전과자|성범죄\s*출소자|아동\s*성범죄자?|조두순|전자\s*발찌\s*(?:착용|부착)\s*(?:출소자|전과자|대상자)?|흉악범\s*출소자|출소자)[^.…]{0,24}(?:거주|이사|입주|이주|정착|주민\s*(?:불안|반발|항의|대책|청원)|이웃\s*주의|우리\s*동네)|(?:출소|거주지)[^.…]{0,12}주민\s*(?:불안|반발|항의|대책|청원)/;
+        const EXOFF_EXCL = /선정|입찰|공모|지원\s*사업|설명회|교육|캠페인|협약|조례|예산|토론회|세미나|포럼|방안|공고|정책|개정|계획|전망|분석|취업|자립|재활|치료|퇴치|징역|선고|재판/;
+        function isExoff(news) { return !!(news.exoff || (EXOFF_TITLE.test(news.title || '') && !EXOFF_EXCL.test(news.title || ''))); }
         function tagBadges(news, size) {
             const cls = size === 'lg' ? 'text-xs px-2 py-0.5' : 'text-[0.625rem] px-2 py-0.5';
-            return tagsOf(news).map((s, i) => {
+            const exoff = isExoff(news) ? `<span class="${cls} rounded border border-fuchsia-500 bg-fuchsia-600 text-white font-extrabold" title="출소한 성범죄자의 거주지 소식 — 해당 지역 주민이 알아야 할 정보">📍 성범죄자 거주지</span>` : '';
+            return exoff + tagsOf(news).map((s, i) => {
                 const g = isOverseas(news) ? OVERSEAS : (SUB_TO_GROUP[s] || groupOf(news));
                 return `<span class="${cls} rounded border ${CATEGORY_GROUPS[g].badge} font-bold ${i ? 'opacity-90' : ''}">${esc(i ? s : (news.category || s))}</span>`;
             }).join('');
