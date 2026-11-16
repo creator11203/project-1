@@ -52,12 +52,10 @@
         #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 999px; min-height: 26vh; border: 2px solid transparent; background-clip: content-box; }
         #detailViewContainer:has(#hotspotList):hover::-webkit-scrollbar-thumb { background-color: #fb7185; }
         #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb:hover { background-color: #e11d48; }
-        #hotspotList::-webkit-scrollbar { width: 12px; } #hotspotList::-webkit-scrollbar-thumb { min-height: 26vh; border-radius: 999px; }
+        #hotspotList::-webkit-scrollbar { width: 12px; } #hotspotList::-webkit-scrollbar-thumb { min-height: 26vh; border-radius: 999px; background: #94a3b8; }
         .dark #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-track { background: #1e293b; }
         .dark #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb { background-color: #64748b; }
         .dark #detailViewContainer:has(#hotspotList):hover::-webkit-scrollbar-thumb { background-color: #fb7185; }
-        #detailViewContainer:has(#hotspotList) { scrollbar-width: auto; scrollbar-color: #94a3b8 #e2e8f0; }
-        #detailViewContainer:has(#hotspotList):hover { scrollbar-color: #e11d48 #e2e8f0; }
         .dark .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
         .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
         /* 왼쪽 기사 목록 스크롤바: 넓고(12px) 손잡이 최소 64px, 칸 조정 막대(회색)와 구분되는 남색 */
@@ -3094,13 +3092,9 @@
             p.innerHTML = `
                 <div class="flex items-center justify-between mb-2"><b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-columns"></i> 화면 설정</b><button onclick="toggleLayoutPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button></div>
                 <div class="flex gap-1.5 mb-2">${cnt(2)}${cnt(3)}</div>
-                <p class="text-[0.6875rem] text-slate-500 mb-2 leading-relaxed">화면 ${paneCount}칸에 어떤 화면을 놓을지 고르세요. 칸을 누르면 다음 화면으로 바뀌고, 아래 목록에서 바로 고를 수도 있습니다. 같은 화면을 고르면 두 칸이 서로 자리를 바꿉니다.</p>
-                <div class="grid gap-1 mb-2" style="grid-template-columns: repeat(${slots.length}, 1fr);">${slots.map(i => `<button type="button" onclick="cycleSlot(${i})" title="${names[i]}: 누르면 다음 화면으로 바꿉니다" class="rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 hover:border-emerald-400 active:scale-95 transition p-1.5 text-center"><div class="text-[0.625rem] text-slate-400">${names[i]}</div><i class="fa-solid ${PANELS[layout[i]].icon} text-emerald-500"></i><div class="text-[0.625rem] font-bold text-slate-700 dark:text-slate-200 leading-tight">${PANELS[layout[i]].short}</div></button>`).join('')}</div>
                 ${slots.map(i => `
                     <label class="block text-[0.6875rem] text-slate-500 mb-0.5">${names[i]}</label>
-                    <select onchange="setSlot(${i}, this.value)" class="${inp} mb-2">${Object.keys(PANELS).map(x => `<option value="${x}" ${x === layout[i] ? 'selected' : ''}>${PANELS[x].label}</option>`).join('')}</select>`).join('')}
-                <div class="text-[0.6875rem] text-slate-500 mb-2">버튼으로 여는 화면: <b class="text-slate-800 dark:text-slate-100">${hiddenPanels().map(x => PANELS[x].label).concat(isDocked('briefing') ? [] : [PANELS.briefing.label]).join(', ')}</b> <span class="text-slate-400">(상단 오른쪽 버튼)</span></div>
-                <p class="text-[0.625rem] text-slate-400 leading-relaxed">칸 사이의 세로 막대(⇄)를 끌면 칸 너비를 바꿀 수 있습니다.</p>`;
+                    <select onchange="setSlot(${i}, this.value)" class="${inp} mb-2">${Object.keys(PANELS).map(x => `<option value="${x}" ${x === layout[i] ? 'selected' : ''}>${PANELS[x].label}</option>`).join('')}</select>`).join('')}`;
         }
         function setSlot(i, key) {
             if (!PANELS[key] || layout[i] === key) return;
@@ -3109,11 +3103,6 @@
             layout[i] = key;
             applyLayout();
             renderLayoutPanel();
-        }
-        // 칸 미리보기(왼쪽 칸·가운데 칸·오른쪽 칸 버튼)를 누르면 그 칸의 화면을 다음 화면으로 바꿈
-        function cycleSlot(i) {
-            const keys = Object.keys(PANELS);
-            setSlot(i, keys[(keys.indexOf(layout[i]) + 1) % keys.length]);
         }
         function setLayoutPreset(i) { layout = LAYOUT_PRESETS[i][1].slice(); applyLayout(); renderLayoutPanel(); }
 
