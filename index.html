@@ -804,8 +804,16 @@
         const ACTING_ROLE = /(?:[가-힣]{1,6}범|범인|살인마|살인자|악역|가해자|괴물|사이코패스|연쇄\s*[가-힣]{2,6}|조폭|깡패|스토커|변태|빌런|악당)[^.…"”]{0,4}연기(?!\s*(?:가\s*|를\s*)?(?:치솟|자욱|가득|피어|흡입|뿜|나오|나는|속))|연기\s*(?:잘|력|변신|호평|열연|내공|천재|도전)|(?:눈빛|표정|분위기|열연|호연)[^.…]{0,8}(?:소름|긴장감|압도)|연기(?:를|가)\s*(?:너무|정말)?\s*잘/;
         const DISPATCH_PROMO = /출동\s*(?:준비|채비|대기)\s*(?:완료|끝|중)?|출동\s*완료|(?:깨끗이|빨아서|빨아|씻어|닦아)\s*[^.…]{0,6}출동|출동\s*(?:합니다|해요|한다)\s*[!~♪]|출동\s*[!~♪]/;
         const DISPATCH_REAL = /경찰|소방|119|112|구급|구조|해경|특공대|특수\s*부대|사고|화재|부상|사망|숨져|신고|환자|응급|재난|산불|폭우|침수|폭발|추락|실종|시신/;
+        // 점쟁이·무속인 예언 ('北김정은 2년 안에 사망… 무속인 1000만원 걸었다') · 관광·행락 홍보 ('방문객 몰려드는 경주… 관광도시 도약')
+        //  (scraper.py 의 FORTUNE_RE · TOURISM_RE 와 같은 기준 — 수집기를 다시 올리기 전에 모아 둔 news.json 에도 바로 적용)
+        const FORTUNE_TITLE = /무속인|점쟁이|역술인|점술가|(?<![가-힣])무당(?![가-힣])|신점|타로|운명전쟁|사주\s*(?:풀이|팔자|궁합|카페|를\s*보)|사주풀이|예언|신통|점괘|(?<![가-힣])도사(?![가-힣])|예지몽|\d+\s*만원\s*(?:내)?걸/;
+        const FORTUNE_REAL = /검거|구속|체포|입건|송치|적발|붙잡|사기|횡령|성추행|폭행/;
+        const TOURISM_TITLE = /관광\s*(?:도시|객|지|산업|명소|수요|활성화|벨트|단지|코스|상품|공사)|방문객|탐방객|관람객|여행객|상춘객|행락객|단풍객|나들이객|성수기|성황|흥행|도약|활성화|북적|인기몰이|발길\s*(?:이어|잇|끊)|핫플|명소|단풍\s*(?:절정|명소|구경)|(?:벚꽃|꽃)\s*(?:축제|구경|명소)|축제|개장|개막|오픈런|맛집|힐링|관광/;
+        const TOURISM_REAL = /불법|단속|범행|혐의|범죄|살해|살인|강도|추행|성폭|마약|방화|해킹|사고|부상|다쳐|다친|다쳤|쓰러|이송|압사|사망|숨|대피|구조|실신|심정지|추락|화재|불이|폭발|붕괴|난동|소동|폭행|경찰|소방|119|112|통제|정체|마비|검거|구속|입건|체포|적발|피해|사기|바가지|절도|소매치기|납치|실종|익사|조난|고립|침수|주의보|경보|특보|산불|충돌|추돌|전복|감염|식중독|확진|정전|단전|고장|중단|취소|폐쇄|차질|지연|결항|파손|훼손|무너|균열|낙석|싱크홀|지진|태풍|호우|폭설|한파|혼잡|포화|대란|체증|만차|극심/;
         function notIncidentTitle(t) {
-            if (isPartyPolitics(t)) return true;                                // 정치 공방·징계 기사 (위치와 상관없는 기사)
+            if (FORTUNE_TITLE.test(t) && !FORTUNE_REAL.test(t)) return true;     // 무속인·점쟁이 예언은 근거 없는 발언
+            if (TOURISM_TITLE.test(t) && !TOURISM_REAL.test(t)) return true;     // 관광지가 인기라는 홍보·경제 기사
+            if (isPartyPolitics(t)) return true;                              // 정치 공방·징계 기사 (위치와 상관없는 기사)
             if (ACTING_ROLE.test(t) && !STRICT_FACT.test(t)) return true;       // 배우가 범인 역을 연기했다는 이야기 (실제 범죄 아님)
             if (DISPATCH_PROMO.test(t) && !DISPATCH_REAL.test(t)) return true;  // '출동 준비 완료' 같은 홍보 비유
             if (/애정\s*전선|의미\s*심장|[♥♡❤]|열애설|결별설|불화설|재결합|럽스타/.test(t) && !REAL_FACT.test(t)) return true;   // 연예 가십 ('애정전선 이상 무'의 '정전' 오인)
@@ -845,6 +853,8 @@
             try { localStorage.setItem('sel_cats', JSON.stringify(Array.from(selCats))); localStorage.setItem('ex_cats', JSON.stringify(Array.from(exCats))); localStorage.setItem('cat_mode', catMode); } catch (e) {}
         }
         let selectedHotspotRegion = null;
+        let hotspotStat = null;           // 최근 7일 사건 중 몇 건이 다발 지역 집계에 들어갔는지
+        let hotspotScrollTop = 0;        // 다발 지역 순위 목록의 스크롤 위치 (기사 보고 돌아와도 유지)
         let selectedNewsId = null;
         let map, markersLayer;
         let currentFontSizePx = 16;
@@ -1986,7 +1996,7 @@
             markersLayer.clearLayers();
 
             if (currentCategory === '범죄 다발 지역') {
-                getCrimeHotspotsData().forEach((stat, idx) => {
+                getCrimeHotspotsData().slice(0, 30).forEach((stat, idx) => {     // 지도에는 상위 30곳만 표시 (순위 목록은 전체)
                     let size = Math.min(40, 16 + stat.count * 4);
                     let color = idx === 0 ? '#dc2626' : (idx === 1 ? '#ea580c' : '#f59e0b');
                     const icon = L.divIcon({
@@ -2353,6 +2363,15 @@
         function hotspotEvents() {
             const evs = groupEvents(newsData.filter(n => inLast7(n) && n.source !== '시스템' && !isCourt(n) && catPass(n)));
             evs.forEach(ev => { ev.region = eventRegion(ev); });
+            // 집계에서 빠진 사건이 얼마나 되는지 (화면 안내문에 보여 줌: 위치를 못 찾았거나 시·도까지만 알려진 사건은 어느 시·군·구인지 몰라 셀 수 없음)
+            const st = { total: evs.length, counted: 0, abroad: 0, sido: 0, unknown: 0 };
+            evs.forEach(ev => {
+                if (ev.region) { st.counted++; return; }
+                if (ev.items.every(n => isOverseas(n) || (n.location || '').startsWith('북한'))) st.abroad++;
+                else if (ev.items.some(n => (n.location || '') && precOf(n) === 'sido')) st.sido++;
+                else st.unknown++;
+            });
+            hotspotStat = st;
             return evs.filter(ev => ev.region);
         }
         // 시·군·구별 '사건 수' (종류가 다른 사건마다 1건, 같은 사건을 다룬 기사 여러 개는 1건). 왼쪽 목록도 똑같은 기준
@@ -2370,16 +2389,26 @@
                 const c = SIGUNGU_CENTERS[s.region] || SIGUNGU_CENTERS[s.region.split(' ').slice(0, 2).join(' ')];
                 const types = Object.keys(s.types).sort((a, b) => s.types[b] - s.types[a]).map(g => ({ g: g, n: s.types[g] }));
                 return { region: s.region, count: s.count, articles: s.articles, types: types, lat: c ? c[0] : s.lat, lng: c ? c[1] : s.lng };
-            }).filter(s => s.lat != null).sort((a, b) => (b.count - a.count) || (b.articles - a.articles)).slice(0, 30);
+            }).filter(s => s.lat != null).sort((a, b) => (b.count - a.count) || (b.articles - a.articles)).slice(0, 300);   // 예전에는 30위까지만 보여서 31위 이하 지역의 사건은 순위에서 통째로 사라졌음
         }
 
         function renderCrimeHotspotsView(keepScroll) {
             hotspotArticleOpen = false;
             const container = document.getElementById('detailViewContainer');
             const oldList = document.getElementById('hotspotList');
-            const keepTop = keepScroll && oldList ? oldList.scrollTop : 0;
+            // 실제로 스크롤되는 칸은 순위 목록이 아니라 바깥 칸(detailViewContainer)이라 거기의 위치를 기억함
+            //  (기사를 보러 갔다 와도, 다발 지역 버튼을 다시 눌러도 보던 순위 위치로 돌아가도록)
+            if (oldList) hotspotScrollTop = Math.max(container.scrollTop, oldList.scrollTop);
+            const keepTop = keepScroll ? hotspotScrollTop : 0;
+            if (!container._hotspotScrollBound) {
+                container._hotspotScrollBound = true;
+                container.addEventListener('scroll', () => { if (document.getElementById('hotspotList')) hotspotScrollTop = container.scrollTop; }, { passive: true });
+            }
             let listHTML = '';
-            getCrimeHotspotsData().forEach((item, index) => {
+            const hsData = getCrimeHotspotsData();       // (이 안에서 hotspotStat 이 갱신됨)
+            const hs = hotspotStat;
+            const hsNote = hs ? `<p class="text-xs mt-2 font-bold text-rose-700 dark:text-rose-300">최근 7일 사건 ${hs.total}건 중 시·군·구까지 확인되어 집계된 사건 ${hs.counted}건 · 빠진 사건: 위치 미확인 ${hs.unknown}건, 시·도까지만 확인 ${hs.sido}건${hs.abroad ? ', 해외·북한 ' + hs.abroad + '건' : ''} · 총 ${hsData.length}개 지역</p>` : '';
+            hsData.forEach((item, index) => {
                 let isSelected = selectedHotspotRegion === item.region;
                 listHTML += `
                     <div onclick="selectHotspotRegion('${esc(item.region)}', ${item.lat}, ${item.lng})" class="bg-white dark:bg-slate-900 border ${isSelected ? 'border-red-500 bg-red-50/50' : 'border-slate-200 dark:border-slate-800'} p-3 rounded-xl flex items-center justify-between cursor-pointer hover:border-red-400 transition">
@@ -2402,24 +2431,28 @@
                     <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/25">
                         <h2 class="text-base font-extrabold text-slate-900 dark:text-white">🚨 최근 7일간 전국 사건사고 다발 지역</h2>
                         <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">오늘 포함 최근 7일 동안 서로 다른 사건마다 1건으로 셉니다. 같은 사건을 다룬 기사 여러 개는 1건으로 묶고, 사건 하나는 위치가 가장 자세한 지역 한 곳에만 셉니다. 해외·위치 미상·시·도까지만 알려진 기사, 그리고 ⚖️ 재판·판결 소식(예전 사건의 후속 보도)과 법원·검찰 소재지로만 위치가 잡힌 기사는 빠집니다.${selCats.size || exCats.size ? ' <b class="text-rose-600">지금 고른 분류 기준으로 집계 중입니다.</b>' : ''} 지역을 누르면 왼쪽에 그 지역 사건이 정리됩니다.</p>
+                        ${hsNote}
                     </div>
                     <div id="hotspotList" class="space-y-2.5 flex-1 overflow-y-auto custom-scrollbar">${listHTML}</div>
                 </div>
             `;
-            if (keepTop) document.getElementById('hotspotList').scrollTop = keepTop;
+            const newList = document.getElementById('hotspotList');
+            newList.addEventListener('scroll', () => { hotspotScrollTop = newList.scrollTop || hotspotScrollTop; }, { passive: true });
+            container.scrollTop = keepTop;
+            if (keepTop) newList.scrollTop = Math.min(keepTop, newList.scrollHeight);
         }
 
         function selectHotspotRegion(region, lat, lng) {
             selectedHotspotRegion = region;
             renderLimit = 100;
-            renderCrimeHotspotsView();
+            renderCrimeHotspotsView(true);
             renderNewsList();
             const list = document.getElementById('newsListContainer');
             if (list) list.scrollTop = 0;
             if (map) map.flyTo([lat, lng], 12, { duration: 1.2 });
         }
         function backToHotspots() {
-            renderCrimeHotspotsView();
+            renderCrimeHotspotsView(true);
             renderNewsList();
         }
 
@@ -2591,7 +2624,7 @@
             updateMapMarkers();
             if (cat === '범죄 다발 지역') {
                 renderNewsList();
-                renderCrimeHotspotsView();
+                renderCrimeHotspotsView(true);      // 다발 지역 버튼을 다시 눌러도 보던 순위 위치를 유지
                 if (!isDocked('article')) openFloat('article');   // 다발 지역 순위는 기사 원문 화면에 나오므로, 칸에 없으면 창으로 보여 줌
             } else {
                 renderNewsList();
