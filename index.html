@@ -1486,8 +1486,8 @@
         let hotspotArticleOpen = false;   // 다발 지역 화면에서 기사를 보고 있는 중인지
         const expandedEvents = new Set();  // '관련 기사'를 펼친 사건
         const READ_WIDTH = 820;            // 기사 원문을 가운데에 놓을 때의 폭(px)
-        let articleMode = 'fit';           // 'fit': 칸 너비에 맞춤(PC 화면을 통째로 축소) / 'mobile': 모바일형(글씨 크게)
-        try { const am = localStorage.getItem('article_mode'); articleMode = (am === 'mobile' || am === 'whole') ? am : 'fit'; } catch (e) {}
+        let articleZoom = 100;             // 기사 원문 글씨 배율(%): 아래 슬라이더를 끌어서 50~250 사이로 세밀하게 조절
+        try { const az = parseInt(localStorage.getItem('article_zoom'), 10); if (az >= 50 && az <= 250) articleZoom = az; } catch (e) {}
 
         // ================= 공통 도우미 =================
         function esc(s) {
@@ -2708,9 +2708,10 @@
                         <iframe id="articleFrame" src="${esc(embedUrl)}" referrerpolicy="no-referrer"
                             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                             style="position:absolute; top:0; left:0; border:0; background:#fff; transform-origin:0 0; box-shadow:0 0 24px rgba(0,0,0,.25);"></iframe>
-                        <div style="position:absolute; right:14px; bottom:14px; z-index:5; opacity:.9;" class="flex items-center gap-1.5">
-                            <button onclick="toggleArticleMode()" title="기사 보는 방식 바꾸기" class="${fab}"><i class="fa-solid fa-arrows-left-right"></i> 보기: ${articleMode === 'fit' ? '읽기 좋은 크기' : (articleMode === 'mobile' ? '모바일형' : '전체 축소')} (바꾸기)</button>
-                            <a href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="기사가 보이지 않으면 눌러서 새 창으로 여세요" class="${fab}"><i class="fa-solid fa-arrow-up-right-from-square"></i> 새 창</a>
+                        <div style="position:absolute; right:14px; bottom:14px; z-index:5; opacity:.92;" class="flex items-center gap-2 text-[0.6875rem] font-bold text-white bg-slate-900/80 px-3 py-1.5 rounded-full shadow-lg">
+                            <span class="whitespace-nowrap">글씨 크기</span>
+                            <input id="articleZoom" type="range" min="50" max="250" step="1" value="${articleZoom}" oninput="setArticleZoom(this.value)" aria-label="기사 글씨 크기 조절" style="width:8rem; accent-color:#818cf8; cursor:pointer;">
+                            <button id="articleZoomVal" type="button" onclick="setArticleZoom(100, true)" title="누르면 100%로 되돌립니다" class="w-11 text-right tabular-nums hover:text-indigo-300">${articleZoom}%</button>
                         </div>
                     </div>`;
                 fitArticleFrame();
@@ -2827,10 +2828,13 @@
             renderDetailView(id);
             n.embed = saved; n.orig = savedOrig;
         }
-        function toggleArticleMode() {
-            articleMode = articleMode === 'fit' ? 'mobile' : (articleMode === 'mobile' ? 'whole' : 'fit');
-            try { localStorage.setItem('article_mode', articleMode); } catch (e) {}
-            if (selectedNewsId) renderDetailView(selectedNewsId);
+        function setArticleZoom(v, syncSlider) {
+            v = Math.max(50, Math.min(250, parseInt(v, 10) || 100));
+            articleZoom = v;
+            try { localStorage.setItem('article_zoom', String(v)); } catch (e) {}
+            const lab = document.getElementById('articleZoomVal'); if (lab) lab.textContent = v + '%';
+            if (syncSlider) { const s = document.getElementById('articleZoom'); if (s) s.value = v; }
+            fitArticleFrame();
         }
 
         // 기사 원문 배치: 언제나 '이 칸의 너비'에 기사 전체가 들어오게 맞춥니다. (옆으로 넘겨 보는 가로 스크롤이 생기지 않게)
@@ -2844,20 +2848,10 @@
             const w = wrap.clientWidth, h = wrap.clientHeight;
             if (!w || !h) return;
             const fontFactor = currentFontSizePx / 16;
-            let shown, virtualWidth;
-            if (articleMode === 'fit') {
-                // 읽기 좋은 크기(기본): 글씨가 너무 작아지지 않도록 최소 0.9배(× 글씨 크기 설정) 이상으로 보여 줍니다.
-                // 칸이 넓으면 PC 화면 그대로, 칸이 좁으면 언론사 페이지가 태블릿·모바일 배치로 바뀌어 글씨가 큼직하게 보입니다.
-                shown = w;
-                const scale0 = Math.max(w / ARTICLE_BASE_WIDTH, 0.9 * fontFactor);
-                virtualWidth = Math.max(360, w / scale0);
-            } else if (articleMode === 'whole') {
-                shown = w;
-                virtualWidth = Math.max(w, ARTICLE_BASE_WIDTH / fontFactor);   // PC 화면 전체를 칸에 맞게 축소 (글씨는 작아짐)
-            } else {
-                shown = Math.min(w, Math.round(ARTICLE_MOBILE_WIDTH * 1.5 * fontFactor));
-                virtualWidth = Math.min(shown, ARTICLE_MOBILE_WIDTH);
-            }
+            // 기본(100%): 글씨가 너무 작아지지 않도록 최소 0.9배(× 글씨 크기 설정). 슬라이더 배율을 곱해 50%~250% 로 연속 조절
+            const shown = w;
+            const scale0 = Math.max(w / ARTICLE_BASE_WIDTH, 0.9 * fontFactor) * (articleZoom / 100);
+            const virtualWidth = Math.max(200, w / scale0);
             const scale = shown / virtualWidth;
             frame.style.left = Math.round((w - shown) / 2) + 'px';
             frame.style.width = virtualWidth + 'px';
@@ -3333,34 +3327,34 @@
         const APP_LINKS = { android: '', ios: '' };
         function closeAppModal() { document.getElementById('appModal').classList.add('hidden'); }
         async function openAppModal() {
-            const site = location.origin + location.pathname;
-            const links = { android: APP_LINKS.android || site, ios: APP_LINKS.ios || site };
-            const ready = !!(APP_LINKS.android || APP_LINKS.ios);
+            // QR 코드는 항상 이 웹사이트(모바일 브라우저로 열림)를 가리킴. 앱은 APP_LINKS 에 주소가 들어가기 전까지 '준비중' 으로 표시
+            const site = location.origin + '/';
             const box = document.getElementById('appModalBox');
+            const appBadge = (icon, name, color, url) => url
+                ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-2 text-xs font-bold ${color}"><i class="${icon}"></i> ${name} 앱 받기</a>`
+                : `<div class="flex-1 flex flex-col items-center rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/60 px-2 py-2 opacity-80"><span class="text-xs font-bold ${color}"><i class="${icon}"></i> ${name} 앱</span><span class="mt-0.5 px-2 py-0.5 rounded-full bg-slate-700 text-white text-[0.625rem] font-extrabold">준비중</span></div>`;
             box.innerHTML = `
-                <div class="flex items-center justify-between mb-3"><b class="text-base text-slate-900 dark:text-white"><i class="fa-solid fa-mobile-screen-button text-emerald-500"></i> 휴대폰 앱으로 이용하기</b><button onclick="closeAppModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button></div>
-                <p class="text-xs text-slate-600 dark:text-slate-300 mb-3">휴대폰 카메라로 QR 코드를 비추면 바로 열립니다.</p>
-                <div class="grid grid-cols-2 gap-3">
-                    ${[['android', 'fa-brands fa-android', '안드로이드', 'text-emerald-600'], ['ios', 'fa-brands fa-apple', '아이폰', 'text-slate-800 dark:text-white']].map(x => `
-                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 text-center">
-                        <div class="text-sm font-bold ${x[3]} mb-2"><i class="${x[1]}"></i> ${x[2]}</div>
-                        <div class="relative mx-auto inline-block">
-                            <div id="qr_${x[0]}" class="mx-auto bg-white p-2 rounded-lg inline-block" style="min-width:164px;min-height:164px;"></div>
-                            ${APP_LINKS[x[0]] ? '' : '<div class="absolute inset-0 flex items-center justify-center pointer-events-none"><span class="px-3 py-1.5 rounded-lg bg-slate-900/90 text-white text-sm font-extrabold shadow-lg">준비중</span></div>'}
-                        </div>
-                        ${APP_LINKS[x[0]] ? `<a href="${esc(links[x[0]])}" target="_blank" rel="noopener noreferrer" class="block mt-2 text-[0.625rem] text-blue-500 break-all hover:underline">${esc(links[x[0]])}</a>` : ''}
-                    </div>`).join('')}
+                <div class="flex items-center justify-between mb-3"><b class="text-base text-slate-900 dark:text-white"><i class="fa-solid fa-mobile-screen-button text-emerald-500"></i> 휴대폰으로 이용하기</b><button onclick="closeAppModal()" aria-label="닫기" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button></div>
+                <div class="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 p-3 text-center">
+                    <div class="text-sm font-extrabold text-indigo-700 dark:text-indigo-300 mb-1"><i class="fa-solid fa-globe"></i> 모바일 웹으로 바로 이용</div>
+                    <p class="text-xs text-slate-600 dark:text-slate-300 mb-2">휴대폰 카메라로 QR 코드를 비추면 모바일 브라우저에서 바로 열립니다.</p>
+                    <div id="qr_web" class="mx-auto bg-white p-2 rounded-lg inline-block" style="min-width:176px;min-height:176px;"></div>
+                    <a href="${esc(site)}" target="_blank" rel="noopener noreferrer" class="block mt-2 text-[0.6875rem] text-blue-500 break-all hover:underline">${esc(site)}</a>
                 </div>
-                ${ready ? '' : `<div class="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-[0.6875rem] text-amber-800 dark:text-amber-200 leading-relaxed">
-                    아직 앱 장터에 올린 앱이 없어서 QR 코드는 <b>이 웹사이트</b>로 연결됩니다. 휴대폰에서 연 뒤 아래처럼 하면 앱처럼 쓸 수 있습니다.<br>
+                <div class="mt-3"><div class="text-[0.6875rem] font-bold text-slate-500 dark:text-slate-400 mb-1.5">전용 앱</div>
+                    <div class="flex gap-2">${appBadge('fa-brands fa-android', '안드로이드', 'text-emerald-600', APP_LINKS.android)}${appBadge('fa-brands fa-apple', '아이폰', 'text-slate-800 dark:text-white', APP_LINKS.ios)}</div>
+                    ${(APP_LINKS.android && APP_LINKS.ios) ? '' : '<p class="mt-1.5 text-[0.6875rem] text-slate-500 dark:text-slate-400">앱은 준비 중입니다. 그동안은 모바일 웹으로 똑같이 이용할 수 있어요.</p>'}
+                </div>
+                <div class="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-2 text-[0.6875rem] text-amber-800 dark:text-amber-200 leading-relaxed">
+                    <b>앱처럼 쓰려면</b> 휴대폰에서 연 뒤 홈 화면에 추가하세요.<br>
                     · <b>안드로이드(크롬)</b>: 오른쪽 위 ⋮ → <b>홈 화면에 추가</b><br>
-                    · <b>아이폰(사파리)</b>: 아래 공유 버튼 → <b>홈 화면에 추가</b></div>`}`;
+                    · <b>아이폰(사파리)</b>: 아래 공유 버튼 → <b>홈 화면에 추가</b></div>`;
             document.getElementById('appModal').classList.remove('hidden');
             try {
                 await loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js');
-                ['android', 'ios'].forEach(k => { const el = document.getElementById('qr_' + k); el.innerHTML = ''; new QRCode(el, { text: links[k], width: 160, height: 160 }); });
+                const el = document.getElementById('qr_web'); el.innerHTML = ''; new QRCode(el, { text: site, width: 168, height: 168 });
             } catch (e) {
-                ['android', 'ios'].forEach(k => { const el = document.getElementById('qr_' + k); if (el) el.innerHTML = '<div class="text-[0.6875rem] text-slate-500 p-4">QR 코드를 만들지 못했습니다.<br>아래 주소로 접속해 주세요.</div>'; });
+                const el = document.getElementById('qr_web'); if (el) el.innerHTML = '<div class="text-[0.6875rem] text-slate-500 p-4">QR 코드를 만들지 못했습니다.<br>아래 주소로 접속해 주세요.</div>';
             }
         }
 
