@@ -1746,47 +1746,88 @@
             }
             if (!show) { if (map.hasLayer(stationLayer)) map.removeLayer(stationLayer); return; }
             if (!map.hasLayer(stationLayer)) stationLayer.addTo(map);
-            // 화면 안에서 아직 안 받아 온 칸만 모아서 한 번에 물음
+            // ① 수집기(scraper.py)가 미리 모아 둔 전국 경찰·소방 목록(stations.json)이 있으면 그걸로 즉시 표시 — 공개 지도 서버(Overpass)는 자주 붐비거나 멈춰서
+            //    '찾는 중'이 몇십 초씩 걸렸음(실제로 502·504·무응답). 파일은 사이트와 같은 곳에 있어 서버를 기다릴 일이 없음
+            if (stationDB === undefined) { loadStationDB(); return; }
+            if (stationDB === null) return;
+            if (Array.isArray(stationDB)) {
+                const bb = map.getBounds().pad(0.25);
+                stationDB.forEach(r => { if (!stationSeen.has(r.id) && bb.contains([r.lat, r.lng])) stnAdd(r); });
+                return;
+            }
+            // ② 파일이 아직 없으면 예전처럼 공개 지도 서버에 물음
+            // 화면 안에서 아직 안 받아 온 칸을 찾음. 이 기기에 저장해 둔 칸(7일)은 서버에 묻지 않고 바로 그림 → 두 번째부터는 거의 즉시 표시
             const bd = map.getBounds(), c = STATION_CELL;
             const need = [];
             for (let la = Math.floor(bd.getSouth() / c); la <= Math.floor(bd.getNorth() / c); la++)
-                for (let ln = Math.floor(bd.getWest() / c); ln <= Math.floor(bd.getEast() / c); ln++)
-                    if (!stationCells.has(la + ',' + ln)) need.push([la, ln]);
-            if (!need.length || stationBusy || need.length > 16) return;
-            const s = Math.min(...need.map(x => x[0])) * c, n = (Math.max(...need.map(x => x[0])) + 1) * c;
-            const w = Math.min(...need.map(x => x[1])) * c, e = (Math.max(...need.map(x => x[1])) + 1) * c;
-            const bbox = [s, w, n, e].map(v => v.toFixed(3)).join(',');
-            const query = `[out:json][timeout:25];(nwr["amenity"="police"](${bbox});nwr["amenity"="fire_station"](${bbox}););out center tags 800;`;
-            const servers = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+                for (let ln = Math.floor(bd.getWest() / c); ln <= Math.floor(bd.getEast() / c); ln++) {
+                    const key = la + ',' + ln;
+                    if (stationCells.has(key)) continue;
+                    const cached = stnCacheGet(key);
+                    if (cached) { cached.forEach(stnAdd); stationCells.add(key); continue; }
+                    need.push([la, ln]);
+                }
+            if (!need.length || stationBusy || need.length > 40 || Date.now() < stationCool) return;
+            // 지도 가운데에 가까운 칸부터 최대 3칸씩 나눠서 물음 → 한 번에 큰 영역을 묻던 때보다 서버 응답이 훨씬 빠르고, 가운데 시설이 먼저 보임
+            const cx = map.getCenter().lat / c, cy = map.getCenter().lng / c;
+            need.sort((p, q) => Math.hypot(p[0] + .5 - cx, p[1] + .5 - cy) - Math.hypot(q[0] + .5 - cx, q[1] + .5 - cy));
+            const batch = need.slice(0, 3);
+            const q1 = batch.map(x => { const bb = [x[0] * c, x[1] * c, (x[0] + 1) * c, (x[1] + 1) * c].map(v => v.toFixed(3)).join(','); return `nwr["amenity"~"^(police|fire_station)$"](${bb});`; }).join('');
+            const query = `[out:json][timeout:12];(${q1});out center tags 400;`;
+            const servers = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
             const ctls = [];
-            const ask = url => new Promise((ok, no) => {
+            const ask = (url, ms) => new Promise((ok, no) => {
                 const ctl = window.AbortController ? new AbortController() : null;
-                if (ctl) { ctls.push(ctl); setTimeout(() => ctl.abort(), 30000); }
+                if (ctl) { ctls.push(ctl); setTimeout(() => ctl.abort(), ms); }
                 fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: ctl ? ctl.signal : undefined })
                     .then(r => r.ok ? r.json() : Promise.reject(r.status)).then(j => (j && Array.isArray(j.elements)) ? ok(j) : no('bad')).catch(no);
             });
+            // 4개 서버에 동시에 묻고 가장 먼저 온 답을 씀. 오래 걸리던 원인: 붐비는 서버가 30초 뒤에야 실패했고, 실패하면 곧바로 같은 요청을 끝없이 반복했음 → 서버당 10초로 줄이고, 모두 실패하면 한 번만 더 시도한 뒤 15초 쉼
+            const race = ms => new Promise((ok, no) => { let fails = 0; servers.forEach(u => ask(u, ms).then(ok, () => { if (++fails === servers.length) no('all failed'); })); });
             stationBusy = true; syncStationLabel();
-            new Promise((ok, no) => { let fails = 0; servers.forEach(u => ask(u).then(ok, () => { if (++fails === servers.length) no('all failed'); })); })
+            race(10000).catch(() => race(14000))
                 .then(data => {
-                    need.forEach(x => stationCells.add(x[0] + ',' + x[1]));
+                    const byCell = {};
+                    batch.forEach(x => { byCell[x[0] + ',' + x[1]] = []; });
                     (data.elements || []).forEach(el => {
                         const t = el.tags || {}, kind = t.amenity === 'police' ? 'police' : (t.amenity === 'fire_station' ? 'fire' : null);
                         const lat = el.lat != null ? el.lat : (el.center && el.center.lat), lng = el.lon != null ? el.lon : (el.center && el.center.lon);
                         if (!kind || lat == null || lng == null) return;
-                        const id = el.type + el.id;
-                        if (stationSeen.has(id)) return;
-                        stationSeen.add(id);
-                        const k = STATION_KINDS[kind];
-                        const name = t['name:ko'] || t.name || (kind === 'police' ? '경찰 시설' : '소방 시설');
-                        const phone = t.phone || t['contact:phone'] || '';
-                        L.marker([lat, lng], { icon: stationIcon(kind), zIndexOffset: 1500, title: name })
-                            .bindTooltip(esc(name), { direction: 'top', offset: [0, -12] })
-                            .bindPopup(`<div style="font-family:sans-serif;max-width:220px;"><span style="font-size:10px;background:${k.color};color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold;">${k.icon} ${kind === 'police' ? '경찰서·지구대·파출소' : '소방서·119안전센터'}</span><br><b style="font-size:12px;">${esc(name)}</b>${phone ? '<br><a style="font-size:11px;" href="tel:' + esc(phone.replace(/[^0-9+]/g, '')) + '">☎ ' + esc(phone) + '</a>' : ''}<br><span style="font-size:11px;color:#64748b;">긴급 신고는 ${kind === 'police' ? '112' : '119'}</span> · <a style="font-size:11px;" target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lng}">길찾기 ↗</a></div>`)
-                            .addTo(stationLayer);
+                        const rec = { id: el.type + el.id, kind: kind, lat: lat, lng: lng, name: t['name:ko'] || t.name || (kind === 'police' ? '경찰 시설' : '소방 시설'), phone: t.phone || t['contact:phone'] || '' };
+                        stnAdd(rec);
+                        const ck = Math.floor(lat / c) + ',' + Math.floor(lng / c);
+                        if (byCell[ck]) byCell[ck].push(rec);
                     });
+                    batch.forEach(x => { const k = x[0] + ',' + x[1]; stationCells.add(k); stnCacheSet(k, byCell[k] || []); });
                 })
-                .catch(() => {})                       // 서버가 모두 바쁘면 다음에 지도를 움직일 때 다시 시도
+                .catch(() => { stationCool = Date.now() + 15000; })       // 서버가 모두 바쁘면 15초 뒤 지도를 움직일 때 다시 시도
                 .finally(() => { ctls.forEach(x => { try { x.abort(); } catch (e) {} }); stationBusy = false; syncStationLayer(); });
+        }
+        // 이 기기에 저장해 둔 경찰·소방 시설 (칸 단위, 7일). 서버 응답을 기다리지 않고 바로 지도에 그리기 위함
+        const STN_PREFIX = 'stn_v1_', STN_TTL = 7 * 86400000;
+        let stationCool = 0;
+        let stationDB;     // undefined: 아직 안 불러옴 / null: 불러오는 중 / false: stations.json 없음 / 배열: 전국 목록
+        function loadStationDB() {
+            if (stationDB === null) return;
+            stationDB = null; stationBusy = true; syncStationLabel();
+            fetch('stations.json?v=' + Math.floor(Date.now() / 3600000), { cache: 'default' }).then(r => r.ok ? r.json() : Promise.reject(r.status))
+                .then(j => { stationDB = Array.isArray(j) && j.length > 100 ? j.map((a, i) => ({ id: 'd' + i, kind: a[0] === 'f' ? 'fire' : 'police', lat: a[1], lng: a[2], name: a[3] || (a[0] === 'f' ? '소방 시설' : '경찰 시설'), phone: a[4] || '' })) : false; })
+                .catch(() => { stationDB = false; })
+                .finally(() => { stationBusy = false; syncStationLayer(); });
+        }
+        function stnCacheGet(key) { try { const v = JSON.parse(localStorage.getItem(STN_PREFIX + key) || 'null'); if (v && Date.now() - v.ts < STN_TTL) return v.r; } catch (e) {} return null; }
+        function stnCacheSet(key, r) {
+            try { localStorage.setItem(STN_PREFIX + key, JSON.stringify({ ts: Date.now(), r: r })); }
+            catch (e) { try { const ks = Object.keys(localStorage).filter(k => k.startsWith(STN_PREFIX)); ks.slice(0, Math.ceil(ks.length / 2)).forEach(k => localStorage.removeItem(k)); } catch (e2) {} }
+        }
+        function stnAdd(rec) {
+            if (stationSeen.has(rec.id)) return;
+            stationSeen.add(rec.id);
+            const k = STATION_KINDS[rec.kind], kind = rec.kind, name = rec.name, phone = rec.phone, lat = rec.lat, lng = rec.lng;
+            L.marker([lat, lng], { icon: stationIcon(kind), zIndexOffset: 1500, title: name })
+                .bindTooltip(esc(name), { direction: 'top', offset: [0, -12] })
+                .bindPopup(`<div style="font-family:sans-serif;max-width:220px;"><span style="font-size:10px;background:${k.color};color:#fff;padding:2px 6px;border-radius:4px;font-weight:bold;">${k.icon} ${kind === 'police' ? '경찰서·지구대·파출소' : '소방서·119안전센터'}</span><br><b style="font-size:12px;">${esc(name)}</b>${phone ? '<br><a style="font-size:11px;" href="tel:' + esc(phone.replace(/[^0-9+]/g, '')) + '">☎ ' + esc(phone) + '</a>' : ''}<br><span style="font-size:11px;color:#64748b;">긴급 신고는 ${kind === 'police' ? '112' : '119'}</span> · <a style="font-size:11px;" target="_blank" rel="noopener noreferrer" href="https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lng}">길찾기 ↗</a></div>`)
+                .addTo(stationLayer);
         }
         function syncStationLabel() { syncStationLayerLabelOnly(); }
         function syncStationLayerLabelOnly() {
@@ -3320,10 +3361,10 @@
             document.querySelectorAll('#alertToasts .toast-card').forEach(el => el._close && el._close());
         }
         // ================= 지난 알림 목록 (오른쪽 아래 확성기 버튼) =================
-        //  알림창은 몇 초 뒤 사라져서 못 보고 지나갈 수 있으므로, 뜬 알림을 이 기기에 최근 100건까지 기록해 두고 다시 볼 수 있게 함
+        //  알림창은 몇 초 뒤 사라져서 못 보고 지나갈 수 있으므로, 뜬 알림을 이 기기에 최근 10건까지 기록해 두고 다시 볼 수 있게 함
         const ALERT_LOG_KEY = 'alert_log_v1', ALERT_LOG_SEEN = 'alert_log_seen';
         function alertLogLoad() { try { const a = JSON.parse(localStorage.getItem(ALERT_LOG_KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-        function alertLogSave(a) { try { localStorage.setItem(ALERT_LOG_KEY, JSON.stringify(a.slice(0, 100))); } catch (e) {} }
+        function alertLogSave(a) { try { localStorage.setItem(ALERT_LOG_KEY, JSON.stringify(a.slice(0, 10))); } catch (e) {} }
         function alertLogAdd(o) {
             if (!(o.newsId || o.danger || o.here || o.commTab || o.live || o.openCommunity || o.briefing)) return;   // '안내·확인' 같은 단순 알림은 기록하지 않음
             const a = alertLogLoad();
@@ -4593,7 +4634,7 @@
                     <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-left">
                         <div class="flex items-center justify-between mb-2">
                             <b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-cells"></i> ${mine ? '내 일상' : '일상 게시물'}</b>
-                            ${mine ? `<button onclick="openFeedComposer()" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-violet-600 text-white text-xs font-bold shadow"><i class="fa-solid fa-plus"></i> 새 게시물</button>` : ''}
+                            ${mine ? `<button onclick="openFeedComposer()" title="새 게시물 쓰기" aria-label="새 게시물 쓰기" class="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-rose-500 to-violet-600 text-white text-base shadow-lg ring-2 ring-white dark:ring-slate-900 flex items-center justify-center hover:scale-110 active:scale-95 transition"><i class="fa-solid fa-plus"></i></button>` : ''}
                         </div>
                         <div id="pfFeed"><div class="text-center py-8 text-xs text-slate-400">게시물을 불러오는 중…</div></div>
                     </div>
@@ -4702,7 +4743,7 @@
             const list = feedCache[uid] || [];
             const st = document.getElementById('pfStats'); if (st) st.innerHTML = feedStatsHtml(list);
             if (!list.length) {
-                box.innerHTML = `<div class="text-center py-10 text-slate-400"><div class="text-3xl mb-1">📷</div><div class="text-xs">${uid === COMM_UID ? '아직 게시물이 없습니다. [새 게시물]로 오늘의 일상을 기록해 보세요.' : '아직 올린 게시물이 없습니다.'}</div></div>`;
+                box.innerHTML = `<div class="text-center py-10 text-slate-400"><div class="text-3xl mb-1">📷</div><div class="text-xs">${uid === COMM_UID ? '아직 게시물이 없습니다. 오른쪽 위 ＋ 버튼으로 오늘의 일상을 기록해 보세요.' : '아직 올린 게시물이 없습니다.'}</div></div>`;
                 return;
             }
             // 칸 크기는 커뮤니티 화면 너비와 상관없이 고정(최대 7rem): 화면이 넓어도 커지지 않고, 아주 좁을 때만 3칸이 나란히 줄어듦
@@ -5565,7 +5606,7 @@
                 <div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
                     <div class="flex items-center justify-between mb-2">
                         <b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-cells text-rose-500"></i> 내 일상${feed ? ` <span class="text-xs font-semibold text-slate-400">${feed.length}</span>` : ''}</b>
-                        <button onclick="openFeedComposer()" class="px-2.5 py-1 rounded-lg bg-gradient-to-r from-rose-500 to-violet-600 text-white text-[0.6875rem] font-bold shadow"><i class="fa-solid fa-plus"></i> 새 게시물</button>
+                        <button onclick="openFeedComposer()" title="새 게시물 쓰기" aria-label="새 게시물 쓰기" class="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-rose-500 to-violet-600 text-white text-base shadow-lg ring-2 ring-white dark:ring-slate-900 flex items-center justify-center hover:scale-110 active:scale-95 transition"><i class="fa-solid fa-plus"></i></button>
                     </div>
                     <div id="pfFeed"><div class="text-center py-8 text-xs text-slate-400">게시물을 불러오는 중…</div></div>
                 </div>
