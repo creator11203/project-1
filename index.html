@@ -183,25 +183,31 @@
         /* 글씨 크기 조절은 1·2·3번 칸(과 창으로 뜨는 화면)에만 적용. 맨 위 제목 줄과 버튼 줄은 항상 100% 크기로 고정 */
         .fixed-scale { zoom: var(--fixed-zoom, 1); }
         /* ===== 휴대폰 화면: 칸 3개 대신 한 칸씩 보여 주고 아래 탭으로 넘김 ===== */
-        #mobileTabs { display: none; }
+        #mobileTabs, .m-only, #catToggleRow, .m-call { display: none; }
         @media (max-width: 767px), (max-height: 480px) and (pointer: coarse) {
             #appBody { height: 100vh; height: 100dvh; }
             .m-hide { display: none !important; }
-            #appHeader { flex-wrap: wrap; justify-content: flex-start; padding: 6px 10px; gap: 6px 8px; }
-            #appHeader > div:first-child { gap: 8px; }
-            #appHeader > div:first-child > div:first-child { width: 34px; height: 34px; }
-            #appHeader h1 { font-size: 15px; }
+            .m-only { display: block; }
+            /* 맨 위 줄: [로고+제목 ........ 안내·다크모드] / 아래 줄: 주요 버튼 3개를 화면 폭에 맞춰 나란히 */
+            #appHeader { flex-wrap: wrap; justify-content: flex-start; align-items: center; padding: 6px 10px 8px; gap: 6px 8px; }
+            #appHeader > div:first-child { flex: 1 1 0; min-width: 0; gap: 7px; }
+            #appHeader > div:first-child > * + * { margin-left: 0 !important; }
+            #appHeader > div:first-child > div:first-child { width: 36px; height: 36px; border-radius: 10px; }
+            #appHeader h1 { font-size: 15px; white-space: nowrap; }
             #appHeader h1 span, #appHeader h1 + p { display: none; }
-            #appHeader > div:last-child { width: 100%; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
-            #appHeader > div:last-child::-webkit-scrollbar { display: none; }
-            #appHeader > div:last-child > * { flex-shrink: 0; }
-            #appHeader .hero-sweep { flex-wrap: nowrap; }
-            #appHeader .hero-sweep button { font-size: 12px; padding: 7px 10px; }
+            #appHeader > div:last-child { display: contents; }
+            #appHeader .tool-group { order: 2; flex-shrink: 0; }
+            #appHeader #heroBtns { order: 3; width: 100%; gap: 6px; }
+            #appHeader #heroBtns > button, #appHeader #floatBtnWrap > button { flex: 1 1 0; min-width: 0; justify-content: center; font-size: 12px; padding: 8px 4px; gap: 4px; }
+            #appHeader #floatBtnWrap { display: contents; }
+            #appHeader #floatBtnWrap .comm-faces { display: none; }
+            #appHeader #floatBtnWrap > button { border-radius: 8px; }
             #splitContainer > section { width: 100% !important; min-width: 0 !important; flex: 1 1 0 !important; border-right: 0 !important; display: none; }
             #splitContainer[data-m="list"] > #leftPane, #splitContainer[data-m="article"] > #centerPane, #splitContainer[data-m="map"] > #rightPane { display: block; }
             #splitContainer > .resizer { display: none !important; }
-            #siteFooter { padding: 2px 8px; gap: 0 10px; }
-            #siteFooter > span { display: none; }
+            #siteFooter { padding: 2px 56px 2px 8px; gap: 0 10px; font-size: 10px; }
+            #siteFooter > span:not(.m-only) { display: none; }
+            #siteFooter > .m-only { flex-basis: 100%; text-align: center; font-size: 9px; line-height: 1.3; color: #94a3b8; }
             #mobileTabs { display: flex; flex-shrink: 0; background: #fff; border-top: 1px solid #e2e8f0; padding-bottom: env(safe-area-inset-bottom); }
             .dark #mobileTabs { background: #0f172a; border-top-color: #1e293b; }
             #mobileTabs button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 0 5px; font-size: 11px; font-weight: 700; color: #64748b; }
@@ -209,10 +215,33 @@
             #mobileTabs button.on { color: #4f46e5; box-shadow: inset 0 2px 0 #4f46e5; }
             .dark #mobileTabs button.on { color: #a5b4fc; box-shadow: inset 0 2px 0 #818cf8; }
             #layoutPanel { display: none !important; }
+            /* 지도 위 바로 전화 버튼 (119 소방·구급 / 112 경찰) */
+            .m-call { display: inline-flex; align-items: center; gap: 5px; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 800; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,.25); white-space: nowrap; text-decoration: none; }
+            .m-call-119 { background: #dc2626; border: 1px solid #b91c1c; }
+            .m-call-112 { background: #2563eb; border: 1px solid #1d4ed8; }
+            .m-call { flex: 1 1 40%; justify-content: center; padding: 8px 10px; }
+            #panel-map #mapStyleSelect { order: 5; flex: 0 0 auto; width: 9.5rem; }
+            .m-call:active { transform: scale(.96); }
+            /* 커뮤니티 창 맨 위: 크고 분명한 '← 사건 목록' 버튼 (✕ 만으로는 닫는 방법을 찾기 어려웠음) */
+            .comm-back { display: inline-flex !important; align-items: center; gap: 5px; padding: 7px 11px; border-radius: 999px; background: #fff; color: #047857; font-size: 12px; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,.22); white-space: nowrap; }
+            .comm-back:active { transform: scale(.96); }
+            #commHeadBtns button[onclick="setFloatW(0)"] { display: none !important; }
+            #commHeadBtns .comm-head-btn { padding: 7px 10px; }
+            /* 분류 버튼: 처음엔 접어 두고 [분류] 줄을 눌러 펼침 → 기사 원문 자리를 넓게 */
+            #catToggleRow { display: flex; align-items: center; gap: 6px; }
+            #catToggleBtn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 12px; font-weight: 700; color: #334155; text-align: left; }
+            .dark #catToggleBtn { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+            #catToggleBtn .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            #catToggleBtn .chev { transition: transform .2s; font-size: 11px; opacity: .6; }
+            #categoryBar:not(.cat-collapsed) #catToggleBtn .chev { transform: rotate(180deg); }
+            #categoryBar.cat-collapsed #groupButtons, #categoryBar.cat-collapsed #subButtons { display: none !important; }
+            #categoryBar:not(.cat-collapsed) #groupButtons { max-height: 42vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            #groupButtons button[data-cat="범죄 다발 지역"] { display: none; }
             #groupButtons > span.ml-auto { flex-wrap: wrap; width: 100%; margin-left: 0; padding-left: 0; border-left: 0; }
-            #alertLogBtn { bottom: 84px !important; right: 12px !important; width: 44px !important; height: 44px !important; }
-        }
-        /* 3칸 영역을 하나의 층으로 묶어서, 칸 안의 버튼(알림·안전시설·지도 모양)이 위에 뜨는 창(커뮤니티 등)을 뚫고 나오지 않게 함 */
+            /* 오른쪽 아래 '지난 알림' 버튼: 맨 아래 모서리에 붙임 (아래 탭 바로 위, 푸터 오른쪽 빈 자리) */
+            #alertLogBtn { bottom: calc(50px + env(safe-area-inset-bottom)) !important; right: 6px !important; width: 42px !important; height: 42px !important; font-size: 16px !important; }
+            #alertLogPanel { right: 8px !important; bottom: calc(98px + env(safe-area-inset-bottom)) !important; }
+        }        /* 3칸 영역을 하나의 층으로 묶어서, 칸 안의 버튼(알림·안전시설·지도 모양)이 위에 뜨는 창(커뮤니티 등)을 뚫고 나오지 않게 함 */
         #splitContainer { isolation: isolate; position: relative; z-index: 0; }
         #floatModal { z-index: 1000; top: var(--hdr-h, 0px); }   /* 제목 줄·속보 바 아래에서 시작 → 창이 속보 바와 겹치지 않음 */
         /* 맨 위 제목 줄: 글씨 고정(zoom) 때문에 따로 쌓임 순서(stacking context)가 생겨서, 안의 [화면 설정] 창(z 1200)이
@@ -575,13 +604,14 @@
         <a href="privacy.html" target="_blank" rel="noopener" class="font-bold hover:underline">개인정보처리방침</a>
         <a href="terms.html" target="_blank" rel="noopener" class="hover:underline">이용약관</a>
         <a href="contact.html" target="_blank" rel="noopener" class="hover:underline">문의·신고</a>
+        <span class="m-only">참고용 정보이며 부정확하거나 최신이 아닐 수 있습니다. 사실은 원문에서 확인하고, 긴급 상황은 112·119</span>
         <span class="basis-full text-center text-[0.625rem] text-slate-400 dark:text-slate-500">참고용 정보로 부정확하거나 최신이 아닐 수 있습니다. 사실은 원문·공식 채널에서 확인하세요. 긴급 상황은 112·119 · 기사는 각 언론사 소유이며 제목과 원문 링크만 제공합니다</span>
     </footer>
     <!-- 휴대폰 전용 아래 탭 (PC에서는 숨김) -->
     <nav id="mobileTabs" aria-label="화면 전환">
         <button type="button" data-mt="list" class="on" onclick="setMobTab('list')"><i class="fa-solid fa-list-ul"></i><span>사건 목록</span></button>
-        <button type="button" data-mt="map" onclick="setMobTab('map')"><i class="fa-solid fa-map-location-dot"></i><span>지도</span></button>
         <button type="button" data-mt="article" onclick="setMobTab('article')"><i class="fa-solid fa-newspaper"></i><span>분류·기사</span></button>
+        <button type="button" data-mt="map" onclick="setMobTab('map')"><i class="fa-solid fa-map-location-dot"></i><span>지도</span></button>
     </nav>
     <noscript>
         <div style="padding:16px;font-size:14px;line-height:1.7">
@@ -658,7 +688,12 @@
         </div>
         <!-- 패널 2: 카테고리 + 기사 원문 -->
         <div id="panel-article" class="panel bg-slate-50 dark:bg-slate-950">
-            <div id="categoryBar" class="relative z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex flex-col gap-1.5 shrink-0">
+            <div id="categoryBar" class="relative z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-3 py-2 flex flex-col gap-1.5 shrink-0 cat-collapsed">
+                <!-- 휴대폰 전용: 분류 버튼 접기/펼치기 줄 (PC에서는 숨김) -->
+                <div id="catToggleRow">
+                    <button id="catToggleBtn" type="button" onclick="toggleCatBar()" aria-expanded="false"><i class="fa-solid fa-filter text-indigo-500"></i><span class="lbl" id="catToggleLabel">분류: 전체</span><i class="fa-solid fa-chevron-down chev"></i></button>
+                    <button type="button" onclick="setCategoryFilter('범죄 다발 지역')" class="shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white border border-rose-700">🚨 다발 지역</button>
+                </div>
                 <div id="groupButtons" class="flex flex-wrap items-center gap-1.5"></div>
                 <div id="subButtons" class="flex flex-wrap items-center gap-1" style="display:none"></div>
             </div>
@@ -671,6 +706,9 @@
             <div class="absolute top-3 right-3 z-[400] flex flex-wrap items-center justify-end gap-2" style="max-width: calc(100% - 4rem);">
                 <button id="alertButton" onclick="toggleAlertPanel()" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-amber-400 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-800 whitespace-nowrap"><i class="fa-regular fa-bell"></i> 알림 설정</button>
                 <button onclick="toggleSafetyPanel()" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-red-400 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-slate-800 whitespace-nowrap"><i class="fa-solid fa-kit-medical text-red-500"></i> 내 주변 안전시설</button>
+                <!-- 휴대폰 전용: 바로 전화 연결 (PC에서는 숨김) -->
+                <a href="tel:119" class="m-call m-call-119" aria-label="119 소방·구급 신고 전화"><i class="fa-solid fa-phone"></i> 119 신고</a>
+                <a href="tel:112" class="m-call m-call-112" aria-label="112 경찰 신고 전화"><i class="fa-solid fa-phone"></i> 112 신고</a>
                 <select id="mapStyleSelect" onchange="setMapStyle(this.value)" title="지도 모양" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-600 text-xs font-bold px-2 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200"></select>
             </div>
             <div id="map" class="flex-1 w-full h-full z-10"></div>
@@ -681,6 +719,8 @@
         <!-- 패널 4: 우리동네 커뮤니티 -->
         <div id="panel-community" class="panel bg-white dark:bg-slate-900">
             <div class="comm-head px-3 py-1 flex items-center justify-between gap-2 shrink-0 nowrap-kids">
+                <!-- 휴대폰 전용: 눈에 띄는 '사건 목록으로' 돌아가기 버튼 (PC에서는 숨김) -->
+                <button type="button" onclick="closeFloat()" class="m-only comm-back shrink-0" aria-label="사건 목록으로 돌아가기"><i class="fa-solid fa-arrow-left"></i> 사건 목록</button>
                 <h3 class="font-extrabold text-sm flex items-center gap-2 min-w-0">
                     <span class="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 text-xs"><i class="fa-solid fa-people-group"></i></span>
                     <span class="min-w-0 flex flex-col leading-tight">
@@ -2149,6 +2189,25 @@
         }
 
         // ================= 중앙 상단: 카테고리 버튼 =================
+        // 휴대폰: 분류 버튼 줄 접기/펼치기 (기사 원문 자리를 넓히기 위해 처음엔 접힘). 접힌 줄에는 지금 고른 분류를 요약해 보여 줌
+        function toggleCatBar(open) {
+            const bar = document.getElementById('categoryBar');
+            if (!bar) return;
+            const want = typeof open === 'boolean' ? open : bar.classList.contains('cat-collapsed');
+            bar.classList.toggle('cat-collapsed', !want);
+            const b = document.getElementById('catToggleBtn'); if (b) b.setAttribute('aria-expanded', String(want));
+            setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
+        }
+        function updateCatToggle() {
+            const el = document.getElementById('catToggleLabel');
+            if (!el) return;
+            const lab = g => (CATEGORY_GROUPS[g] && CATEGORY_GROUPS[g].label) || g;
+            let t = '분류: 전체';
+            if (currentCategory === '범죄 다발 지역') t = '분류: 7일 다발 지역';
+            else if (selCats.size) { const a = Array.from(selCats); t = '분류: ' + lab(a[0]) + (a.length > 1 ? ' 외 ' + (a.length - 1) : ''); }
+            else if (exCats.size) t = '분류: ' + exCats.size + '개 빼고 보기';
+            el.textContent = t;
+        }
         function renderCategoryBar() {
             const base = groupEvents(getFilteredNews(true)).map(ev => ev.lead);   // 사건 1건 = 1개로 셈
             const gCount = {}, sCount = {};
@@ -2196,6 +2255,7 @@
                 ${courtBtn(false)}
                 <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
             document.getElementById('groupButtons').innerHTML = html;
+            updateCatToggle();
             // 기사 원문 화면을 3칸에 넣지 않았을 때: 사건 목록(요약) 위에 분류 버튼을 한 줄로 줄여서 보여 줌
             const lcb = document.getElementById('listCatBar');
             if (lcb) {
@@ -9420,23 +9480,73 @@
             } catch (e) { return null; } finally { clearTimeout(timer); }
         }
 
-        function verifyTown() {
+        // ---- 동네 인증: 위치 확인 (권한이 막혀 있을 때 기기별 해결 방법을 단계별로 안내) ----
+        function inAppBrowserName() {
+            const m = (navigator.userAgent || '').match(/KAKAOTALK|NAVER\(inapp|Instagram|FB_IAB|FBAN|FBAV|Line\/|DaumApps|everytimeApp/i);
+            return m ? m[0].replace(/\(inapp/i, '') : null;
+        }
+        function locGuideHtml(kind) {
+            const ua = navigator.userAgent || '', ios = /iPhone|iPad|iPod/i.test(ua), and = /Android/i.test(ua);
+            let title, steps;
+            if (kind === 'inapp') {
+                title = '앱 안의 간이 브라우저에서는 위치를 쓸 수 없는 경우가 많아요';
+                steps = [ios ? '화면 오른쪽 아래(또는 위) ⋯ 메뉴에서 <b>[Safari로 열기]</b>를 눌러 주세요.' : '화면 오른쪽 위 ⋮ 메뉴에서 <b>[다른 브라우저로 열기]</b> 또는 <b>[Chrome으로 열기]</b>를 눌러 주세요.', '또는 아래 <b>[주소 복사]</b>를 누른 뒤 ' + (ios ? 'Safari' : 'Chrome') + ' 주소창에 붙여넣어 주세요.'];
+            } else if (ios) {
+                title = '이 사이트의 위치 사용이 꺼져 있어요';
+                steps = ['<b>설정</b> 앱 → <b>개인정보 보호 및 보안</b> → <b>위치 서비스</b>가 켜져 있는지 확인해 주세요.', '같은 화면에서 <b>Safari 웹사이트</b>(또는 쓰는 브라우저)를 눌러 <b>[앱을 사용하는 동안]</b>으로 바꿔 주세요.', '주소창 왼쪽 <b>[aA]</b> → <b>웹사이트 설정</b> → <b>위치</b> → <b>허용</b>으로 바꿔도 돼요.'];
+            } else if (and) {
+                title = '이 사이트의 위치 사용이 꺼져 있어요';
+                steps = ['화면 맨 위를 쓸어내려 <b>빠른 설정</b>에서 <b>[위치]</b>가 켜져 있는지 확인해 주세요. (꺼져 있으면 허용해도 같은 메시지가 떠요)', '주소창 왼쪽 <b>아이콘(자물쇠·설정)</b> → <b>권한</b> → <b>위치</b> → <b>허용</b>으로 바꿔 주세요.', 'Chrome이라면 오른쪽 위 ⋮ → <b>설정</b> → <b>사이트 설정</b> → <b>위치</b>에서 이 사이트를 <b>허용</b>해도 돼요.'];
+            } else {
+                title = '이 사이트의 위치 사용이 막혀 있어요';
+                steps = ['주소창 왼쪽 <b>자물쇠 아이콘</b> → <b>위치</b> → <b>허용</b>으로 바꿔 주세요.', '컴퓨터의 위치 서비스(Windows 설정 → 개인정보 → 위치)가 꺼져 있으면 켜 주세요.'];
+            }
+            return `<div class="mt-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-left text-slate-800 dark:text-slate-100">
+                <p class="text-xs font-extrabold mb-1.5">📍 ${title}</p>
+                <ol class="list-decimal pl-4 space-y-1 text-[0.75rem] leading-relaxed">${steps.map(x => `<li>${x}</li>`).join('')}</ol>
+                <div class="flex gap-2 mt-2.5">
+                    ${kind === 'inapp' ? `<button onclick="copySiteUrl(this)" class="flex-1 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs font-bold">주소 복사</button>` : ''}
+                    <button onclick="verifyTown()" class="flex-1 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold"><i class="fa-solid fa-rotate-right"></i> 설정했어요, 다시 시도</button>
+                </div></div>`;
+        }
+        function commStatusHtml(html) { const el = document.getElementById('commStatus'); if (el) el.innerHTML = html || ''; }
+        function copySiteUrl(btn) {
+            const url = location.origin + '/';
+            const done = () => { if (btn) { btn.textContent = '복사됨 ✓'; setTimeout(() => { btn.textContent = '주소 복사'; }, 1800); } };
+            try { navigator.clipboard.writeText(url).then(done, () => window.prompt('주소를 복사하세요', url)); } catch (e) { window.prompt('주소를 복사하세요', url); }
+        }
+        async function onTownPosition(pos) {
+            const lat = pos.coords.latitude, lng = pos.coords.longitude;
+            const near = nearestSigungu(lat, lng, 3);
+            if (near.length === 0 || near[0].dist > 60) { commStatus('대한민국 안에서만 동네 인증을 할 수 있습니다.'); return; }
+            setMyLoc(lat, lng);               // 인증한 위치는 지도에 '내 위치'로 계속 표시 (이 기기에만 저장)
+            commFound = await reverseGeocode(lat, lng);
+            commCands = [];
+            if (commFound && commFound.sigungu) commCands.push({ sido: commFound.sido, sigungu: commFound.sigungu });
+            near.forEach(c => { if (!commCands.some(x => x.sido === c.sido && x.sigungu === c.sigungu)) commCands.push(c); });
+            commStatus('');
+            renderTownConfirm();
+        }
+        async function verifyTown() {
             if (!navigator.geolocation) { commStatus('이 기기(브라우저)는 위치 확인을 지원하지 않습니다.'); return; }
-            commStatus('현재 위치를 확인하는 중입니다... (위치 권한을 허용해 주세요)');
-            navigator.geolocation.getCurrentPosition(async pos => {
-                const lat = pos.coords.latitude, lng = pos.coords.longitude;
-                const near = nearestSigungu(lat, lng, 3);
-                if (near.length === 0 || near[0].dist > 60) { commStatus('대한민국 안에서만 동네 인증을 할 수 있습니다.'); return; }
-                setMyLoc(lat, lng);               // 인증한 위치는 지도에 '내 위치'로 계속 표시 (이 기기에만 저장)
-                commFound = await reverseGeocode(lat, lng);
-                commCands = [];
-                if (commFound && commFound.sigungu) commCands.push({ sido: commFound.sido, sigungu: commFound.sigungu });
-                near.forEach(c => { if (!commCands.some(x => x.sido === c.sido && x.sigungu === c.sigungu)) commCands.push(c); });
-                commStatus('');
-                renderTownConfirm();
-            }, err => {
-                commStatus(err && err.code === 1 ? '위치 권한이 거부되었습니다. 브라우저 주소창의 자물쇠 아이콘에서 위치를 허용한 뒤 다시 눌러 주세요.' : '위치를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.');
-            }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+            const app = inAppBrowserName();
+            // 이미 '차단'으로 저장되어 있으면 요청해도 창이 뜨지 않으므로, 바로 해결 방법을 안내
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    const st = await navigator.permissions.query({ name: 'geolocation' });
+                    if (st.state === 'denied') { commStatusHtml(locGuideHtml(app ? 'inapp' : 'denied')); return; }
+                }
+            } catch (e) {}
+            commStatus('현재 위치를 확인하는 중입니다... (위치 권한 창이 뜨면 [허용]을 눌러 주세요)');
+            const fail = err => {
+                if (err && err.code === 1) commStatusHtml(locGuideHtml(app ? 'inapp' : 'denied'));
+                else commStatus('위치를 확인하지 못했어요. 휴대폰의 위치(GPS)가 켜져 있는지 확인하고, 실내라면 창가에서 잠시 후 다시 눌러 주세요.');
+            };
+            // 동네를 찾는 데는 정밀한 GPS가 필요 없으므로 먼저 가볍게(빠르게) 요청하고, 안 되면 정밀하게 한 번 더 시도
+            navigator.geolocation.getCurrentPosition(onTownPosition, err => {
+                if (err && err.code === 1) return fail(err);
+                navigator.geolocation.getCurrentPosition(onTownPosition, fail, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+            }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 });
         }
 
         function renderTownConfirm() {
@@ -9961,7 +10071,7 @@
         //  · 사이트에 들어오면 가장 먼저 뜨는 단계별 안내. [다음]을 눌러 핵심 기능을 하나씩 확인
         //  · 오른쪽 위 ✕ = 이번에만 닫기 / [오늘 하루 열지 않기] / [앞으로 열지 않기] 로 선택
         //  · 상단 [사용 안내] 버튼으로 언제든 다시 열 수 있음
-        const TOUR_STEPS = [
+        const TOUR_ALL = [
             { icon: '👋', title: '우리동네 사건사고에 오신 걸 환영해요', text: '전국의 사건·사고를 실시간으로 모아 보여 주는 안전 관제 사이트예요. 1분이면 끝나는 핵심 사용법을 [다음]으로 넘기며 확인해 보세요.', target: '' },
             { icon: '📍', title: '내 동네만 골라 보기', text: '시·도 → 시·군·구 → 읍·면·동 순서로 고르면 우리 동네 사건만 모아 볼 수 있어요. 기본은 전국 전체예요.', target: () => tourPanel('list', '#sidoSelect') },
             { icon: '📅', title: '날짜 · 사건 목록', text: '화살표나 날짜 버튼으로 지난 날짜의 사건도 볼 수 있어요. 목록은 새 기사가 올라오면 새로고침 없이 자동으로 추가돼요.', target: () => tourPanel('list', '#dateButton') },
@@ -10000,6 +10110,18 @@
             { icon: '📸', title: '내 프로필 · 게시물', comm: 'me', part: 'rest', text: '내가 올린 게시물과 활동이 모이는 곳이에요.',
                 bullets: ['📸 내 일상: 사진·글 게시물을 올려 이웃과 공유해요', '➕ 팔로우: 마음에 드는 이웃을 팔로우하면 그 사람의 게시물을 [팔로잉 소식]에서 볼 수 있어요', '❤ 공감·감정·댓글을 받으면 순위와 신뢰 지수가 올라가요', '☰ 오른쪽 위 [메뉴]에서 이웃 초대, 차단 관리, 배경색, 동네 다시 인증을 할 수 있어요'] }
         ];
+        // 휴대폰용 안내: 칸 3개가 없고 아래 탭으로 한 화면씩 보여 주므로, 단계마다 알맞은 탭으로 넘겨서 그 부분을 비추고, 설명 카드는 비추는 곳을 가리지 않게 위/아래로 옮김
+        //  · PC 전용인 [화면 설정] 단계는 빼고, 글씨 크기 단계는 다크 모드 단계로 바꿈
+        const TOUR_TAB = { 1: 'list', 2: 'list', 3: 'article', 4: 'map' };
+        function tourBuildSteps() {
+            if (!isMobile()) return TOUR_ALL;
+            return TOUR_ALL.map((s, i) => Object.assign({}, s, { tab: TOUR_TAB[i], _i: i })).filter(s => s._i !== 7).map(s => {
+                if (s._i === 3) return Object.assign(s, { title: '분류 버튼 · 기사 원문', text: '[분류] 줄을 누르면 펼쳐져요. 교통·화재·범죄 같은 종류만 골라서 볼 수 있고, 다시 누르면 접혀서 기사 원문을 넓게 볼 수 있어요. 목록에서 기사를 누르면 원문 요약이 열려요.', target: () => document.getElementById('catToggleRow') });
+                if (s._i === 8) return Object.assign(s, { icon: '🌙', title: '라이트 / 다크 모드', text: '오른쪽 위 달 모양 버튼으로 밝은 화면과 어두운 화면을 바꿀 수 있어요. 이 안내는 왼쪽의 [?] 버튼으로 언제든 다시 볼 수 있어요.', target: () => document.getElementById('themeBtn') });
+                return s;
+            });
+        }
+        let TOUR_STEPS = TOUR_ALL;
         const tourState = { i: 0, open: false, commOpen: false, tok: 0 };
         // 여러 요소를 하나로 묶어 비출 때 쓰는 가짜 요소 (화면 좌표 사각형만 가짐)
         function tourRectEl(r) {
@@ -10062,6 +10184,7 @@
             const root = document.getElementById('tourRoot');
             if (!root) return;
             const n = TOUR_STEPS.length, i = tourState.i, s = TOUR_STEPS[i], last = i === n - 1;
+            if (isMobile() && s.tab) setMobTab(s.tab);          // 휴대폰: 이 단계가 설명하는 화면(탭)으로 먼저 넘김
             if (s.comm) tourOpenComm(s.comm); else tourCloseComm();      // 커뮤니티 단계에서만 커뮤니티를 열어 둠
             tourPlace();
             // 커뮤니티 창은 열릴 때 .22초 동안 아래에서 올라오며(pop-in) 자리가 움직이므로, 첫 계산 값은 어긋나 있음
@@ -10094,6 +10217,13 @@
             if (!s) return;
             const el = tourTarget(s);
             const r = el ? el.getBoundingClientRect() : null, pad = 6;
+            if (el && isMobile() && typeof el.scrollIntoView === 'function') { try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {} }
+            // 휴대폰: 비추는 곳이 화면 아래쪽이면 설명 카드를 위로, 위쪽이면 아래로 (비추는 곳을 가리지 않게)
+            const cardEl = document.getElementById('tourCard');
+            if (cardEl) {
+                if (isMobile()) { const low = r && (r.top + r.height / 2) > innerHeight * 0.5; cardEl.style.top = low ? '.5rem' : 'auto'; cardEl.style.bottom = low ? 'auto' : '.5rem'; }
+                else { cardEl.style.top = ''; cardEl.style.bottom = ''; }
+            }
             const spot = document.getElementById('tourSpot'), dim = document.getElementById('tourDim');
             if (r) {
                 const x1 = Math.max(0, r.left - pad), y1 = Math.max(0, r.top - pad), x2 = Math.min(innerWidth, r.right + pad), y2 = Math.min(innerHeight, r.bottom + pad);
@@ -10145,12 +10275,19 @@
                 .tour-prev { background: #f1f5f9; color: #475569; } .tour-prev:disabled { opacity: .4; cursor: default; } .dark .tour-prev { background: #1e293b; color: #cbd5e1; }
                 .tour-next { flex: 2; background: linear-gradient(90deg, #4f46e5, #7c3aed); color: #fff; box-shadow: 0 8px 18px -8px rgba(79,70,229,.8); } .tour-next:hover { filter: brightness(1.1); }
                 .tour-foot { margin-top: .75rem; padding-top: .6rem; border-top: 1px solid #e2e8f0; display: flex; justify-content: center; align-items: center; gap: .5rem; font-size: .6875rem; color: #94a3b8; }
-                .dark .tour-foot { border-color: #334155; } .tour-foot button { color: #64748b; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; } .tour-foot button:hover { color: #0f172a; } .dark .tour-foot button:hover { color: #fff; }`;
+                .dark .tour-foot { border-color: #334155; } .tour-foot button { color: #64748b; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; } .tour-foot button:hover { color: #0f172a; } .dark .tour-foot button:hover { color: #fff; }
+                @media (max-width: 767px), (max-height: 480px) and (pointer: coarse) {
+                    #tourCard { width: calc(100vw - 1rem); max-height: 46vh; padding: .9rem .9rem .7rem; border-radius: 16px; }
+                    .tour-icon { font-size: 1.6rem; } .tour-title { font-size: 1rem; } .tour-text { font-size: .8125rem; margin-top: .3rem; line-height: 1.5; }
+                    .tour-dots { display: none; } .tour-nav { margin-top: .7rem; } .tour-btn { padding: .6rem; } .tour-foot { margin-top: .55rem; padding-top: .45rem; }
+                    .tour-list { font-size: .75rem; } .tour-x { width: 2.2rem; height: 2.2rem; }
+                }`;
                 document.head.appendChild(st);
             }
             const root = document.createElement('div'); root.id = 'tourRoot'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', '사용 안내');
             root.innerHTML = '<div id="tourDim"></div><div id="tourSpot"></div><div id="tourCard"></div>';
             document.body.appendChild(root);
+            TOUR_STEPS = tourBuildSteps();
             tourState.open = true; tourState.i = start || 0;
             document.addEventListener('keydown', tourKey); window.addEventListener('resize', tourRender);
             tourRender();
