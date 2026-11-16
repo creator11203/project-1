@@ -210,6 +210,29 @@
         .tip:hover .tip-box, .tip:focus .tip-box { visibility: visible; opacity: 1; }
         /* 새 기사가 들어왔을 때 목록 맨 위 카드 강조 */
         /* 새 기사: 'NEW' 표시만 (초록 테두리 깜빡임은 뺌) */
+        /* 새 기사 알림 알약 (잘 보이도록 크고 진한 색 + 은은하게 번쩍이는 빛) / NEW 배지 */
+        .new-pill { display: flex; align-items: center; gap: .4rem; padding: .4rem .9rem; border-radius: 999px; color: #fff; font-size: .8125rem; font-weight: 900; letter-spacing: -.01em;
+            background: linear-gradient(135deg, #f43f5e, #f97316); border: 2px solid #fff; box-shadow: 0 6px 18px -4px rgba(244,63,94,.65), 0 0 0 0 rgba(244,63,94,.55); animation: newPillGlow 1.8s ease-out infinite; position: relative; overflow: hidden; }
+        .new-pill::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); animation: newPillShine 2.6s ease-in-out infinite; }
+        .new-pill b { background: #fff; color: #e11d48; border-radius: 999px; padding: 0 .5rem; min-width: 1.4rem; text-align: center; font-size: .8125rem; }
+        .new-pill i { animation: newBell 1.8s ease-in-out infinite; transform-origin: 50% 0; }
+        @keyframes newPillGlow { 0% { box-shadow: 0 6px 18px -4px rgba(244,63,94,.65), 0 0 0 0 rgba(244,63,94,.55); } 70%, 100% { box-shadow: 0 6px 18px -4px rgba(244,63,94,.65), 0 0 0 12px rgba(244,63,94,0); } }
+        @keyframes newPillShine { 0% { left: -60%; } 55%, 100% { left: 130%; } }
+        @keyframes newBell { 0%, 60%, 100% { transform: rotate(0); } 10% { transform: rotate(16deg); } 20% { transform: rotate(-14deg); } 30% { transform: rotate(10deg); } 40% { transform: rotate(-6deg); } }
+        .new-badge { display: inline-flex; align-items: center; gap: .2rem; font-size: .6875rem; padding: .1rem .45rem; border-radius: 6px; color: #fff; font-weight: 900; background: linear-gradient(135deg, #f43f5e, #f97316); box-shadow: 0 0 0 0 rgba(244,63,94,.6); animation: newPillGlow 1.8s ease-out infinite; }
+        /* 내 위치 표시(파란 점) · 반경 레이더 */
+        .myloc-dot { position: relative; width: 22px; height: 22px; }
+        .myloc-dot::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: #2563eb; border: 3px solid #fff; box-shadow: 0 0 0 1px rgba(37,99,235,.5), 0 2px 8px rgba(0,0,0,.4); }
+        .myloc-dot::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(37,99,235,.6); animation: mylocPulse 2s ease-out infinite; }
+        @keyframes mylocPulse { 0% { transform: scale(.6); opacity: .9; } 100% { transform: scale(2); opacity: 0; } }
+        .radar-disc { position: relative; border-radius: 50%; border: 2px solid rgba(16,185,129,.85); background: rgba(16,185,129,.07); overflow: hidden; pointer-events: none; }
+        .radar-disc::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, rgba(16,185,129,0) 0deg, rgba(16,185,129,0) 250deg, rgba(16,185,129,.38) 345deg, rgba(16,185,129,.6) 360deg); animation: radarSweep 3.2s linear infinite; }
+        .radar-disc::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(16,185,129,.7); animation: radarRing 3.2s ease-out infinite; }
+        .radar-ring2 { position: absolute; inset: 33%; border-radius: 50%; border: 1px dashed rgba(16,185,129,.5); }
+        .radar-ring3 { position: absolute; inset: 66%; border-radius: 50%; border: 1px dashed rgba(16,185,129,.5); }
+        @keyframes radarSweep { to { transform: rotate(360deg); } }
+        @keyframes radarRing { 0% { transform: scale(.05); opacity: .9; } 100% { transform: scale(1); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .radar-disc::before, .radar-disc::after, .myloc-dot::after, .new-pill, .new-pill::after, .new-pill i, .new-badge { animation: none; } }
         /* 어두운 지도: 한글 지명이 나오는 기본 지도를 어둡게 바꿔서 사용 */
         .tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.55); }
         .tiles-light { filter: saturate(.55) brightness(1.04); }
@@ -1597,7 +1620,7 @@
             sat: { name: '지도: 위성 사진', url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: ESRI_ATTR, maxZoom: 19 }
         };
         const MAP_FALLBACK = { voyager: 'street', light: 'street', dark: 'gray', street: 'voyager', gray: 'dark', sat: 'voyager' };
-        let mapStyle = 'auto', baseLayer = null, safetyLayer = null, mapFallbackUsed = {};
+        let mapStyle = 'auto', baseLayer = null, safetyLayer = null, myLocLayer = null, mapFallbackUsed = {};
         try {
             mapStyle = localStorage.getItem('map_style') || 'auto';
             if (mapStyle === 'osm') mapStyle = 'voyager';
@@ -1648,6 +1671,9 @@
             markersLayer = makeMarkersLayer().addTo(map);
             map.on('popupclose moveend zoomend dragend', () => setTimeout(flushPendingMarkers, 400));
             safetyLayer = L.layerGroup().addTo(map);
+            myLocLayer = L.layerGroup().addTo(map);
+            map.on('zoomend', drawMyLoc);
+            drawMyLoc();
             initStationLayer();
             const sel = document.getElementById('mapStyleSelect');
             if (sel) { sel.innerHTML = Object.keys(MAP_STYLES).map(k => `<option value="${k}">${MAP_STYLES[k].name}</option>`).join(''); sel.value = mapStyle; }
@@ -1777,7 +1803,7 @@
         // inst = 법원·검찰·경찰청 같은 기관이 있는 곳으로만 잡은 위치 (사건이 실제로 일어난 곳이 아니라서 집계·지도 핀에서 뺌)
         const PREC_RANK = { poi: 4, dong: 3, sgg: 2, road: 1.5, sido: 1, inst: 1, world: 1 };
         const PREC_ZOOM = { poi: 16, dong: 15, sgg: 13, road: 9, sido: 9, inst: 11, world: 5 };
-        const PREC_TEXT = { poi: '장소까지 확인', dong: '읍·면·동까지 확인', sgg: '시·군·구 단위(대략)', road: '고속도로 노선 위(구간 미상)', sido: '시·도 단위(대략)', inst: '법원·검찰 등 기관 소재지(사건 장소 아님)', world: '해외(대략)' };
+        const PREC_TEXT = { poi: '장소까지 확인', dong: '읍·면·동까지 확인', sgg: '시·군·구 단위(대략)', road: '고속도로 노선 위(구간 미상)', sido: '시·도 단위(대략)', inst: '법원·검찰 등 기관 소재지(사건 장소 아님)', world: '해외(대략)', nation: '전국 단위 소식(특정 지역 사건이 아님)' };
 
         // ---- 고속도로 노선 (highways.json · scraper.py 와 같은 파일) ----
         //  '호남고속도로 추돌사고'처럼 노선 이름이 있는 기사는 지도에 그 노선을 굵은 선으로 그리고, 노선 전체가 보이게 맞춤.
@@ -2143,7 +2169,7 @@
                 main.innerHTML = `
                     <div class="flex items-start justify-between mb-1.5 gap-1">
                         <span class="flex flex-wrap items-center gap-1 min-w-0">
-                            ${freshEventKeys.has(ev.key) ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-emerald-600 text-white font-extrabold">NEW</span>' : ''}
+                            ${freshEventKeys.has(ev.key) ? '<span class="new-badge"><i class="fa-solid fa-bolt"></i>NEW</span>' : ''}
                             ${isOverseas(news) ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-zinc-700 text-white font-extrabold">🌍 해외</span>' : ''}
                             ${isCourt(news) ? courtBadge() : ''}
                             ${tagBadges(news)}
@@ -2190,8 +2216,8 @@
                 const freshN = events.filter(ev => freshEventKeys.has(ev.key)).length;
                 if (freshN) {
                     const pill = document.createElement('button');
-                    pill.className = 'sticky top-1 z-30 mx-auto block w-max px-3 py-1 rounded-full bg-emerald-600 text-white text-[0.6875rem] font-bold shadow-lg';
-                    pill.innerHTML = '▲ 새 기사 ' + freshN + '건';
+                    pill.className = 'new-pill sticky top-1 z-30 mx-auto w-max';
+                    pill.innerHTML = '<i class="fa-solid fa-bell"></i> 새 기사 <b>' + freshN + '</b>건 <span>▲ 맨 위로</span>';
                     pill.onclick = () => { container.scrollTo({ top: 0, behavior: 'smooth' }); pill.remove(); };
                     container.insertBefore(pill, container.firstChild);
                     container.scrollTop += pill.offsetHeight;
@@ -2532,7 +2558,7 @@
 
                 if (!ignoreCategory && currentCategory !== '범죄 다발 지역' && !catPass(news)) return false;
 
-                if (sido !== 'all') {
+                if (sido !== 'all' && loc !== '전국') {     // '전국' 단위 소식(전국 단속 결과·통계 등)은 어느 지역을 골라도 보임
                     if (!loc.includes(sido)) return false;
                     if (sigungu !== 'all' && sigungu !== '전체') {
                         const city = sigungu.split(' ')[0];
@@ -2899,7 +2925,7 @@
                 // 위치 권한 창에 답하지 않고 두면 브라우저가 끝없이 기다려서 '찾는 중'에 멈춰 있던 문제 → 15초 지나면 지도 가운데로 찾음
                 setTimeout(() => fallback('현재 위치 확인이 늦어짐'), 15000);
                 navigator.geolocation.getCurrentPosition(
-                    pos => finish({ lat: pos.coords.latitude, lng: pos.coords.longitude, text: '내 현재 위치 기준', mine: true }),
+                    pos => { setMyLoc(pos.coords.latitude, pos.coords.longitude); finish({ lat: pos.coords.latitude, lng: pos.coords.longitude, text: '내 현재 위치 기준', mine: true }); },
                     err => fallback(err && err.code === 1 ? '위치 권한이 꺼져 있음' : '현재 위치를 확인하지 못함'),
                     { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
             });
@@ -2923,6 +2949,7 @@
             else o = await safetyLocate();
             if (seq !== safetySeq) return;                  // 그 사이에 다른 찾기를 눌렀음
             safety.origin = o; safety.originText = o.text;
+            drawMyLoc();                                    // 찾기를 누르면 반경 레이더도 함께 갱신
             safety.msg = '주변 시설을 찾는 중입니다...'; renderSafetyPanel();
             drawSafety(true);                               // 찾는 동안에도 기준 위치·반경 원을 먼저 보여 줌
             const r = Math.round(safety.radius * 1000);
@@ -2966,13 +2993,51 @@
             drawSafety();
             renderSafetyPanel();
         }
+        // ================= 내 위치 표시 · 반경 레이더 =================
+        //  · 동네 인증(또는 [내 위치에서 찾기])을 하면 그 위치를 이 기기에만 저장해 두고, 지도에 파란 점으로 항상 표시합니다.
+        //  · 안전시설 반경을 골랐다면 내 위치를 중심으로 그 반경만큼의 원이 생기고 레이더가 천천히 돕니다.
+        //  · 둘 다 [내 주변 안전시설] 창의 '내 위치 표시 설정'에서 켜고 끌 수 있습니다.
+        function myLocCfg() {
+            if (!window._mlc) {
+                let c = {}; try { c = JSON.parse(localStorage.getItem('myloc_cfg') || '{}') || {}; } catch (e) {}
+                window._mlc = { show: c.show !== false, radar: c.radar !== false, chosen: !!c.chosen };
+            }
+            return window._mlc;
+        }
+        function saveMyLocCfg() { try { localStorage.setItem('myloc_cfg', JSON.stringify(myLocCfg())); } catch (e) {} }
+        function myLocPos() { try { const p = JSON.parse(localStorage.getItem('my_loc') || 'null'); return p && isFinite(p.lat) && isFinite(p.lng) ? p : null; } catch (e) { return null; } }
+        function setMyLoc(lat, lng) { try { localStorage.setItem('my_loc', JSON.stringify({ lat: lat, lng: lng, ts: Date.now() })); } catch (e) {} drawMyLoc(); }
+        function clearMyLoc() { try { localStorage.removeItem('my_loc'); } catch (e) {} drawMyLoc(); }
+        function mylocSet(k, v) { myLocCfg()[k] = v; saveMyLocCfg(); drawMyLoc(); renderSafetyPanel(); }
+        function mylocRefresh() {
+            if (!navigator.geolocation) { alert('이 기기는 위치 확인을 지원하지 않습니다.'); return; }
+            navigator.geolocation.getCurrentPosition(pos => { setMyLoc(pos.coords.latitude, pos.coords.longitude); renderSafetyPanel(); if (map) map.flyTo([pos.coords.latitude, pos.coords.longitude], 14, { duration: 1 }); },
+                () => alert('현재 위치를 확인하지 못했습니다. 브라우저의 위치 권한을 확인해 주세요.'), { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+        }
+        function drawMyLoc() {
+            try {
+                if (!myLocLayer || !map) return;
+                myLocLayer.clearLayers();
+                const c = myLocCfg(), p = myLocPos();
+                if (!p || !c.show) return;
+                if (c.radar && (c.chosen || (safety && safety.origin))) {
+                    const km = safety.radius || 2;
+                    const mpp = 40075016.686 * Math.cos(p.lat * Math.PI / 180) / Math.pow(2, map.getZoom() + 8);    // 지금 확대 단계에서 1픽셀이 몇 미터인지
+                    const d = Math.round(Math.min(4000, Math.max(30, 2 * km * 1000 / mpp)));
+                    L.marker([p.lat, p.lng], { interactive: false, keyboard: false, zIndexOffset: 100,
+                        icon: L.divIcon({ className: '', html: `<div class="radar-disc" style="width:${d}px;height:${d}px;"><div class="radar-ring2"></div><div class="radar-ring3"></div></div>`, iconSize: [d, d], iconAnchor: [d / 2, d / 2] }) }).addTo(myLocLayer);
+                }
+                L.marker([p.lat, p.lng], { zIndexOffset: 2900, icon: L.divIcon({ className: '', html: '<div class="myloc-dot"></div>', iconSize: [22, 22], iconAnchor: [11, 11] }) })
+                    .bindPopup('<b>📍 내 위치</b><br><span style="font-size:11px;">' + (c.radar && (c.chosen || (safety && safety.origin)) ? '반경 ' + safety.radius + 'km 레이더가 표시됩니다' : '[내 주변 안전시설]에서 반경을 고르면 레이더가 나타납니다') + '</span>').addTo(myLocLayer);
+            } catch (e) {}
+        }
         function saveSafetyCfg() { try { localStorage.setItem('safety_cfg', JSON.stringify({ on: safety.on, radius: safety.radius })); } catch (e) {} }
         // 체크를 바꾸면: 이미 찾아 둔 곳이 있으면 같은 자리에서 바로 다시 찾아 지도에 반영
         function safetyToggle(k, on) {
             safety.on[k] = on; saveSafetyCfg();
             if (safety.origin) { if (!on) { safety.results = safety.results.filter(f => f.kind !== k); drawSafety(true); renderSafetyPanel(); } else safetySearch('same'); }
         }
-        function safetySetRadius(v) { safety.radius = Number(v) || 2; saveSafetyCfg(); if (safety.origin) safetySearch('same'); }
+        function safetySetRadius(v) { safety.radius = Number(v) || 2; saveSafetyCfg(); myLocCfg().chosen = true; saveMyLocCfg(); drawMyLoc(); if (safety.origin) safetySearch('same'); }
         function safetyIcon(kind, big) {
             const t = SAFETY_BY[kind] || SAFETY_TYPES[0], s = big ? 40 : 34;
             return L.divIcon({ className: '', html: `<div class="safety-pin" style="width:${s}px;height:${s}px;border-color:${t.color};box-shadow:0 0 0 3px ${t.color}55, 0 3px 8px rgba(0,0,0,.45);"><span>${t.icon}</span><i style="background:${t.color};"></i></div>`, iconSize: [s, s + 8], iconAnchor: [s / 2, s + 8], popupAnchor: [0, -s] });
@@ -3022,6 +3087,12 @@
             });
             p.innerHTML = `
                 <div class="flex items-center justify-between mb-2"><b class="text-sm text-slate-900 dark:text-white">🆘 내 주변 안전시설</b><button onclick="toggleSafetyPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button></div>
+                <div class="rounded-lg border border-blue-300 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-950/30 p-2 mb-2 space-y-1">
+                    <div class="text-[0.6875rem] font-extrabold text-blue-800 dark:text-blue-200">📍 내 위치 표시 설정</div>
+                    <label class="flex items-start gap-2 text-[0.6875rem] text-slate-700 dark:text-slate-200 cursor-pointer"><input type="checkbox" class="mt-0.5" ${myLocCfg().show ? 'checked' : ''} onchange="mylocSet('show', this.checked)"><span><b>내 위치를 지도에 계속 표시</b><br><span class="text-slate-500">동네 인증·위치 확인을 한 곳을 파란 점으로 보여 줘요</span></span></label>
+                    <label class="flex items-start gap-2 text-[0.6875rem] text-slate-700 dark:text-slate-200 cursor-pointer"><input type="checkbox" class="mt-0.5" ${myLocCfg().radar ? 'checked' : ''} onchange="mylocSet('radar', this.checked)"><span><b>내 위치 중심 반경 레이더 표시</b><br><span class="text-slate-500">아래에서 고른 반경만큼 원이 생기고 레이더가 천천히 돌아요</span></span></label>
+                    <div class="flex items-center gap-2 text-[0.625rem] text-slate-500">${myLocPos() ? '위치 저장됨 (이 기기에만)' : '아직 저장된 위치가 없어요'}<button onclick="mylocRefresh()" class="ml-auto px-2 py-0.5 rounded border border-blue-400 text-blue-700 dark:text-blue-300 font-bold hover:bg-blue-100 dark:hover:bg-slate-800 whitespace-nowrap">내 위치 새로 확인</button>${myLocPos() ? '<button onclick="clearMyLoc(); renderSafetyPanel()" class="px-2 py-0.5 rounded border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800">지우기</button>' : ''}</div>
+                </div>
                 <div class="space-y-1 mb-2">${SAFETY_TYPES.map(t => { const n = safety.origin ? safety.results.filter(f => f.kind === t.k).length : null; return `<label class="flex items-center gap-2 text-[0.6875rem] text-slate-700 dark:text-slate-200 cursor-pointer"><input type="checkbox" ${safety.on[t.k] ? 'checked' : ''} onchange="safetyToggle('${t.k}', this.checked)"><span class="inline-flex items-center justify-center w-5 h-5 rounded bg-white border-2 text-[0.75rem] shrink-0" style="border-color:${t.color};">${t.icon}</span><span class="flex-1">${t.name}</span>${n !== null && safety.on[t.k] ? `<b class="font-mono shrink-0" style="color:${t.color};">${n}</b>` : ''}</label>`; }).join('')}</div>
                 <div class="flex items-center gap-1.5 mb-2">
                     <select onchange="safetySetRadius(this.value)" class="${inp}">${[0.5, 1, 2, 5, 10].map(k => `<option value="${k}" ${safety.radius === k ? 'selected' : ''}>반경 ${k < 1 ? k * 1000 + 'm' : k + 'km'}</option>`).join('')}</select>
@@ -3072,6 +3143,7 @@
             const r = alertRegion();
             if (!r) return false;
             const loc = news.location || '';
+            if (loc === '전국') return true;          // 전국 단위 소식은 어느 동네 알림에도 전달
             if (!loc.includes(r.sido)) return false;
             if (r.sigungu) {
                 const city = r.sigungu.split(' ')[0];
@@ -3097,6 +3169,7 @@
             if (!alertCfg.useLocation || !alertHere) return false;
             if (isOverseas(news)) return false;
             const loc = news.location || '';
+            if (loc === '전국') return true;
             if (alertHere.sigungu && loc.includes(alertHere.sido)) {
                 const city = alertHere.sigungu.split(' ')[0];
                 if (loc.includes(alertHere.sigungu) || (alertHere.sigungu.includes(' ') && loc.split(' ').pop() === city)) return true;
@@ -3179,7 +3252,7 @@
         //  · 잠깐 보였다가 저절로 사라짐 (보통 4초, 위험·SOS·내 위치 알림은 8초). 마우스를 올려 두면 멈춤
         //  · 한 번에 최대 5개: 6번째가 오면 가장 오래된 것부터 밀려나며 새 알림이 아래에 붙음
         //  · 2개 이상 떠 있으면 위에 '알림 N개 · 모두 닫기' 막대
-        const TOAST_MAX = 5, TOAST_MS = 4000, TOAST_LONG_MS = 8000;
+        const TOAST_MAX = 5, TOAST_MS = 5000, TOAST_LONG_MS = 8000;
         function toastStackBar() {
             const box = document.getElementById('alertToasts');
             if (!box) return;
@@ -4100,7 +4173,7 @@
                     <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
                         <div class="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                             <b>동네 인증</b>을 하면 우리 동(洞) 이웃끼리 사건·사고를 제보·공유하고, 아이를 잃어버렸을 때처럼 급한 일에는 <b class="text-red-600">SOS</b>를 보낼 수 있습니다.<br>
-                            <span class="text-xs text-slate-500">예) 개포1동에 살면 ‘개포동’ 전체 이웃이 함께 보는 게시판에 들어갑니다. 위치는 동네 확인에만 쓰이고 저장되지 않습니다.</span>
+                            <span class="text-xs text-slate-500">예) 개포1동에 살면 ‘개포동’ 전체 이웃이 함께 보는 게시판에 들어갑니다. 위치는 동네 확인과 지도의 ‘내 위치’ 표시에만 쓰이고, 이 기기에만 저장됩니다.</span>
                         </div>
                         <button onclick="verifyTown()" id="commVerifyBtn" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow"><i class="fa-solid fa-location-crosshairs"></i> 현재 위치로 동네 인증하기</button>
                         <p id="commStatus" class="text-xs text-amber-600 dark:text-amber-400"></p>
@@ -8855,6 +8928,7 @@
                 const lat = pos.coords.latitude, lng = pos.coords.longitude;
                 const near = nearestSigungu(lat, lng, 3);
                 if (near.length === 0 || near[0].dist > 60) { commStatus('대한민국 안에서만 동네 인증을 할 수 있습니다.'); return; }
+                setMyLoc(lat, lng);               // 인증한 위치는 지도에 '내 위치'로 계속 표시 (이 기기에만 저장)
                 commFound = await reverseGeocode(lat, lng);
                 commCands = [];
                 if (commFound && commFound.sigungu) commCands.push({ sido: commFound.sido, sigungu: commFound.sigungu });
@@ -8919,6 +8993,7 @@
             stopMarketChat(); marketItems = []; marketOpen = null;
             myTown = null; commMessages = []; commMembers = []; commType = 'talk'; commAttach = null;
             lsSet('my_town', 'null');
+            clearMyLoc();
             updateCommBadge();
             renderCommunity();
             renderMeBtn();
