@@ -373,6 +373,7 @@
         /* 커뮤니티 탭 끌어서 순서 바꾸기 */
         .comm-tab[draggable="true"] { cursor: grab; }
         .comm-tab.dragging, .ord-item.dragging { opacity: .4; }
+        .ord-item { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
         .ord-item.drop-before { box-shadow: -3px 0 0 0 #6366f1; }
         .ord-item.drop-after { box-shadow: 3px 0 0 0 #6366f1; }
         .comm-tab.drop-before { box-shadow: -3px 0 0 0 #6366f1; }
@@ -4847,6 +4848,10 @@
             } catch (e) {
                 console.error(e);
                 const c = e && e.code || '';
+                // 휴대폰 브라우저가 팝업을 막거나 지원하지 않으면 같은 창에서 구글 로그인 화면으로 이동했다가 돌아옴
+                if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') {
+                    try { msg('구글 로그인 화면으로 이동합니다…'); await commAuth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); return; } catch (e2) { console.error(e2); }
+                }
                 msg(c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request' ? '로그인을 취소했어요.'
                     : c === 'auth/popup-blocked' ? '팝업이 막혔어요. 주소창 오른쪽의 팝업 허용을 눌러 다시 시도해 주세요.'
                     : c === 'auth/unauthorized-domain' ? '이 주소는 아직 로그인이 허용되지 않았어요. (운영자: Firebase 승인된 도메인을 확인해 주세요)'
@@ -5047,10 +5052,16 @@
         }
         // 제보 종류는 따로 고르지 않고 글 내용에서 짐작 (글 위의 작은 꼬리표로만 쓰임)
         const REPORT_KIND_RX = [['화재', /화재|불이|불길|연기|타고\s*있|전소/], ['교통사고', /교통사고|추돌|충돌|사고\s*났|차량\s*전복|들이받|오토바이\s*사고/], ['실종', /실종|잃어버|찾고\s*있|찾습니다|미아/],
-            ['범죄 의심', /도둑|절도|폭행|싸움|흉기|강도|사기|수상한\s*거래|몰카|불법\s*촬영/], ['수상한 사람', /수상한\s*(?:사람|남성|여성|차)|배회|따라오/], ['안전사고', /넘어|미끄러|추락|떨어|부상|다쳤|쓰러|정전|가스\s*냄새|누수|침수|싱크홀/]];
+            ['범죄 의심', /도둑|절도|폭행|싸움|흉기|강도|사기|수상한\s*거래|몰카|불법\s*촬영/], ['수상한 사람', /수상한\s*(?:사람|남성|여성|차)|배회|따라오/], ['안전사고', /넘어|미끄러|추락|떨어|부상|다쳤|쓰러|가스\s*냄새/],
+            ['재난·날씨', /태풍|폭우|호우|폭설|지진|홍수|침수|산사태|강풍|한파|폭염|정전|단수/], ['도로·시설', /싱크홀|도로\s*(?:파손|공사|통제)|신호등|가로등|맨홀|공사|통제|고장|누수/]];
         // 제보 종류 표시: 종류마다 색·아이콘이 달라 한눈에 구분 (진한 바탕 + 흰 글씨, 글씨는 크지 않게)
-        const KIND_STYLE = { '화재': ['🔥', 'bg-orange-600'], '교통사고': ['🚗', 'bg-blue-600'], '범죄 의심': ['🚔', 'bg-violet-600'], '수상한 사람': ['👀', 'bg-slate-700'],
-            '실종': ['🔍', 'bg-teal-600'], '안전사고': ['⚠️', 'bg-amber-600'] };
+        const KIND_STYLE = { '화재': ['🔥', 'bg-orange-600', '#ea580c'], '교통사고': ['🚗', 'bg-blue-600', '#2563eb'], '범죄 의심': ['🚔', 'bg-violet-600', '#7c3aed'], '수상한 사람': ['👀', 'bg-slate-700', '#334155'],
+            '실종': ['🔍', 'bg-teal-600', '#0d9488'], '안전사고': ['⚠️', 'bg-amber-600', '#d97706'], '재난·날씨': ['🌧️', 'bg-sky-600', '#0284c7'], '도로·시설': ['🚧', 'bg-yellow-600', '#ca8a04'],
+            '기타': ['📢', 'bg-slate-500', '#64748b'], '제보': ['📢', 'bg-slate-500', '#64748b'] };
+        // 글쓰기에서 고르는 테마 (순서 그대로 표시). SOS 는 실종·사고처럼 급한 것만 보여 줌
+        const SAFETY_THEMES = ['실종', '교통사고', '화재', '범죄 의심', '수상한 사람', '안전사고', '재난·날씨', '도로·시설', '기타'];
+        const SOS_THEMES = ['실종', '교통사고', '화재', '안전사고', '기타'];
+        function kindColor(k) { return (KIND_STYLE[k] || KIND_STYLE['기타'])[2]; }
         function kindChip(kind, big) {
             const k = kind && kind !== '제보' ? kind : '제보', s = KIND_STYLE[k] || ['📢', 'bg-slate-500'];
             return `<span class="shrink-0 inline-flex items-center gap-0.5 rounded-md ${s[1]} text-white font-extrabold shadow-sm ${big ? 'px-2 py-0.5 text-xs' : 'px-1.5 py-0.5 text-[0.6875rem]'}">${s[0]} ${esc(k)}</span>`;
@@ -5214,6 +5225,7 @@
         //  - 저장: 서버(Firebase) 연결 시 feedPosts 컬렉션(댓글은 그 아래 comments), 체험 모드에서는 이 기기에만 저장
         const FEED_REACTS = ['😂', '😮', '😢', '👏', '🔥'];
         const FEED_IMG_MAX = 4, FEED_TEXT_MAX = 500, FEED_CMT_MAX = 200;
+        const FEED_VIDEO_ON = false;     // 동영상 올리기: Firebase Storage(유료 요금제 필요할 수 있음)를 켠 뒤 true
         const FEED_VIDEO_RE = /^https:\/\/firebasestorage\.googleapis\.com\//;
         let feedCache = {};             // uid → 게시물 목록
         let feedOpen = null;            // 지금 크게 보고 있는 게시물 { uid, id }
@@ -5454,10 +5466,10 @@
                     <input id="feedImgIn" type="file" accept="image/*" multiple class="hidden" onchange="feedPickImages(this)">
                     <input id="feedVidIn" type="file" accept="video/*" class="hidden" onchange="feedPickVideo(this)">
                     <button onclick="document.getElementById('feedImgIn').click()" ${feedDraft.imgs.length >= FEED_IMG_MAX || feedDraft.video ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 disabled:opacity-40"><i class="fa-solid fa-image"></i> 사진 (${feedDraft.imgs.length}/${FEED_IMG_MAX})</button>
-                    <button onclick="document.getElementById('feedVidIn').click()" ${feedDraft.imgs.length || feedDraft.video ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 disabled:opacity-40"><i class="fa-solid fa-video"></i> 동영상</button>
+                    ${FEED_VIDEO_ON ? `<button onclick="document.getElementById('feedVidIn').click()" ${feedDraft.imgs.length || feedDraft.video ? 'disabled' : ''} class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-bold text-slate-700 dark:text-slate-200 disabled:opacity-40"><i class="fa-solid fa-video"></i> 동영상</button>` : ''}
                     <button onclick="feedSubmit()" ${feedBusy ? 'disabled' : ''} class="ml-auto px-4 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-violet-600 text-white text-xs font-bold disabled:opacity-50">${feedBusy ? '올리는 중…' : '공유하기'}</button>
                 </div>
-                <div class="text-[0.625rem] text-slate-400">사진은 최대 ${FEED_IMG_MAX}장(자동으로 줄여 저장), 동영상은 1개 · ${VIDEO_MAX_MB}MB 이하${commDb ? '' : ' (동영상은 서버 연결 후 올릴 수 있습니다)'}</div>
+                <div class="text-[0.625rem] text-slate-400">사진은 최대 ${FEED_IMG_MAX}장(자동으로 줄여 저장)${FEED_VIDEO_ON ? `, 동영상은 1개 · ${VIDEO_MAX_MB}MB 이하` : ''}</div>
             </div>`;
             document.getElementById('feedText').value = keep;
         }
@@ -6149,7 +6161,7 @@
                             </div>
                             <p class="text-xs text-slate-600 dark:text-slate-300 truncate">${esc(commProfile.intro || '한 줄 소개를 적어 보세요.')}</p>
                             <div class="mt-1.5 flex flex-wrap items-center gap-1">
-                                ${pill(`openFollowList('${COMM_UID}', 'followers')`, fCnt, '팔로워')}${pill(`openFollowList('${COMM_UID}', 'following')`, gCnt, '팔로잉')}
+                                ${commOpen('people') ? pill(`openFollowList('${COMM_UID}', 'followers')`, fCnt, '팔로워') + pill(`openFollowList('${COMM_UID}', 'following')`, gCnt, '팔로잉') : ''}
                                 <span id="meTrust">${trustChipHtml(trustCache[COMM_UID])}</span>
                             </div>
                         </div>
@@ -7331,13 +7343,13 @@
         // 안전망은 가장 중요해서 혼자 따로(빨간색), 맛집·핫플처럼 성격이 같은 것은 한 묶음으로.
         // ★ 단계별 공개 (2026-11-16): 지금은 안전망 · 동네 이야기 · 동네 장터만 엽니다. 나머지(맛집·핫플 / 이웃·대화 / 전국 TOP10 / 내 프로필 탭)는 화면에서만 숨겼고 코드는 그대로 있습니다.
         //   나중에 열 때는 아래 목록에 이름만 더하면 됩니다. 예) ['safe', 'life', 'market', 'local']  (people 을 열면 팔로우·1:1 대화 버튼도 함께 보입니다)
-        const COMM_OPEN = ['safe', 'life', 'market'];
+        const COMM_OPEN = ['safe', 'life', 'market', 'me'];
         function commOpen(k) { return COMM_OPEN.includes(k); }
         const COMM_GROUPS_ALL = [
             // c: 묶음 색, fa: 아이콘. 안전망은 고르지 않았을 때도 빨간색으로 칠해서 항상 눈에 띄게 (SOS 표시는 실제 SOS 글이 있을 때만 한 번)
             { k: 'safe', label: '우리동네 안전망', fa: 'fa-shield-halved', c: 'red', tabs: ['talk'] },
             // 동네 이야기: 맨 앞 '우리동네 TOP10'(이번 달 우리 동네 인기 글 TOP10 + 인기쟁이 TOP10)을 함께 둠 (탭 이름 popular 는 예전 저장값과 맞추려고 그대로 씀)
-            { k: 'life', label: '동네 이야기', fa: 'fa-house-chimney-user', c: 'sky', tabs: ['popular', 'free', 'hello', 'wish', 'praise'] },
+            { k: 'life', label: '동네 이야기', fa: 'fa-house-chimney-user', c: 'sky', tabs: ['free', 'praise', 'wish', 'hello', 'popular'] },
             { k: 'market', label: '동네 장터', fa: 'fa-store', c: 'emerald', tabs: ['market'] },
             { k: 'local', label: '동네 맛집·핫플', fa: 'fa-utensils', c: 'orange', tabs: ['food', 'spot'] },
             // 이웃·대화: '팔로잉 소식'을 맨 앞에 (예전에 순서를 저장해 둔 사람도 한 번은 맨 앞으로 옮김 → groupTabs)
@@ -7371,6 +7383,8 @@
         // 묶음 안의 작은 탭 순서: 마우스로 끌어서 바꾸고 저장 (새로 생긴 탭은 맨 뒤에 붙음)
         function groupTabs(g) {
             let o = [];
+            // 동네 이야기 기본 순서(이런저런·칭찬해요·아쉬워요·이사왔어요·TOP10)로 한 번 맞춤 — 이후 사용자가 끌어 바꾼 순서는 그대로 따름
+            if (g.k === 'life' && lsGet('comm_order_life_v3') !== '1') { lsSet('comm_order_life', ''); lsSet('comm_order_life_v3', '1'); }
             try { o = JSON.parse(lsGet('comm_order_' + g.k) || '[]'); } catch (e) {}
             o = o.filter(t => g.tabs.includes(t));
             // '친구' → '팔로잉 소식'으로 바뀐 뒤 처음 한 번: 예전에 저장한 순서가 있어도 팔로잉 소식을 맨 앞으로 (그 뒤 사용자가 끌어 옮기면 그대로 따름)
@@ -7404,12 +7418,62 @@
             if (!dragOrd || dragOrd.key !== key || dragOrd.item === target) { ordDragEnd(); return; }
             const o = list.filter(x => x !== dragOrd.item);
             o.splice(o.indexOf(target) + (after ? 1 : 0), 0, dragOrd.item);
-            lsSet(key, JSON.stringify(o));
+            lsSet(key, JSON.stringify(o)); lsSet('comm_drag_hint', '1');
             ordDragEnd();
             done();
         }
+        // 휴대폰(터치): 꾹 누르면(0.45초) 끌기 시작 → 손가락을 옮겨 놓고 뗌. PC 의 끌어놓기(HTML5 drag)와 같은 저장 방식
+        (function ordTouchInit() {
+            let t = null;
+            const q = s => String(s).replace(/&quot;/g, '"');
+            const stop = () => { if (t) { clearTimeout(t.timer); t.el.classList.remove('dragging'); document.querySelectorAll('.ord-item.drop-before, .ord-item.drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after')); } t = null; };
+            const targetAt = (x, y) => { const e = document.elementFromPoint(x, y), o = e && e.closest ? e.closest('.ord-item[data-ok]') : null; return o && o.dataset.ok === t.el.dataset.ok && o !== t.el ? o : null; };
+            document.addEventListener('touchstart', e => {
+                stop();
+                const el = e.target.closest && e.target.closest('.ord-item[data-ok]');
+                if (!el || e.touches.length !== 1) return;
+                const p = e.touches[0];
+                t = { el: el, x: p.clientX, y: p.clientY, on: false };
+                t.timer = setTimeout(() => { if (!t) return; t.on = true; t.el.classList.add('dragging'); try { navigator.vibrate && navigator.vibrate(15); } catch (err) {} }, 450);
+            }, { passive: true });
+            document.addEventListener('touchmove', e => {
+                if (!t) return;
+                const p = e.touches[0];
+                if (!t.on) { if (Math.hypot(p.clientX - t.x, p.clientY - t.y) > 8) stop(); return; }   // 누르기 전에 움직이면 그냥 스크롤
+                e.preventDefault();
+                document.querySelectorAll('.ord-item.drop-before, .ord-item.drop-after').forEach(x => x.classList.remove('drop-before', 'drop-after'));
+                const o = targetAt(p.clientX, p.clientY);
+                if (o) { const r = o.getBoundingClientRect(); o.classList.add(p.clientX > r.left + r.width / 2 ? 'drop-after' : 'drop-before'); }
+            }, { passive: false });
+            document.addEventListener('touchend', e => {
+                if (!t) return;
+                if (!t.on) { stop(); return; }
+                const p = e.changedTouches[0], o = targetAt(p.clientX, p.clientY), el = t.el;
+                e.preventDefault();                       // 끌기를 끝낸 손가락은 '눌림(클릭)'으로 치지 않음
+                if (o) {
+                    const r = o.getBoundingClientRect(), after = p.clientX > r.left + r.width / 2;
+                    try {
+                        const list = (new Function('return ' + q(el.dataset.ol)))().filter(x => x !== el.dataset.oi);
+                        list.splice(list.indexOf(o.dataset.oi) + (after ? 1 : 0), 0, el.dataset.oi);
+                        lsSet(el.dataset.ok, JSON.stringify(list));
+                        lsSet('comm_drag_hint', '1');
+                        stop();
+                        (new Function(q(el.dataset.od)))();
+                        return;
+                    } catch (err) { console.error(err); }
+                }
+                stop();
+            }, { passive: false });
+            document.addEventListener('touchcancel', stop, { passive: true });
+        })();
+        function commDragHintHtml() {
+            if (lsGet('comm_drag_hint') === '1') return '';
+            const touch = window.matchMedia && matchMedia('(pointer: coarse)').matches;
+            return `<div id="commDragHint" class="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 text-white text-[0.6875rem] font-bold" style="white-space: normal;"><span class="text-base">👆</span><span class="flex-1 leading-snug">탭을 ${touch ? '꾹 누른 채' : '마우스로'} 끌어서 <u>순서를 바꿀 수 있어요</u></span><button onclick="lsSet('comm_drag_hint', '1'); this.parentElement.remove()" class="shrink-0 px-2 py-0.5 rounded-full bg-white text-indigo-700 font-extrabold">알겠어요</button></div>`;
+        }
         function ordAttrs(key, item, listExpr, doneExpr) {
-            return `draggable="true" ondragstart="ordDragStart(event, '${key}', '${item}')" ondragover="ordDragOver(event, '${key}')" ondragleave="ordDragLeave(event)" ondragend="ordDragEnd()" ondrop="ordDrop(event, '${key}', '${item}', ${listExpr}, () => ${doneExpr})"`;
+            const qa = s => String(s).replace(/"/g, '&quot;');
+            return `data-ok="${key}" data-oi="${item}" data-ol="${qa(listExpr)}" data-od="${qa(doneExpr)}" draggable="true" ondragstart="ordDragStart(event, '${key}', '${item}')" ondragover="ordDragOver(event, '${key}')" ondragleave="ordDragLeave(event)" ondragend="ordDragEnd()" ondrop="ordDrop(event, '${key}', '${item}', ${listExpr}, () => ${doneExpr})"`;
         }
         function tabBadge(tab) {
             if (tab === 'friends') return commUnseen.feed + commUnseen.follow;
@@ -7448,7 +7512,7 @@
                 const ico = on ? 'bg-white/25 text-white' : `bg-${c}-100 dark:bg-${c}-950/60 text-${c}-600 dark:text-${c}-300`;
                 return `<button onclick="setCommTab('${t}')" ${ordAttrs(okey, t, 'groupTabs(commGroupOf(commTab))', 'renderCommTabBar()')} aria-pressed="${on}" class="ord-item comm-tab relative shrink-0 flex items-center gap-1.5 pl-1.5 pr-3.5 py-1.5 rounded-full border text-[0.8125rem] font-extrabold whitespace-nowrap cursor-grab transition ${cls}"><span class="w-6 h-6 rounded-full flex items-center justify-center text-[0.6875rem] ${ico}"><i class="fa-solid ${COMM_TAB_FA[t] || 'fa-circle'}"></i></span>${COMM_TAB_LABEL[t]}${b ? ` <span class="text-[0.5625rem] ${on ? 'bg-white text-red-600' : 'bg-red-500 text-white'} rounded-full px-1.5 leading-4">${b === '●' ? '●' : b}</span>` : ''}</button>`;
             }).join('')}</div>` : '';
-            bar.innerHTML = `<div class="grid gap-1.5 px-2 pt-2 ${subs ? '' : 'pb-2'}" style="grid-template-columns: repeat(${COMM_GROUPS.length}, minmax(0, 1fr));">${groups}</div>${subs}`;
+            bar.innerHTML = `<div class="grid gap-1.5 px-2 pt-2 ${subs ? '' : 'pb-2'}" style="grid-template-columns: repeat(${COMM_GROUPS.length}, minmax(0, 1fr));">${groups}</div>${subs ? commDragHintHtml() : ''}${subs}`;
             const on = bar.querySelector('.comm-tab[aria-pressed="true"]'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });   // 고른 탭이 가려지지 않게
             // 휴대폰: 맨 위 큰 탭 줄은 옆으로 밀어서 보는 줄 → 고른 큰 탭이 줄 가운데에 오도록 맞춤 (처음엔 맨 앞 안전망, 뒤쪽 탭을 골라도 보이게)
             const gOn = bar.querySelector('[data-on="1"]'), row = gOn && gOn.parentElement;
@@ -7500,10 +7564,9 @@
         }
         function pbBadge(b, p) {
             if (b === 'talk') {
-                if (p.type === 'sos') return '<span class="shrink-0 px-1.5 py-0.5 rounded bg-red-600 text-white text-[0.625rem] font-extrabold">🚨 SOS</span>';
+                if (p.type === 'sos') return '<span class="shrink-0 px-1.5 py-0.5 rounded bg-red-600 text-white text-[0.625rem] font-extrabold">🚨 SOS</span>' + (p.kind && p.kind !== '기타' && p.kind !== '제보' ? kindChip(p.kind) : '');
                 if (p.type === 'live') return `<span class="shrink-0 px-1.5 py-0.5 rounded bg-rose-600 text-white text-[0.625rem] font-extrabold">🔴 ${liveIsOn(p.liveId) ? '방송 중' : '방송'}</span>`;
-                if (p.type === 'report') return kindChip(p.kind);
-                return '';
+                return kindChip(p.kind || guessReportKind((p.title || '') + ' ' + (p.text || '')));
             }
             const f = (PB[b].filters || []).find(x => x[0] === p.kind);
             return f ? `<span class="shrink-0 px-1.5 py-0.5 rounded bg-${PB[b].c}-100 dark:bg-${PB[b].c}-950/60 text-${PB[b].c}-800 dark:text-${PB[b].c}-200 text-[0.625rem] font-bold">${esc(f[1])}</span>` : '';
@@ -7563,7 +7626,8 @@
                 const n = cc[p.id] || 0, lk = pbLikes(b, p), fresh = now - p.ts < 3 * 3600000;
                 const thumb = p.img && IMG_DATA_RE.test(p.img) ? `<img src="${p.img}" class="w-14 h-14 rounded-lg object-cover shrink-0 border border-slate-200 dark:border-slate-700">`
                     : (p.video ? '<span class="w-14 h-14 rounded-lg shrink-0 bg-slate-900 text-white flex items-center justify-center text-lg">▶</span>' : '');
-                return `<button onclick="pbOpen('${b}', '${esc(p.id)}')" class="w-full text-left flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 transition ${pin ? 'bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/60' : 'bg-white/80 dark:bg-slate-900/70 hover:bg-slate-50 dark:hover:bg-slate-800/70'}">
+                const bar = b === 'talk' ? ` style="border-left: 5px solid ${p.type === 'sos' ? '#dc2626' : kindColor(p.kind || guessReportKind((p.title || '') + ' ' + (p.text || '')))}"` : '';
+                return `<button onclick="pbOpen('${b}', '${esc(p.id)}')"${bar} class="w-full text-left flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 transition ${pin ? 'bg-red-50 dark:bg-red-950/40 hover:bg-red-100 dark:hover:bg-red-950/60' : 'bg-white/80 dark:bg-slate-900/70 hover:bg-slate-50 dark:hover:bg-slate-800/70'}">
                     <div class="min-w-0 flex-1">
                         <div class="flex items-center gap-1.5 min-w-0">${pin ? '<i class="fa-solid fa-thumbtack text-red-500 text-[0.6875rem] shrink-0"></i>' : ''}${pbBadge(b, p)}
                             <span class="text-[0.875rem] font-bold text-slate-900 dark:text-white truncate">${esc(pbTitle(p))}</span>
@@ -7741,10 +7805,18 @@
         function pbSetType(t) {
             if (t === 'live') { pbUi.talk.view = 'list'; pbRefresh('talk', true); openLiveStart(); return; }   // 실시간 방송은 방송 시작 창으로
             pbDraft.type = t;
+            const th = document.getElementById('pbThemes'); if (th) th.innerHTML = pbThemesHtml();
             document.querySelectorAll('#pbTypes [data-t]').forEach(el => el.classList.toggle('pb-on', el.dataset.t === t));
             const g = document.getElementById('pbTypeGuide'); if (g) g.innerHTML = pbTypeGuide(t);
             const tx = document.getElementById('pbText'); if (tx) tx.placeholder = t === 'sos' ? '예) 7살 남자아이, 파란 점퍼에 노란 가방이에요. 오후 3시쯤 ○○놀이터에서 마지막으로 봤어요. 보신 분은 댓글이나 112로 알려 주세요.' : '예) 오후 3시쯤 ○○사거리에서 차량 화재가 났어요. 연기가 많이 나고 소방차가 오고 있어요. 근처 지나가시는 분들 우회하세요.';
         }
+        function pbThemesHtml() {
+            const list = pbDraft.type === 'sos' ? SOS_THEMES : SAFETY_THEMES;
+            if (pbDraft.kind && !list.includes(pbDraft.kind)) pbDraft.kind = '';
+            return list.map(k => { const s = KIND_STYLE[k], on = pbDraft.kind === k;
+                return `<button type="button" onclick="pbPickTheme('${k}')" aria-pressed="${on}" class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-extrabold border-2 transition ${on ? 'text-white shadow-md' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'}" style="${on ? `background:${s[2]};border-color:${s[2]}` : ''}"><span>${s[0]}</span>${k}</button>`; }).join('');
+        }
+        function pbPickTheme(k) { pbDraft.kind = pbDraft.kind === k ? '' : k; const el = document.getElementById('pbThemes'); if (el) el.innerHTML = pbThemesHtml(); }
         function pbSetKind(k) { pbDraft.kind = k; document.querySelectorAll('#pbKinds [data-k]').forEach(el => el.classList.toggle('pb-on', el.dataset.k === k)); }
         function pbTypeGuide(t) {
             return t === 'sos' ? '<b class="text-red-600">🚨 SOS 긴급 도움 요청</b> — 글이 24시간 동안 맨 위에 고정되고 이웃에게 경보음 알림이 갑니다. 인상착의·마지막으로 본 장소와 시간·연락 방법을 적어 주세요. 생명이 위급하면 먼저 112·119에 신고하세요.'
@@ -7766,7 +7838,7 @@
                     <button onclick="pbSubmit('${b}')" class="ml-auto px-4 py-1.5 rounded-lg ${pbBtn(b)} text-white text-xs font-extrabold shadow-sm">등록</button>
                 </div>
                 <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-3 bg-slate-50 dark:bg-slate-950/40">
-                    ${typeCards}${kinds}
+                    ${typeCards}${kinds}${b === 'talk' ? `<div><div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">어떤 일인가요? <span class="font-normal text-slate-400">(고르지 않으면 내용을 보고 자동으로 붙어요)</span></div><div id="pbThemes" class="flex flex-wrap gap-1.5">${pbThemesHtml()}</div></div>` : ''}
                     ${P.tip ? `<div class="text-[0.6875rem] text-slate-500 leading-relaxed" style="white-space: normal;">${esc(P.tip)}</div>` : ''}
                     <input id="pbTitle" maxlength="60" placeholder="제목을 입력하세요" class="${inp} font-bold">
                     <textarea id="pbText" rows="8" maxlength="1000" placeholder="${esc(ph)}" class="${inp} resize-y leading-relaxed" style="min-height: 9rem;"></textarea>
@@ -7801,9 +7873,11 @@
             if (!text && !pbDraft.img && !pbDraft.video) { say('내용을 입력해 주세요.'); return; }
             const msg = Object.assign({ title: title, text: text, ts: Date.now(), uid: COMM_UID, views: 0 }, meFields());
             msg[P.like] = [];
-            if (b === 'talk') { msg.type = pbDraft.type === 'sos' ? 'sos' : 'report'; msg.town = myTown.dong; if (msg.type === 'report') msg.kind = guessReportKind(title + ' ' + text); }
-            if (b === 'talk' && msg.type === 'report' && !(await reportGate('실시간 제보'))) return;   // 신뢰 지수 기준 + 법적 책임 경고
-            else { msg.type = 'post'; if (P.filterKey === 'kind') msg.kind = pbDraft.kind || (P.filters ? P.filters[0][0] : ''); }
+            if (b === 'talk') { msg.type = pbDraft.type === 'sos' ? 'sos' : 'report'; msg.town = myTown.dong; }
+            if (b === 'talk') {
+                msg.kind = pbDraft.kind || guessReportKind(title + ' ' + text);   // 고른 테마(없으면 내용에서 짐작)
+                if (msg.type === 'report' && !(await reportGate('실시간 제보'))) return;   // 신뢰 지수 기준 + 법적 책임 경고
+            } else { msg.type = 'post'; if (P.filterKey === 'kind') msg.kind = pbDraft.kind || (P.filters ? P.filters[0][0] : ''); }
             if (pbDraft.img) msg.img = pbDraft.img;
             try {
                 const db = await commInit();
