@@ -1151,9 +1151,23 @@ def is_personal_story(title):
     return bool(PERSONAL_STORY_RE.search(t)) and not PERSONAL_STORY_FACT_RE.search(t)
 
 
+# 시설 '균열·붕괴·침하' 낱말이 있지만 기술 개발·신공법·특허·연구 같은 정책/기술 기사 (예: '교량 건설 기술 개발 균열 방지 신공법')
+#   실제 사고·피해·통제·대피 같은 사건 낱말이 없을 때만 제외
+STRUCT_WORD_RE = re.compile(r"균열|붕괴|무너|침하|처짐|기울|파손|낙하|추락|누수|싱크홀")
+STRUCT_TECH_RE = re.compile(r"신공법|공법|신기술|기술\s*(?:개발|적용|도입|이전)|(?<!재)(?<!도시)개발|특허|연구|시공\s*(?:기술|법)|보강\s*(?:기술|공법|재)|방지\s*(?:기술|공법|재|제|시스템|장치)|균열\s*방지|내진\s*(?:설계|보강|기술)|스마트\s*(?:안전|점검)|진단\s*(?:기술|시스템)")
+STRUCT_REAL_RE = re.compile(r"사고|사망|숨져|숨진|숨졌|부상|다쳐|다쳤|대피|통제|발견|확인됐|신고|출동|매몰|구조|무너졌|붕괴됐|붕괴돼|무너져|추락해|추락했|발생(?!\s*방지)|피해|긴급|폐쇄|운행\s*중단|통행\s*(?:금지|제한)|입건|구속")
+
+
+def is_tech_policy_struct(title):
+    t = title or ""
+    return bool(STRUCT_WORD_RE.search(t) and STRUCT_TECH_RE.search(t) and not STRUCT_REAL_RE.search(t))
+
+
 def is_not_incident(title, content):
     """사건사고 '발생' 기사가 아닌 것(서평·광고·정책·발언·사설·기술·과학·역사·상품·예방)을 걸러냄"""
     if NON_NEWS_RE.search(title):
+        return True
+    if is_tech_policy_struct(title):
         return True
     if is_personal_story(title):
         return True
@@ -4611,6 +4625,11 @@ def selftest():
         ("살충제 계란 검출", True),
         ("고속도로 낙하물 사고 잇따라", True),
         ("저수지 제방 균열 주민 대피", True),
+        ("교량 건설 기술 개발 균열 방지 신공법", False),
+        ("콘크리트 균열 방지 신기술 특허 취득", False),
+        ("건물 붕괴 막는 보강 공법 개발", False),
+        ("재개발 구역 건물 균열 주민 불안", True),
+        ("교량 상판 균열 발견 통제", True),
         ("독사 출몰 산책로 주의", True),
         ("우편물 수상한 가루 발견 대피", True),
         ("현대차 리콜 15만대 브레이크 결함", True),
