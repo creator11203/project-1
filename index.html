@@ -4620,6 +4620,7 @@
             if (!myTown) return;
             const me = Object.assign({ uid: COMM_UID, intro: commProfile.intro || '', joinedAt: commProfile.joinedAt || Date.now(), lastSeen: Date.now(), photo: myPhoto(),
                 feedPublic: commProfile.feedPublic !== false, rankPublic: !!commProfile.rankPublic }, meFields());   // 일상 게시물·인기쟁이 순위 공개 설정
+            if (commProfile.nickAt) { me.nickAt = commProfile.nickAt; me.nickFree = !!commProfile.nickFree; }       // 닉네임 변경 시각 (서버 규칙이 3개월 제한을 검사)
             const db = await commInit();
             if (db) { try { await commDoc(townKey(myTown)).collection('members').doc(COMM_UID).set(me, { merge: true }); } catch (e) { console.error(e); } }
             else { commMembers = [me]; renderCommMembers(); }
@@ -4843,11 +4844,13 @@
                 await commInit();
                 if (!commAuth) { msg('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
                 msg('구글 로그인 창을 여는 중…');
+                lsSet('comm_after_login', String(Date.now()));       // 로그인 뒤 다시 불러올 때 기사 목록이 아니라 커뮤니티로 바로 들어가기 위한 표시
                 await commAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
                 location.reload();                            // 로그인 뒤 처음부터 다시 불러옴 (구독이 로그인 전 상태로 남지 않게)
             } catch (e) {
                 console.error(e);
                 const c = e && e.code || '';
+                if (c !== 'auth/popup-blocked' && c !== 'auth/operation-not-supported-in-this-environment') lsSet('comm_after_login', '');   // 취소·실패면 표시 지움
                 // 휴대폰 브라우저가 팝업을 막거나 지원하지 않으면 같은 창에서 구글 로그인 화면으로 이동했다가 돌아옴
                 if (c === 'auth/popup-blocked' || c === 'auth/operation-not-supported-in-this-environment') {
                     try { msg('구글 로그인 화면으로 이동합니다…'); await commAuth.signInWithRedirect(new firebase.auth.GoogleAuthProvider()); return; } catch (e2) { console.error(e2); }
@@ -4858,6 +4861,14 @@
                     : '로그인하지 못했어요. 잠시 후 다시 시도해 주세요.');
             }
         }
+        // 구글 로그인을 마치고 돌아오면(10분 안) 기사 목록 대신 커뮤니티를 바로 엶 — PC·휴대폰 공통
+        window.addEventListener('load', () => {
+            const t = Number(lsGet('comm_after_login') || 0);
+            if (!t) return;
+            lsSet('comm_after_login', '');
+            if (!FIREBASE_CONFIG || Date.now() - t > 600000) return;
+            setTimeout(() => { try { openCommunity(); } catch (e) { console.error(e); } }, 700);
+        });
         async function commLogout() {
             if (!confirm('로그아웃할까요?')) return;
             try { await commInit(); if (commAuth) await commAuth.signOut(); } catch (e) { console.error(e); }
@@ -6092,7 +6103,8 @@
                     <div class="flex flex-wrap gap-1.5 justify-center ${showAv ? '' : 'hidden'}">
                         ${COMM_EMOJIS.map(e => `<button onclick="pickEmoji('${e}')" class="w-9 h-9 rounded-full text-xl border ${commEditEmoji === e ? 'border-emerald-500 ring-2 ring-emerald-400 bg-emerald-50 dark:bg-emerald-950' : 'border-slate-300 dark:border-slate-600'}">${e}</button>`).join('')}
                     </div>
-                    <input id="pfNick" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" class="${inp} ${showNick ? '' : 'hidden'}">
+                    <div class="${showNick ? '' : 'hidden'} space-y-2">${nickRuleHtml()}</div>
+                    <input id="pfNick" type="text" maxlength="12" placeholder="닉네임 (최대 12자)" ${nickChangeInfo().ok ? '' : 'disabled'} class="${inp} ${showNick ? '' : 'hidden'} disabled:opacity-50">
                     <input id="pfIntro" type="text" maxlength="40" placeholder="한 줄 소개 (최대 40자)" class="${inp} ${showNick ? '' : 'hidden'}">
                     <div class="flex gap-2 justify-end">
                         <button onclick="closeProfile()" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold">취소</button>
@@ -6103,6 +6115,21 @@
             document.getElementById('pfIntro').value = intro || '';
             card.classList.remove('hidden');
         }
+        // ---- 닉네임 변경 제한: 한 번 바꾸면 90일(3개월) 뒤에 다시 변경 가능. 처음 정한 뒤 24시간 안에는 1번 무료 수정 ----
+        const NICK_COOLDOWN = 90 * 86400000, NICK_FREE_WINDOW = 86400000;
+        function nickChangeInfo() {
+            const at = commProfile.nickAt || 0, now = Date.now();
+            if (!at || !(commProfile.nick || '').trim()) return { ok: true, free: true };                   // 아직 한 번도 안 정함
+            if (!commProfile.nickFree && now - at < NICK_FREE_WINDOW) return { ok: true, free: true, left: 1 };   // 정한 지 24시간 안: 1번 고칠 수 있음
+            if (now - at >= NICK_COOLDOWN) return { ok: true };
+            return { ok: false, next: at + NICK_COOLDOWN };
+        }
+        function nickDateText(ts) { const d = new Date(ts); return d.getFullYear() + '년 ' + (d.getMonth() + 1) + '월 ' + d.getDate() + '일'; }
+        function nickRuleHtml() {
+            const i = nickChangeInfo();
+            const rule = '닉네임은 한 번 바꾸면 <b>3개월(90일)</b> 동안 다시 바꿀 수 없어요. (처음 정한 뒤 24시간 안에는 1번 고칠 수 있어요.) 이웃이 서로를 알아볼 수 있도록 한 규칙입니다.';
+            return `<div class="rounded-lg px-3 py-2 text-[0.6875rem] leading-relaxed ${i.ok ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}" style="white-space: normal;">${i.ok ? '' : `🔒 <b>${nickDateText(i.next)}</b>부터 다시 바꿀 수 있어요.<br>`}${rule}</div>`;
+        }
         function pickEmoji(e) { commEditEmoji = e; editProfile(true); }
         async function pickProfilePhoto(input) {
             const f = input.files && input.files[0];
@@ -6112,7 +6139,14 @@
             editProfile(true);
         }
         function saveProfile() {
-            commProfile.nick = (document.getElementById('pfNick').value || '').trim().slice(0, 12);
+            const newNick = (document.getElementById('pfNick').value || '').trim().slice(0, 12), oldNick = (commProfile.nick || '').trim();
+            if (newNick !== oldNick) {
+                const info = nickChangeInfo();
+                if (!info.ok) { showAlertToast({ head: '닉네임', title: nickDateText(info.next) + '부터 다시 바꿀 수 있어요.' }); return; }
+                if (oldNick && !confirm('닉네임을 "' + newNick + '"(으)로 바꿀까요?\n' + (info.free ? '처음 정한 뒤 24시간 안의 1번뿐인 무료 수정이에요. 이후에는 3개월 동안 다시 바꿀 수 없어요.' : '바꾼 뒤에는 3개월(90일) 동안 다시 바꿀 수 없어요.'))) return;
+                if (oldNick && info.free && info.left) commProfile.nickFree = true;      // 24시간 무료 수정 사용
+                commProfile.nick = newNick; commProfile.nickAt = Date.now();
+            }
             commProfile.intro = (document.getElementById('pfIntro').value || '').trim().slice(0, 40);
             commProfile.emoji = commEditEmoji || '🙂';
             if (commEditPhoto !== null) commProfile.photo = commEditPhoto;
