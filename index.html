@@ -814,7 +814,14 @@
         // ▼▼▼ 우리동네 커뮤니티 서버 설정 ▼▼▼
         // Firebase 콘솔에서 받은 설정값을 null 자리에 붙여넣으면 실제 커뮤니티가 켜집니다.
         // 예) const FIREBASE_CONFIG = { apiKey: "...", authDomain: "...", projectId: "...", storageBucket: "...", messagingSenderId: "...", appId: "..." };
-        const FIREBASE_CONFIG = null;
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyC1xwQLRv48-Uy5rzXXYE6g426qXyGrjQc",
+            authDomain: "townalertkr-b76f6.firebaseapp.com",
+            projectId: "townalertkr-b76f6",
+            storageBucket: "townalertkr-b76f6.firebasestorage.app",
+            messagingSenderId: "373734693701",
+            appId: "1:373734693701:web:4cf170c9aa4b164b367c2c"
+        };   // ※ 이 값은 공개되어도 되는 값입니다. 데이터는 Firebase 콘솔의 Firestore 보안 규칙(firestore.rules)이 지킵니다.
         // ▲▲▲ 여기까지 ▲▲▲
 
         let newsData = [];
@@ -3254,7 +3261,8 @@
                 ${item('showBlockList()', 'fa-ban', '차단 관리' + (Object.keys(blocked).length ? ' ' + Object.keys(blocked).length : ''))}
                 ${item('showReportGuide()', 'fa-scale-balanced', '제보 가이드라인 · 신뢰 지수')}
                 <div class="px-2.5 py-1.5 flex items-center gap-1.5 text-[0.6875rem] text-slate-500">배경 <span id="commBgDots" class="flex items-center gap-1"></span></div>
-                ${item('resetTown()', 'fa-location-crosshairs', '동네 다시 인증')}` : `<div class="px-2.5 py-2 text-xs text-slate-500">먼저 동네 인증을 해 주세요.</div>`;
+                ${item('resetTown()', 'fa-location-crosshairs', '동네 다시 인증')}
+                ${FIREBASE_CONFIG && commUser ? item('commLogout()', 'fa-right-from-bracket', '로그아웃') : ''}` : `<div class="px-2.5 py-2 text-xs text-slate-500">먼저 동네 인증을 해 주세요.</div>`;
             m.classList.remove('hidden');
             renderCommBg();
         }
@@ -4091,11 +4099,13 @@
 
         function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
         function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
-        const COMM_UID = (() => {
+        // 이용자 식별자: 서버(Firebase)를 연결하면 구글 로그인 계정의 uid 로 바뀜 (commInit 에서). 체험 모드에서는 이 기기에서 만든 임의 값
+        let COMM_UID = (() => {
             let u = lsGet('comm_uid');
             if (!u) { u = 'u' + Math.random().toString(36).slice(2) + Date.now().toString(36); lsSet('comm_uid', u); }
             return u;
         })();
+        let commAuth = null, commUser = null, commAuthState = FIREBASE_CONFIG ? 'unknown' : 'demo';   // unknown(확인 중) / in / out / demo(서버 없음)
         let commProfile = (() => {
             const base = { nick: lsGet('comm_nick') || '', emoji: '🙂', intro: '', joinedAt: Date.now() };
             try { return Object.assign(base, JSON.parse(lsGet('comm_profile') || '{}')); } catch (e) { return base; }
@@ -4535,10 +4545,19 @@
                 if (!FIREBASE_CONFIG) return null;
                 await loadScript(FB_VER + 'firebase-app-compat.js');
                 await loadScript(FB_VER + 'firebase-firestore-compat.js');
+                await loadScript(FB_VER + 'firebase-auth-compat.js');
                 firebase.initializeApp(FIREBASE_CONFIG);
+                commAuth = firebase.auth();
+                // 구글 로그인 상태를 먼저 확인 (이전에 로그인했으면 그대로 이어짐). 로그인했으면 이용자 식별자를 계정 uid 로 바꿈
+                const first = await new Promise(res => { const un = commAuth.onAuthStateChanged(u => { un(); res(u); }); });
+                commUser = first; commAuthState = first ? 'in' : 'out';
+                if (first) COMM_UID = first.uid;
+                commAuth.onAuthStateChanged(u => {           // 다른 탭에서 로그아웃하는 등 나중에 바뀌면 새로 불러옴
+                    if ((u ? u.uid : null) !== (commUser ? commUser.uid : null)) location.reload();
+                });
                 commDb = firebase.firestore();
                 return commDb;
-            })().catch(e => { console.error(e); commDb = null; return null; });
+            })().catch(e => { console.error(e); commDb = null; if (commAuthState === 'unknown') commAuthState = 'out'; return null; });
             return commReady;
         }
         function commDoc(key) { return commDb.collection('communities').doc(key); }
@@ -4802,9 +4821,54 @@
             if (ic) ic.className = 'fa-solid ' + (noticeOpen ? 'fa-chevron-up' : 'fa-chevron-down') + ' shrink-0 opacity-60 mt-0.5';
         }
 
+        // ---- 구글 로그인 (서버를 연결했을 때만 필요: 글쓰기·동네 인증은 로그인한 사람만) ----
+        function commLoginHtml() {
+            const app = inAppBrowserName();
+            return `<div class="p-6 space-y-4 overflow-y-auto custom-scrollbar">
+                <div class="rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800 p-4 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                    <b>구글 로그인</b>을 하면 커뮤니티를 이용할 수 있어요.<br>
+                    <span class="text-xs text-slate-500">로그인은 이용자를 구분하기 위한 용도예요. 구글 이름·사진은 가져오지 않고, 다른 이웃에게는 내가 정한 닉네임만 보여요. <a href="privacy.html" target="_blank" rel="noopener" class="underline">개인정보처리방침</a></span>
+                </div>
+                ${app ? `<div class="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-xs text-slate-800 dark:text-slate-100 leading-relaxed">
+                    <b>${esc(app)} 앱 안의 브라우저에서는 구글 로그인이 막혀 있어요.</b> 오른쪽 위(또는 아래) 메뉴에서 <b>[다른 브라우저로 열기]</b>를 누르거나, 아래 [주소 복사] 후 Chrome·Safari 주소창에 붙여넣어 주세요.
+                    <button onclick="copySiteUrl(this)" class="mt-2 w-full py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs font-bold">주소 복사</button></div>` : ''}
+                <button onclick="commGoogleLogin()" ${app ? 'disabled' : ''} class="w-full py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 text-sm font-bold shadow flex items-center justify-center gap-2 disabled:opacity-50"><i class="fa-brands fa-google text-red-500"></i> 구글로 로그인</button>
+                <p id="commLoginMsg" class="text-xs text-amber-600 dark:text-amber-400"></p>
+            </div>`;
+        }
+        async function commGoogleLogin() {
+            const msg = t => { const el = document.getElementById('commLoginMsg'); if (el) el.textContent = t || ''; };
+            try {
+                await commInit();
+                if (!commAuth) { msg('서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'); return; }
+                msg('구글 로그인 창을 여는 중…');
+                await commAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+                location.reload();                            // 로그인 뒤 처음부터 다시 불러옴 (구독이 로그인 전 상태로 남지 않게)
+            } catch (e) {
+                console.error(e);
+                const c = e && e.code || '';
+                msg(c === 'auth/popup-closed-by-user' || c === 'auth/cancelled-popup-request' ? '로그인을 취소했어요.'
+                    : c === 'auth/popup-blocked' ? '팝업이 막혔어요. 주소창 오른쪽의 팝업 허용을 눌러 다시 시도해 주세요.'
+                    : c === 'auth/unauthorized-domain' ? '이 주소는 아직 로그인이 허용되지 않았어요. (운영자: Firebase 승인된 도메인을 확인해 주세요)'
+                    : '로그인하지 못했어요. 잠시 후 다시 시도해 주세요.');
+            }
+        }
+        async function commLogout() {
+            if (!confirm('로그아웃할까요?')) return;
+            try { await commInit(); if (commAuth) await commAuth.signOut(); } catch (e) { console.error(e); }
+            location.reload();
+        }
         function renderCommunity() {
             const body = document.getElementById('commBody');
             const title = document.getElementById('commTitle');
+            if (FIREBASE_CONFIG && commAuthState !== 'in' && !commSampleGroup) {     // 서버 연결 상태: 로그인 전에는 로그인 화면 (예시 화면은 그대로 보여 줌)
+                title.textContent = '우리동네 커뮤니티';
+                if (commAuthState === 'unknown') {
+                    body.innerHTML = '<div class="p-8 text-center text-sm text-slate-500">로그인 상태를 확인하는 중…</div>';
+                    commInit().then(() => renderCommunity());
+                } else body.innerHTML = commLoginHtml();
+                return;
+            }
             if (!myTown && commSampleGroup) {
                 title.textContent = '우리동네 커뮤니티 (예시)';
                 body.innerHTML = commSampleHtml(commSampleGroup);
@@ -4936,7 +5000,7 @@
         function setCommType(t) { commType = t; renderCommComposer(); }
         // 안전망 글쓰기 버튼(실시간 제보 · SOS · 실시간 방송) 순서 — 끌어서 바꾸고 저장
         function composerChipOrder() {
-            const all = ['report', 'sos', 'live'];
+            const all = ['report', 'sos'];   // 실시간 방송('live')은 서버 확장 후 공개
             let o = []; try { o = JSON.parse(lsGet('comm_chip_order') || '[]'); } catch (e) {}
             o = o.filter(k => all.includes(k)); all.forEach(k => { if (!o.includes(k)) o.push(k); });
             return o;
@@ -7398,8 +7462,8 @@
         //  - 글 보기: 본문 + 공감 + 댓글로 소통 (예전 채팅식 글도 글 하나로 그대로 보임)
         const PB = {
             talk: { name: '우리동네 안전망', c: 'red', list: () => commMessages, col: () => commCol(townKey(myTown)), save: () => commLocalWrite(townKey(myTown), commMessages),
-                like: 'likes', likeLabel: '❤️ 공감', video: true, filterKey: 'type',
-                filters: [['report', '📢 실시간 제보'], ['sos', '🚨 SOS'], ['live', '🔴 실시간 방송']],
+                like: 'likes', likeLabel: '❤️ 공감', video: false, filterKey: 'type',
+                filters: [['report', '📢 실시간 제보'], ['sos', '🚨 SOS']],
                 empty: '아직 올라온 제보가 없습니다. 지금 동네에서 일어난 일을 [글쓰기]로 알려 주세요.' },
             free: { name: '이런저런', c: 'sky', list: () => freeMessages, col: () => commDoc(townKey(myTown)).collection('free'), save: () => freeLocalSave(),
                 like: 'likes', likeLabel: '❤️ 공감', filterKey: 'kind',
@@ -7690,7 +7754,7 @@
             const P = PB[b], c = P.c, inp = 'w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-' + c + '-400/50';
             const TYPES = { report: ['📢', '실시간 제보', '지금 일어난 사건·사고 알리기', 'amber'], sos: ['🚨', 'SOS 긴급 도움 요청', '실종·위급 상황, 24시간 맨 위 고정', 'red'], live: ['🔴', '실시간 방송', '현장을 카메라로 생중계', 'rose'] };
             const typeCards = b === 'talk' ? `<div><div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">글 종류 <span class="pc-only font-normal text-slate-400">(끌어서 순서 바꾸기)</span></div>
-                <div id="pbTypes" class="grid grid-cols-3 gap-1.5">${composerChipOrder().map(t => { const d = TYPES[t]; return `<button type="button" data-t="${t}" onclick="pbSetType('${t}')" ${ordAttrs('comm_chip_order', t, 'composerChipOrder()', "pbRefresh('talk', true)")}
+                <div id="pbTypes" class="grid grid-cols-2 gap-1.5">${composerChipOrder().map(t => { const d = TYPES[t]; return `<button type="button" data-t="${t}" onclick="pbSetType('${t}')" ${ordAttrs('comm_chip_order', t, 'composerChipOrder()', "pbRefresh('talk', true)")}
                     class="ord-item pb-type ${pbDraft.type === t ? 'pb-on' : ''} cursor-grab text-left rounded-xl border-2 px-2.5 py-2 transition border-slate-200 dark:border-slate-700 hover:border-${d[3]}-400" data-c="${d[3]}">
                     <div class="text-sm font-extrabold text-slate-900 dark:text-white">${d[0]} ${d[1]}</div><div class="text-[0.625rem] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug" style="white-space: normal;">${d[2]}</div></button>`; }).join('')}</div>
                 <div id="pbTypeGuide" class="mt-2 text-[0.6875rem] leading-relaxed text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3 py-2" style="white-space: normal;">${pbTypeGuide(pbDraft.type)}</div></div>` : '';
@@ -8454,7 +8518,7 @@
         function subscribeLives() {
             if (commLivesUnsub) { commLivesUnsub(); commLivesUnsub = null; }
             commLives = []; livesLoadedOnce = false;
-            if (!commDb || !myTown) { renderLiveBar(); return; }
+            if (!commDb || !myTown || !commOpen('live')) { renderLiveBar(); return; }
             commLivesUnsub = liveCol().where('active', '==', true).onSnapshot(snap => {
                 const prev = new Set(commLives.map(l => l.id));
                 commLives = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(l => liveActive(l) && !isBlocked(l.uid));
