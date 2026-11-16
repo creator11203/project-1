@@ -2816,7 +2816,7 @@
 
                 if (!ignoreCategory && currentCategory !== '범죄 다발 지역' && !catPass(news)) return false;
 
-                if (sido !== 'all' && loc !== '전국') {     // '전국' 단위 소식(전국 단속 결과·통계 등)은 어느 지역을 골라도 보임
+                if (sido !== 'all') {     // 지역을 고르면 그 지역 소식만 (전국 단위 소식·위치 미상은 '전체(전국)' 보기에서만 보임)
                     if (!loc.includes(sido)) return false;
                     if (sigungu !== 'all' && sigungu !== '전체') {
                         const city = sigungu.split(' ')[0];
@@ -3403,7 +3403,7 @@
             const r = alertRegion();
             if (!r) return false;
             const loc = news.location || '';
-            if (loc === '전국') return true;          // 전국 단위 소식은 어느 동네 알림에도 전달
+            if (loc === '전국') return alertCfg.nation === true;   // 전국 단위 소식은 [전국 소식도 받기]를 켠 사람에게만
             if (!loc.includes(r.sido)) return false;
             if (r.sigungu) {
                 const city = r.sigungu.split(' ')[0];
@@ -3429,7 +3429,7 @@
             if (!alertCfg.useLocation || !alertHere) return false;
             if (isOverseas(news)) return false;
             const loc = news.location || '';
-            if (loc === '전국') return true;
+            if (loc === '전국') return false;   // 전국 단위 소식은 '지금 계신 곳' 알림이 아님
             if (alertHere.sigungu && loc.includes(alertHere.sido)) {
                 const city = alertHere.sigungu.split(' ')[0];
                 if (loc.includes(alertHere.sigungu) || (alertHere.sigungu.includes(' ') && loc.split(' ').pop() === city)) return true;
@@ -3750,6 +3750,10 @@
                     <option value="sigungu" ${alertCfg.scope === 'sigungu' ? 'selected' : ''}>시·군·구 전체</option>
                     <option value="dong" ${alertCfg.scope === 'dong' ? 'selected' : ''}>우리 읍·면·동만</option>
                 </select>
+                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
+                    <span>🇰🇷 전국 단위 소식도 받기 <span class="text-slate-400">(전국 단속·한파특보 등)</span></span>
+                    <input type="checkbox" ${alertCfg.nation === true ? 'checked' : ''} onchange="setAlertCfg('nation', this.checked)">
+                </label>
                 <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
                 <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
                     <span>📍 현재 위치 기반 알림</span>
