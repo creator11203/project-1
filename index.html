@@ -186,7 +186,17 @@
         /* 글씨 크기 조절은 1·2·3번 칸(과 창으로 뜨는 화면)에만 적용. 맨 위 제목 줄과 버튼 줄은 항상 100% 크기로 고정 */
         .fixed-scale { zoom: var(--fixed-zoom, 1); }
         /* ===== 휴대폰 화면: 칸 3개 대신 한 칸씩 보여 주고 아래 탭으로 넘김 ===== */
-        #mobileTabs, .m-only, #catToggleRow { display: none; }
+        #mobileTabs, .m-only { display: none; }
+        /* 분류 버튼 줄: 접기/펼치기 (PC·휴대폰 공통). 휴대폰은 처음엔 접어 두고 기사 원문 자리를 넓게 */
+        #catToggleRow { display: flex; align-items: center; gap: 6px; }
+        #catToggleRow .cat-hot-btn { display: none; }
+        #catToggleBtn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 12px; font-weight: 700; color: #334155; text-align: left; cursor: pointer; }
+        #catToggleBtn:hover { background: #eef2ff; border-color: #a5b4fc; }
+        .dark #catToggleBtn { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+        #catToggleBtn .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #catToggleBtn .chev { transition: transform .2s; font-size: 11px; opacity: .6; }
+        #categoryBar:not(.cat-collapsed) #catToggleBtn .chev { transform: rotate(180deg); }
+        #categoryBar.cat-collapsed #groupButtons, #categoryBar.cat-collapsed #subButtons { display: none !important; }
         @media (max-width: 767px), (max-height: 480px) and (pointer: coarse) {
             #appBody { height: 100vh; height: 100dvh; }
             .m-hide { display: none !important; }
@@ -249,14 +259,8 @@
             .comm-back:active { transform: scale(.96); }
             #commHeadBtns button[onclick="setFloatW(0)"] { display: none !important; }
             #commHeadBtns .comm-head-btn { padding: 7px 10px; }
-            /* 분류 버튼: 처음엔 접어 두고 [분류] 줄을 눌러 펼침 → 기사 원문 자리를 넓게 */
-            #catToggleRow { display: flex; align-items: center; gap: 6px; }
-            #catToggleBtn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 12px; font-weight: 700; color: #334155; text-align: left; }
-            .dark #catToggleBtn { background: #1e293b; border-color: #475569; color: #e2e8f0; }
-            #catToggleBtn .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-            #catToggleBtn .chev { transition: transform .2s; font-size: 11px; opacity: .6; }
-            #categoryBar:not(.cat-collapsed) #catToggleBtn .chev { transform: rotate(180deg); }
-            #categoryBar.cat-collapsed #groupButtons, #categoryBar.cat-collapsed #subButtons { display: none !important; }
+            #catToggleRow { display: flex; }
+            #catToggleRow .cat-hot-btn { display: inline-block; }
             #categoryBar:not(.cat-collapsed) #groupButtons { max-height: 42vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
             #groupButtons button[data-cat="범죄 다발 지역"] { display: none; }
             #groupButtons > span.ml-auto { flex-wrap: wrap; width: 100%; margin-left: 0; padding-left: 0; border-left: 0; }
@@ -715,7 +719,7 @@
                 <!-- 휴대폰 전용: 분류 버튼 접기/펼치기 줄 (PC에서는 숨김) -->
                 <div id="catToggleRow">
                     <button id="catToggleBtn" type="button" onclick="toggleCatBar()" aria-expanded="false"><i class="fa-solid fa-filter text-indigo-500"></i><span class="lbl" id="catToggleLabel">분류: 전체</span><i class="fa-solid fa-chevron-down chev"></i></button>
-                    <button type="button" onclick="setCategoryFilter('범죄 다발 지역')" class="shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white border border-rose-700">🚨 다발 지역</button>
+                    <button type="button" onclick="setCategoryFilter('범죄 다발 지역')" class="cat-hot-btn shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white border border-rose-700">🚨 다발 지역</button>
                 </div>
                 <div id="groupButtons" class="flex flex-wrap items-center gap-1.5"></div>
                 <div id="subButtons" class="flex flex-wrap items-center gap-1" style="display:none"></div>
@@ -2222,6 +2226,7 @@
             if (!bar) return;
             const want = typeof open === 'boolean' ? open : bar.classList.contains('cat-collapsed');
             bar.classList.toggle('cat-collapsed', !want);
+            if (!isMobile()) { try { localStorage.setItem('cat_pc_collapsed', want ? '0' : '1'); } catch (e) {} }
             const b = document.getElementById('catToggleBtn'); if (b) b.setAttribute('aria-expanded', String(want));
             setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
         }
@@ -2282,6 +2287,16 @@
                 ${courtBtn(false)}
                 <button onclick="setCategoryFilter('범죄 다발 지역')" data-cat="범죄 다발 지역" class="cat-btn px-2.5 py-1 rounded-md text-[0.6875rem] border whitespace-nowrap transition bg-rose-600 text-white border-rose-700 font-bold shadow-sm hover:bg-rose-500${currentCategory === '범죄 다발 지역' ? ACTIVE : ''}">🚨 7일간 전국 사건사고 다발 지역</button></span>`;
             document.getElementById('groupButtons').innerHTML = html;
+            // PC 는 처음에 펼쳐 두고(저장된 선택이 있으면 그대로), 휴대폰은 접어 둠. 한 번만 적용
+            if (!window._catInit) {
+                window._catInit = true;
+                if (!isMobile()) {
+                    let c = '0'; try { c = localStorage.getItem('cat_pc_collapsed') || '0'; } catch (e) {}
+                    const bar = document.getElementById('categoryBar');
+                    if (bar) bar.classList.toggle('cat-collapsed', c === '1');
+                    const b = document.getElementById('catToggleBtn'); if (b) b.setAttribute('aria-expanded', String(c !== '1'));
+                }
+            }
             updateCatToggle();
             // 기사 원문 화면을 3칸에 넣지 않았을 때: 사건 목록(요약) 위에 분류 버튼을 한 줄로 줄여서 보여 줌
             const lcb = document.getElementById('listCatBar');
@@ -4894,7 +4909,7 @@
                 } else body.innerHTML = commLoginHtml();
                 return;
             }
-            if (!myTown && commSampleGroup) {
+            if (commSampleGroup && (!myTown || (FIREBASE_CONFIG && commAuthState !== 'in'))) {
                 title.textContent = '우리동네 커뮤니티 (예시)';
                 body.innerHTML = commSampleHtml(commSampleGroup);
                 return;
@@ -4957,32 +4972,75 @@
             renderCommMessages(true);
         }
 
-        // 동네 인증 전에도 게시글이 어떤 모양으로 올라오는지 볼 수 있는 예시 화면 (사용 안내에서만 보임 · 실제 글이 아님)
-        const COMM_SAMPLES = {
-            safe: { tab: '📢 실시간 제보 · 🚨 SOS · 🔴 실시간 방송', posts: [
-                { badge: '📢 실시간 제보', c: 'amber', title: '○○사거리 차량 화재 (연기 많음)', body: '오후 3시쯤 ○○사거리에서 차량 화재가 났어요. 소방차가 오고 있어요.', meta: '개포동 이웃 · 방금 전 · 신뢰 지수 82 · ❤ 12 · 💬 3' },
-                { badge: '🚨 SOS', c: 'red', title: '7살 남자아이를 찾고 있어요', body: '파란 점퍼를 입은 아이를 ○○놀이터에서 마지막으로 봤어요. 보신 분은 알려 주세요.', meta: '24시간 맨 위 고정 · 이웃 경보음 알림' }] },
-            life: { tab: '🏆 우리동네 TOP10 · ☕ 이런저런 · 👋 이사왔어요 · 🥺 아쉬워요 · 👏 칭찬해요', posts: [
-                { badge: '☕ 이런저런 · 일상', c: 'sky', title: '○○공원 산책로에 가로등이 생겼어요', body: '저녁 산책하기 좋아졌어요!', meta: '봄이네 · 1시간 전 · ❤ 8 · 💬 2' },
-                { badge: '👏 칭찬해요', c: 'amber', title: '지갑을 찾아 주신 분 감사합니다', body: '편의점 사장님이 지갑을 잘 보관해 주셨어요.', meta: '단비 · 어제 · ❤ 21 · 💬 5' }] },
-            market: { tab: '🛒 동네 장터', posts: [
-                { badge: '🛒 판매 · 책상 스탠드', c: 'emerald', title: 'LED 책상 스탠드 5,000원', body: '1년 사용했어요. 직거래만 가능하고, 사람이 많은 곳에서 만나요.', meta: '개포동 · 30분 전 · 거래 별점 4.8' },
-                { badge: '🤝 나눔 · 유아 도서', c: 'emerald', title: '아이 그림책 10권 나눔해요', body: '필요하신 분 댓글 남겨 주세요.', meta: '개포동 · 어제 · 💬 4' }] },
-            local: { tab: '🍜 우리동네 맛집 · 🔥 우리동네 핫플', posts: [
-                { badge: '🍜 맛집 · ★★★★☆ 4.3', c: 'orange', title: '○○칼국수', body: '국물이 진하고 양이 많아요. 점심에는 줄이 길어요.', meta: '미식가 · 2일 전 · 같은 가게는 평균 별점으로 모여요' },
-                { badge: '🔥 핫플', c: 'orange', title: '○○천 벚꽃길', body: '퇴근길 산책하기 좋은 길이에요.', meta: '산책러 · 3일 전 · ❤ 15' }] },
-            people: { tab: '📰 팔로잉 소식 · 🙋 친구해요 · ✉️ 1:1 대화', posts: [
-                { badge: '📰 팔로잉 소식', c: 'violet', title: '오늘 저녁 메뉴는 김치찌개 🍲', body: '내가 팔로우한 이웃의 일상이 이렇게 올라와요.', meta: '단비 · 10분 전 · ❤ 4' },
-                { badge: '🙋 친구해요 대화방', c: 'violet', title: '주말 같이 산책하실 분 (3/5명)', body: '글·음성 대화방에 들어가 이웃과 이야기할 수 있어요.', meta: '같은 시·군·구 이웃' }] },
-            nation: { tab: '🏆 이달의 전국 TOP10', posts: [
-                { badge: '🥇 1위 · 글', c: 'amber', title: '새벽 배달 기사님께 감사 인사', body: '전국 모든 동네를 합쳐 이번 달 공감을 가장 많이 받은 글이에요.', meta: '○○동 · ❤ 1,204' },
-                { badge: '🥈 2위 · 장소', c: 'amber', title: '○○시장 떡볶이 골목', body: '순위는 매달 1일에 새로 시작해요.', meta: '○○동 · ❤ 980' }] },
-            me: { tab: '👤 내 프로필', posts: [
-                { badge: '📸 내 일상', c: 'fuchsia', title: '오늘의 동네 풍경', body: '사진·글 게시물을 올려 이웃과 공유하고, 공감을 받으면 순위와 신뢰 지수가 올라가요.', meta: '내 닉네임 · ❤ 공감 · 💬 댓글' }] }
-        };
+        // 로그인 전·동네 인증 전에도 게시글이 어떤 모양으로 올라오는지 볼 수 있는 예시 화면 (사용 안내에서만 보임 · 실제 글이 아님)
+        //  실제 게시판 목록과 똑같은 모양(왼쪽 색 띠 · 글 종류 꼬리표 · 댓글/조회/공감)으로 그려서, 작은 탭을 눌러 가며 탭마다 어떤 글이 올라오는지 볼 수 있음
+        let commSampleSub = null;
+        function commSampleData() {
+            const chip = (c, t) => `<span class="shrink-0 px-1.5 py-0.5 rounded bg-${c}-100 dark:bg-${c}-950/60 text-${c}-800 dark:text-${c}-200 text-[0.625rem] font-bold">${t}</span>`;
+            const sos = '<span class="shrink-0 px-1.5 py-0.5 rounded bg-red-600 text-white text-[0.625rem] font-extrabold">🚨 SOS</span>';
+            const k = (kind, title, meta, extra) => Object.assign({ color: kindColor(kind), chip: kindChip(kind), title: title, meta: meta }, extra || {});
+            return {
+                safe: { talk: [
+                    k('실종', '7살 남자아이를 찾고 있어요 (파란 점퍼)', '이웃 · 방금 전 · 조회 38 · 공감 12', { pin: 1, color: '#dc2626', chip: sos + kindChip('실종'), cmt: 5, fresh: 1 }),
+                    k('화재', '○○사거리 차량 화재, 연기가 많아요', '이웃 · 12분 전 · 조회 54 · 공감 9', { cmt: 3, fresh: 1 }),
+                    k('교통사고', '○○로 교차로 접촉사고 — 우회하세요', '이웃 · 40분 전 · 조회 21 · 공감 4', { cmt: 1 }),
+                    k('재난·날씨', '폭우로 ○○천 산책로가 통제 중이에요', '이웃 · 1시간 전 · 조회 33 · 공감 6'),
+                    k('도로·시설', '○○초 앞 횡단보도 가로등이 꺼졌어요', '이웃 · 2시간 전 · 조회 17 · 공감 3'),
+                    k('수상한 사람', '밤마다 우리 동 주차장을 서성이는 사람이 있어요', '이웃 · 어제 · 조회 61 · 공감 15', { cmt: 7 })] },
+                life: {
+                    free: [
+                        { color: '#0ea5e9', chip: chip('sky', '☕ 이런저런 · 일상'), title: '○○공원 산책로에 가로등이 생겼어요', meta: '봄이네 · 1시간 전 · 조회 40 · 공감 8', cmt: 2, fresh: 1 },
+                        { color: '#0ea5e9', chip: chip('sky', '☕ 이런저런 · 질문'), title: '근처에 야간 진료하는 소아과 아시는 분?', meta: '단비 · 3시간 전 · 조회 72 · 공감 5', cmt: 9 },
+                        { color: '#0ea5e9', chip: chip('sky', '☕ 이런저런 · 정보'), title: '이번 주말 ○○시장 야시장 열린대요', meta: '산책러 · 어제 · 조회 95 · 공감 21', cmt: 4 }],
+                    praise: [
+                        { color: '#f59e0b', chip: chip('amber', '👏 칭찬해요'), title: '지갑을 찾아 주신 편의점 사장님 감사합니다', meta: '단비 · 어제 · 조회 130 · 공감 21', cmt: 5, thumb: '🙏' },
+                        { color: '#f59e0b', chip: chip('amber', '👏 칭찬해요'), title: '폭설에 아파트 앞길을 치워 주신 경비 아저씨', meta: '봄이네 · 2일 전 · 조회 88 · 공감 17', cmt: 3, thumb: '❄️' }],
+                    wish: [
+                        { color: '#f43f5e', chip: chip('rose', '🥺 아쉬워요 · 도로·교통'), title: '○○초 앞 횡단보도 신호가 너무 짧아요', meta: '이웃 · 5시간 전 · 조회 64 · 공감 33', cmt: 6, fresh: 1 },
+                        { color: '#f43f5e', chip: chip('rose', '🥺 아쉬워요 · 쓰레기·청결'), title: '재활용 분리수거장 청소가 필요해요', meta: '이웃 · 어제 · 조회 48 · 공감 19', cmt: 2 }],
+                    hello: [
+                        { color: '#0ea5e9', chip: chip('sky', '👋 이사왔어요'), title: '👋 단비님이 이사 왔어요', meta: '단비 · 2시간 전 · 환영해요 12', cmt: 4, fresh: 1 },
+                        { color: '#0ea5e9', chip: chip('sky', '👋 이사왔어요'), title: '👋 산책러님이 이사 왔어요', meta: '산책러 · 어제 · 환영해요 9', cmt: 2 }],
+                    popular: 'rank' },
+                market: { market: [
+                    { color: '#10b981', chip: chip('emerald', '🛒 판매'), title: 'LED 책상 스탠드 5,000원', meta: '개포동 · 30분 전 · 거래 별점 4.8', cmt: 2, thumb: '💡', fresh: 1 },
+                    { color: '#10b981', chip: chip('emerald', '🤝 나눔'), title: '아이 그림책 10권 나눔해요', meta: '개포동 · 어제 · 필요하신 분 댓글 주세요', cmt: 4, thumb: '📚' },
+                    { color: '#10b981', chip: chip('emerald', '🔍 구해요'), title: '아기 유모차 구합니다 (중고 가능)', meta: '개포동 · 2일 전 · 사람 많은 곳에서 직거래', thumb: '🍼' }] },
+                me: 'profile'
+            };
+        }
+        function commSampleRow(p) {
+            return `<div class="flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 ${p.pin ? 'bg-red-50 dark:bg-red-950/40' : 'bg-white/80 dark:bg-slate-900/70'}" style="border-left: 5px solid ${p.color}">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center flex-wrap gap-1.5 mb-0.5">${p.pin ? '<i class="fa-solid fa-thumbtack text-red-500 text-[0.6875rem] shrink-0"></i>' : ''}${p.chip}${p.cmt ? `<span class="shrink-0 text-xs font-extrabold text-slate-500 dark:text-slate-400">댓글 ${p.cmt}</span>` : ''}${p.fresh ? '<span class="shrink-0 w-4 h-4 rounded-full bg-orange-500 text-white text-[0.5625rem] font-black flex items-center justify-center">N</span>' : ''}</div>
+                    <div class="text-[0.875rem] font-bold text-slate-900 dark:text-white leading-snug break-words" style="white-space: normal;">${p.title}</div>
+                    <div class="mt-1 text-[0.6875rem] text-slate-500 dark:text-slate-400" style="white-space: normal;">${p.meta}</div>
+                </div>${p.thumb ? `<span class="w-12 h-12 rounded-lg shrink-0 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl">${p.thumb}</span>` : ''}</div>`;
+        }
+        function commSampleRank() {
+            const medal = ['🥇', '🥈', '🥉'], items = [['새벽 배달 기사님께 감사 인사', '❤ 48 · 💬 12'], ['○○천 벚꽃길 산책 후기', '❤ 41 · 💬 9'], ['야간 진료 소아과 정보 모음', '❤ 37 · 💬 15']];
+            return `<div class="px-3 py-2 text-[0.6875rem] font-bold text-slate-500 dark:text-slate-400">🔥 이번 달 우리 동네 인기 글</div>` + items.map((x, i) =>
+                `<div class="flex items-center gap-3 px-3 py-2.5 border-b border-slate-100 dark:border-slate-800 ${i === 0 ? 'bg-amber-50/70 dark:bg-amber-950/30' : 'bg-white/80 dark:bg-slate-900/70'}"><span class="w-7 text-center text-xl shrink-0">${medal[i]}</span><span class="min-w-0 flex-1"><span class="block text-[0.875rem] font-bold text-slate-900 dark:text-white truncate">${x[0]}</span><span class="block text-[0.6875rem] text-slate-500">${x[1]}</span></span></div>`).join('');
+        }
+        function commSampleProfile() {
+            const tile = (g, e) => `<span class="aspect-square rounded-lg bg-gradient-to-br ${g} flex items-center justify-center text-2xl">${e}</span>`;
+            return `<div class="m-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3.5 py-3">
+                    <div class="flex items-center gap-3"><span class="w-14 h-14 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-violet-600 p-[2px]"><span class="w-full h-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center text-3xl">🙂</span></span>
+                        <div class="min-w-0 flex-1"><div class="text-[0.9375rem] font-extrabold text-slate-900 dark:text-white">내 닉네임 <i class="fa-solid fa-pen text-[0.625rem] text-slate-400"></i></div>
+                            <div class="text-xs text-slate-500">한 줄 소개를 적어 보세요.</div>
+                            <div class="mt-1.5"><span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 border text-[0.6875rem] font-bold border-blue-300 bg-blue-50 text-blue-700"><i class="fa-solid fa-shield-halved text-[0.625rem]"></i>신뢰 50 · 보통</span></div></div></div>
+                    <div class="mt-2 text-[0.6875rem] text-slate-500">📷 게시물 <b>3</b> · ❤ 받은 감정 <b>24</b> · 💬 댓글 <b>6</b></div></div>
+                <div class="mx-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3"><b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-cells text-rose-500"></i> 내 일상 <span class="text-xs font-semibold text-slate-400">3</span></b>
+                    <div class="mt-2 grid grid-cols-3 gap-1.5">${tile('from-amber-200 to-orange-300', '🌅')}${tile('from-sky-200 to-indigo-300', '🌳')}${tile('from-rose-200 to-pink-300', '🍲')}</div></div>`;
+        }
+        function commSampleSubSet(t) {
+            commSampleSub = t;
+            try { renderCommunity(); } catch (e) {}
+            if (typeof tourState !== 'undefined' && tourState.open) setTimeout(tourPlace, 30);
+        }
         function commSampleHtml(group) {
-            const S = COMM_SAMPLES[group] || COMM_SAMPLES.safe;
-            // 동네 인증 전에도 실제 커뮤니티처럼 큰 탭(묶음) + 작은 탭 줄이 보이도록 흉내 낸 탭 줄 (사용 안내에서 탭을 정확히 비추기 위함)
+            const S = commSampleData()[group] || commSampleData().safe;
+            // 로그인·동네 인증 전에도 실제 커뮤니티처럼 큰 탭(묶음) + 작은 탭 줄이 보이도록 흉내 낸 탭 줄 (사용 안내에서 탭을 정확히 비추기 위함)
             const cur = COMM_GROUPS.find(g => g.k === group) || COMM_GROUPS[0];
             const tiles = COMM_GROUPS.map(g => {
                 const on = g === cur, safe = g.k === 'safe', c = g.c;
@@ -4994,20 +5052,19 @@
                     <span class="w-7 h-7 rounded-lg flex items-center justify-center text-[0.8125rem] ${ico}"><i class="fa-solid ${g.fa}"></i></span>
                     <span class="text-[0.6875rem] font-extrabold truncate max-w-full leading-none">${g.label}</span></div>`;
             }).join('');
-            const subs = cur.tabs.length > 1 ? `<div id="commSampleSubs" class="flex gap-1.5 px-2 py-2 mt-1.5 border-t border-slate-100 dark:border-slate-800 overflow-hidden">${cur.tabs.map((t, i) =>
-                `<span class="shrink-0 flex items-center gap-1.5 pl-1.5 pr-3.5 py-1.5 rounded-full border text-[0.8125rem] font-extrabold whitespace-nowrap ${i === 0 ? `bg-${cur.c}-600 text-white border-${cur.c}-600` : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'}">${COMM_TAB_LABEL[t]}</span>`).join('')}</div>` : '';
+            const order = groupTabs(cur), sub = order.includes(commSampleSub) ? commSampleSub : order[0];
+            const subs = cur.tabs.length > 1 ? `<div id="commSampleSubs" class="hscroll gap-1.5 px-2 py-2 mt-1.5 border-t border-slate-100 dark:border-slate-800 bg-${cur.c}-50/50 dark:bg-slate-900">${order.map(t => {
+                const on = t === sub;
+                return `<button onclick="commSampleSubSet('${t}')" class="shrink-0 flex items-center gap-1.5 pl-1.5 pr-3.5 py-1.5 rounded-full border text-[0.8125rem] font-extrabold whitespace-nowrap ${on ? `bg-${cur.c}-600 text-white border-${cur.c}-600 shadow-md` : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700'}"><span class="w-6 h-6 rounded-full flex items-center justify-center text-[0.6875rem] ${on ? 'bg-white/25 text-white' : `bg-${cur.c}-100 dark:bg-${cur.c}-950/60 text-${cur.c}-600 dark:text-${cur.c}-300`}"><i class="fa-solid ${COMM_TAB_FA[t] || 'fa-circle'}"></i></span>${COMM_TAB_LABEL[t]}</button>`;
+            }).join('')}</div>` : '';
+            const data = S === 'profile' ? commSampleProfile() : (S[sub] === 'rank' ? commSampleRank() : ((S[sub] || S[Object.keys(S)[0]] || []).map(commSampleRow).join('')));
+            const needLogin = !!FIREBASE_CONFIG && commAuthState !== 'in';
             return `<div id="commSampleBar" class="shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
                 <div class="grid gap-1.5 px-2 pt-2 ${subs ? '' : 'pb-2'}" style="grid-template-columns: repeat(${COMM_GROUPS.length}, minmax(0, 1fr));">${tiles}</div>${subs}</div>
-                <div id="commSamplePosts" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2.5">
-                <div class="rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 px-3 py-2 text-[0.6875rem] text-indigo-800 dark:text-indigo-200 leading-relaxed"><b>👀 예시 화면이에요.</b> 동네 인증 전에는 글을 볼 수 없지만, 인증하면 이런 모양으로 우리 동네 글이 올라와요. (아래 글은 실제 글이 아닙니다)</div>
-                <div class="text-[0.6875rem] font-bold text-slate-500 dark:text-slate-400">${S.tab}</div>
-                ${S.posts.map(p => `<article class="relative rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/60 p-3">
-                    <span class="absolute top-2 right-2 px-1.5 rounded bg-slate-200 dark:bg-slate-700 text-[0.5625rem] font-bold text-slate-600 dark:text-slate-300">예시</span>
-                    <span class="inline-block px-2 py-0.5 rounded-full text-[0.625rem] font-bold bg-${p.c}-100 dark:bg-${p.c}-950/50 text-${p.c}-700 dark:text-${p.c}-300">${p.badge}</span>
-                    <div class="mt-1 text-sm font-extrabold text-slate-900 dark:text-white pr-8">${p.title}</div>
-                    <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">${p.body}</p>
-                    <div class="mt-1.5 text-[0.625rem] text-slate-400">${p.meta}</div></article>`).join('')}
-                <button onclick="tourClose(); verifyTown()" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow"><i class="fa-solid fa-location-crosshairs"></i> 현재 위치로 동네 인증하기</button>
+                <div id="commSamplePosts" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar" style="padding-bottom: 7rem;">
+                <div class="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-200 dark:border-indigo-800 text-[0.6875rem] text-indigo-800 dark:text-indigo-200 font-bold">👀 예시 화면 · ${needLogin ? '로그인' : '동네 인증'}하면 이런 모양으로 우리 동네 글이 올라와요 (실제 글 아님)</div>
+                ${data}
+                <div class="p-3"><button onclick="${needLogin ? 'tourClose(); setTimeout(openCommunity, 80)' : 'tourClose(); verifyTown()'}" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow">${needLogin ? '<i class="fa-brands fa-google"></i> 구글로 로그인하고 시작하기' : '<i class="fa-solid fa-location-crosshairs"></i> 현재 위치로 동네 인증하기'}</button></div>
             </div>`;
         }
 
@@ -10369,14 +10426,14 @@
             } },
             // ── 여기서부터 커뮤니티 설명 (안내의 마지막 부분) ──
             //  묶음(큰 탭)마다 2단계: ① 그 큰 탭만 비춤(part: 'tile') ② 아래 작은 탭들과 게시물을 한 번에 비춤(part: 'rest')
-            { icon: '💬', title: '우리동네 커뮤니티', text: '동네 인증을 하면 같은 동네 이웃과 소통하는 게시판을 쓸 수 있어요. 다음 단계부터 커뮤니티를 열어 두고 기능을 하나씩 소개할게요. (동네 인증 전에는 예시 게시물로 보여 드려요)', target: () => tourPanel('community'),
-                bullets: ['↔️ 커뮤니티 맨 위 큰 탭(안전망·동네 이야기·동네 장터)과 그 아래 작은 탭은 마우스로 끌어서 원하는 순서로 바꿀 수 있어요 (순서는 저장돼요)'] },
+            { icon: '💬', title: '우리동네 커뮤니티', openComm: true, text: '구글 로그인과 동네 인증을 하면 같은 동네 이웃과 소통하는 게시판을 쓸 수 있어요. 지금부터 커뮤니티를 열어 두고 하나씩 소개할게요. (로그인 전에는 예시 게시물로 보여 드려요)', target: () => tourCommTarget(null),
+                bullets: ['↔️ 커뮤니티 맨 위 큰 탭(안전망·동네 이야기·동네 장터·내 프로필)과 그 아래 작은 탭은 마우스로 끌어서 원하는 순서로 바꿀 수 있어요 (순서는 저장돼요)'] },
             { icon: '🚨', title: '우리동네 안전망', comm: 'safe', part: 'tile', text: '우리 동네 사건·사고를 이웃에게 바로 알리는 곳이에요. 빨간색으로 표시된 이 탭은 항상 맨 앞에 있어요.' },
-            { icon: '📢', title: '안전망 · 글 종류와 게시물', comm: 'safe', part: 'rest', text: '안전망 게시판은 이렇게 보여요. 글머리로 종류를 나눠 볼 수 있고, 글을 누르면 댓글·공감이 열려요.',
-                bullets: ['📢 실시간 제보: 목격한 사고·위험 상황을 사진·영상과 함께 올려요 (언론사·방송사에도 함께 보낼 수 있어요)', '🆘 SOS: 아이를 잃어버리는 등 급한 일에 이웃에게 긴급 도움을 요청해요', '🔴 실시간 방송: 현장을 바로 생중계해요', '⚠️ 생명이 위급하면 먼저 112·119에 신고하세요'] },
+            { icon: '📢', title: '안전망 · 글 종류와 게시물', comm: 'safe', part: 'rest', text: '안전망 글은 이렇게 보여요. 글 종류마다 색 꼬리표가 붙어 한눈에 구분되고, 글을 누르면 댓글·공감이 열려요.',
+                bullets: ['📢 실시간 제보: 목격한 사고·위험 상황을 사진과 함께 알려요 (언론사·방송사에도 함께 보낼 수 있어요)', '🚨 SOS: 아이를 잃어버리는 등 급한 일에 이웃에게 긴급 도움을 요청해요', '🏷️ 글 종류(실종·교통사고·화재·범죄 의심·수상한 사람·안전사고·재난·날씨·도로·시설)를 골라 올려요', '⚠️ 생명이 위급하면 먼저 112·119에 신고하세요'] },
             { icon: '🏘️', title: '동네 이야기', comm: 'life', part: 'tile', text: '이웃과 일상을 나누는 게시판 모음이에요. 이 큰 탭 안에 작은 탭이 여러 개 들어 있어요.' },
             { icon: '📑', title: '동네 이야기 · 하위 탭과 게시물', comm: 'life', part: 'rest', text: '아래 작은 탭을 눌러 게시판을 옮겨 다녀요. 작은 탭도 끌어서 순서를 바꿀 수 있어요.',
-                bullets: ['🏆 우리동네 TOP10: 이번 달 우리 동네 인기 글과 인기쟁이', '☕ 이런저런: 날씨·소식·수다 뭐든 편하게', '👋 이사왔어요: 새 이웃의 첫인사, 반갑게 맞아 주세요', '🥺 아쉬워요: 가로등·도로·쓰레기 등 동네 개선 요청 (공감이 많으면 위로!)', '👏 칭찬해요: 고마웠던 이웃·공간을 사진과 함께 소개'] },
+                bullets: ['☕ 이런저런: 날씨·소식·수다 뭐든 편하게', '👏 칭찬해요: 고마웠던 이웃·공간을 사진과 함께 소개', '🥺 아쉬워요: 가로등·도로·쓰레기 등 동네 개선 요청 (공감이 많으면 위로!)', '👋 이사왔어요: 새 이웃의 첫인사, 반갑게 맞아 주세요', '🏆 우리동네 TOP10: 이번 달 우리 동네 인기 글과 인기쟁이'] },
             { icon: '🛒', title: '동네 장터', comm: 'market', part: 'tile', text: '이웃끼리 물건을 사고팔고, 교환·나눔을 하는 곳이에요.' },
             { icon: '🛍️', title: '동네 장터 · 게시물', comm: 'market', part: 'rest', text: '판매·구매·나눔 글이 이렇게 올라와요. 거래 후 남긴 별점은 신뢰 지수에 반영되고, 거래는 사람이 많은 곳에서 직접 만나 하세요.' },
             { icon: '🍜', title: '동네 맛집 · 핫플', comm: 'local', part: 'tile', text: '직접 가 본 우리 동네 장소를 추천하는 묶음이에요.' },
@@ -10388,8 +10445,8 @@
             { icon: '🏆', title: '이달의 전국 TOP10', comm: 'nation', part: 'tile', text: '전국 모든 동네를 합쳐 이번 달 가장 인기 있는 글·장소·이웃을 모아 보는 곳이에요.' },
             { icon: '🥇', title: '전국 TOP10 · 게시물', comm: 'nation', part: 'rest', text: '공감을 가장 많이 받은 글·장소·이웃을 10위까지 보여 줘요. 다른 동네 글에도 공감(❤)을 보낼 수 있고, 인기 이웃에게는 팔로우·대화 요청도 할 수 있어요. 순위는 매달 1일에 새로 시작해요.' },
             { icon: '👤', title: '내 프로필', comm: 'me', part: 'tile', text: '나만의 공간이에요.' },
-            { icon: '📸', title: '내 프로필 · 게시물', comm: 'me', part: 'rest', text: '내가 올린 게시물과 활동이 모이는 곳이에요.',
-                bullets: ['📸 내 일상: 사진·글 게시물을 올려 이웃과 공유해요', '➕ 팔로우: 마음에 드는 이웃을 팔로우하면 그 사람의 게시물을 [팔로잉 소식]에서 볼 수 있어요', '❤ 공감·감정·댓글을 받으면 순위와 신뢰 지수가 올라가요', '☰ 오른쪽 위 [메뉴]에서 이웃 초대, 차단 관리, 배경색, 동네 다시 인증을 할 수 있어요'] }
+            { icon: '📸', title: '내 프로필 · 게시물', comm: 'me', part: 'rest', text: '내 일상과 활동이 모이는 곳이에요.',
+                bullets: ['📸 내 일상: 사진·글 게시물을 올려 이웃과 공유해요', '✏️ 닉네임·사진·소개를 바꿀 수 있어요 (닉네임은 한 번 바꾸면 3개월 뒤에 다시 바꿀 수 있어요)', '🛡️ 신뢰 지수와 받은 공감을 확인해요', '⚙️ 설정에서 공개 범위·차단 관리·동네 다시 인증을 할 수 있어요'] }
         ].filter(s => !s.comm || commOpen(s.comm));     // 아직 열지 않은 커뮤니티 탭(맛집·이웃·전국 TOP10·내 프로필) 설명은 뺌 (모두 맨 뒤 단계라 앞 단계 번호는 그대로)
         // 휴대폰용 안내: 칸 3개가 없고 아래 탭으로 한 화면씩 보여 주므로, 단계마다 알맞은 탭으로 넘겨서 그 부분을 비추고, 설명 카드는 비추는 곳을 가리지 않게 위/아래로 옮김
         //  · PC 전용인 [화면 설정] 단계는 빼고, 글씨 크기 단계는 다크 모드 단계로 바꿈
@@ -10402,25 +10459,27 @@
             4: { text: '사건 위치를 지도에서 봐요. [알림 설정]으로 내 지역 속보를, [내 주변 안전시설]로 가까운 병원·소방서·경찰서를 찾아요.' },
             5: { text: '오늘·이번 주 주요 사건을 요약해 드려요. 이것만 눌러도 동네 분위기를 알 수 있어요.' },
             6: { text: '목격한 사고·위험 상황을 이 버튼으로 바로 제보해요.' },
-            9: { text: '동네 인증을 하면 같은 동네 이웃과 소통하는 게시판을 쓸 수 있어요. 인증 전에는 예시 글로 보여 드려요.', bullets: ['↔️ 위쪽 탭은 끌어서 순서를 바꿀 수 있어요'] },
-            10: { text: '우리 동네 사건·사고를 이웃에게 바로 알리는 곳이에요. 항상 맨 앞에 있어요.' },
-            11: { text: '글을 누르면 댓글·공감이 열려요.', bullets: ['📢 실시간 제보: 사진·영상과 함께 올려요', '🆘 SOS: 급한 일에 이웃에게 도움 요청', '🔴 실시간 방송: 현장 생중계', '⚠️ 위급하면 먼저 112·119'] },
-            12: { text: '이웃과 일상을 나누는 게시판 모음이에요. 안에 작은 탭이 여러 개 있어요.' },
-            13: { text: '작은 탭으로 게시판을 옮겨 다녀요.', bullets: ['🏆 TOP10: 이번 달 인기 글·이웃', '☕ 이런저런 · 👋 이사왔어요', '🥺 아쉬워요: 동네 개선 요청', '👏 칭찬해요: 고마운 이웃·공간'] },
-            14: { text: '이웃끼리 사고팔고, 교환·나눔을 하는 곳이에요.' },
-            15: { text: '판매·구매·나눔 글이 올라와요. 거래 후 별점은 신뢰 지수에 반영돼요. 거래는 사람 많은 곳에서 직접 만나 하세요.' },
-            16: { text: '직접 가 본 우리 동네 장소를 추천하는 곳이에요.' },
-            17: { text: '작은 탭으로 나눠 봐요.', bullets: ['🍜 맛집: 이름·별점·후기·사진', '🔥 핫플: 산책길·공원·전시 추천', '🗺️ 장소를 누르면 지도로 연결'] },
-            18: { text: '이웃과 가까워지는 공간이에요.' },
-            19: { text: '작은 탭 3개가 있어요.', bullets: ['📰 팔로잉 소식: 팔로우한 이웃 글', '🙋 친구해요: 대화방·소개 카드', '✉️ 1:1 대화: 맞팔이면 바로 대화'] },
-            20: { text: '전국 동네를 합쳐 이번 달 인기 글·장소·이웃을 모아 봐요.' },
-            21: { text: '공감이 많은 순서로 10위까지 보여 줘요. 다른 동네 글에도 공감(❤)을 보낼 수 있고, 순위는 매달 1일에 새로 시작해요.' },
-            22: { text: '나만의 공간이에요.' },
-            23: { text: '내가 올린 글과 활동이 모이는 곳이에요.', bullets: ['📸 내 일상: 사진·글 올리기', '➕ 팔로우: 이웃 글을 [팔로잉 소식]에서 보기', '❤ 공감을 받으면 순위·신뢰 지수 상승', '☰ 메뉴: 이웃 초대·차단·동네 재인증'] }
+            // ※ 커뮤니티 단계는 '순서 번호'가 아니라 이름('묶음:tile/rest')으로 연결 — 일부 탭을 숨겨도 글이 어긋나지 않게 (tourShortKey)
+            comm: { text: '구글 로그인과 동네 인증을 하면 같은 동네 이웃과 소통하는 게시판을 쓸 수 있어요. 로그인 전에는 예시 글로 보여 드려요.', bullets: ['↔️ 위쪽 탭은 꾹 누른 채 끌어서 순서를 바꿀 수 있어요'] },
+            'safe:tile': { text: '우리 동네 사건·사고를 이웃에게 바로 알리는 곳이에요. 항상 맨 앞에 있어요.' },
+            'safe:rest': { text: '글 종류마다 색 꼬리표가 붙어요. 글을 누르면 댓글·공감이 열려요.', bullets: ['📢 실시간 제보: 사진과 함께 알려요', '🚨 SOS: 급한 일에 이웃에게 도움 요청', '🏷️ 실종·교통사고·화재 등 글 종류 선택', '⚠️ 위급하면 먼저 112·119'] },
+            'life:tile': { text: '이웃과 일상을 나누는 게시판 모음이에요. 안에 작은 탭이 여러 개 있어요.' },
+            'life:rest': { text: '작은 탭을 눌러 게시판을 옮겨 보세요.', bullets: ['☕ 이런저런: 날씨·소식·수다', '👏 칭찬해요: 고마운 이웃·공간', '🥺 아쉬워요: 동네 개선 요청', '👋 이사왔어요 · 🏆 TOP10'] },
+            'market:tile': { text: '이웃끼리 사고팔고, 교환·나눔을 하는 곳이에요.' },
+            'market:rest': { text: '판매·구매·나눔 글이 올라와요. 거래 후 별점은 신뢰 지수에 반영돼요. 거래는 사람 많은 곳에서 직접 만나 하세요.' },
+            'local:tile': { text: '직접 가 본 우리 동네 장소를 추천하는 곳이에요.' },
+            'local:rest': { text: '작은 탭으로 나눠 봐요.', bullets: ['🍜 맛집: 이름·별점·후기·사진', '🔥 핫플: 산책길·공원·전시 추천', '🗺️ 장소를 누르면 지도로 연결'] },
+            'people:tile': { text: '이웃과 가까워지는 공간이에요.' },
+            'people:rest': { text: '작은 탭 3개가 있어요.', bullets: ['📰 팔로잉 소식: 팔로우한 이웃 글', '🙋 친구해요: 대화방·소개 카드', '✉️ 1:1 대화: 맞팔이면 바로 대화'] },
+            'nation:tile': { text: '전국 동네를 합쳐 이번 달 인기 글·장소·이웃을 모아 봐요.' },
+            'nation:rest': { text: '공감이 많은 순서로 10위까지 보여 줘요. 다른 동네 글에도 공감(❤)을 보낼 수 있고, 순위는 매달 1일에 새로 시작해요.' },
+            'me:tile': { text: '나만의 공간이에요.' },
+            'me:rest': { text: '내 일상과 활동이 모이는 곳이에요.', bullets: ['📸 내 일상: 사진·글 올리기', '✏️ 닉네임은 한 번 바꾸면 3개월 뒤에 다시 바꿀 수 있어요', '🛡️ 신뢰 지수·받은 공감 확인', '⚙️ 설정: 공개 범위·차단 관리'] }
         };
+        function tourShortKey(s, i) { return s.comm ? s.comm + ':' + s.part : (s.openComm ? 'comm' : i); }
         function tourBuildSteps() {
             if (!isMobile()) return TOUR_ALL;
-            const steps = TOUR_ALL.map((s, i) => Object.assign({}, s, TOUR_SHORT[i] || {}, { tab: TOUR_TAB[i], _i: i })).filter(s => s._i !== 7).map(s => {
+            const steps = TOUR_ALL.map((s, i) => Object.assign({}, s, TOUR_SHORT[tourShortKey(s, i)] || {}, { tab: TOUR_TAB[i], _i: i })).filter(s => s._i !== 7).map(s => {
                 if (s._i === 3) return Object.assign(s, { title: '분류 버튼 · 기사 원문', text: '[분류] 줄을 누르면 펼쳐져요. 교통·화재·범죄 같은 종류만 골라서 볼 수 있고, 다시 누르면 접혀서 기사 원문을 넓게 볼 수 있어요. 목록에서 기사를 누르면 원문 요약이 열려요.', target: () => document.getElementById('catToggleRow') });
                 if (s._i === 8) return Object.assign(s, { icon: '🌙', title: '라이트 / 다크 모드', text: '오른쪽 위 달 모양 버튼으로 밝은 화면과 어두운 화면을 바꿀 수 있어요. 이 안내는 왼쪽의 [?] 버튼으로 언제든 다시 볼 수 있어요.', target: () => document.getElementById('themeBtn') });
                 return s;
@@ -10450,32 +10509,38 @@
             return document.querySelector('#floatBtnWrap [data-panel="' + k + '"]');
         }
         // 커뮤니티 단계: 커뮤니티를 실제로 열어 두고(칸에 있으면 그대로, 없으면 창으로), 해당 묶음 탭을 눌러 보여 줌
+        // 로그인 전이거나 동네 인증 전이면 실제 글 대신 '예시 게시물' 화면을 보여 줌
+        function tourSampleMode() { return !myTown || (!!FIREBASE_CONFIG && commAuthState !== 'in'); }
         function tourOpenComm(group) {
             if (!tourState.commOpen) { tourState.commOpen = true; try { openCommunity(); } catch (e) {} }
-            if (myTown && group) { try { setCommGroup(group); } catch (e) {} }
-            else if (!myTown && group) { commSampleGroup = group; try { renderCommunity(); } catch (e) {} }   // 동네 인증 전: 예시 게시물 화면
+            if (tourSampleMode()) {
+                if (group && commSampleGroup !== group) commSampleSub = null;    // 다른 묶음으로 넘어가면 첫 작은 탭부터
+                commSampleGroup = group || 'safe'; try { renderCommunity(); } catch (e) {}
+            } else if (group) { try { setCommGroup(group); } catch (e) {} }
         }
         function tourCloseComm() {
             if (!tourState.commOpen) return;
             tourState.commOpen = false;
-            commSampleGroup = null;
+            const wasSample = !!commSampleGroup;
+            commSampleGroup = null; commSampleSub = null;
             if (!isDocked('community')) { try { closeFloat(); } catch (e) {} }
-            else if (!myTown) { try { renderCommunity(); } catch (e) {} }
+            else if (wasSample || !myTown) { try { renderCommunity(); } catch (e) {} }
         }
         // part 'tile' = 맨 위 큰 탭 하나만 / 'rest' = 그 아래 작은 탭 줄 + 게시물 영역을 한 번에
         function tourCommTarget(group, part) {
             const whole = () => isDocked('community') ? panelEl('community') : document.getElementById('floatBox');
-            const bar = document.getElementById(myTown ? 'commTabBar' : 'commSampleBar');
+            const sample = tourSampleMode();
+            const bar = document.getElementById(sample ? 'commSampleBar' : 'commTabBar');
             if (!bar || !group) return whole();
-            const tile = myTown
+            const tile = !sample
                 ? (() => { const i = commGroupsOrdered().findIndex(g => g.k === group); return bar.firstElementChild && bar.firstElementChild.children[i]; })()
                 : bar.querySelector('[data-g="' + group + '"]');
             // 휴대폰: 큰 탭 줄이 옆으로 밀리는 줄이라, 비출 탭이 화면 밖이면 줄 가운데로 가져옴
             const trow = tile && tile.parentElement;
             if (trow && trow.scrollWidth > trow.clientWidth + 2) trow.scrollLeft = Math.max(0, tile.offsetLeft - (trow.clientWidth - tile.offsetWidth) / 2);
             if (part === 'rest') {
-                const subs = myTown ? bar.children[1] : document.getElementById('commSampleSubs');
-                const posts = myTown ? document.getElementById('commMain') : document.getElementById('commSamplePosts');
+                const subs = sample ? document.getElementById('commSampleSubs') : bar.children[1];
+                const posts = sample ? document.getElementById('commSamplePosts') : document.getElementById('commMain');
                 if (subs && posts) return tourUnion(subs, posts);
                 return posts || subs || whole();
             }
@@ -10499,7 +10564,9 @@
             if (!root) return;
             const n = TOUR_STEPS.length, i = tourState.i, s = TOUR_STEPS[i], last = i === n - 1;
             if (isMobile() && s.tab) setMobTab(s.tab);          // 휴대폰: 이 단계가 설명하는 화면(탭)으로 먼저 넘김
-            if (s.comm) tourOpenComm(s.comm); else tourCloseComm();      // 커뮤니티 단계에서만 커뮤니티를 열어 둠
+            if (s.comm || s.openComm) tourOpenComm(s.comm); else tourCloseComm();      // 커뮤니티 단계에서만 커뮤니티를 열어 둠 (소개 단계부터 미리 열어 두어, 다음 단계에서 창이 새로 뜨는 움직임이 없게)
+            const cardEl0 = document.getElementById('tourCard');
+            if (cardEl0) cardEl0.classList.toggle('tour-compact', isMobile() && !!s.comm);   // 휴대폰 커뮤니티 단계: 설명 카드를 작게 줄여 게시물이 보이게
             tourPlace();
             // 커뮤니티 창은 열릴 때 .22초 동안 아래에서 올라오며(pop-in) 자리가 움직이므로, 첫 계산 값은 어긋나 있음
             //  → 움직임이 끝날 때까지 몇 번 다시 재서 테두리를 정확한 자리에 맞춤 (이전 단계에서 넘어올 때 테두리가 겹쳐 보이던 문제)
@@ -10512,7 +10579,9 @@
                 <div class="tour-step">${i + 1} / ${n}</div>
                 <h2 class="tour-title">${esc(s.title)}</h2>
                 <p class="tour-text">${esc(s.text)}</p>
-                ${s.bullets ? `<ul class="tour-list">${s.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>` : ''}
+                ${s.bullets ? (isMobile() && s.comm
+                    ? `<details class="tour-more"><summary>자세히 보기</summary><ul class="tour-list">${s.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul></details>`   // 휴대폰 커뮤니티 단계: 접어 두어 게시물을 가리지 않음
+                    : `<ul class="tour-list">${s.bullets.map(b => `<li>${esc(b)}</li>`).join('')}</ul>`) : ''}
                 <div class="tour-dots">${TOUR_STEPS.map((_, k) => `<button onclick="tourGo(${k})" class="${k === i ? 'on' : ''}" aria-label="${k + 1}번째 안내"></button>`).join('')}</div>
                 <div class="tour-nav">
                     <button onclick="tourGo(${i - 1})" class="tour-btn tour-prev" ${i === 0 ? 'disabled' : ''}>이전</button>
@@ -10537,7 +10606,13 @@
             if (cardEl) {
                 // 설명 카드는 단계마다 자리가 정해져 있어 왔다 갔다 하지 않음: 맨 아래 탭을 설명할 때만 위쪽, 나머지는 모두 아래쪽 고정
                 if (isMobile()) { const top = s.pos === 'top'; cardEl.style.top = top ? '.5rem' : 'auto'; cardEl.style.bottom = top ? 'auto' : '.5rem'; }
-                else { cardEl.style.top = ''; cardEl.style.bottom = ''; }
+                else {
+                    cardEl.style.top = ''; cardEl.style.bottom = '';
+                    // PC 커뮤니티 단계: 설명 카드를 오른쪽 아래 구석에 작게 붙여 가운데 게시물이 가려지지 않게
+                    const side = !!s.comm;
+                    cardEl.style.left = side ? 'auto' : ''; cardEl.style.right = side ? '1.25rem' : ''; cardEl.style.transform = side ? 'none' : '';
+                    cardEl.style.width = side ? 'min(22rem, calc(100vw - 2rem))' : '';
+                }
             }
             const spot = document.getElementById('tourSpot'), dim = document.getElementById('tourDim');
             // 아래 탭 설명 단계: 빛 테두리 대신, 아이콘마다 화살표 말풍선이 위에서 가리킴
@@ -10557,16 +10632,16 @@
                     arr.appendChild(el);
                 });
             }
+            // 어둡게 하는 층은 #tourSpot 의 큰 box-shadow 로 처리(구멍과 테두리가 같은 도형이라 틈·흰 선이 생기지 않음). #tourDim 은 클릭만 막는 투명 막
             if (r && s.arrows && isMobile()) {
-                const x1 = Math.max(0, r.left), y1 = Math.max(0, r.top), x2 = Math.min(innerWidth, r.right), y2 = Math.min(innerHeight, r.bottom);
-                dim.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
-                dim.style.display = 'block'; spot.style.display = 'none';
+                Object.assign(spot.style, { display: 'block', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
+                spot.classList.add('flat');
+                dim.style.display = 'block';
                 root.classList.remove('tour-plain');
             } else if (r) {
-                const x1 = Math.max(0, r.left - pad), y1 = Math.max(0, r.top - pad), x2 = Math.min(innerWidth, r.right + pad), y2 = Math.min(innerHeight, r.bottom + pad);
-                dim.style.clipPath = `polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px)`;
-                dim.style.display = 'block';
                 Object.assign(spot.style, { display: 'block', left: (r.left - pad) + 'px', top: (r.top - pad) + 'px', width: (r.width + pad * 2) + 'px', height: (r.height + pad * 2) + 'px' });
+                spot.classList.remove('flat');
+                dim.style.display = 'block';
                 root.classList.remove('tour-plain');
             } else { spot.style.display = 'none'; dim.style.display = 'none'; root.classList.add('tour-plain'); }
         }
@@ -10574,7 +10649,7 @@
         function tourClose() {
             const root = document.getElementById('tourRoot'); if (root) root.remove();
             tourCloseComm();
-            tourState.open = false; document.removeEventListener('keydown', tourKey); window.removeEventListener('resize', tourRender);
+            tourState.open = false; document.body.classList.remove('tour-on'); document.removeEventListener('keydown', tourKey); window.removeEventListener('resize', tourRender);
         }
         function tourHide(mode) {
             if (mode === 'never') lsSet('tour_never', '1');
@@ -10594,13 +10669,14 @@
                 st.textContent = `
                 #tourRoot { position: fixed; inset: 0; z-index: 3000; }
                 #tourRoot.tour-plain { background: rgba(2,6,23,.62); backdrop-filter: blur(2px); }
-                #tourDim { position: fixed; inset: 0; background: rgba(2,6,23,.62); }
-                #tourSpot { position: fixed; border-radius: 12px; box-shadow: 0 0 0 3px #818cf8, 0 0 22px 4px rgba(129,140,248,.7); pointer-events: none; animation: tourPulse 1.6s ease-in-out infinite; }
+                #tourDim { position: fixed; inset: 0; background: transparent; }
+                #tourSpot { position: fixed; border-radius: 12px; box-shadow: 0 0 0 3px #818cf8, 0 0 22px 4px rgba(129,140,248,.7), 0 0 0 100vmax rgba(2,6,23,.62); pointer-events: none; animation: tourPulse 1.6s ease-in-out infinite; }
+                #tourSpot.flat { border-radius: 0; box-shadow: 0 0 0 100vmax rgba(2,6,23,.62); animation: none; }
                 .tour-arrow { position: fixed; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none; animation: tourBob 1s ease-in-out infinite; }
                 .tour-arrow span { background: #4f46e5; color: #fff; font-size: .75rem; font-weight: 800; padding: .3rem .55rem; border-radius: 999px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
                 .tour-arrow i { color: #fff; font-size: 1.4rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
                 @keyframes tourBob { 50% { transform: translateX(-50%) translateY(-6px); } }
-                @keyframes tourPulse { 50% { box-shadow: 0 0 0 5px #a5b4fc, 0 0 30px 8px rgba(165,180,252,.75); } }
+                @keyframes tourPulse { 50% { box-shadow: 0 0 0 5px #a5b4fc, 0 0 30px 8px rgba(165,180,252,.75), 0 0 0 100vmax rgba(2,6,23,.62); } }
                 #tourCard { position: fixed; left: 50%; bottom: 1.25rem; transform: translateX(-50%); width: min(28rem, calc(100vw - 2rem)); max-height: calc(100vh - 2.5rem); overflow-y: auto;
                     padding-top: 1.1rem; background: #fff; color: #0f172a; border-radius: 20px; padding: 1.4rem 1.25rem 1rem; box-shadow: 0 24px 60px -12px rgba(0,0,0,.55); text-align: center; user-select: none; }
                 .tour-list { list-style: none; padding: 0; margin: .6rem 0 0; text-align: left; font-size: .8125rem; line-height: 1.5; color: #334155; display: flex; flex-direction: column; gap: .3rem; word-break: keep-all; }
@@ -10624,7 +10700,19 @@
                     .tour-icon { font-size: 1.6rem; } .tour-title { font-size: 1rem; } .tour-text { font-size: .8125rem; margin-top: .3rem; line-height: 1.5; }
                     .tour-dots { display: none; } .tour-nav { margin-top: .7rem; } .tour-btn { padding: .6rem; } .tour-foot { margin-top: .55rem; padding-top: .45rem; }
                     .tour-list { font-size: .75rem; } .tour-x { width: 2.2rem; height: 2.2rem; }
-                }`;
+                    /* 커뮤니티 설명 단계: 카드를 작게 줄여 뒤의 게시물이 잘 보이게 (아이콘·쪽수 줄·아래 링크는 숨김, 자세한 내용은 접어 둠) */
+                    #tourCard.tour-compact { max-height: 38vh; padding: .5rem .75rem .45rem; border-radius: 14px; }
+                    #tourCard.tour-compact .tour-icon, #tourCard.tour-compact .tour-foot { display: none; }
+                    #tourCard.tour-compact .tour-step { display: inline-block; margin: 0 .35rem 0 0; }
+                    #tourCard.tour-compact .tour-title { display: inline; font-size: .95rem; margin: 0; padding-right: 2rem; }
+                    #tourCard.tour-compact .tour-text { margin-top: .25rem; font-size: .78rem; line-height: 1.4; }
+                    #tourCard.tour-compact .tour-nav { margin-top: .45rem; } #tourCard.tour-compact .tour-btn { padding: .5rem; }
+                    #tourCard.tour-compact .tour-x { top: .35rem; right: .4rem; width: 1.9rem; height: 1.9rem; }
+                    .tour-more { margin-top: .3rem; text-align: left; } .tour-more summary { cursor: pointer; font-size: .72rem; font-weight: 800; color: #4f46e5; list-style: none; text-align: center; } .dark .tour-more summary { color: #a5b4fc; }
+                    .tour-more[open] summary { margin-bottom: .3rem; }
+                }
+                /* 안내 중에는 커뮤니티 창이 아래에서 올라오는 움직임을 없앰 — 비추는 테두리가 움직이는 창을 따라 흔들려 보이던 문제 */
+                body.tour-on #floatModal:not(.hidden) #floatBox { animation: none !important; }`;
                 document.head.appendChild(st);
             }
             const root = document.createElement('div'); root.id = 'tourRoot'; root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-label', '사용 안내');
@@ -10632,6 +10720,7 @@
             document.body.appendChild(root);
             TOUR_STEPS = tourBuildSteps();
             tourState.open = true; tourState.i = start || 0;
+            document.body.classList.add('tour-on');
             document.addEventListener('keydown', tourKey); window.addEventListener('resize', tourRender);
             tourRender();
         }
