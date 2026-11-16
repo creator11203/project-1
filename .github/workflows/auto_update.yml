@@ -137,6 +137,8 @@ jobs:
             if [ -f blocked.json ]; then git add blocked.json; fi
             # geocache.json: 동(洞)·장소 좌표를 한 번 찾으면 저장해 두는 파일 (scraper.py 가 자동으로 만듭니다)
             if [ -f geocache.json ]; then git add geocache.json; fi
+            # stations.json: 전국 경찰·소방 시설 목록 (지도의 [경찰·소방 표시]를 즉시 보여 주려고 3일에 한 번 갱신)
+            if [ -f stations.json ]; then git add stations.json; fi
             if git diff --staged --quiet; then
               echo "변경된 뉴스가 없어 저장을 건너뜁니다."
             else
