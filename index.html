@@ -9504,6 +9504,9 @@
             return `<div class="mt-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-left text-slate-800 dark:text-slate-100">
                 <p class="text-xs font-extrabold mb-1.5">📍 ${title}</p>
                 <ol class="list-decimal pl-4 space-y-1 text-[0.75rem] leading-relaxed">${steps.map(x => `<li>${x}</li>`).join('')}</ol>
+                ${and ? `<a href="intent:#Intent;action=android.settings.LOCATION_SOURCE_SETTINGS;end" class="mt-2.5 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-lg bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold"><i class="fa-solid fa-gear"></i> 휴대폰 위치 설정 바로 열기</a>
+                <p class="text-[0.625rem] text-slate-500 dark:text-slate-400 mt-1">안 열리면 위 순서대로 직접 열어 주세요. (기기·브라우저에 따라 막혀 있을 수 있어요)</p>` : ''}
+                ${ios ? `<p class="text-[0.625rem] text-slate-500 dark:text-slate-400 mt-2">※ iPhone은 웹사이트가 설정 앱을 직접 열 수 없어서, 위 순서대로 설정 앱을 열어 주세요.</p>` : ''}
                 <div class="flex gap-2 mt-2.5">
                     ${kind === 'inapp' ? `<button onclick="copySiteUrl(this)" class="flex-1 py-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs font-bold">주소 복사</button>` : ''}
                     <button onclick="verifyTown()" class="flex-1 py-2 rounded-lg bg-emerald-600 text-white text-xs font-bold"><i class="fa-solid fa-rotate-right"></i> 설정했어요, 다시 시도</button>
