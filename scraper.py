@@ -3221,10 +3221,23 @@ def fetch_article_text(url):
     return (p.desc + " " + body).strip()
 
 
-def location_sentences(text, limit=220):
-    """본문에서 위치가 나오는 문장만 골라 짧게 (저작권을 고려해 위치 확인용 최소한만 보관)"""
+EXOFF_RE = re.compile(_EXOFF_PAT)
+_RESIDENCE_RE = re.compile(r"거주|이사|입주|이주|정착|주소지|전입|살게|살고|머물|주거")
+
+
+def is_exoffender(title):
+    """출소한 성범죄자가 어느 동네에 거주하게 됐다는 소식인지 (제도·정책·교육 기사는 제외)"""
+    return bool(EXOFF_RE.search(title or "")) and not SAFETY_EXCL_RE.search(title or "")
+
+
+def location_sentences(text, limit=220, prefer=None):
+    """본문에서 위치가 나오는 문장만 골라 짧게 (저작권을 고려해 위치 확인용 최소한만 보관)
+    prefer: 이 낱말이 든 문장을 먼저 고름 (출소 성범죄자 기사는 '거주·이사·입주' 문장의 지명이 거주지임 — 교도소·법무부 소재지가 아님)"""
     out, total = [], 0
-    for s in re.split(r"(?<=[다요\.!?])\s+", text):
+    sents = re.split(r"(?<=[다요\.!?])\s+", text)
+    if prefer:
+        sents = [x for x in sents if prefer.search(x)] + [x for x in sents if not prefer.search(x)]
+    for s in sents:
         s = s.strip()
         # 동·읍·면·도로명 같은 자세한 위치뿐 아니라 '최근 여수에서…', '완도해경은…'처럼 시·군·구 이름만 나오는 문장도 위치 문장으로 봄
         if 8 <= len(s) <= 220 and (_LOC_CUE_RE.search(s) or _has_domestic_place(s)) and s not in out:
@@ -3238,7 +3251,7 @@ def location_sentences(text, limit=220):
 _PREC_RANK = {"poi": 4, "dong": 3, "sgg": 2, "road": 1.5, "sido": 1, "inst": 1, "world": 1, None: 0}   # inst(기관 소재지)는 시·도 수준으로 약하게 봄
 
 
-_INST_WORD_RE = re.compile(r"[가-힣]{2,6}(?:경찰서|경찰청|지구대|파출소|소방서|지검|지청|지법|고법|법원|검찰청|세무서|구청|시청|군청|교육청|보건소)")
+_INST_WORD_RE = re.compile(r"[가-힣]{2,6}(?:경찰서|경찰청|지구대|파출소|소방서|지검|지청|지법|고법|법원|검찰청|세무서|구청|시청|군청|교육청|보건소|교도소|구치소|보호관찰소|보호관찰소|교정시설|교정청)")
 
 
 def enrich_locations(items, started):
@@ -3247,7 +3260,8 @@ def enrich_locations(items, started):
     cands = []
     # 지도에 아예 못 찍은 기사(위치 미상) → 시·도까지만 아는 기사 → 시·군·구까지 아는 기사 순서로 먼저 확인
     order = {None: 0, "sido": 1, "inst": 1, "road": 1, "sgg": 2}
-    for v in sorted(items, key=lambda x: (order.get(x.get("prec"), 3), -x["timestamp"])):
+    # 출소 성범죄자 거주 소식은 거주지가 시민에게 중요한 정보라 가장 먼저 본문을 확인
+    for v in sorted(items, key=lambda x: (0 if x.get("exoff") else 1, order.get(x.get("prec"), 3), -x["timestamp"])):
         if len(cands) >= MAX_ENRICH_PER_RUN:
             break
         g = v.get("_geo") or {}
@@ -3279,7 +3293,7 @@ def enrich_locations(items, started):
     better = 0
     for v, text in res:
         v["enr"] = ENRICH_VER                       # 한 번 확인한 기사는 다시 열지 않음
-        lt = location_sentences(text) if text else ""
+        lt = location_sentences(text, prefer=_RESIDENCE_RE if v.get("exoff") else None) if text else ""
         if not lt:
             continue
         v["loctext"] = lt
@@ -3724,7 +3738,12 @@ def check_bodies(items, started, cutoff_ts=0):
 
 def make_item(title, content, sub, group, source, link, ts, hint, orig=None, loctext=None):
     overseas = group == OVERSEAS_GROUP or sub == "북한 도발"
-    loc, lat, lng, geo = locate(title, content + (" " + orig if orig else "") + (" " + loctext if loctext else ""), None if overseas else hint, overseas)
+    exoff = (not overseas) and is_exoffender(title)
+    if exoff:
+        # 출소 성범죄자 기사: '○○교도소 출소'·'법무부 ○○보호관찰소' 속 지명은 거주지가 아님 → 기관 이름을 빼고 거주지(제목·본문의 거주 문장)로 위치를 잡음
+        loc, lat, lng, geo = locate(_INST_WORD_RE.sub(" ", title), _INST_WORD_RE.sub(" ", content + (" " + loctext if loctext else "")), hint, False)
+    else:
+        loc, lat, lng, geo = locate(title, content + (" " + orig if orig else "") + (" " + loctext if loctext else ""), None if overseas else hint, overseas)
     # 해킹·정보 유출·서비스 장애(사이버범죄)는 서비스가 전국에서 쓰이므로 '본사가 있는 시·군·구'의 사건이 아님 (2026-11-16 사용자 지적:
     #   카카오워크·금융보안원 해킹, MS 서비스 장애가 성남시 분당구(카카오 본사)로 집계되던 문제).
     #   제목에 시·도·시·군·구·장소가 직접 적힌 경우(예: '대전 ○○병원 전산망 해킹')만 그 위치를 쓰고, 나머지는 '전국'으로 둠 (지도에 찍지 않고 지역 집계에서 뺌)
@@ -3757,7 +3776,8 @@ def make_item(title, content, sub, group, source, link, ts, hint, orig=None, loc
         "route": geo.get("hw"),    # 고속도로 기사면 노선 키 (highways.json). 화면에서 노선을 지도에 그려 줌
         "place": None,      # 기사에 나온 구체적인 장소 이름 (좌표를 찾은 경우에만)
         "stage": stage_of(title),  # 기사 단계: incident(발생) / police(수사) / court(재판·판결 — 집계·알림에서 뺌)
-        "_geo": geo,        # 좌표를 더 정밀하게 찾기 위한 임시 정보 (저장 전에 지움)
+        "exoff": 1 if exoff else None,   # 출소한 성범죄자 거주지 소식 (화면에 '성범죄자 거주지' 표시)
+        "_geo": geo,       # 좌표를 더 정밀하게 찾기 위한 임시 정보 (저장 전에 지움)
     }
 
 
@@ -4567,6 +4587,8 @@ def selftest():
         ("전자발찌 착용 출소자 마을 입주 주민 항의", True),
         ("성범죄자 신상정보 등록 제도 개선 토론회", False),
         ("성범죄자 출소 후 재범 징역 선고", False),
+        ("청주교도소 출소 성범죄자 안산 거주 주민 불안", True),
+        ("서울남부교도소 출소 성폭행범 광주 북구 거주 주민 반발", True),
         ("학원가 마약 음료 청소년", True),
         ("학원가서 공짜 음료 나눠주며 학생 접근 경찰 수사", True),
         ("마약 예방 캠페인 학원가 청소년", False),
