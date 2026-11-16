@@ -46,13 +46,13 @@
         /* 기사를 많이 불러와도 손잡이가 너무 작아지지 않게 최소 길이를 둠 */
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; min-height: 40px; }
         /* 7일간 전국 사건사고 다발 지역(190위까지 이어지는 긴 목록): 스크롤 막대를 굵고 길게, 커서를 대면 빨간색으로 눈에 띄게 */
-        /* 스크롤 막대 손잡이 길이: 기사 요약 목록(#newsListContainer)과 다발 지역 순위가 똑같이 '화면 높이의 26%' 이상이 되게 함 (항목이 아무리 많아도 짧아지지 않음) */
+        /* 스크롤 막대 손잡이 길이: 기사 요약 목록(#newsListContainer)과 다발 지역 순위가 똑같이 '화면 높이의 13%' 이상이 되게 함 (항목이 아무리 많아도 짧아지지 않음) */
         #detailViewContainer:has(#hotspotList)::-webkit-scrollbar { width: 12px; }
         #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 9px; }
-        #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 999px; min-height: 26vh; border: 2px solid transparent; background-clip: content-box; }
+        #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb { background-color: #94a3b8; border-radius: 999px; min-height: 13vh; border: 2px solid transparent; background-clip: content-box; }
         #detailViewContainer:has(#hotspotList):hover::-webkit-scrollbar-thumb { background-color: #fb7185; }
         #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb:hover { background-color: #e11d48; }
-        #hotspotList::-webkit-scrollbar { width: 12px; } #hotspotList::-webkit-scrollbar-thumb { min-height: 26vh; border-radius: 999px; background: #94a3b8; }
+        #hotspotList::-webkit-scrollbar { width: 12px; } #hotspotList::-webkit-scrollbar-thumb { min-height: 13vh; border-radius: 999px; background: #94a3b8; }
         .dark #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-track { background: #1e293b; }
         .dark #detailViewContainer:has(#hotspotList)::-webkit-scrollbar-thumb { background-color: #64748b; }
         .dark #detailViewContainer:has(#hotspotList):hover::-webkit-scrollbar-thumb { background-color: #fb7185; }
@@ -61,7 +61,7 @@
         /* 왼쪽 기사 목록 스크롤바: 넓고(12px) 손잡이 최소 64px, 칸 조정 막대(회색)와 구분되는 남색 */
         #newsListContainer::-webkit-scrollbar { width: 12px; }
         #newsListContainer::-webkit-scrollbar-track { background: #f1f5f9; border-left: 1px solid #e2e8f0; }
-        #newsListContainer::-webkit-scrollbar-thumb { background: #818cf8; border-radius: 999px; border: 2px solid #f1f5f9; min-height: 26vh; }
+        #newsListContainer::-webkit-scrollbar-thumb { background: #818cf8; border-radius: 999px; border: 2px solid #f1f5f9; min-height: 13vh; }
         #newsListContainer::-webkit-scrollbar-thumb:hover { background: #6366f1; }
         #newsListContainer::-webkit-scrollbar-thumb:active { background: #4f46e5; }
         .dark #newsListContainer::-webkit-scrollbar-track { background: #0f172a; border-left-color: #1e293b; }
