@@ -2,8 +2,9 @@ name: Auto Update Incidents and News
 
 on:
   schedule:
-    # 5분마다 시작 (GitHub Actions가 허용하는 가장 짧은 간격). 실제로는 GitHub 사정에 따라 몇 분씩 늦게 시작되기도 합니다.
-    - cron: '*/5 * * * *'
+    # 10분마다 시작 요청. 한 번 실행이 약 55분 동안 계속 수집하므로 실행이 겹치면 하나만 대기했다가 앞 실행이 끝나면 바로 이어받습니다.
+    # (GitHub 사정에 따라 정기 실행이 몇십 분씩 시작되지 않기도 해서, 한 번 실행을 길게 잡아 수집이 끊기지 않게 함)
+    - cron: '*/10 * * * *'
   workflow_dispatch:   # Actions 탭에서 수동으로 "Run workflow" 버튼으로 실행할 수도 있습니다
   # scraper.py 를 새로 올리면 곧바로 '고장 검사'만 한 번 돌림 (1분 안에 결과: 초록 ✓ 정상 / 빨간 ✗ 고장)
   push:
@@ -43,12 +44,14 @@ jobs:
   update-news:
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 75
     permissions:
       contents: write
 
     env:
-      LOOP_MINUTES: 20        # 한 번 실행될 때 계속 수집하는 시간 (분)
+      LOOP_MINUTES: 55        # 한 번 실행될 때 계속 수집하는 시간 (분). 길게 잡은 이유: GitHub 정기 실행(cron)이 가끔 몇십 분씩 시작되지 않아
+                              #  수집이 끊긴 적이 있음(2026-11-16 17:42~18:37). 한 번 실행이 길면 정기 실행이 빠져도 앞선 실행이 계속 수집함
+                              #  (실행이 끝날 즈음엔 대기 중이던 다음 실행이 바로 이어받음)
       CYCLE_SECONDS: 420      # 수집 간격 (초). 7분 = 한 시간에 최대 약 8번 올림 → GitHub Pages 배포 한도(시간당 약 10회)에 여유를 둠
                               #   (6분이면 정확히 10회라, 사람이 index.html 을 한 번만 올려도 한도를 넘어 배포가 밀리고 사이트가 한동안 안 바뀔 수 있음)
       GOOGLE_EVERY_SEC: 900   # 구글 뉴스 검색은 15분마다 한 번 (너무 자주 하면 구글이 막음). 언론사 직접 RSS 는 매번
@@ -144,13 +147,26 @@ jobs:
             else
               # 주의: 커밋 메시지에 [skip ci] 를 넣으면 GitHub Pages 배포까지 건너뛰어 웹사이트가 안 바뀔 수 있어서 넣지 않습니다.
               git commit -m "Auto-update latest news dataset ($(TZ=Asia/Seoul date '+%m-%d %H:%M'))"
-              if ! git pull --rebase origin ${{ github.ref_name }}; then
-                # 사람이 같은 때 파일을 올려 합치기가 꼬이면: 이번 회차 저장은 버리고 저장소 최신 상태에서 다음 회차를 새로 시작
-                #  (예전에는 여기서 꼬인 채로 남아, 남은 회차의 올리기가 모두 실패할 수 있었음)
+              if ! git pull --rebase --autostash origin ${{ github.ref_name }}; then
+                # 사람이 같은 때 파일을 올려 합치기가 꼬이면: 이번 회차에 모은 데이터 파일을 따로 챙겨 두고,
+                #  저장소 최신 상태로 되돌린 뒤 그 데이터 파일만 다시 얹어서 저장 (예전에는 이 회차 결과를 그냥 버렸음)
                 git rebase --abort || true
+                mkdir -p /tmp/keep
+                for f in news.json tips.json blocked.json geocache.json stations.json; do
+                  if [ -f "$f" ]; then cp "$f" "/tmp/keep/$f"; fi
+                done
                 git fetch origin ${{ github.ref_name }}
                 git reset --hard origin/${{ github.ref_name }}
-                echo "::warning::다른 변경과 겹쳐 이번 회차 저장을 건너뛰었습니다. 다음 회차에 다시 저장합니다."
+                for f in news.json tips.json blocked.json geocache.json stations.json; do
+                  if [ -f "/tmp/keep/$f" ]; then cp "/tmp/keep/$f" "$f"; git add "$f"; fi
+                done
+                if git diff --staged --quiet; then
+                  echo "::warning::다른 변경과 겹쳤지만 저장할 새 내용이 없어 건너뜁니다."
+                else
+                  git commit -m "Auto-update latest news dataset ($(TZ=Asia/Seoul date '+%m-%d %H:%M'), 겹침 복구)"
+                  git push || echo "::warning::겹침 복구 후 올리기 실패 — 다음 회차에 다시 시도합니다."
+                  echo "::warning::다른 변경과 겹쳤지만 이번 회차 결과를 최신 저장소 위에 다시 저장했습니다."
+                fi
               else
                 git push || echo "::warning::올리기 실패 — 다음 회차에 다시 시도합니다."
               fi
