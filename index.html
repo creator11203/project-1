@@ -222,6 +222,30 @@
             .m-call { flex: 1 1 40%; justify-content: center; padding: 8px 10px; }
             #panel-map #mapStyleSelect { order: 5; flex: 0 0 auto; width: 9.5rem; }
             .m-call:active { transform: scale(.96); }
+            /* 커뮤니티 맨 위 큰 탭(안전망·동네 이야기·장터…): 한 줄에 억지로 넣지 않고, 탭마다 글씨가 다 보이는 크기로 두고 옆으로 밀어서 봄 */
+            #commTabBar > .grid, #commSampleBar > .grid { display: flex !important; overflow-x: auto; overflow-y: hidden; gap: 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
+            #commTabBar > .grid::-webkit-scrollbar, #commSampleBar > .grid::-webkit-scrollbar { display: none; }
+            #commTabBar > .grid > button, #commSampleBar > .grid > div { flex: 0 0 auto; min-width: 78px; padding: 8px 10px 7px; scroll-snap-align: center; gap: 4px; }
+            #commTabBar > .grid > button > span:nth-child(2), #commSampleBar > .grid > div > span:nth-child(2) { font-size: 12px; max-width: none; overflow: visible; text-overflow: clip; white-space: nowrap; }
+            #commTabBar > .grid > button > span:first-child, #commSampleBar > .grid > div > span:first-child { width: 30px; height: 30px; font-size: 14px; }
+            /* 커뮤니티를 열면 맨 위 로고 줄과 '지난 알림' 버튼은 숨겨서 글 읽을 자리를 넓힘 (돌아가기는 ← 사건 목록) */
+            body:has(#floatModal:not(.hidden)) #appHeader, body:has(#floatModal:not(.hidden)) #alertLogBtn { display: none !important; }
+            /* 글쓰기: 화면 오른쪽 아래에 떠 있는 둥근 버튼 (엄지로 누르기 쉽게). 목록 맨 아래 글이 가려지지 않게 아래 여백을 둠 */
+            .pb-write-fab { position: fixed !important; right: 14px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 60; margin: 0 !important; padding: 13px 20px !important; border-radius: 999px !important; font-size: 14px !important; box-shadow: 0 8px 22px rgba(0,0,0,.35) !important; }
+            /* 글을 읽거나 쓰는 중에는 위쪽 탭 줄·안내 줄을 접어서 본문과 입력칸 자리를 넓힘 (← 목록 / ✕ 취소 로 돌아오면 다시 나타남) */
+            div:has(> #commTabBar):has(#pbBox[data-view="post"]) > #commTabBar, div:has(> #commTabBar):has(#pbBox[data-view="write"]) > #commTabBar,
+            div:has(> #commTabBar):has(#pbBox[data-view="post"]) > button[onclick="toggleTabNotice()"], div:has(> #commTabBar):has(#pbBox[data-view="write"]) > button[onclick="toggleTabNotice()"] { display: none !important; }
+            .pc-only { display: none !important; }
+            #pbTypes { grid-template-columns: 1fr !important; }
+            #pbTypes > button { padding: 10px 12px !important; }
+            /* 입력칸 글씨를 16px 이상으로: 아이폰에서 입력칸을 누를 때 화면이 저절로 확대되는 것을 막음 */
+            #floatBox input:not([type="range"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), #floatBox textarea, #floatBox select { font-size: 16px !important; }
+            #pbList, .mk-list { padding-bottom: 84px !important; }
+            .mk-chips { flex-wrap: nowrap !important; overflow-x: auto; width: 100%; scrollbar-width: none; padding-bottom: 2px; }
+            .mk-chips::-webkit-scrollbar { display: none; }
+            .mk-chips > button { flex-shrink: 0; padding: 6px 12px !important; font-size: 12px !important; }
+            /* 작은 탭(이런저런·이사왔어요…): 터치하기 쉬운 크기 */
+            #commTabBar .comm-tab { padding: 7px 14px 7px 7px; font-size: 13px; }
             /* 커뮤니티 창 맨 위: 크고 분명한 '← 사건 목록' 버튼 (✕ 만으로는 닫는 방법을 찾기 어려웠음) */
             .comm-back { display: inline-flex !important; align-items: center; gap: 5px; padding: 7px 11px; border-radius: 999px; background: #fff; color: #047857; font-size: 12px; font-weight: 800; box-shadow: 0 2px 8px rgba(0,0,0,.22); white-space: nowrap; }
             .comm-back:active { transform: scale(.96); }
@@ -604,7 +628,7 @@
         <a href="privacy.html" target="_blank" rel="noopener" class="font-bold hover:underline">개인정보처리방침</a>
         <a href="terms.html" target="_blank" rel="noopener" class="hover:underline">이용약관</a>
         <a href="contact.html" target="_blank" rel="noopener" class="hover:underline">문의·신고</a>
-        <span class="m-only">참고용 정보이며 부정확하거나 최신이 아닐 수 있습니다. 사실은 원문에서 확인하고, 긴급 상황은 112·119</span>
+        <span class="m-only">참고용 정보이며 최신이 아닐 수 있습니다. 사실은 원문에서 확인하세요</span>
         <span class="basis-full text-center text-[0.625rem] text-slate-400 dark:text-slate-500">참고용 정보로 부정확하거나 최신이 아닐 수 있습니다. 사실은 원문·공식 채널에서 확인하세요. 긴급 상황은 112·119 · 기사는 각 언론사 소유이며 제목과 원문 링크만 제공합니다</span>
     </footer>
     <!-- 휴대폰 전용 아래 탭 (PC에서는 숨김) -->
@@ -6338,14 +6362,14 @@
             main.innerHTML = `
                 <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0">
                     <div class="inline-flex rounded-lg overflow-hidden border border-emerald-600">${scopeBtn('town', '🏘 우리 동네')}${scopeBtn('nation', '🌐 전국 장터 보기')}</div>
-                    <button onclick="openMarketForm(true)" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"><i class="fa-solid fa-plus"></i> 물건 올리기</button>
+                    <button onclick="openMarketForm(true)" class="pb-write-fab px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"><i class="fa-solid fa-plus"></i> 물건 올리기</button>
                 </div>
                 <div class="px-3 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center gap-2 shrink-0">
-                    <div class="flex flex-wrap items-center gap-1.5">${['전체'].concat(MARKET_KINDS).map(chip).join('')}</div>
+                    <div class="mk-chips flex flex-wrap items-center gap-1.5">${['전체'].concat(MARKET_KINDS).map(chip).join('')}</div>
                     <input id="mkSearch" type="search" placeholder="${nation ? '전국에서 물건 찾기 (물건 이름·지역)' : '우리 동네에서 물건 찾기'}" onchange="setMarketQuery(this.value)" onkeydown="if (event.key === 'Enter') setMarketQuery(this.value)" class="flex-1 min-w-[8rem] bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-900 dark:text-white">
                 </div>
                 ${nation ? `<div class="px-3 py-1.5 text-[0.6875rem] bg-sky-50 dark:bg-sky-950/30 text-sky-800 dark:text-sky-200 border-b border-sky-200 dark:border-sky-800 shrink-0">전국 모든 동네에 올라온 물건입니다. 물건마다 올린 사람의 지역이 표시되고, 물건을 누르면 다른 동네 이웃과도 문의 채팅·1:1 대화를 할 수 있습니다.${FIREBASE_CONFIG ? '' : ' (체험 모드에서는 이 기기에서 올린 물건만 보입니다)'}</div>` : ''}
-                <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
+                <div class="mk-list flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">
                     ${list.length ? `<div class="grid grid-cols-2 md:grid-cols-3 gap-3">` + list.map(x => `
                         <button onclick="openMarketItem('${esc(x.id)}')" class="text-left rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden hover:border-emerald-500 transition ${x.status === 'done' ? 'opacity-50' : ''}">
                             <div class="h-28 bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">${x.img && IMG_DATA_RE.test(x.img) ? `<img src="${x.img}" class="w-full h-full object-cover">` : '<span class="text-3xl">📦</span>'}</div>
@@ -7278,7 +7302,7 @@
                 const ico = safe ? (on ? 'bg-white/20 text-white' : 'bg-red-600 text-white') : (on ? `bg-${c}-600 text-white` : `bg-${c}-100 dark:bg-${c}-950/60 text-${c}-600 dark:text-${c}-300`);
                 const sosTag = safe && sos ? `<span class="absolute -top-1.5 left-1/2 -translate-x-1/2 px-1.5 rounded-full bg-yellow-300 text-red-700 text-[0.5625rem] font-black leading-4 shadow animate-pulse whitespace-nowrap">SOS ${sos}</span>` : '';
                 const drag = safe ? '' : ordAttrs('comm_group_order', g.k, 'commGroupKeys()', 'renderCommTabBar()');
-                return `<button onclick="setCommGroup('${g.k}')" ${drag} title="${g.tabs.map(t => COMM_TAB_LABEL[t]).join(' · ')}${safe ? '' : ' (끌어서 순서 바꾸기)'}" class="${safe ? '' : 'ord-item cursor-grab '}relative flex flex-col items-center justify-center gap-1 rounded-xl px-1 pt-1.5 pb-1.5 min-w-0 transition ${tile}">
+                return `<button onclick="setCommGroup('${g.k}')" ${drag} data-on="${on ? 1 : 0}" title="${g.tabs.map(t => COMM_TAB_LABEL[t]).join(' · ')}${safe ? '' : ' (끌어서 순서 바꾸기)'}" class="${safe ? '' : 'ord-item cursor-grab '}relative flex flex-col items-center justify-center gap-1 rounded-xl px-1 pt-1.5 pb-1.5 min-w-0 transition ${tile}">
                     <span class="w-7 h-7 rounded-lg flex items-center justify-center text-[0.8125rem] ${ico}"><i class="fa-solid ${g.fa}"></i></span>
                     <span class="text-[0.6875rem] font-extrabold truncate max-w-full leading-none">${g.label}</span>${sosTag}${badge(n)}</button>`;
             }).join('');
@@ -7294,6 +7318,9 @@
             }).join('')}</div>` : '';
             bar.innerHTML = `<div class="grid gap-1.5 px-2 pt-2 ${subs ? '' : 'pb-2'}" style="grid-template-columns: repeat(${COMM_GROUPS.length}, minmax(0, 1fr));">${groups}</div>${subs}`;
             const on = bar.querySelector('.comm-tab[aria-pressed="true"]'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });   // 고른 탭이 가려지지 않게
+            // 휴대폰: 맨 위 큰 탭 줄은 옆으로 밀어서 보는 줄 → 고른 큰 탭이 줄 가운데에 오도록 맞춤 (처음엔 맨 앞 안전망, 뒤쪽 탭을 골라도 보이게)
+            const gOn = bar.querySelector('[data-on="1"]'), row = gOn && gOn.parentElement;
+            if (row && row.scrollWidth > row.clientWidth + 2) row.scrollLeft = Math.max(0, gOn.offsetLeft - (row.clientWidth - gOn.offsetWidth) / 2);
         }
 
         // ================= 게시판 (네이버 카페처럼: 글 목록 → 글 보기 → 댓글) =================
@@ -7451,7 +7478,7 @@
                         <div class="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5">${PB_SORTS.map(s => `<button onclick="pbSetSort('${b}', '${s[0]}')" class="px-2 py-1 rounded-md text-[0.6875rem] font-bold whitespace-nowrap transition ${ui.sort === s[0] ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-800'}">${s[1]}</button>`).join('')}</div>
                         ${layoutSeg}
                         <span class="text-[0.6875rem] text-slate-400 hide-narrow whitespace-nowrap">글 ${posts.length}개</span>
-                        <button onclick="pbWrite('${b}')" class="ml-auto shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg ${pbBtn(b)} text-white text-xs font-extrabold shadow-sm"><i class="fa-solid fa-pen"></i> 글쓰기</button>
+                        <button onclick="pbWrite('${b}')" class="pb-write-fab ml-auto shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg ${pbBtn(b)} text-white text-xs font-extrabold shadow-sm"><i class="fa-solid fa-pen"></i> 글쓰기</button>
                     </div>
                     ${P.filters ? `<div class="hscroll gap-1">${chip('all', '전체')}${P.filters.map(f => chip(f[0], f[1])).join('')}</div>` : ''}
                 </div>
@@ -7594,7 +7621,7 @@
         function pbWriteHtml(b) {
             const P = PB[b], c = P.c, inp = 'w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-' + c + '-400/50';
             const TYPES = { report: ['📢', '실시간 제보', '지금 일어난 사건·사고 알리기', 'amber'], sos: ['🚨', 'SOS 긴급 도움 요청', '실종·위급 상황, 24시간 맨 위 고정', 'red'], live: ['🔴', '실시간 방송', '현장을 카메라로 생중계', 'rose'] };
-            const typeCards = b === 'talk' ? `<div><div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">글 종류 <span class="font-normal text-slate-400">(끌어서 순서 바꾸기)</span></div>
+            const typeCards = b === 'talk' ? `<div><div class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">글 종류 <span class="pc-only font-normal text-slate-400">(끌어서 순서 바꾸기)</span></div>
                 <div id="pbTypes" class="grid grid-cols-3 gap-1.5">${composerChipOrder().map(t => { const d = TYPES[t]; return `<button type="button" data-t="${t}" onclick="pbSetType('${t}')" ${ordAttrs('comm_chip_order', t, 'composerChipOrder()', "pbRefresh('talk', true)")}
                     class="ord-item pb-type ${pbDraft.type === t ? 'pb-on' : ''} cursor-grab text-left rounded-xl border-2 px-2.5 py-2 transition border-slate-200 dark:border-slate-700 hover:border-${d[3]}-400" data-c="${d[3]}">
                     <div class="text-sm font-extrabold text-slate-900 dark:text-white">${d[0]} ${d[1]}</div><div class="text-[0.625rem] text-slate-500 dark:text-slate-400 mt-0.5 leading-snug" style="white-space: normal;">${d[2]}</div></button>`; }).join('')}</div>
