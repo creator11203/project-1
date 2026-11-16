@@ -1788,7 +1788,7 @@
         // 기본 지도(OpenStreetMap)는 확대하면 병원(H)은 잘 보이지만 경찰서·소방서는 거의 안 보여서,
         // 지도를 어느 곳으로 옮기든 확대(13단계 이상)하면 그 화면 안의 경찰서·지구대·파출소(🚓 파랑)와 소방서·119안전센터(🚒 빨강)를 따로 그려 줍니다.
         // 공개 지도 데이터(Overpass)를 0.1도 칸 단위로 한 번만 받아 기억해 두고, 같은 곳을 다시 볼 때는 다시 묻지 않습니다.
-        const STATION_MIN_ZOOM = 12, STATION_CELL = 0.1;
+        const STATION_MIN_ZOOM = 14, STATION_CELL = 0.1;
         const STATION_KINDS = {
             police: { icon: '🚓', label: '경찰', color: '#1d4ed8', bg: '#dbeafe' },
             fire: { icon: '🚒', label: '소방', color: '#dc2626', bg: '#fee2e2' }
