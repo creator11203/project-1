@@ -592,8 +592,11 @@
                 <span id="fontSizeIndicator" class="px-1 text-xs font-mono text-slate-500 dark:text-slate-400">100%</span>
                 <button onclick="adjustFontSize(1)" class="px-1.5 py-1 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded">A+</button>
             </div>
-            <!-- 다크/라이트 모드: 글씨 없이 아이콘(달 ↔ 해)으로만 구분 -->
-            <!-- 도구 아이콘 4개(사용 안내 · 화면 설정 · 앱으로 이용 · 다크/라이트): 글씨 없이 아이콘만. 아이콘마다 색이 달라 한눈에 구분되고, 마우스를 올리면 색 배경과 설명 말풍선이 나타남 -->
+            <!-- 다크/라이트 모드: 글씨 크기 바로 옆. 글씨 없이 아이콘(달 ↔ 해)으로만 구분 -->
+            <div class="tool-group flex items-center gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5">
+                <button id="themeBtn" onclick="toggleTheme()" title="다크 모드로 바꾸기" aria-label="다크 모드로 바꾸기" class="tool-btn tool-theme theme-btn"><i id="themeIcon" class="fa-solid fa-moon"></i></button>
+            </div>
+            <!-- 도구 아이콘 3개(사용 안내 · 화면 설정 · 앱으로 이용): 글씨 없이 아이콘만. 아이콘마다 색이 달라 한눈에 구분되고, 마우스를 올리면 색 배경과 설명 말풍선이 나타남 -->
             <div class="tool-group flex items-center gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5">
                 <button onclick="openTour(0)" title="사용 안내 (처음 쓰는 분을 위한 단계별 안내)" aria-label="사용 안내" class="tool-btn tool-help"><i class="fa-regular fa-circle-question"></i></button>
                 <div class="relative m-hide">
@@ -601,8 +604,6 @@
                     <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
                 </div>
                 <button onclick="openAppModal()" title="휴대폰 앱으로 이용하기" aria-label="휴대폰 앱으로 이용하기" class="tool-btn tool-app m-hide"><i class="fa-solid fa-mobile-screen-button"></i></button>
-                <span class="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-0.5" aria-hidden="true"></span>
-                <button id="themeBtn" onclick="toggleTheme()" title="다크 모드로 바꾸기" aria-label="다크 모드로 바꾸기" class="tool-btn tool-theme theme-btn"><i id="themeIcon" class="fa-solid fa-moon"></i></button>
             </div>
             <!-- 주요 버튼 3개(안전 브리핑 · 우리동네 커뮤니티 · 실시간 제보하기): 왼쪽 끝에서 오른쪽 끝으로 옅은 빛이 한 줄로 지나감 (.hero-sweep / .sweep-btn) -->
             <div id="heroBtns" class="hero-sweep flex items-center gap-1.5">
@@ -2769,9 +2770,10 @@
                     </div>
                     <button onclick="shareCopy(${id})" class="${btn} border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100"><span class="text-xl">🔗</span><span class="flex-1">내용·링크 복사</span></button>
                     <div class="rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-950/20 p-3 space-y-2">
-                        <div class="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">🏘️ 우리동네 커뮤니티 · 동네 이야기에 공유</div>
+                        <div class="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">🏘️ 동네 이야기에 공유</div>
                         <div class="text-[0.6875rem] text-slate-600 dark:text-slate-300 leading-relaxed">기사 제목과 원문 링크가 자동으로 채워진 <b>글쓰기 화면</b>으로 이동해요. 이웃에게 하고 싶은 말을 덧붙여 [등록]을 누르면 올라갑니다.</div>
-                        <button onclick="shareToCommunity(${id})" class="w-full py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold"><i class="fa-solid fa-pen"></i> 글 쓰러 가기</button>
+                        <div class="text-[0.6875rem] font-bold text-slate-700 dark:text-slate-200">어디에 쓸까요?</div>
+                        <div class="grid grid-cols-2 gap-1.5">${[['free', '☕', '이런저런'], ['praise', '👏', '칭찬해요'], ['wish', '🥺', '아쉬워요'], ['hello', '👋', '이사왔어요']].map(x => `<button onclick="shareToCommunity(${id}, '${x[0]}')" class="py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold">${x[1]} ${x[2]}</button>`).join('')}</div>
                         <div id="shareMsg" class="text-[0.6875rem] text-slate-500"></div>
                     </div>
                 </div>`);
@@ -2796,7 +2798,8 @@
             showAlertToast({ head: '공유', title: ok ? '내용을 복사했습니다. 카카오톡·문자에 붙여넣어 보내세요.' : '복사하지 못했습니다. 직접 선택해 복사해 주세요.' });
             if (ok) closeSheet();
         }
-        async function shareToCommunity(id) {
+        async function shareToCommunity(id, tab) {
+            if (!['free', 'praise', 'wish', 'hello'].includes(tab)) tab = 'free';
             const n = newsData.find(x => x.id === id);
             const say = t => { const el = document.getElementById('shareMsg'); if (el) el.textContent = t; };
             if (!n) return;
@@ -2812,8 +2815,8 @@
             const text = [(n.location ? '📍 ' + n.location + ' · ' : '') + [n.time, n.source].filter(Boolean).join(' · '), link ? '원문: ' + link : ''].filter(Boolean).join('\n').slice(0, 900) + '\n\n';
             try {
                 openCommunity();
-                setCommTab('free');
-                pbWrite('free', '', { title: title, text: text, kind: '정보' });
+                setCommTab(tab);
+                pbWrite(tab, '', { title: title, text: text, kind: tab === 'free' ? '정보' : '' });
             } catch (e) { console.error(e); showAlertToast({ head: '공유', title: '글쓰기 화면을 열지 못했습니다. 잠시 후 다시 시도해 주세요.' }); }
         }
         // 글 속의 http(s) 주소를 눌러서 바로 새 탭으로 열 수 있게 함 (esc 처리된 글에만 사용)
