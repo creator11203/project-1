@@ -966,6 +966,10 @@ def is_drama(title):
     return False
 
 
+SHARE_POLICY_RE = re.compile(r"우수\s*사례|모범\s*사례|(?:비결|노하우|사례|경험|정보)\s*(?:을\s*)?(?:공유|나눈|나눠|나눔)|(?:사례|정책|제도|서비스)\s*(?:를\s*)?확산(?:한다|하겠|시킨다|키로|합니다)|"
+                             r"(?:회복|치유|자립|재활)\s*(?:을\s*)?(?:돕는|돕기|지원)(?:\s*위한)?[^가-힣]*(?:비결|사례|공유|프로그램|모델|체계|사업)")
+
+
 def not_realtime(title):
     """실시간 사건사고가 아닌 기사: 후속·전망·정치 공방·외교·통계·예방 성공·행정 절차·행사·나눔·연구 (True 면 올리지 않음)"""
     # 불송치·불기소·무혐의: 수사 결과 '사건이 아니었다'는 소식 ('송치' 낱말이 들어 있어도 실제 사건 발생이 아님)
@@ -998,6 +1002,10 @@ def not_realtime(title):
         return True
     # 앞으로 할 일·수사 일정 기사 ('고경표 소환조사 방침…수사 이달 내 마무리') — 새로 일어난 사건이 아니라 예정·방침 소식
     if PLAN_RE.search(title) and not STRICT_FACT_RE.search(title) and not NEW_HARM_RE.search(title) and not BREAKING_RE.search(title):
+        return True
+    # 우수사례·비결·노하우 공유·확산, 회복·자립 지원 정책 기사 ('학대피해아동 회복 돕는 비결 공유…우수사례 확산한다') — 새로 일어난 사건이 아님
+    _tp = re.sub(r"피해(?:자|아동|자들|\s*아동)?", " ", title)      # '학대피해'의 '대피'가 대피(사고 낱말)로 잘못 읽히는 것을 막음
+    if SHARE_POLICY_RE.search(title) and not STRICT_FACT_RE.search(_tp) and not NEW_HARM_STRONG_RE.search(_tp) and not NEW_ARREST_RE.search(_tp) and not BREAKING_RE.search(title):
         return True
     hard = HARD_FACT_RE.search(title)
     # 유명인 여러 명의 말·반응을 모아 놓은 기사 ('A "…"·B "…"') 또는 발언·반응 중심 기사 (구속·검거 같은 확실한 사건 낱말이 있어도 '반응' 기사이면 제외)
@@ -4286,6 +4294,29 @@ def assign_events(items):
                 if ok and _may_merge(a, b, j) and (size_of(idxs[x]) + size_of(idxs[y]) <= 60 or j >= 0.35):
                     union(idxs[x], idxs[y])
 
+    # 5) 같은 분류에서 '86명'처럼 눈에 띄는 큰 인원·건수와 같은 사건 종류 낱말(마약 등)이 함께 겹치면 같은 사건
+    #    (전국 단위 합동단속 기사는 제목 표현이 제각각이라 낱말 비교로는 안 묶임. 위치를 몰라도 적용)
+    big_rx = re.compile(r"(?<![0-9.,])(\d{2,3}(?:,\d{3})?)\s*(명|건|곳|개소|억)")
+    for it in items:
+        it["_cnt"] = {m.group(1) + m.group(2) for m in big_rx.finditer(it["title"]) if int(m.group(1).replace(",", "")) >= 30}
+        it["_kw"] = {m.group(0) for m in _EVENT_TYPE_RX.finditer(it["title"])}
+    by_cnt = {}
+    for i, it in enumerate(items):
+        if it["_cnt"] and it["_kw"] and not _ROUNDUP_RE.search(it["title"]) and it["group"] != OVERSEAS_GROUP:
+            for c in it["_cnt"]:
+                by_cnt.setdefault((it["category"], c), []).append(i)
+    for idxs in by_cnt.values():
+        for x in range(len(idxs)):
+            for y in range(x + 1, len(idxs)):
+                a, b = items[idxs[x]], items[idxs[y]]
+                if find(idxs[x]) == find(idxs[y]) or abs(a["timestamp"] - b["timestamp"]) > 48 * 3600:
+                    continue
+                if not (a["_kw"] & b["_kw"]):
+                    continue
+                if a["_loc"] and b["_loc"] and _sg_key(a["_loc"]) != _sg_key(b["_loc"]) and a["_loc"].split()[0] != b["_loc"].split()[0]:
+                    continue                          # 서로 다른 시·도로 위치가 확실하면 별개
+                union(idxs[x], idxs[y])
+
     groups = {}
     for i in range(n):
         groups.setdefault(find(i), []).append(i)
@@ -4296,7 +4327,7 @@ def assign_events(items):
             items[k]["event"] = ev
             items[k]["event_n"] = len(members)
     for it in items:
-        for key in ("_tk", "_bg", "_loc", "_st"):
+        for key in ("_tk", "_bg", "_loc", "_st", "_cnt", "_kw"):
             it.pop(key, None)
     return len(groups)
 
@@ -4963,6 +4994,20 @@ def selftest():
         print("[selftest 주의] 일본 영공 기사가 국내 사건으로 올라옴")
     if classify("중국 군용기 KADIZ 진입…공군 전투기 긴급 발진", "") is None:
         print("[selftest 주의] 우리 방공식별구역 진입 기사가 빠짐")
+    # 2026-11-17: 우수사례·비결 공유 정책 기사는 제외 / 같은 합동단속(86명)을 다룬 기사들은 한 사건으로 묶음
+    if classify("학대피해아동 회복 돕는 비결 공유…우수사례 확산한다", "") is not None:
+        print("[selftest 주의] 우수사례 공유 정책 기사가 올라옴")
+    if classify("학대 피해 아동 숨져 부모 구속", "") is None:
+        print("[selftest 주의] 아동학대 사망 기사가 빠짐")
+    _dr = ['"한번 해볼래?"…연인·동료 따라 마약 손댄 86명 덜미', '"나는 노예였다" 친구·연인 건넨 마약에 일상 무너져…86명 송치', "친구가 권하고 연인이 팔고…일상 파고든 '대면 마약망' 86명 적발"]
+    _its = []
+    for t in _dr:
+        _c = classify(t, "")
+        if _c:
+            _its.append({"title": t, "category": _c[0], "group": _c[1], "timestamp": 1000000, "location": "", "lat": None, "lng": None})
+    assign_events(_its)
+    if len(_its) != 3 or len({x["event"] for x in _its}) != 1:
+        print("[selftest 주의] 같은 합동단속(86명) 기사가 한 사건으로 안 묶임")
     # 여러 지역이 본문에 나오는 기사: 2~3곳은 모두 표기, 4곳 이상은 전국, 제목에 지명이 있으면 그 지명 우선
     _body = ("지난달 울산 건축기사 시험에서 적발됐고, 인천 공인중개사 시험에서도 적발됐다. 이달 부산 소방설비기사 시험에서는 시험장을 이탈했다.")
     for t, c, want in (("'스마트안경' 국가자격시험 부정행위 12건…확인 요구에 시험장 이탈도", _body, "울산광역시·인천광역시·부산광역시"),
