@@ -10426,7 +10426,7 @@
             return o;
         })();
         const briefHas = s => briefCfg.scopes.includes(s);
-        let briefPick = { sido: '' };                         // 설정 화면에서 지역을 고르는 중인 시·도
+        let briefPick = { sido: '', sgg: '' };                        // 설정 화면에서 지역을 고르는 중인 시·도
         function briefAreaMap() {
             if (briefAreaMap._m) return briefAreaMap._m;
             const m = {};
@@ -10441,18 +10441,21 @@
         function briefAddArea() {
             const a = document.getElementById('briefSido'), b = document.getElementById('briefSgg');
             if (!a || !a.value) return;
-            const v = a.value + (b && b.value ? ' ' + b.value : '');
-            if (!briefCfg.areas.includes(v)) briefCfg.areas.push(v);
-            // 시·도 전체를 넣으면 그 안의 시·군·구는 따로 둘 필요가 없음
-            if (!(b && b.value)) briefCfg.areas = briefCfg.areas.filter(x => x === v || !x.startsWith(a.value + ' '));
-            else if (briefCfg.areas.includes(a.value)) briefCfg.areas = briefCfg.areas.filter(x => x !== v);
+            const d = document.getElementById('briefDong');
+            const v = a.value + (b && b.value ? ' ' + b.value : '') + (b && b.value && d && d.value ? '|' + d.value : '');
+            // 이미 더 넓은 범위(시·도 전체, 시·군·구 전체)가 들어 있으면 좁은 범위는 따로 둘 필요가 없음
+            const covered = briefCfg.areas.some(x => x !== v && (v.startsWith(x + ' ') || v.startsWith(x + '|')));
+            if (!covered && !briefCfg.areas.includes(v)) {
+                briefCfg.areas.push(v);
+                briefCfg.areas = briefCfg.areas.filter(x => x === v || !(x.startsWith(v + ' ') || x.startsWith(v + '|')));
+            }
             saveBriefCfg(); openBriefing('settings');
         }
         function briefRemoveArea(i) { briefCfg.areas.splice(i, 1); saveBriefCfg(); openBriefing('settings'); }
         function briefLabelAll(c) {
             if (briefHas('all')) return '전국';
             const short = s => s.replace(/특별자치시|특별자치도|특별시|광역시/g, '').trim();
-            const parts = briefCfg.areas.map(short);
+            const parts = briefCfg.areas.map(a => short(a).replace('|', ' '));
             if (c && briefCfg.scopes.some(s => s !== 'all')) parts.unshift(c.label + (briefHas('near') ? ' 반경 ' + briefCfg.radius + 'km' : ''));
             const u = parts.filter((x, i) => parts.indexOf(x) === i);
             if (!u.length) return '전국';
@@ -10470,11 +10473,13 @@
         const BRIEF_SCOPES = [['dong', '우리 동네(읍·면·동)'], ['sigungu', '우리 시·군·구'], ['near', '우리 동네 + 가까운 곳(반경)'], ['sido', '우리 시·도'], ['all', '전국']];
         // 보고 범위는 여러 개를 함께 고를 수 있음: 내 동네·시군구·반경·시도·전국 중 여러 개 + 직접 고른 지역(시·도 전체 또는 시·군·구) 여러 곳. 하나라도 맞으면 포함
         function briefAreaMatch(n, a) {
-            const loc = n.location || '', i = a.indexOf(' ');
-            const sido = i < 0 ? a : a.slice(0, i), sg = i < 0 ? '' : a.slice(i + 1);
+            const loc = n.location || '', dp = a.indexOf('|');          // '시도 시군구|읍면동' 형태로 저장
+            const dong = dp < 0 ? '' : a.slice(dp + 1), base = dp < 0 ? a : a.slice(0, dp), i = base.indexOf(' ');
+            const sido = i < 0 ? base : base.slice(0, i), sg = i < 0 ? '' : base.slice(i + 1);
             if (!loc.includes(sido)) return false;
             if (!sg) return true;
-            return loc.includes(sg) || (sg.includes(' ') && loc.split(' ').pop() === sg.split(' ')[0]);
+            if (!(loc.includes(sg) || (sg.includes(' ') && loc.split(' ').pop() === sg.split(' ')[0]))) return false;
+            return !dong || loc.includes(dong) || loc.includes(dongStem(dong));
         }
         function briefMatch(n, c) {
             if (isOverseas(n)) return false;
@@ -10616,12 +10621,13 @@
                         <p class="text-[0.6875rem] text-slate-400 mt-1">정한 시간이 되면 화면에 브리핑이 자동으로 열리고 알림이 갑니다. (이 웹사이트를 열어 둔 상태에서 동작합니다. 휴대폰 앱으로 설치하면 더 편리합니다)</p></div>
                     <div><div class="font-bold mb-1">📍 보고 범위 <span class="text-xs font-normal text-slate-400">(여러 개 함께 고를 수 있어요)</span></div>
                         <div class="flex flex-wrap gap-1.5">${BRIEF_SCOPES.map(s => `<button onclick="briefToggleScope('${s[0]}')" class="px-2.5 py-1 rounded-full text-xs font-bold border ${briefHas(s[0]) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600'}">${briefHas(s[0]) ? '✓ ' : ''}${s[1]}</button>`).join('')}</div>
-                        <div class="mt-3 font-bold mb-1">🗺 다른 지역도 직접 추가 <span class="text-xs font-normal text-slate-400">(시·도 전체 또는 시·군·구, 원하는 만큼)</span></div>
+                        <div class="mt-3 font-bold mb-1">🗺 다른 지역도 직접 추가 <span class="text-xs font-normal text-slate-400">(시·도 → 시·군·구 → 읍·면·동 까지, 원하는 만큼)</span></div>
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <select id="briefSido" onchange="briefPick.sido = this.value; openBriefing('settings')" class="${inp}"><option value="">시·도 선택</option>${Object.keys(briefAreaMap()).map(s => `<option value="${esc(s)}" ${briefPick.sido === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
-                            <select id="briefSgg" class="${inp}"><option value="">${briefPick.sido ? '시·도 전체' : '—'}</option>${(briefAreaMap()[briefPick.sido] || []).map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
+                            <select id="briefSido" onchange="briefPick.sido = this.value; briefPick.sgg = ''; openBriefing('settings')" class="${inp}"><option value="">시·도 선택</option>${Object.keys(briefAreaMap()).map(s => `<option value="${esc(s)}" ${briefPick.sido === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+                            <select id="briefSgg" onchange="briefPick.sgg = this.value; openBriefing('settings')" class="${inp}"><option value="">${briefPick.sido ? '시·도 전체' : '—'}</option>${(briefAreaMap()[briefPick.sido] || []).map(s => `<option value="${esc(s)}" ${briefPick.sgg === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+                            <select id="briefDong" class="${inp}"><option value="">${briefPick.sgg ? '시·군·구 전체' : '—'}</option>${(briefPick.sgg ? (() => { try { return townDongs(briefPick.sido, briefPick.sgg) || []; } catch (e) { return []; } })() : []).map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
                             <button onclick="briefAddArea()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">+ 추가</button></div>
-                        ${briefCfg.areas.length ? `<div class="mt-2 flex flex-wrap gap-1.5">${briefCfg.areas.map((a, i) => `<span class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-700 text-xs font-bold text-indigo-800 dark:text-indigo-200">${esc(a)}<button onclick="briefRemoveArea(${i})" aria-label="삭제" class="text-red-500 text-sm leading-none px-1">×</button></span>`).join('')}</div>` : ''}
+                        ${briefCfg.areas.length ? `<div class="mt-2 flex flex-wrap gap-1.5">${briefCfg.areas.map((a, i) => `<span class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-700 text-xs font-bold text-indigo-800 dark:text-indigo-200">${esc(a.replace('|', ' '))}<button onclick="briefRemoveArea(${i})" aria-label="삭제" class="text-red-500 text-sm leading-none px-1">×</button></span>`).join('')}</div>` : ''}
                         ${briefHas('near') ?`<div class="mt-2 flex items-center gap-2 text-xs">반경 <input type="range" min="3" max="50" step="1" value="${briefCfg.radius}" oninput="briefCfg.radius = Number(this.value); this.nextElementSibling.textContent = this.value + 'km'" onchange="saveBriefCfg()"><b>${briefCfg.radius}km</b></div>` : ''}
                         <p class="text-[0.6875rem] text-slate-400 mt-1">기준 지역: <b>${esc(c ? c.label : '아직 없음')}</b> — 커뮤니티 동네 인증, 지도 위 [알림 설정]의 지역, 또는 현재 위치 알림을 켜면 정해집니다.</p></div>
                     <label class="flex items-center gap-2"><input type="checkbox" ${briefCfg.autoOpen ? 'checked' : ''} onchange="briefCfg.autoOpen = this.checked; saveBriefCfg()"> 정한 시간에 브리핑 창 자동으로 열기</label>
