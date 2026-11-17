@@ -10427,6 +10427,7 @@
         })();
         const briefHas = s => briefCfg.scopes.includes(s);
         let briefPick = { sido: '', sgg: '' };                        // 설정 화면에서 지역을 고르는 중인 시·도
+        const briefKo = (a, b) => a.localeCompare(b, 'ko');       // 가나다(ㄱ ㄴ ㄷ) 순
         function briefAreaMap() {
             if (briefAreaMap._m) return briefAreaMap._m;
             const m = {};
@@ -10623,9 +10624,9 @@
                         <div class="flex flex-wrap gap-1.5">${BRIEF_SCOPES.map(s => `<button onclick="briefToggleScope('${s[0]}')" class="px-2.5 py-1 rounded-full text-xs font-bold border ${briefHas(s[0]) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600'}">${briefHas(s[0]) ? '✓ ' : ''}${s[1]}</button>`).join('')}</div>
                         <div class="mt-3 font-bold mb-1">🗺 다른 지역도 직접 추가 <span class="text-xs font-normal text-slate-400">(시·도 → 시·군·구 → 읍·면·동 까지, 원하는 만큼)</span></div>
                         <div class="flex flex-wrap items-center gap-1.5">
-                            <select id="briefSido" onchange="briefPick.sido = this.value; briefPick.sgg = ''; openBriefing('settings')" class="${inp}"><option value="">시·도 선택</option>${Object.keys(briefAreaMap()).map(s => `<option value="${esc(s)}" ${briefPick.sido === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
-                            <select id="briefSgg" onchange="briefPick.sgg = this.value; openBriefing('settings')" class="${inp}"><option value="">${briefPick.sido ? '시·도 전체' : '—'}</option>${(briefAreaMap()[briefPick.sido] || []).map(s => `<option value="${esc(s)}" ${briefPick.sgg === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
-                            <select id="briefDong" class="${inp}"><option value="">${briefPick.sgg ? '시·군·구 전체' : '—'}</option>${(briefPick.sgg ? (() => { try { return townDongs(briefPick.sido, briefPick.sgg) || []; } catch (e) { return []; } })() : []).map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
+                            <select id="briefSido" onchange="briefPick.sido = this.value; briefPick.sgg = ''; openBriefing('settings')" class="${inp}"><option value="">시·도 선택</option>${Object.keys(briefAreaMap()).sort(briefKo).map(s => `<option value="${esc(s)}" ${briefPick.sido === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+                            <select id="briefSgg" onchange="briefPick.sgg = this.value; openBriefing('settings')" class="${inp}"><option value="">${briefPick.sido ? '시·도 전체' : '—'}</option>${(briefAreaMap()[briefPick.sido] || []).slice().sort(briefKo).map(s => `<option value="${esc(s)}" ${briefPick.sgg === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+                            <select id="briefDong" class="${inp}"><option value="">${briefPick.sgg ? '시·군·구 전체' : '—'}</option>${(briefPick.sgg ? (() => { try { return (townDongs(briefPick.sido, briefPick.sgg) || []).slice().sort(briefKo); } catch (e) { return []; } })() : []).map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
                             <button onclick="briefAddArea()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">+ 추가</button></div>
                         ${briefCfg.areas.length ? `<div class="mt-2 flex flex-wrap gap-1.5">${briefCfg.areas.map((a, i) => `<span class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-700 text-xs font-bold text-indigo-800 dark:text-indigo-200">${esc(a.replace('|', ' '))}<button onclick="briefRemoveArea(${i})" aria-label="삭제" class="text-red-500 text-sm leading-none px-1">×</button></span>`).join('')}</div>` : ''}
                         ${briefHas('near') ?`<div class="mt-2 flex items-center gap-2 text-xs">반경 <input type="range" min="3" max="50" step="1" value="${briefCfg.radius}" oninput="briefCfg.radius = Number(this.value); this.nextElementSibling.textContent = this.value + 'km'" onchange="saveBriefCfg()"><b>${briefCfg.radius}km</b></div>` : ''}
