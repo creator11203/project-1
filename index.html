@@ -2740,6 +2740,10 @@
                     container.scrollTop = prevScroll + Math.max(0, container.scrollHeight - oldHeight);
                 }
             } else container.scrollTop = prevScroll;
+            if (window._jump && Date.now() < window._jump.until) {       // '새 기사 보기'로 이동하는 도중 목록이 다시 그려져도 그 카드로 이동한 자리를 유지
+                const jc = Array.from(container.querySelectorAll('.news-card')).find(x => x.dataset.evk === window._jump.key);
+                if (jc) { container.scrollTop = Math.max(0, container.scrollTop + jc.getBoundingClientRect().top - container.getBoundingClientRect().top - 10); jc.classList.add('news-flash'); }
+            }
             // 자동 갱신으로 새 기사가 들어왔는데 지금 화면 안에 안 보이면 알림 (위·중간·아래 어디에 끼어들었든)
             //  → 시간순 배치는 그대로 두고, 누르면 가장 가까운 새 기사로 이동해 잠깐 반짝임 (2026-11-17: 발행 시각이 오래된 기사가 목록 중간에 조용히 끼어들던 문제)
             if (anchor && freshEventKeys.size) {
@@ -2754,8 +2758,22 @@
                         const cr2 = container.getBoundingClientRect();
                         const left = Array.from(container.querySelectorAll('.news-card.news-new')).filter(c => { const r = c.getBoundingClientRect(); return r.bottom < cr2.top + 8 || r.top > cr2.bottom - 8; });
                         const t = left.slice().sort((a, b) => Math.abs(a.getBoundingClientRect().top - cr2.top) - Math.abs(b.getBoundingClientRect().top - cr2.top))[0];   // 지금 화면에서 가장 가까운 새 기사
-                        if (t) { t.style.scrollMarginTop = '56px'; t.scrollIntoView({ block: 'start', behavior: _reduceMotion() ? 'auto' : 'smooth' }); t.classList.add('news-flash'); setTimeout(() => t.classList.remove('news-flash'), 2200); }
-                        pill.remove();
+                        pill.remove();          // 알림 알약을 먼저 치워야 아래 위치 계산이 어긋나지 않음 (알약만큼 목록이 위로 당겨짐)
+                        if (t) {
+                            // 브라우저 '부드러운 스크롤'(scrollIntoView smooth)은 모바일에서 아무 일도 안 일어나거나, 움직이는 도중 목록이 다시 그려지면 멈춰 버림
+                            //  → 직접 짧게 애니메이션하고, 끝난 뒤 정확한 위치로 한 번 더 맞추며, 1.5초 안에 목록이 다시 그려져도 같은 카드 위치를 유지
+                            const key = t.dataset.evk;
+                            const goal = () => { const c2 = container.getBoundingClientRect(); const el = Array.from(container.querySelectorAll('.news-card')).find(x => x.dataset.evk === key); return el ? Math.max(0, container.scrollTop + el.getBoundingClientRect().top - c2.top - 10) : null; };
+                            window._jump = { key: key, until: Date.now() + 1500 };
+                            const from = container.scrollTop, to = goal();
+                            if (to != null) {
+                                const t0 = performance.now(), dur = _reduceMotion() ? 0 : 320;
+                                const step = (now) => { const p = dur ? Math.min(1, (now - t0) / dur) : 1; container.scrollTop = from + (to - from) * (1 - Math.pow(1 - p, 3)); if (p < 1) requestAnimationFrame(step); };
+                                requestAnimationFrame(step);
+                                setTimeout(() => { const g = goal(); if (g != null) container.scrollTop = g; }, dur + 80);   // 화면이 가려져 애니메이션이 멈춰도 끝 위치에는 반드시 도착
+                            }
+                            t.classList.add('news-flash'); setTimeout(() => t.classList.remove('news-flash'), 2200);
+                        }
                     };
                     container.insertBefore(pill, container.firstChild);
                     if (prevScroll > 20) container.scrollTop += pill.offsetHeight;
