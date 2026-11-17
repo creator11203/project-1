@@ -3871,6 +3871,7 @@
                 if (loc.includes(alertHere.sigungu) || (alertHere.sigungu.includes(' ') && loc.split(' ').pop() === city)) return true;
             }
             // 시·군·구 이름이 달라도 반경 안이면 알림 (시·도만 알려진 기사는 위치가 부정확하므로 제외)
+            if (news.prec === 'sido') return false;   // 시·도만 알려진 기사는 좌표가 대략적이라 반경 비교에서 제외
             return hasCoords(news) && loc.includes(' ') && distKm(news.lat, news.lng, alertHere.lat, alertHere.lng) <= alertCfg.radiusKm;
         }
         // 현재 위치 다시 확인 (5분마다 + 설정을 켤 때)
