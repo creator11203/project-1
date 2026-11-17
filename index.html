@@ -10868,6 +10868,7 @@
         }
         function openTour(start) {
             if (tourState.open) return;
+            try { helpHintDone(); } catch (e) {}
             if (!document.getElementById('tourCss')) {
                 const st = document.createElement('style'); st.id = 'tourCss';
                 st.textContent = `
@@ -10929,6 +10930,53 @@
             tourRender();
         }
         // 첫 방문 때 사용 안내를 자동으로 띄우지 않음 (처음 보는 사람도 바로 사건 목록·지도를 볼 수 있게). 상단 [사용 안내] 버튼을 눌렀을 때만 열림
+        // 대신 처음 온 사람에게는 [사용 안내] 버튼만 살짝 빛나게 하고 작은 말풍선 한 줄만 띄움 (화면을 가리지 않음 · 누르거나 ✕ 하거나 12초 지나면 사라지고, 다시 뜨지 않음)
+        function helpHintDone() {
+            lsSet('help_hint_seen', '1');
+            const b = document.getElementById('helpHint'); if (b) b.remove();
+            document.querySelectorAll('.tool-help.hint-glow').forEach(e => e.classList.remove('hint-glow'));
+            window.removeEventListener('resize', helpHintPlace);
+        }
+        function helpHintPlace() {
+            const b = document.getElementById('helpHint'); if (!b) return;
+            const btn = Array.from(document.querySelectorAll('.tool-help')).find(e => { const r = e.getBoundingClientRect(); return r.width > 4 && r.height > 4; });
+            if (!btn) { b.style.display = 'none'; return; }
+            const r = btn.getBoundingClientRect();
+            b.style.display = '';
+            const w = b.offsetWidth || 200;
+            const cx = r.left + r.width / 2;
+            const left = Math.max(8, Math.min(innerWidth - w - 8, cx - w / 2));
+            b.style.left = left + 'px'; b.style.top = (r.bottom + 10) + 'px';
+            b.style.setProperty('--arrow-x', Math.max(14, Math.min(w - 14, cx - left)) + 'px');
+        }
+        function helpHintShow() {
+            if (lsGet('help_hint_seen') === '1' || document.getElementById('helpHint') || tourSkipped() && lsGet('tour_never') === '1') return;
+            const btn = Array.from(document.querySelectorAll('.tool-help')).find(e => { const r = e.getBoundingClientRect(); return r.width > 4 && r.height > 4; });
+            if (!btn) return;
+            if (!document.getElementById('helpHintCss')) {
+                const st = document.createElement('style'); st.id = 'helpHintCss';
+                st.textContent = `
+                    .tool-help.hint-glow { position: relative; background: #0284c7; color: #fff !important; animation: hintPulse 1.6s ease-out infinite; }
+                    @keyframes hintPulse { 0% { box-shadow: 0 0 0 0 rgba(2,132,199,.55); } 70% { box-shadow: 0 0 0 10px rgba(2,132,199,0); } 100% { box-shadow: 0 0 0 0 rgba(2,132,199,0); } }
+                    #helpHint { position: fixed; z-index: 1002; max-width: min(15rem, calc(100vw - 16px)); display: flex; align-items: center; gap: .4rem; padding: .4rem .45rem .4rem .7rem; border-radius: .75rem;
+                        background: #0f172a; color: #fff; font-size: .75rem; font-weight: 700; line-height: 1.3; box-shadow: 0 8px 24px -8px rgba(15,23,42,.5); animation: pop-in .25s ease both; }
+                    #helpHint::before { content: ''; position: absolute; top: -5px; left: var(--arrow-x, 20px); margin-left: -5px; width: 10px; height: 10px; background: #0f172a; transform: rotate(45deg); }
+                    #helpHint button.hh-go { text-align: left; color: inherit; font: inherit; }
+                    #helpHint button.hh-x { flex: none; width: 1.4rem; height: 1.4rem; border-radius: 9999px; color: #94a3b8; }
+                    #helpHint button.hh-x:hover { background: rgba(255,255,255,.12); color: #fff; }
+                    @media (prefers-reduced-motion: reduce) { .tool-help.hint-glow, #helpHint { animation: none; } }`;
+                document.head.appendChild(st);
+            }
+            btn.classList.add('hint-glow');
+            const b = document.createElement('div'); b.id = 'helpHint'; b.setAttribute('role', 'status');
+            b.innerHTML = '<button type="button" class="hh-go" onclick="openTour(0)">처음 오셨나요? <u>사용 안내</u>를 눌러 보세요</button><button type="button" class="hh-x" aria-label="닫기" onclick="helpHintDone()"><i class="fa-solid fa-xmark"></i></button>';
+            document.body.appendChild(b);
+            helpHintPlace();
+            window.addEventListener('resize', helpHintPlace);
+            setTimeout(helpHintPlace, 400);
+            setTimeout(() => { if (document.getElementById('helpHint')) helpHintDone(); }, 12000);
+        }
+        window.addEventListener('load', () => setTimeout(helpHintShow, 1500));
 
         // 맨 위 제목 줄(속보 바 포함)의 아래쪽 위치를 재서, 가운데 창(커뮤니티 등)이 제목 줄·속보 바 밑에서 시작하게 함
         // (창이 화면 맨 위부터 꽉 차 있어서 윗부분이 제목 줄과 겹치던 문제)
