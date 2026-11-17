@@ -243,8 +243,9 @@
             #hdrPeek, #hdrFold { display: none; }
             body.m-reading.m-hdr-open #hdrFold { display: flex; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 54px; height: 16px; align-items: center; justify-content: center; border-radius: 10px 10px 0 0; background: rgba(79,70,229,.92); color: #fff; font-size: 10px; z-index: 3; }
             .art-ib { min-width: 34px; height: 30px; justify-content: center; }
-            .art-zoom { bottom: 62px !important; right: 8px !important; }
-            body.m-compact #articleZoomToggle { transform: scale(.68); transform-origin: 100% 100%; }
+            /* 글씨 크기(Aa) 버튼: 아래쪽 구글 광고의 오른쪽 위 닫기(X)와 겹쳐 광고를 못 닫던 문제 → 왼쪽으로 옮기고, 광고 높이보다 위에 둠. 슬라이더는 버튼 위로 펼침 */
+            .art-zoom { bottom: 130px !important; left: 8px !important; right: auto !important; flex-direction: column !important; align-items: flex-start !important; }
+            body.m-compact #articleZoomToggle { transform: scale(.68); transform-origin: 0 100%; }
             #articleZoomToggle { transition: transform .28s cubic-bezier(.3,.8,.3,1); }
             body.m-reading:not(.m-hdr-open) #hdrPeek { display: flex; position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 44; width: 54px; height: 18px; align-items: center; justify-content: center; border-radius: 0 0 14px 14px; background: rgba(79,70,229,.92); color: #fff; font-size: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
             /* 떠 있는 아래 막대에 본문이 가리지 않도록 아래 여백 */
