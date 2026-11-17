@@ -71,6 +71,7 @@
         .dark #newsListContainer::-webkit-scrollbar-track { background: #0f172a; border-left-color: #1e293b; }
         .dark #newsListContainer::-webkit-scrollbar-thumb { background: #6366f1; border-color: #0f172a; }
         .dark #newsListContainer::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+        .mob-txt { display: none; }
         /* 같은 사건 관련 기사 꼬리표: 글자가 들어간 알약 모양 (색만으로 구분하지 않음) */
         .rel-chip { display: inline-flex; align-items: center; flex: none; padding: .12rem .5rem; border-radius: 999px; font-size: .6875rem; font-weight: 800; line-height: 1.35; white-space: nowrap; }
         .rel-new { background: #f59e0b; color: #fff; }
@@ -218,7 +219,12 @@
             #appHeader > div:first-child > * + * { margin-left: 0 !important; }
             #appHeader > div:first-child > div:first-child { width: 36px; height: 36px; border-radius: 10px; }
             #appHeader h1 { font-size: 15px; white-space: nowrap; }
-            #appHeader h1 span, #appHeader h1 + p { display: none; }
+            #appHeader h1 span { display: none; }
+            /* 제목 아래 한 줄 소개 (좁은 화면용 압축 문구): 넘치면 … 로 줄임 */
+            #appHeader h1 + p { display: block; margin-top: 1px; font-size: 9.5px; line-height: 1.22; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            #appHeader h1 + p .desk-txt { display: none; } #appHeader h1 + p .mob-txt { display: block; }
+            #appHeader h1 + p .mob-txt b, #appHeader h1 + p .mob-txt i { display: block; font-style: normal; overflow: hidden; text-overflow: ellipsis; }
+            #appHeader h1 + p .mob-txt b { color: #047857; font-weight: 800; } .dark #appHeader h1 + p .mob-txt b { color: #34d399; }
             #appHeader > div:last-of-type { display: contents; }
             #appHeader .tool-group { order: 2; flex-shrink: 0; }
             #appHeader #heroBtns { order: 3; width: 100%; gap: 6px; }
@@ -679,7 +685,7 @@
                 <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     우리동네 사건사고 
                     <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-mono shadow-sm">전국 실시간 관제</span>                </h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</p>
+                <p class="text-xs text-slate-500 dark:text-slate-400"><span class="desk-txt">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</span><span class="mob-txt"><b>전국 실시간 관제</b><i>시·군·구·동 단위 밀착 모니터링</i></span></p>
             </div>
         </div>
 
