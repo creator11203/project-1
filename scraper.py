@@ -1999,6 +1999,7 @@ def _unquote(t):
 INTRUSION_RE = re.compile(r"영공|영해|KADIZ|방공\s*식별\s*구역|NLL|북방\s*한계선|EEZ|배타적\s*경제\s*수역|이어도|독도|서해\s*(?:5도|해상|상공|특정)|동해\s*(?:상공|해상)|한국\s*(?:해역|영해|영공)|우리\s*(?:영해|영공|해역)|"
                           r"특정\s*금지\s*구역|불법\s*(?:조업|어업)|(?:중국|러시아|일본)\s*(?:어선|군함|함정|군용기|전투기|폭격기|정찰기|순시선|해경|잠수함)")
 INTRUSION_EVENT_RE = re.compile(r"침범|침입|진입|월선|월경|무단\s*(?:진입|비행)|긴급\s*발진|경고\s*사격|나포|검거|단속|충돌|도발|포착|식별|접근|출몰|표류|구속|부상|사망|실종|해경\s*(?:대원|정)")
+KOREA_TERRITORY_RE = re.compile(r"한국|대한민국|우리\s*(?:영해|영공|해역|군)|KADIZ|방공\s*식별\s*구역|독도|이어도|울릉|NLL|북방\s*한계선|서해|동해|남해|제주|마라도|백령|연평|흑산|합참|해경|해양\s*경찰|F-\d+|한미|韓|경고\s*사격|나포|우리\s*군")
 INTRUSION_TALK_RE = re.compile(r"항의|규탄|성명|외교부|협상|회담|논의|우려|입장|전망|가능성|분석|영유권\s*(?:주장|교육)|기념|홍보|캠페인|지킴이|행사|축제|방문객")
 
 
@@ -2115,8 +2116,12 @@ def classify(title, content):
     # ── 1-2) 영해·영공 침범 (북한이 아닌 중국·러시아·일본 선박·항공기·함정, 불법 조업 외국 어선) ──
     #   예) 중국 군용기 KADIZ 진입·긴급 발진, 러시아 군용기 영공 침범 경고사격, 일본 순시선 독도 영해 침범, 중국 어선 불법 조업 나포·해경 충돌
     #   '중국'·'러시아' 같은 나라 이름이 있어도 한국 영토·영해·영공에서 일어난 일이므로 해외 기사로 보지 않음
+    #   단, 일본·중국·러시아 '자기 영공·영해'에서 난 일(예: '日 "러 군용기 추정 항공기 2대 영공 침범"…자위대 전투기 긴급 발진')은 우리 영토 사건이 아님
+    #   → 한국 영토 단서(KADIZ·독도·NLL·해경·서해·동해·한국 등)가 없고 해외 지명이 있으면 아래 '해외 사건' 판단으로 넘김 (한국과 연결되지 않으면 올리지 않음)
     if INTRUSION_RE.search(t) and INTRUSION_EVENT_RE.search(t) and not INTRUSION_TALK_RE.search(t):
-        return "영해·영공 침범", "국가안보·테러"
+        _fg = find_foreign(t, full)
+        if not (_fg and _fg[0] != "북한" and not KOREA_TERRITORY_RE.search(t) and not _has_domestic_place(t)):
+            return "영해·영공 침범", "국가안보·테러"
     # ── 2) 해외에서 일어난 일인지 ──
     foreign = find_foreign(t, full)
     if foreign and foreign[0] == "북한":
@@ -3155,6 +3160,11 @@ def multi_regions(title, content):
     return [k for k, _ in sorted(s.items(), key=lambda kv: kv[1])]
 
 
+FOOD_ENFORCE_RE = re.compile(r"잔류\s*농약|농약|중금속|부적합|기준\s*(?:초과|위반)|검출|회수\s*조치|회수|적발|식품|축산물|수산물|농산물|원산지|위생|유통기한|대장균|세균|곰팡이")
+# 시·도 보건환경연구원(식품 검사 기관) — '서울시보건환경연구원', '경기도 보건환경연구원' 등
+REGULATOR_LAB_RE = re.compile(r"(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주|충청북|충청남|전라북|전라남|경상북|경상남)[가-힣]{0,5}?\s*(?:보건\s*환경\s*연구원|농수산물\s*검사소|농수산식품\s*유통공사|식품\s*안전\s*과)")
+
+
 def locate(title, content, hint_sido=None, overseas=False):
     """(위치이름, 위도, 경도, 정밀도정보) 반환. 모르면 (미상, None, None, …)"""
     key = title
@@ -3186,8 +3196,24 @@ def locate(title, content, hint_sido=None, overseas=False):
             return got
     place = find_poi(_NOT_PLACE.sub(" ", full))
     unknown = ("대한민국 (세부 위치 미상)", None, None, {"prec": None, "place": None})
+    title_sidos = find_sidos(title)
+    # 식품 검사·적발·회수 기사는 '검사·조치를 한 기관'의 지역이 사건 위치 (제품을 만든 업체 소재지가 아님)
+    #   예) '수입산 혼합 고춧가루서 잔류농약 4배 검출…서울시 회수 조치' (서울시보건환경연구원 검사, 제조업체는 남양주) → 서울특별시
+    if not title_sidos and not match_sigungu(title, None) and FOOD_ENFORCE_RE.search(title):
+        _rg = REGULATOR_LAB_RE.search(full)
+        if _rg:
+            _rs = find_sidos(_rg.group(0))
+            if _rs:
+                sido = min(_rs, key=_rs.get)
+                la, ln = SIDO_CENTER[sido]
+                dy, dx = _jitter(key, 0.10)
+                return sido, round(la + dy, 4), round(ln + dx, 4), {"prec": "sido", "sido": sido, "center": (la, ln), "place": place}
     for scope in (title, full):
         res = match_sigungu(scope, hint_sido)
+        # 제목에 시·도('서울시 회수 조치')가 적혀 있는데 본문에서만 찾은 시·군·구가 다른 시·도면(제조업체·판매처 소재지 등) 제목의 시·도를 따름
+        if res and scope is not title and title_sidos and not any((res[5] or res[0] or "").startswith(s) for s in title_sidos):
+            res = None
+            continue
         if not res:
             # 시·군·구 이름은 없지만 '잠실광역환승센터·강남역·판교·해운대'처럼 누구나 아는 동네·명소 이름이 있으면 그 시·군·구로
             lm = find_landmark(scope)
@@ -4927,6 +4953,16 @@ def selftest():
         got = locate(t, t)[0]
         if (got == "전국") != (loc_want == "전국"):
             print(f"[selftest 주의] 전국 단위 소식 위치 판별이 예상과 다름: {t} → {got}")
+    # 2026-11-17: 검사·조치 기관의 지역이 위치 (제조업체 소재지가 아님) / 일본 자국 영공 기사는 우리 영토 사건이 아님
+    _lab = "서울시보건환경연구원이 유통 중인 고춧가루를 검사한 결과 남양주시 소재 업체가 제조한 제품에서 기준치의 4배 잔류농약이 검출됐다."
+    for t, c in (("수입산 혼합 고춧가루서 잔류농약 4배 검출…서울시 회수 조치", _lab), ("수입산 혼합 고춧가루서 잔류농약 4배 검출…회수 조치", _lab)):
+        got = locate(t, c)[0]
+        if "서울" not in got or "남양주" in got:
+            print(f"[selftest 주의] 식품 검사 기사 위치가 예상과 다름: {t[:24]} → {got}")
+    if classify('日 "러 군용기 추정 항공기 2대 영공 침범"…자위대 전투기 긴급 발진', "") is not None:
+        print("[selftest 주의] 일본 영공 기사가 국내 사건으로 올라옴")
+    if classify("중국 군용기 KADIZ 진입…공군 전투기 긴급 발진", "") is None:
+        print("[selftest 주의] 우리 방공식별구역 진입 기사가 빠짐")
     # 여러 지역이 본문에 나오는 기사: 2~3곳은 모두 표기, 4곳 이상은 전국, 제목에 지명이 있으면 그 지명 우선
     _body = ("지난달 울산 건축기사 시험에서 적발됐고, 인천 공인중개사 시험에서도 적발됐다. 이달 부산 소방설비기사 시험에서는 시험장을 이탈했다.")
     for t, c, want in (("'스마트안경' 국가자격시험 부정행위 12건…확인 요구에 시험장 이탈도", _body, "울산광역시·인천광역시·부산광역시"),
