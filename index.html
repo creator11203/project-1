@@ -186,7 +186,7 @@
         /* 글씨 크기 조절은 1·2·3번 칸(과 창으로 뜨는 화면)에만 적용. 맨 위 제목 줄과 버튼 줄은 항상 100% 크기로 고정 */
         .fixed-scale { zoom: var(--fixed-zoom, 1); }
         /* ===== 휴대폰 화면: 칸 3개 대신 한 칸씩 보여 주고 아래 탭으로 넘김 ===== */
-        #mobileTabs, .m-only { display: none; }
+        #mobileDock, #mobileTabs, #hdrPeek, #mHotspot, #mobileHotBtn, .m-only { display: none; }
         /* 분류 버튼 줄: 접기/펼치기 (PC·휴대폰 공통). 휴대폰은 처음엔 접어 두고 기사 원문 자리를 넓게 */
         #catToggleRow { display: flex; align-items: center; gap: 6px; }
         #catToggleRow .cat-hot-btn { display: none; }
@@ -218,17 +218,43 @@
             #splitContainer > section { width: 100% !important; min-width: 0 !important; flex: 1 1 0 !important; border-right: 0 !important; display: none; }
             #splitContainer[data-m="list"] > #leftPane, #splitContainer[data-m="article"] > #centerPane, #splitContainer[data-m="map"] > #rightPane { display: block; }
             #splitContainer > .resizer { display: none !important; }
-            #siteFooter { padding: 2px 56px 2px 8px; gap: 0 10px; font-size: 10px; }
-            #siteFooter > span:not(.m-only) { display: none; }
-            #siteFooter > .m-only { flex-basis: 100%; text-align: center; font-size: 9px; line-height: 1.3; color: #94a3b8; }
-            #mobileTabs { display: flex; flex-shrink: 0; background: #fff; border-top: 1px solid #e2e8f0; padding-bottom: env(safe-area-inset-bottom); }
-            .dark #mobileTabs { background: #0f172a; border-top-color: #1e293b; }
-            #mobileTabs button { flex: 1; display: flex; align-items: center; justify-content: center; padding: 8px 0; color: #64748b; }
-            #mobileTabs button i { font-size: 20px; }
-            #mobileTabs button { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: transform .12s; }
-            #mobileTabs button.mt-drag { position: relative; z-index: 5; transition: none; background: rgba(99,102,241,.14); border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,.25); }
-            #mobileTabs button.on { color: #4f46e5; box-shadow: inset 0 2px 0 #4f46e5; }
-            .dark #mobileTabs button.on { color: #a5b4fc; box-shadow: inset 0 2px 0 #818cf8; }
+            #siteFooter { padding: 2px 8px; gap: 0 10px; font-size: 10px; }
+            /* ── 아래 알약 탭(떠 있는 둥근 막대): 아이콘만. 아래로 스크롤하면 작아지고, 위로 올리면 원래 크기로 ── */
+            #mobileDock { position: fixed; left: 50%; bottom: calc(32px + env(safe-area-inset-bottom)); z-index: 45; display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 999px;
+                background: rgba(255,255,255,.9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(148,163,184,.5); box-shadow: 0 10px 28px rgba(15,23,42,.3);
+                transform: translateX(-50%); transform-origin: 50% 100%; transition: transform .28s cubic-bezier(.3,.8,.3,1), opacity .28s, box-shadow .28s; }
+            .dark #mobileDock { background: rgba(15,23,42,.9); border-color: rgba(71,85,105,.8); }
+            body.m-compact #mobileDock { transform: translateX(-50%) scale(.68); opacity: .88; box-shadow: 0 4px 12px rgba(15,23,42,.25); }
+            #mobileTabs { display: flex; align-items: center; gap: 2px; }
+            #mobileTabs button, #mobileCommBtn { position: relative; width: 46px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999px; color: #64748b; }
+            #mobileTabs button i, #mobileCommBtn i { font-size: 19px; }
+            #mobileTabs button { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: transform .12s, background .2s, color .2s; }
+            #mobileTabs button.mt-drag { z-index: 5; transition: none; background: rgba(99,102,241,.2); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+            #mobileTabs button.on { color: #fff; background: linear-gradient(135deg, #6366f1, #7c3aed); box-shadow: 0 4px 10px rgba(99,102,241,.45); }
+            #mobileCommBtn { color: #fff; background: linear-gradient(135deg, #10b981, #0d9488); box-shadow: 0 4px 10px rgba(16,185,129,.4); }
+            #mobileCommBtn:active, #mobileTabs button:active { transform: scale(.92); }
+            #mobileCommBadge { position: absolute; top: -3px; right: -3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: #dc2626; color: #fff; font-size: 10px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px #fff; }
+            .dark #mobileCommBadge { box-shadow: 0 0 0 2px #0f172a; }
+            /* 위쪽 헤더: 기사 원문을 읽는 탭에서는 위로 접어 올려 본문 자리를 넓힘 (위 가운데 작은 손잡이를 누르면 잠깐 펼침) */
+            #appHeader { max-height: 220px; overflow: hidden; transition: max-height .32s ease, padding .32s ease, opacity .25s ease, border-width .32s; }
+            body.m-reading:not(.m-hdr-open) #appHeader { max-height: 0; padding-top: 0; padding-bottom: 0; opacity: 0; border-bottom-width: 0; pointer-events: none; }
+            #hdrPeek { display: none; }
+            body.m-reading:not(.m-hdr-open) #hdrPeek { display: flex; position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 44; width: 54px; height: 18px; align-items: center; justify-content: center; border-radius: 0 0 14px 14px; background: rgba(79,70,229,.92); color: #fff; font-size: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
+            /* 떠 있는 아래 막대에 본문이 가리지 않도록 아래 여백 */
+            #newsListContainer, #detailViewContainer { padding-bottom: 76px !important; }
+            #mapLegend { bottom: 100px !important; }
+            #articleWrap .art-zoom { bottom: 98px !important; right: 8px !important; }
+            #articleWrap .art-zoom input[type=range] { width: 6rem !important; }
+            #articleWrap .art-zoom > span { display: none; }
+            #mHotspot { padding-bottom: 76px; }
+            #mHotspotBody .border-l-4 { padding: 10px 12px; }
+            #mHotspotBody .border-l-4 h2 { font-size: 13px; }
+            #mHotspotBody .border-l-4 p:not(.font-bold), #mHotspotBody h4 + p { display: none; }   /* 긴 설명 글은 줄임 */
+            #panel-list.m-hot > #newsListContainer, #panel-list.m-hot > #dateBarWrap, #panel-list.m-hot > #hotspotBar { display: none !important; }
+            #panel-list.m-hot > #mHotspot { display: block; }
+            /* 아래로 스크롤하면 아래쪽 기능 버튼(지난 알림·글쓰기)도 같이 작아짐 */
+            #alertLogBtn, .pb-write-fab { transition: transform .28s cubic-bezier(.3,.8,.3,1), opacity .28s; transform-origin: 100% 100%; }
+            body.m-compact #alertLogBtn, body.m-compact .pb-write-fab { transform: scale(.68); opacity: .9; }
             #layoutPanel { display: none !important; }
             /* 커뮤니티 맨 위 큰 탭(안전망·동네 이야기·장터…): 한 줄에 억지로 넣지 않고, 탭마다 글씨가 다 보이는 크기로 두고 옆으로 밀어서 봄 */
             #commTabBar > .grid, #commSampleBar > .grid { position: relative; display: flex !important; overflow-x: auto; overflow-y: hidden; gap: 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
@@ -239,7 +265,7 @@
             /* 커뮤니티를 열면 맨 위 로고 줄과 '지난 알림' 버튼은 숨겨서 글 읽을 자리를 넓힘 (돌아가기는 ← 사건 목록) */
             body:has(#floatModal:not(.hidden)) #appHeader, body:has(#floatModal:not(.hidden)) #alertLogBtn { display: none !important; }
             /* 글쓰기: 화면 오른쪽 아래에 떠 있는 둥근 버튼 (엄지로 누르기 쉽게). 목록 맨 아래 글이 가려지지 않게 아래 여백을 둠 */
-            .pb-write-fab { position: fixed !important; right: 14px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 60; margin: 0 !important; padding: 13px 20px !important; border-radius: 999px !important; font-size: 14px !important; box-shadow: 0 8px 22px rgba(0,0,0,.35) !important; }
+            .pb-write-fab { position: fixed !important; right: 14px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 60; margin: 0 !important; padding: 13px 20px !important; border-radius: 999px !important; font-size: 14px !important; box-shadow: 0 8px 22px rgba(0,0,0,.35) !important; }
             /* 글을 읽거나 쓰는 중에는 위쪽 탭 줄·안내 줄을 접어서 본문과 입력칸 자리를 넓힘 (← 목록 / ✕ 취소 로 돌아오면 다시 나타남) */
             div:has(> #commTabBar):has(#pbBox[data-view="post"]) > #commTabBar, div:has(> #commTabBar):has(#pbBox[data-view="write"]) > #commTabBar,
             div:has(> #commTabBar):has(#pbBox[data-view="post"]) > button[onclick="toggleTabNotice()"], div:has(> #commTabBar):has(#pbBox[data-view="write"]) > button[onclick="toggleTabNotice()"] { display: none !important; }
@@ -268,8 +294,11 @@
             #groupButtons button[data-cat="범죄 다발 지역"] { display: none; }
             #groupButtons > span.ml-auto { flex-wrap: wrap; width: 100%; margin-left: 0; padding-left: 0; border-left: 0; }
             /* 오른쪽 아래 '지난 알림' 버튼: 맨 아래 모서리에 붙임 (아래 탭 바로 위, 푸터 오른쪽 빈 자리) */
-            #alertLogBtn { bottom: calc(42px + env(safe-area-inset-bottom)) !important; right: 6px !important; width: 42px !important; height: 42px !important; font-size: 16px !important; }
-            #alertLogPanel { right: 8px !important; bottom: calc(90px + env(safe-area-inset-bottom)) !important; }
+            #alertLogBtn { bottom: calc(36px + env(safe-area-inset-bottom)) !important; right: 8px !important; width: 42px !important; height: 42px !important; font-size: 16px !important; z-index: 46 !important; }
+            #alertLogPanel { right: 8px !important; bottom: calc(88px + env(safe-area-inset-bottom)) !important; }
+            #alertToasts { bottom: calc(92px + env(safe-area-inset-bottom)) !important; }
+            #appHeader #floatBtnWrap .comm-btn { display: none !important; }    /* 커뮤니티는 아래 알약 탭으로 옮김 */
+            #mobileHotBtn { display: inline-flex; }
         }        /* 3칸 영역을 하나의 층으로 묶어서, 칸 안의 버튼(알림·안전시설·지도 모양)이 위에 뜨는 창(커뮤니티 등)을 뚫고 나오지 않게 함 */
         #splitContainer { isolation: isolate; position: relative; z-index: 0; }
         #floatModal { z-index: 1000; top: var(--hdr-h, 0px); }   /* 제목 줄·속보 바 아래에서 시작 → 창이 속보 바와 겹치지 않음 */
@@ -635,15 +664,17 @@
         <a href="privacy.html" target="_blank" rel="noopener" class="font-bold hover:underline">개인정보처리방침</a>
         <a href="terms.html" target="_blank" rel="noopener" class="hover:underline">이용약관</a>
         <a href="contact.html" target="_blank" rel="noopener" class="hover:underline">문의·신고</a>
-        <span class="m-only">참고용 정보이며 최신이 아닐 수 있습니다. 사실은 원문에서 확인하세요</span>
-        <span class="basis-full text-center text-[0.625rem] text-slate-400 dark:text-slate-500">참고용 정보로 부정확하거나 최신이 아닐 수 있습니다. 사실은 원문·공식 채널에서 확인하세요. 긴급 상황은 112·119 · 기사는 각 언론사 소유이며 제목과 원문 링크만 제공합니다</span>
     </footer>
     <!-- 휴대폰 전용 아래 탭 (PC에서는 숨김) -->
+    <div id="mobileDock">
     <nav id="mobileTabs" aria-label="화면 전환">
         <button type="button" data-mt="list" class="on" onclick="setMobTab('list')" aria-label="사건 목록" title="사건 목록"><i class="fa-solid fa-list-ul"></i></button>
         <button type="button" data-mt="article" onclick="setMobTab('article')" aria-label="분류·기사" title="분류·기사"><i class="fa-solid fa-newspaper"></i></button>
         <button type="button" data-mt="map" onclick="setMobTab('map')" aria-label="지도" title="지도"><i class="fa-solid fa-map-location-dot"></i></button>
     </nav>
+    <button type="button" id="mobileCommBtn" onclick="openCommunity()" aria-label="우리동네 커뮤니티" title="우리동네 커뮤니티"><i class="fa-solid fa-people-group"></i><span id="mobileCommBadge" class="hidden"></span></button>
+    </div>
+    <button type="button" id="hdrPeek" onclick="document.body.classList.add('m-hdr-open')" aria-label="위쪽 메뉴 펼치기"><i class="fa-solid fa-chevron-down"></i></button>
     <noscript>
         <div style="padding:16px;font-size:14px;line-height:1.7">
             <h1 style="font-size:18px;font-weight:bold">우리동네 사건사고</h1>
@@ -661,6 +692,7 @@
                     <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1 min-w-0 overflow-hidden">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 전국 지역별 상세 필터
                     </span>
+                    <button id="mobileHotBtn" type="button" onclick="openMobileHotspot()" class="shrink-0 items-center gap-1 px-2.5 py-1 rounded-lg text-[0.6875rem] font-black bg-rose-600 text-white border border-rose-700 shadow-sm">🚨 다발 지역</button>
                     <!-- 평소: 초록 '실시간 업데이트 중' / 수집이 멈추면(최근 기사가 90분 넘게 없거나 news.json 을 못 읽으면): 같은 자리에 노란 '기사 수집 지연 중' -->
                     <span id="liveStatus" title="5초마다 새 기사를 확인하고(다른 탭을 보는 동안은 멈춤), 새 기사가 올라오면 새로고침 없이 바로 목록에 추가합니다" class="ml-auto flex items-center gap-1.5 text-[0.6875rem] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
                         <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-500"></span></span>
@@ -716,6 +748,11 @@
             <div id="hotspotBar" class="hidden shrink-0 px-3 py-2 bg-rose-600 text-white text-xs font-bold items-center justify-between gap-2"></div>
 
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
+            <!-- 휴대폰 전용: 다발 지역 순위를 목록 탭 안에서 바로 보여 줌 (원문 탭으로 왔다 갔다 하지 않게) -->
+            <div id="mHotspot" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 select-text">
+                <div class="mb-2 flex items-center justify-between gap-2"><span class="text-sm font-black text-rose-700 dark:text-rose-300">🚨 최근 7일 다발 지역</span><button type="button" onclick="closeMobileHotspot()" class="px-3 py-1 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-xmark"></i> 닫기</button></div>
+                <div id="mHotspotBody"></div>
+            </div>
         </div>
         <!-- 패널 2: 카테고리 + 기사 원문 -->
         <div id="panel-article" class="panel bg-slate-50 dark:bg-slate-950">
@@ -2652,6 +2689,7 @@
             newList.addEventListener('scroll', () => { hotspotScrollTop = newList.scrollTop || hotspotScrollTop; hotspotScrollAt = Date.now(); }, { passive: true });
             container.scrollTop = keepTop;
             if (keepTop) newList.scrollTop = Math.min(keepTop, newList.scrollHeight);
+            syncMobileHotspot();
         }
 
         function selectHotspotRegion(region, lat, lng) {
@@ -2662,10 +2700,10 @@
             const list = document.getElementById('newsListContainer');
             if (list) list.scrollTop = 0;
             if (map) map.flyTo([lat, lng], 12, { duration: 1.2 });
-            if (isMobile()) setMobTab('list');                   // 고른 지역의 사건은 목록 탭에 정리됨
+            if (isMobile()) { closeMobileHotspot(true); setMobTab('list'); }     // 고른 지역의 사건은 목록 탭에 정리됨
         }
         function backToHotspots() {
-            if (isMobile()) setMobTab('article');
+            if (isMobile()) { renderCrimeHotspotsView(true); renderNewsList(); openMobileHotspot(); return; }   // 휴대폰: 목록 탭 안에서 순위로 돌아감
             renderCrimeHotspotsView(true);
             renderNewsList();
         }
@@ -2703,7 +2741,7 @@
                 container.innerHTML = `
                     <div class="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900 text-[0.6875rem] text-slate-600 dark:text-slate-300">
                         <i class="fa-solid fa-circle-info text-blue-500"></i>
-                        <span class="flex-1 min-w-0 truncate">기사가 안 보이거나 <b>'${esc(host || '언론사')}에서 연결을 거부했습니다'</b>가 뜨면 → 오른쪽 버튼으로 원문을 여세요</span>
+                        <span class="flex-1 min-w-0 truncate m-hide">기사가 안 보이거나 <b>'${esc(host || '언론사')}에서 연결을 거부했습니다'</b>가 뜨면 → 오른쪽 버튼으로 원문을 여세요</span>
                         <button onclick="openShare(${news.id})" title="이 사건을 이웃·커뮤니티에 공유" class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold whitespace-nowrap"><i class="fa-solid fa-share-nodes"></i> 공유하기</button>
                         <a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold whitespace-nowrap"><i class="fa-solid fa-arrow-up-right-from-square"></i> 원문으로 이동</a>
                         <button onclick="renderDetailView(${news.id}, true)" title="이 화면에서 기사 요약으로 보기" class="shrink-0 px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-800 font-bold whitespace-nowrap">요약 보기</button>
@@ -2712,7 +2750,7 @@
                         <iframe id="articleFrame" src="${esc(embedUrl)}" referrerpolicy="no-referrer"
                             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                             style="position:absolute; top:0; left:0; border:0; background:#fff; transform-origin:0 0; box-shadow:0 0 24px rgba(0,0,0,.25);"></iframe>
-                        <div style="position:absolute; right:14px; bottom:14px; z-index:5; opacity:.92;" class="flex items-center gap-2 text-[0.6875rem] font-bold text-white bg-slate-900/80 px-3 py-1.5 rounded-full shadow-lg">
+                        <div style="position:absolute; right:14px; bottom:14px; z-index:5; opacity:.92;" class="art-zoom flex items-center gap-2 text-[0.6875rem] font-bold text-white bg-slate-900/80 px-3 py-1.5 rounded-full shadow-lg">
                             <span class="whitespace-nowrap">글씨 크기</span>
                             <input id="articleZoom" type="range" min="50" max="250" step="1" value="${articleZoom}" oninput="setArticleZoom(this.value)" aria-label="기사 글씨 크기 조절" style="width:8rem; accent-color:#818cf8; cursor:pointer;">
                             <button id="articleZoomVal" type="button" onclick="setArticleZoom(100, true)" title="누르면 100%로 되돌립니다" class="w-11 text-right tabular-nums hover:text-indigo-300">${articleZoom}%</button>
@@ -2900,9 +2938,10 @@
         }
 
         // ================= 필터 =================
-        function setCategoryFilter(cat) {
+        function setCategoryFilter(cat, stayOnList) {
+            if (cat !== '범죄 다발 지역' && mHotspotOpen) closeMobileHotspot(true);
             if (cat === 'all') { selCats.clear(); currentCategory = 'all'; }
-            else if (cat === '범죄 다발 지역') { currentCategory = cat; if (isMobile()) setMobTab('article'); }     // 순위는 가운데 칸(원문 탭)에 나옴
+            else if (cat === '범죄 다발 지역') { currentCategory = cat; if (isMobile() && !stayOnList) setMobTab('article'); }     // 순위는 가운데 칸(원문 탭)에 나옴
             else if (catMode === 'exclude') {        // '빼고 보기' 모드: 누르면 그 분류를 숨김, 다시 누르면 다시 보임
                 currentCategory = 'all';
                 if (exCats.has(cat)) exCats.delete(cat); else { exCats.add(cat); selCats.delete(cat); }
@@ -3102,7 +3141,50 @@
             const sc = document.getElementById('splitContainer');
             if (sc) sc.dataset.m = t;
             document.querySelectorAll('#mobileTabs [data-mt]').forEach(b => b.classList.toggle('on', b.dataset.mt === t));
+            // 기사 원문을 읽는 탭: 위쪽 메뉴는 접고 아래 알약은 작게 (원문은 다른 사이트 화면이라 스크롤을 알 수 없어 처음부터 작게 둠)
+            const reading = isMobile() && t === 'article';
+            document.body.classList.toggle('m-reading', reading);
+            document.body.classList.remove('m-hdr-open');
+            document.body.classList.toggle('m-compact', reading);
+            if (t !== 'list') closeMobileHotspot(true);
             setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
+        }
+        // 아래로 스크롤하면 아래쪽 버튼들이 작아지고, 위로 올리면 원래 크기로 (목록·커뮤니티·요약 등 어디서든)
+        (function mobileCompactOnScroll() {
+            const lastY = new WeakMap();
+            document.addEventListener('scroll', e => {
+                if (!isMobile()) return;
+                const el = e.target;
+                if (!el || el === document || el.nodeType !== 1 || el.closest('#mobileDock')) return;
+                if (document.body.classList.contains('m-reading') && el.id !== 'detailViewContainer') return;
+                const y = el.scrollTop, p = lastY.has(el) ? lastY.get(el) : 0, dy = y - p;
+                lastY.set(el, y);
+                if (y < 24) document.body.classList.remove('m-compact');
+                else if (dy > 6) document.body.classList.add('m-compact');
+                else if (dy < -6) document.body.classList.remove('m-compact');
+            }, true);
+        })();
+        // 휴대폰: 다발 지역 순위를 목록 탭 안에서 바로 열기 (원문 탭으로 왔다 갔다 하지 않음)
+        let mHotspotOpen = false;
+        function syncMobileHotspot() {
+            if (!mHotspotOpen) return;
+            const src = document.getElementById('detailViewContainer'), dst = document.getElementById('mHotspotBody');
+            if (!src || !dst || !src.querySelector('#hotspotList')) return;
+            dst.innerHTML = src.innerHTML.replace(/id="hotspotList"/g, 'id="mHotspotList"');
+        }
+        function openMobileHotspot() {
+            mHotspotOpen = true;
+            if (currentCategory !== '범죄 다발 지역') setCategoryFilter('범죄 다발 지역', true);
+            else renderCrimeHotspotsView(true);
+            const pl = document.getElementById('panel-list'); if (pl) pl.classList.add('m-hot');
+            syncMobileHotspot();
+            const m = document.getElementById('mHotspot'); if (m) m.scrollTop = 0;
+        }
+        function closeMobileHotspot(keep) {
+            if (!mHotspotOpen) return;
+            mHotspotOpen = false;
+            const pl = document.getElementById('panel-list'); if (pl) pl.classList.remove('m-hot');
+            if (!keep && currentCategory === '범죄 다발 지역' && !selectedHotspotRegion) setCategoryFilter('all');
         }
         // 아래 탭 순서 저장/적용 + 좌우 쓸어 넘기기 + 아이콘 꾹 눌러 끌어서 순서 바꾸기
         const MTAB_KEY = 'mtab_order';
@@ -4801,10 +4883,11 @@
             return n;
         }
         function updateCommBadge() {
-            const b = document.getElementById('commBadge');
-            if (!b) return;
+            const b = document.getElementById('commBadge'), mb = document.getElementById('mobileCommBadge');
             const sos = alertCfg.sos !== false ? activeSosCount() : 0, n = commBadgeCount();
             const show = alertCfg.enabled && alertCfg.commBadge !== false && (sos > 0 || n > 0);
+            if (mb) { mb.textContent = sos > 0 ? 'SOS' : (n > 99 ? '99+' : String(n)); mb.classList.toggle('hidden', !show); }   // 휴대폰 아래 알약의 커뮤니티 버튼
+            if (!b) return;
             b.textContent = sos > 0 ? 'SOS ' + sos + (n ? ' · ' + n : '') : (n > 99 ? '99+' : String(n));
             b.classList.toggle('animate-pulse', sos > 0);
             b.classList.toggle('hidden', !show);
@@ -10216,47 +10299,54 @@
             const top = Object.keys(w.by).filter(g => BRIEF_TIPS[g] && CATEGORY_GROUPS[g]).sort((a, b) => w.by[b] - w.by[a]).slice(0, 3);
             return { today: d.total, week: w.total, top: top.map(g => ({ g: g, week: w.by[g], today: d.by[g] || 0, tip: (BRIEF_TIPS[g] || [])[0] || '' })) };
         }
+        // 큰 꼭지 제목: 꼭지마다 색을 달리해 멀리서도 구분되게 (글씨 크고 굵게, 색 막대)
+        function briefBanner(icon, text, sub, cls) {
+            return `<div class="flex items-center justify-between gap-2 rounded-xl px-3 py-2.5 text-white shadow-md ${cls}"><span class="text-base font-black tracking-tight leading-none">${icon} ${text}</span>${sub ? `<span class="text-[0.625rem] font-bold opacity-90 whitespace-nowrap">${sub}</span>` : ''}</div>`;
+        }
+        function briefGroupName(g) { return CATEGORY_GROUPS[g] ? CATEGORY_GROUPS[g].label.replace(/^[^\s가-힣]+\s/, '') : g; }
+        // 맨 위 요약 카드: 숫자 두 개와 '오늘 주의' 한 줄만
+        function briefHero(c, d, w, now) {
+            const p = n => String(n).padStart(2, '0');
+            const num = (lbl, v, on) => `<div class="rounded-xl px-3 py-2 ${on ? 'bg-white text-indigo-700' : 'bg-white/15 text-white'}"><div class="text-[0.625rem] font-bold ${on ? 'text-indigo-500' : 'opacity-80'}">${lbl}</div><div class="text-3xl font-black leading-none mt-0.5">${v}<span class="text-sm font-bold ml-0.5">건</span></div></div>`;
+            const hot = d.topGroups[0] ? `<div class="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs font-extrabold"><span>⚡ 오늘 주의</span>${d.topGroups.slice(0, 2).map(x => `<span class="px-2.5 py-0.5 rounded-full bg-amber-300 text-slate-900">${esc(briefGroupName(x.g))} ${x.n}</span>`).join('')}</div>` : '';
+            return `<div class="rounded-2xl bg-gradient-to-br from-indigo-700 via-violet-700 to-fuchsia-700 text-white p-3.5 shadow-lg">
+                <div class="text-[0.6875rem] font-bold opacity-80">${now.getMonth() + 1}월 ${now.getDate()}일 ${p(now.getHours())}:${p(now.getMinutes())} · ${esc(c ? c.label : '전국')}</div>
+                <div class="mt-2 grid grid-cols-2 gap-2">${num('오늘', d.total, true)}${num('최근 7일', w.total, false)}</div>${hot}</div>`;
+        }
+        // 전국 위험 TOP3: 분류 이름 + 건수만
         function briefNationalHtml() {
             if (briefCfg.scope === 'all') return '';          // 보고 범위가 이미 전국이면 같은 내용이 되풀이되므로 생략
             const a = briefNational();
             if (!a.top.length) return '';
-            return `<section class="rounded-2xl border border-rose-200 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/20 p-3 space-y-2">
-                <div class="flex flex-wrap items-baseline justify-between gap-x-2"><h3 class="text-sm font-extrabold text-rose-700 dark:text-rose-300">🇰🇷 전국 위험 요약</h3><span class="text-[0.6875rem] text-slate-500 dark:text-slate-400">오늘 ${a.today}건 · 이번 주 ${a.week}건</span></div>
-                <ol class="space-y-1.5">${a.top.map((x, i) => `<li class="flex gap-2 items-start text-xs leading-snug">
-                    <b class="shrink-0 w-5 h-5 rounded-full bg-rose-600 text-white text-[0.6875rem] inline-flex items-center justify-center">${i + 1}</b>
-                    <div class="min-w-0"><div class="font-bold text-slate-900 dark:text-white">${esc(CATEGORY_GROUPS[x.g].label)} <span class="font-normal text-slate-500 dark:text-slate-400">이번 주 ${x.week}건${x.today ? ' · 오늘 ' + x.today + '건' : ''}</span></div>
-                    <div class="text-emerald-700 dark:text-emerald-300">🛡 ${esc(x.tip)}</div></div></li>`).join('')}</ol>
-            </section>`;
+            return `<section class="space-y-1.5">${briefBanner('🇰🇷', '전국 위험 TOP3', '오늘 ' + a.today + ' · 주간 ' + a.week, 'bg-gradient-to-r from-sky-600 to-blue-700')}
+                <ol class="grid grid-cols-3 gap-1.5">${a.top.map((x, i) => `<li class="rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 px-2 py-2 text-center">
+                    <div class="text-[0.625rem] font-black text-sky-600 dark:text-sky-300">${i + 1}위</div>
+                    <div class="text-xs font-extrabold text-slate-900 dark:text-white leading-tight">${esc(briefGroupName(x.g))}</div>
+                    <div class="text-[0.6875rem] font-bold text-slate-500 dark:text-slate-400">${x.week}건</div></li>`).join('')}</ol></section>`;
         }
-        function briefSection(title, a, days) {
-            const evRow = (ev, i) => {
-                const n = ev.lead, g = groupOf(n), tip = (BRIEF_TIPS[g] || [])[0], art = tipsFor([g], 1)[0];
-                return `<li class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 space-y-1">
-                    <div class="flex flex-wrap items-center gap-1 text-[0.6875rem]"><b class="text-indigo-600 dark:text-indigo-300">${i + 1}.</b>${tagBadges(n)}<span class="text-slate-400">${esc(shortTime(n))} · ${esc((n.location || '').replace('대한민국 (세부 위치 미상)', '위치 미상'))}${ev.items.length > 1 ? ' · 관련 기사 ' + ev.items.length + '개' : ''}</span></div>
-                    <button onclick="closeSheet(); openHeadline(${n.id})" class="block text-left text-sm font-bold text-slate-900 dark:text-white hover:text-indigo-600 leading-snug" style="white-space: normal;">${esc(n.title)}</button>
-                    ${n.summary && n.summary !== n.title ? `<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">${esc(n.summary)}</p>` : ''}
-                    ${tip ? `<p class="text-[0.6875rem] text-emerald-700 dark:text-emerald-300">🛡 예방·주의: ${esc(tip)}</p>` : ''}
-                    ${art ? `<p class="text-[0.6875rem] text-emerald-700 dark:text-emerald-300">📰 관련 예방 기사: ${tipLink(art)}</p>` : ''}
-                </li>`;
+        function briefSection(a, days) {
+            const evRow = (ev, i, badge) => {
+                const n = ev.lead, k = ev.items.length;
+                return `<li class="flex gap-2.5 items-start rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5">
+                    <span class="shrink-0 w-6 h-6 rounded-lg ${badge} text-white text-xs font-black inline-flex items-center justify-center">${i + 1}</span>
+                    <div class="min-w-0 flex-1">
+                        <button onclick="closeSheet(); openHeadline(${n.id})" class="block w-full text-left text-[0.8125rem] font-extrabold text-slate-900 dark:text-white hover:text-indigo-600 leading-snug" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:normal;">${esc(n.title)}</button>
+                        <div class="mt-1 flex flex-wrap items-center gap-1 text-[0.625rem] text-slate-500 dark:text-slate-400">${tagBadges(n)}<span>${esc(shortTime(n))} · ${esc((n.location || '').replace('대한민국 (세부 위치 미상)', '위치 미상'))}</span>${k > 1 ? `<span class="px-1.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-black">기사 ${k}</span>` : ''}</div>
+                    </div></li>`;
             };
-            const groupsTxt = a.topGroups.length ? a.topGroups.map(x => `${CATEGORY_GROUPS[x.g] ? CATEGORY_GROUPS[x.g].label.replace(/^[^\s가-힣]+\s/, '') : x.g} ${x.n}건`).join(', ') : '없음';
-            const tips = a.topGroups.slice(0, 3).map(x => (BRIEF_TIPS[x.g] || []).slice(0, 2).map(t => `<li>• <b>${esc(CATEGORY_GROUPS[x.g] ? CATEGORY_GROUPS[x.g].label.replace(/^[^\s가-힣]+\s/, '') : x.g)}</b> — ${esc(t)}</li>`).join('')).join('');
-            // 이 기간에 많았던 사건 유형과 같은 분류의 예방·대처 기사 (주간 보고에서는 더 많이)
-            let tipArts = tipsFor(a.topGroups.map(x => x.g), days === 1 ? 3 : 5);
-            if (!tipArts.length && days !== 1) tipArts = safetyTips.slice(0, 3);     // 같은 분류가 없으면 주간 보고에 최신 예방 정보라도
-            const tipArtsHtml = tipArts.length ? `<div class="rounded-xl border border-teal-200 dark:border-teal-900 bg-teal-50 dark:bg-teal-950/30 p-3"><div class="text-xs font-bold text-teal-700 dark:text-teal-300 mb-1">📰 함께 보면 좋은 예방·대처 정보 <span class="font-normal text-slate-400">(사건 기사가 아니라 따로 모은 예방 기사)</span></div><ul class="text-xs text-slate-700 dark:text-slate-200 space-y-1">${tipArts.map(t => `<li>• <span class="text-[0.625rem] px-1 rounded bg-teal-100 dark:bg-teal-900 text-teal-800 dark:text-teal-200">${esc(t.category || '')}</span> ${tipLink(t)}</li>`).join('')}</ul></div>` : '';
-            return `<section class="space-y-3">
-                <h3 class="text-base font-extrabold text-slate-900 dark:text-white border-l-4 border-indigo-500 pl-2">${title}</h3>
-                <div class="rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 p-3 text-sm text-slate-800 dark:text-slate-100 leading-relaxed">
-                    ${a.total ? `${days === 1 ? '오늘' : '이번 주(최근 7일)'} <b>${esc(a.c ? a.c.label : '전국')}</b>${briefCfg.scope === 'near' ? ' 반경 ' + briefCfg.radius + 'km' : ''} 기준 사건사고는 <b>${a.total}건</b>(기사 ${a.articles}개)입니다.
-                    가장 많았던 유형은 <b>${esc(groupsTxt)}</b>입니다.` : `${days === 1 ? '오늘' : '이번 주'} 이 범위에서 보도된 사건사고가 없습니다. 범위를 넓혀 보세요.`}
-                </div>
-                ${a.attention.length ? `<div><div class="text-xs font-bold text-slate-500 mb-1.5">🔥 가장 주목받은 사건 (보도가 많은 순)</div><ol class="space-y-2">${a.attention.slice(0, days === 1 ? 3 : 5).map(evRow).join('')}</ol></div>` : ''}
-                ${a.impactful.length ? `<div><div class="text-xs font-bold text-slate-500 mb-1.5">⚠️ 파장이 큰 사건 (인명·재산 피해 중심)</div><ol class="space-y-2">${a.impactful.map(evRow).join('')}</ol></div>` : ''}
-                ${tips ? `<div class="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-3"><div class="text-xs font-bold text-emerald-700 dark:text-emerald-300 mb-1">🛡 이렇게 예방하세요</div><ul class="text-xs text-slate-700 dark:text-slate-200 space-y-0.5">${tips}</ul></div>` : ''}
-                ${tipArtsHtml}
-                ${a.scams.length ? `<div class="rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/30 p-3"><div class="text-xs font-bold text-amber-700 dark:text-amber-300 mb-1">📵 요즘 유행하는 피싱·사기 수법 (전국 보도 기준)</div><ul class="text-xs text-slate-700 dark:text-slate-200 space-y-1">${a.scams.map(s => `<li>• <b>${esc(s.name)}</b> <span class="text-slate-400">기사 ${s.n}건</span><br><span class="text-amber-800 dark:text-amber-200">주의: ${esc(s.tip)}</span></li>`).join('')}</ul></div>` : ''}
-            </section>`;
+            const scope = esc(a.c ? a.c.label : '전국') + (briefCfg.scope === 'near' ? ' ' + briefCfg.radius + 'km' : '');
+            if (!a.total) return `<div class="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 p-4 text-center text-sm font-extrabold text-slate-500">${scope} · 보도된 사건 없음<div class="text-xs font-normal mt-0.5">⚙ 설정에서 범위를 넓혀 보세요</div></div>`;
+            const tips = a.topGroups.slice(0, 3).map(x => { const t = (BRIEF_TIPS[x.g] || [])[0]; return t ? `<li class="flex gap-1.5"><b class="shrink-0 text-emerald-700 dark:text-emerald-300">${esc(briefGroupName(x.g))}</b><span>${esc(t)}</span></li>` : ''; }).join('');
+            return `<div class="space-y-4">
+                <section class="space-y-1.5">${briefBanner('🔥', '가장 주목받은 사건', scope + ' · 보도 많은 순', 'bg-gradient-to-r from-orange-500 to-red-600')}
+                    <ol class="space-y-1.5">${a.attention.slice(0, days === 1 ? 3 : 5).map((ev, i) => evRow(ev, i, 'bg-red-600')).join('')}</ol></section>
+                ${a.impactful.length ? `<section class="space-y-1.5">${briefBanner('⚠️', '파장 큰 사건', '인명·재산 피해', 'bg-gradient-to-r from-rose-700 to-slate-800')}
+                    <ol class="space-y-1.5">${a.impactful.map((ev, i) => evRow(ev, i, 'bg-rose-800')).join('')}</ol></section>` : ''}
+                ${tips ? `<section class="space-y-1.5">${briefBanner('🛡', '이렇게 예방하세요', '', 'bg-gradient-to-r from-emerald-600 to-teal-600')}
+                    <ul class="rounded-xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 p-2.5 text-xs text-slate-700 dark:text-slate-200 space-y-1 leading-snug">${tips}</ul></section>` : ''}
+                ${a.scams.length ? `<section class="space-y-1.5">${briefBanner('📵', '유행 사기 수법', '전국 보도 기준', 'bg-gradient-to-r from-amber-500 to-orange-600')}
+                    <div class="flex flex-wrap gap-1.5">${a.scams.map(s => `<span class="px-2.5 py-1 rounded-full border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 text-xs font-extrabold text-amber-900 dark:text-amber-200">${esc(s.name.replace(/\s*\(.*\)/, ''))} <span class="font-black text-red-600">${s.n}</span></span>`).join('')}</div></section>` : ''}
+            </div>`;
         }
         // 안전 브리핑: [화면 설정]에서 칸에 넣었으면 그 칸에 그리고, 아니면 창(sheet)으로 띄움
         function openBriefing(tab, quiet) {
@@ -10283,17 +10373,13 @@
                     <button onclick="openBriefing('report')" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold">저장하고 보고서 보기</button>
                 </div>`;
             } else {
+                const wk = briefTab === 'week';
                 const d = briefAnalyze(1), w = briefAnalyze(7);
-                body = `<div class="space-y-5">
-                    <div class="flex items-start gap-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-4">
-                        <div class="text-3xl">🧑‍💼</div>
-                        <div class="text-sm leading-relaxed">${now.getHours() < 12 ? '좋은 아침입니다.' : (now.getHours() < 18 ? '안녕하세요.' : '오늘 하루 수고 많으셨습니다.')} ${now.getMonth() + 1}월 ${now.getDate()}일 ${p(now.getHours())}:${p(now.getMinutes())} 기준 <b>${esc(c ? c.label : '전국')}</b> 안전 브리핑을 보고드립니다.
-                        오늘은 <b>${d.total}건</b>, 이번 주는 <b>${w.total}건</b>의 사건사고가 보도되었습니다.${d.topGroups[0] ? ` 오늘은 특히 <b>${esc(CATEGORY_GROUPS[d.topGroups[0].g].label.replace(/^[^\s가-힣]+\s/, ''))}</b>에 주의하세요.` : ''}</div>
-                    </div>
+                body = `<div class="space-y-3">
+                    ${briefHero(c, d, w, now)}
                     ${briefNationalHtml()}
-                    ${briefSection('📅 일간 주요 상황 (오늘)', d, 1)}
-                    ${briefSection('🗓 주간 주요 상황 (최근 7일)', w, 7)}
-                    <p class="text-[0.6875rem] text-slate-400">이 보고서는 언론 보도를 자동으로 모아 요약한 것으로, 실제 상황과 다를 수 있습니다. 기사 제목을 누르면 원문으로 이동합니다.</p>
+                    ${briefSection(wk ? w : d, wk ? 7 : 1)}
+                    <p class="text-[0.625rem] text-slate-400">언론 보도를 자동 요약한 참고용입니다. 제목을 누르면 원문으로 이동합니다.</p>
                 </div>`;
             }
             const sub = `보고 시간 ${briefCfg.times.join(', ') || '없음'} · 범위: ${esc((BRIEF_SCOPES.find(s => s[0] === briefCfg.scope) || [, ''])[1])}`;
@@ -10302,7 +10388,7 @@
                 if (ps) ps.innerHTML = sub + ' · ' + p(now.getHours()) + ':' + p(now.getMinutes()) + ' 기준';
                 if (pb) {
                     const keep = pb.querySelector('.brief-scroll'), top = keep ? keep.scrollTop : 0;
-                    pb.innerHTML = `<div class="px-3 pt-2 flex flex-wrap gap-1.5 shrink-0">${tabBtn('report', '📋 보고서')}${tabBtn('settings', '⚙ 시간·범위 설정')}</div>
+                    pb.innerHTML = `<div class="px-3 pt-2 flex flex-wrap gap-1.5 shrink-0">${tabBtn('report', '📅 오늘')}${tabBtn('week', '🗓 이번 주')}${tabBtn('settings', '⚙ 설정')}</div>
                         <div class="brief-scroll flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3">${body}</div>`;
                     if (quiet) { const s2 = pb.querySelector('.brief-scroll'); if (s2) s2.scrollTop = top; }
                 }
@@ -10310,7 +10396,7 @@
                 return;
             }
             openSheet(sheetHead('📋', '오늘의 안전 브리핑', sub) + `
-                <div class="px-5 pt-3 flex flex-wrap gap-1.5 shrink-0">${tabBtn('report', '📋 보고서 (지금 기준 예시)')}${tabBtn('settings', '⚙ 보고 시간·범위 설정')}</div>
+                <div class="px-5 pt-3 flex flex-wrap gap-1.5 shrink-0">${tabBtn('report', '📅 오늘')}${tabBtn('week', '🗓 이번 주')}${tabBtn('settings', '⚙ 설정')}</div>
                 <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-5">${body}</div>`);
         }
         // 정한 시간이 되면 브리핑을 자동으로 보여 줌 (30초마다 확인)
@@ -10515,7 +10601,7 @@
         // 칸에 들어가 있으면 그 칸(또는 칸 안의 부품)을, 칸에 없으면 그 화면을 여는 상단 버튼을 가리킴
         function tourPanel(k, inner) {
             if (isDocked(k)) { const p = panelEl(k); return (inner && p && p.querySelector(inner)) || p; }
-            if (k === 'community') return document.querySelector('#floatBtnWrap .comm-btn');
+            if (k === 'community') return (isMobile() && document.getElementById('mobileCommBtn')) || document.querySelector('#floatBtnWrap .comm-btn');
             return document.querySelector('#floatBtnWrap [data-panel="' + k + '"]');
         }
         // 커뮤니티 단계: 커뮤니티를 실제로 열어 두고(칸에 있으면 그대로, 없으면 창으로), 해당 묶음 탭을 눌러 보여 줌
