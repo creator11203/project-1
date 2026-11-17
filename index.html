@@ -3261,8 +3261,10 @@
             }
         }
         // 휴대폰 아래 탭: 한 번에 한 칸(목록 · 지도 · 원문)만 보여 줌. 칸 이름과 탭은 data-m / data-mt 로 연결
+        let _mtHist = [], _mtGoingBack = false;     // 휴대폰에서 거쳐 온 탭 기록 (뒤로가기 쓸기용)
         function setMobTab(t) {
             const sc = document.getElementById('splitContainer');
+            if (sc && sc.dataset.m && sc.dataset.m !== t && !_mtGoingBack) { _mtHist.push(sc.dataset.m); if (_mtHist.length > 20) _mtHist.shift(); }
             if (sc) sc.dataset.m = t;
             document.querySelectorAll('#mobileTabs [data-mt]').forEach(b => b.classList.toggle('on', b.dataset.mt === t));
             // 기사 원문을 읽는 탭: 위쪽 메뉴는 접고 아래 알약은 작게 (원문은 다른 사이트 화면이라 스크롤을 알 수 없어 처음부터 작게 둠)
@@ -3346,17 +3348,38 @@
             syncMobReading();
             if (!keep && currentCategory === '범죄 다발 지역' && !selectedHotspotRegion) setCategoryFilter('all');
         }
-        // 사고 다발 지역 순위: 화면 왼쪽 끝에서 가운데로 쓸면 닫고 목록으로 돌아감
-        (function hotEdgeInit() {
-            const m = document.getElementById('mHotspot'); if (!m) return;
+        // ── 휴대폰 어디서든: 화면 왼쪽 끝에서 가운데로 쓸면 '바로 직전 화면'으로 (열린 창 → 글 보기 → 다발 지역 → 원문 → 이전 탭 순)
+        function mobileGoBack() {
+            const vis = id => { const e = document.getElementById(id); return e && !e.classList.contains('hidden'); };
+            if (vis('commMediaView')) { closeMedia(); return true; }
+            if (vis('sheetModal')) { closeSheet(); return true; }
+            if (vis('appModal')) { closeAppModal(); return true; }
+            if (vis('commProfileCard')) { closeProfile(); return true; }
+            if (vis('floatModal')) {
+                const ui = (typeof pbUi !== 'undefined' && pbUi[commTab]) || null;
+                if (ui && ui.view !== 'list' && document.getElementById('pbBox')) { pbBack(commTab); return true; }
+                if (marketOpen || marketForm) { try { marketOpen = null; marketForm = false; stopMarketChat(); renderCommunity(); return true; } catch (e) {} }
+                closeFloat(); return true;
+            }
+            if (mHotspotOpen) { closeMobileHotspot(); return true; }
+            const sc = document.getElementById('splitContainer');
+            if (sc && sc.dataset.m === 'article' && selectedNewsId && document.getElementById('edgeBack')) { renderDetailView(selectedNewsId, true); return true; }
+            if (_mtHist.length) { _mtGoingBack = true; try { setMobTab(_mtHist.pop()); } finally { _mtGoingBack = false; } return true; }
+            return false;
+        }
+        (function backEdgeInit() {
             let x0 = 0, y0 = 0, on = false;
-            m.addEventListener('touchstart', e => { const t = e.touches[0]; on = t.clientX < 28; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
-            m.addEventListener('touchend', e => {
+            document.addEventListener('touchstart', e => {
+                const t = e.touches[0];
+                on = isMobile() && e.touches.length === 1 && t.clientX < 28 && !document.getElementById('tourRoot') && !(e.target.closest && e.target.closest('#edgeBack'));
+                x0 = t.clientX; y0 = t.clientY;
+            }, { passive: true });
+            document.addEventListener('touchend', e => {
                 if (!on) return; on = false;
                 const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
-                if (dx > 70 && dx > dy * 1.5) closeMobileHotspot();
+                if (dx > 70 && dx > dy * 1.5) mobileGoBack();
             }, { passive: true });
-            m.addEventListener('touchcancel', () => { on = false; }, { passive: true });
+            document.addEventListener('touchcancel', () => { on = false; }, { passive: true });
         })();
         // 아래 탭 순서 저장/적용 + 좌우 쓸어 넘기기 + 아이콘 꾹 눌러 끌어서 순서 바꾸기
         const MTAB_KEY = 'mtab_order';
@@ -3382,7 +3405,7 @@
                 if (e.scrollWidth > e.clientWidth + 4 && /(auto|scroll)/.test(getComputedStyle(e).overflowX)) return true;
             } return false; };
             sc.addEventListener('touchstart', ev => {
-                ok = isMobile() && ev.touches.length === 1 && !blocked(ev.target) && !document.getElementById('tourRoot');
+                ok = isMobile() && ev.touches.length === 1 && ev.touches[0].clientX >= 28 && !blocked(ev.target) && !document.getElementById('tourRoot');   // 왼쪽 끝 28px 는 '뒤로가기' 쓸기 전용
                 if (ok) { sx = ev.touches[0].clientX; sy = ev.touches[0].clientY; st = Date.now(); }
             }, { passive: true });
             sc.addEventListener('touchend', ev => {
