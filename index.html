@@ -193,6 +193,7 @@
         #catToggleBtn { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; font-size: 12px; font-weight: 700; color: #334155; text-align: left; cursor: pointer; }
         #catToggleBtn:hover { background: #eef2ff; border-color: #a5b4fc; }
         .dark #catToggleBtn { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+        #catFoldBtn { display: none; }
         #catToggleBtn .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         #catToggleBtn .chev { transition: transform .2s; font-size: 11px; opacity: .6; }
         #categoryBar:not(.cat-collapsed) #catToggleBtn .chev { transform: rotate(180deg); }
@@ -294,6 +295,9 @@
             /* 휴대폰 맨 위 줄 순서: [로고·제목] … [?(사용 안내)] [달(다크 모드)] → 그 아래 주요 버튼 3개 (PC 에서는 글씨 크기 바로 옆에 다크 모드) */
             #appHeader #themeGroup { order: 3; }
             #appHeader #heroBtns { order: 4; }
+            #categoryBar:not(.cat-collapsed) #catFoldBtn { display: flex; align-items: center; justify-content: center; width: 100%; height: 26px; border-radius: 8px; background: #e0e7ff; color: #4338ca; font-size: 13px; }
+            .dark #categoryBar:not(.cat-collapsed) #catFoldBtn { background: #312e81; color: #c7d2fe; }
+            #catHotBtn.cat-back { background: #4f46e5; border-color: #4338ca; }
             #categoryBar:not(.cat-collapsed) #groupButtons { max-height: 42vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
             #groupButtons button[data-cat="범죄 다발 지역"] { display: none; }
             #groupButtons > span.ml-auto { flex-wrap: wrap; width: 100%; margin-left: 0; padding-left: 0; border-left: 0; }
@@ -769,10 +773,11 @@
                 <!-- 휴대폰 전용: 분류 버튼 접기/펼치기 줄 (PC에서는 숨김) -->
                 <div id="catToggleRow">
                     <button id="catToggleBtn" type="button" onclick="toggleCatBar()" aria-expanded="false"><i class="fa-solid fa-filter text-indigo-500"></i><span class="lbl" id="catToggleLabel">분류: 전체</span><i class="fa-solid fa-chevron-down chev"></i></button>
-                    <button type="button" onclick="setCategoryFilter('범죄 다발 지역')" class="cat-hot-btn shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white border border-rose-700">🚨 다발 지역</button>
+                    <button type="button" id="catHotBtn" onclick="onCatHot()" class="cat-hot-btn shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white border border-rose-700">🚨 다발 지역</button>
                 </div>
                 <div id="groupButtons" class="flex flex-wrap items-center gap-1.5"></div>
                 <div id="subButtons" class="flex flex-wrap items-center gap-1" style="display:none"></div>
+                <button id="catFoldBtn" type="button" onclick="toggleCatBar(false)" aria-label="분류 접기" title="분류 접기"><i class="fa-solid fa-chevron-up"></i></button>
             </div>
             
             <!-- 원문 본문 뷰어 영역 (상세 content 출력) -->
@@ -2288,6 +2293,27 @@
             else if (selCats.size) { const a = Array.from(selCats); t = '분류: ' + lab(a[0]) + (a.length > 1 ? ' 외 ' + (a.length - 1) : ''); }
             else if (exCats.size) t = '분류: ' + exCats.size + '개 빼고 보기';
             el.textContent = t;
+            // 다발 지역 순위를 보는 중이면 같은 자리의 버튼이 '← 원문'(바로 돌아가기)으로 바뀜
+            const hb = document.getElementById('catHotBtn');
+            if (hb) {
+                const inHot = currentCategory === '범죄 다발 지역';
+                hb.classList.toggle('cat-back', inHot);
+                hb.innerHTML = inHot ? '<i class="fa-solid fa-arrow-left"></i> 원문' : '🚨 다발 지역';
+                hb.setAttribute('aria-label', inHot ? '기사 원문으로 돌아가기' : '다발 지역 보기');
+            }
+        }
+        function onCatHot() { if (currentCategory === '범죄 다발 지역') leaveHotspot(); else setCategoryFilter('범죄 다발 지역'); }
+        // 다발 지역 순위에서 보던 기사 원문으로 바로 돌아가기 (분류를 '전체'로 바꾸지 않고 펼친 분류 줄도 접음)
+        function leaveHotspot() {
+            if (currentCategory !== '범죄 다발 지역') return;
+            currentCategory = 'all'; selectedHotspotRegion = null; hotspotArticleOpen = false;
+            renderLimit = 100;
+            if (isMobile()) toggleCatBar(false);
+            renderCategoryBar(); updateMapMarkers(); renderNewsList();
+            const keep = selectedNewsId && newsData.some(n => n.id === selectedNewsId) ? selectedNewsId : null;
+            const f = getFilteredNews(), id = keep || (f[0] && f[0].id);
+            if (id) selectNews(id, true);
+            else setDetailHTML('<div class="text-center py-20 text-slate-400 text-xs">조건에 맞는 기사가 없습니다.</div>');
         }
         function renderCategoryBar() {
             const base = groupEvents(getFilteredNews(true)).map(ev => ev.lead);   // 사건 1건 = 1개로 셈
@@ -2961,7 +2987,7 @@
         function setCategoryFilter(cat, stayOnList) {
             if (cat !== '범죄 다발 지역' && mHotspotOpen) closeMobileHotspot(true);
             if (cat === 'all') { selCats.clear(); currentCategory = 'all'; }
-            else if (cat === '범죄 다발 지역') { currentCategory = cat; if (isMobile() && !stayOnList) setMobTab('article'); }     // 순위는 가운데 칸(원문 탭)에 나옴
+            else if (cat === '범죄 다발 지역') { currentCategory = cat; if (isMobile()) { if (!stayOnList) setMobTab('article'); toggleCatBar(false); } }     // 순위는 가운데 칸(원문 탭)에 나옴
             else if (catMode === 'exclude') {        // '빼고 보기' 모드: 누르면 그 분류를 숨김, 다시 누르면 다시 보임
                 currentCategory = 'all';
                 if (exCats.has(cat)) exCats.delete(cat); else { exCats.add(cat); selCats.delete(cat); }
@@ -3187,7 +3213,10 @@
                 if (rd && el.id !== 'detailViewContainer' && el.id !== 'mHotspot') return;
                 const y = el.scrollTop, p = lastY.has(el) ? lastY.get(el) : 0, dy = y - p;
                 lastY.set(el, y);
-                if (rd && y > 24 && dy > 6) document.body.classList.remove('m-hdr-open');      // 펼쳐 둔 위쪽 메뉴도 아래로 스크롤하면 다시 접힘
+                if (rd && y > 24 && dy > 6) {
+                    document.body.classList.remove('m-hdr-open');
+                    const cb = document.getElementById('categoryBar'); if (cb && !cb.classList.contains('cat-collapsed')) toggleCatBar(false);     // 펼친 분류 줄도 스크롤하면 접힘
+                }      // 펼쳐 둔 위쪽 메뉴도 아래로 스크롤하면 다시 접힘
                 if (y < 24) document.body.classList.remove('m-compact');
                 else if (dy > 6) document.body.classList.add('m-compact');
                 else if (dy < -6) document.body.classList.remove('m-compact');
