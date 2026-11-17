@@ -71,6 +71,7 @@
         .dark #newsListContainer::-webkit-scrollbar-track { background: #0f172a; border-left-color: #1e293b; }
         .dark #newsListContainer::-webkit-scrollbar-thumb { background: #6366f1; border-color: #0f172a; }
         .dark #newsListContainer::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+        #sheetBox #commBgDots button { width: 1.75rem; height: 1.75rem; }
         /* 모든 버튼: 누르면 살짝 눌리고 색이 부드럽게 바뀜 (특이도 0 이라 개별 버튼의 자체 효과는 그대로 우선) */
         :where(button, [role="button"], .tab-btn) { transition: transform .14s cubic-bezier(.3,.8,.3,1), background-color .22s ease, color .22s ease, border-color .22s ease, opacity .22s ease, box-shadow .22s ease; }
         :where(button, [role="button"]):active:not(:disabled) { transform: scale(.96); }
@@ -3663,8 +3664,9 @@
             const box = document.getElementById('commHeadBtns');
             if (!box) return;
             // 칸에 들어가 있을 때: 숨겨진 화면(예: 사건 발생 지도)은 맨 위 버튼 줄에 이미 버튼이 있으므로 여기에는 메뉴만 둠
-            const menu = `<span class="relative"><button onclick="toggleCommMenu()" title="내 프로필 · 친구 · 초대 · 차단 관리 · 배경" class="comm-head-btn px-2 py-1 rounded-lg text-[0.6875rem] font-bold"><i class="fa-solid fa-bars"></i> <span class="hide-xnarrow">메뉴</span></button>
-                <div id="commMenu" class="hidden absolute right-0 top-full mt-1 w-56 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-2xl p-1.5 text-slate-800 dark:text-slate-100" style="z-index: 40;"></div></span>`;
+            const cb = (typeof commBadgeCount === 'function') ? commUnseen.feed + commUnseen.follow : 0;
+            const menu = `<span class="relative"><button onclick="openCommSettings()" title="커뮤니티 설정 (알림 · 공개 범위 · 차단 · 배경 · 계정)" aria-label="커뮤니티 설정" class="comm-head-btn px-2 py-1 rounded-lg text-[0.6875rem] font-bold"><i class="fa-solid fa-bars"></i> <span class="hide-xnarrow">설정</span></button>${cb ? '<span class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white dark:ring-slate-900"></span>' : ''}
+                <div id="commMenu" class="hidden"></div></span>`;
             const modeChip = '';
             if (isDocked('community')) {
                 box.innerHTML = modeChip + menu;
@@ -3688,6 +3690,41 @@
                 ${item('resetTown()', 'fa-location-crosshairs', '동네 다시 인증')}
                 ${FIREBASE_CONFIG && commUser ? item('commLogout()', 'fa-right-from-bracket', '로그아웃') : ''}` : `<div class="px-2.5 py-2 text-xs text-slate-500">먼저 동네 인증을 해 주세요.</div>`;
             m.classList.remove('hidden');
+            renderCommBg();
+        }
+        // ── 커뮤니티 설정 (오른쪽 위 ≡ 버튼): 바로가기 · 알림 · 공개 범위 · 화면(배경) · 계정을 한 창에 정리
+        function commSetSw(key, label) { return aSw(alertCfg[key] !== false, `setAlertCfg('${key}', this.checked)`, label); }
+        function openCommSettings() {
+            const verified = !!myTown, loggedIn = !!(FIREBASE_CONFIG && commUser);
+            const secT = (icon, t, sub) => `<div class="flex items-baseline gap-1.5 px-1 mb-2 mt-1"><span class="text-[0.8125rem] font-extrabold text-slate-800 dark:text-slate-100">${icon} ${t}</span>${sub ? `<span class="text-[0.625rem] text-slate-400">${sub}</span>` : ''}</div>`;
+            const tile = (fn, icon, label, badge) => `<button type="button" onclick="closeSheet(); ${fn}" class="relative flex flex-col items-center justify-center gap-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 active:scale-95 transition"><span class="text-xl">${icon}</span><span class="text-[0.6875rem] font-bold text-slate-700 dark:text-slate-200">${label}</span>${badge ? `<span class="absolute top-1.5 right-2 min-w-[1.1rem] text-center text-[0.5625rem] font-bold text-white bg-red-500 rounded-full px-1">${badge}</span>` : ''}</button>`;
+            const nBlock = Object.keys(blocked).length, nFeed = commUnseen.feed + commUnseen.follow;
+            const linkRow = (fn, icon, label, sub, danger) => `<button type="button" onclick="closeSheet(); ${fn}" class="w-full flex items-center gap-3 py-2.5 text-left"><span class="a-ico">${icon}</span><span class="min-w-0 flex-1"><span class="block text-[0.8125rem] font-bold ${danger ? 'text-red-600' : 'text-slate-800 dark:text-slate-100'}">${label}</span>${sub ? `<span class="block text-[0.6875rem] text-slate-500 dark:text-slate-400 leading-snug">${sub}</span>` : ''}</span><i class="fa-solid fa-chevron-right text-[0.625rem] text-slate-300"></i></button>`;
+            const me = `<div class="flex items-center gap-3 rounded-2xl border ${verified ? 'border-emerald-200 dark:border-emerald-900 bg-emerald-50/70 dark:bg-emerald-950/20' : 'border-amber-200 dark:border-amber-900 bg-amber-50/70 dark:bg-amber-950/20'} p-3 mb-3">
+                    <span class="w-11 h-11 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-2xl shrink-0 shadow-sm">${esc(commProfile.emoji || '🙂')}</span>
+                    <div class="min-w-0 flex-1 leading-tight"><div class="text-sm font-extrabold text-slate-900 dark:text-white truncate">${esc(myNick())}</div>
+                    <div class="text-[0.6875rem] ${verified ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'} mt-0.5">${verified ? '<i class="fa-solid fa-circle-check"></i> ' + esc(townName(myTown)) + ' 인증됨' : '아직 동네 인증 전이에요'}</div></div>
+                    ${verified ? `<button type="button" onclick="closeSheet(); openMyProfile()" class="abtn sm shrink-0">내 프로필</button>` : `<button type="button" onclick="closeSheet(); ${loggedIn || !FIREBASE_CONFIG ? 'verifyTown()' : 'openCommunity()'}" class="abtn sm shrink-0">인증하기</button>`}</div>`;
+            const quick = `<div class="grid grid-cols-3 gap-2 mb-4">
+                    ${commOpen('people') ? tile(`setCommTab('friends')`, '📰', '팔로잉 소식', nFeed || '') : tile('openMyProfile()', '👤', '내 프로필')}
+                    ${tile('showBlockList()', '🚫', '차단 관리' + (nBlock ? ' ' + nBlock : ''))}
+                    ${tile('showReportGuide()', '⚖️', '신뢰 지수·가이드')}</div>`;
+            const notiKinds = [['sos', '🚨', '이웃 SOS', '급한 도움 요청이 올라오면'], ['report', '📢', '이웃 제보', '우리 동네 실시간 제보가 올라오면']];
+            if (commOpen('people')) notiKinds.push(['dm', '✉️', '1:1 메시지', '메시지가 도착하면'], ['chatReq', '💬', '대화 요청', '대화 요청을 받으면'], ['follow', '➕', '새 팔로워', '누가 나를 팔로우하면'], ['feed', '📰', '팔로잉 새 글', '팔로우한 이웃이 글을 올리면']);
+            const noti = secT('🔔', '알림', alertCfg.enabled === false ? '· 맨 위 🔔 알림이 꺼져 있어요' : '')
+                + aCard(notiKinds.map(([k, i, t, d]) => aRow(i, t, d, commSetSw(k, t))).join(''))
+                + aCard(aRow('💬', '화면에 알림창 띄우기', '소식이 오면 화면 구석에 잠깐 보여 줘요', commSetSw('commToast', '알림창')) + aRow('🔴', '커뮤니티 버튼에 빨간 숫자', '안 본 소식 개수를 표시해요', aSw(alertCfg.commBadge !== false, "setAlertCfg('commBadge', this.checked); updateCommBadge();", '빨간 숫자')))
+                + `<div class="mb-4 -mt-1 px-1"><button type="button" onclick="closeSheet(); toggleAlertPanel(true)" class="text-[0.6875rem] font-bold text-blue-600 dark:text-blue-400 hover:underline">🔊 소리·지역·사건 종류 알림은 맨 위 🔔에서 →</button></div>`;
+            const privacy = verified ? secT('🔒', '공개 범위') + aCard(
+                aRow('📷', '내 일상 게시물 공개', '끄면 내 일상 게시물은 나만 볼 수 있어요', aSw(commProfile.feedPublic !== false, "setFeedPrivacy('feedPublic', this.checked)", '게시물 공개')) +
+                aRow('🏆', '인기쟁이 순위에 공개', '켜면 동네 인기 순위에 내 프로필이 나와요 (기본: 꺼짐)', aSw(!!commProfile.rankPublic, "setFeedPrivacy('rankPublic', this.checked)", '인기쟁이 순위 공개'))) : '';
+            const look = secT('🎨', '화면') + aCard(`<div class="py-3"><div class="text-[0.6875rem] font-bold text-slate-500 mb-2">커뮤니티 배경색</div><div id="commBgDots" class="flex items-center gap-2.5 flex-wrap"></div></div>`
+                + (FIREBASE_CONFIG ? '' : aRow('🧪', '예시 게시물 보기 (체험 모드)', "게시판마다 '(예시)' 글을 보여 줘요. 서버를 연결하면 자동으로 사라져요", aSw(demoOn(), "lsSet('demo_samples_off', this.checked ? '0' : '1'); location.reload()", '예시 게시물'))));
+            const acct = secT('👤', '계정') + aCard(
+                (verified ? linkRow('resetTown()', '📍', '동네 다시 인증', esc(townName(myTown)) + ' · 이사했을 때 눌러 주세요') : '')
+                + linkRow('openTour(0)','❓', '사용 안내 다시 보기', '')
+                + (loggedIn ? linkRow('commLogout()', '🚪', '로그아웃', '', true) : ''));
+            openSheet(sheetHead('⚙️', '커뮤니티 설정', '알림 · 공개 범위 · 화면 · 계정') + `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4">${me}${quick}${noti}${privacy}${look}${acct}</div>`);
             renderCommBg();
         }
         function toggleFloatWide() { setFloatW(floatW ? 0 : 96); }
