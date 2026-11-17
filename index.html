@@ -11083,8 +11083,13 @@
             'me:rest': { text: '내 일상과 활동이 모이는 곳이에요.', bullets: ['📸 내 일상: 사진·글 올리기', '✏️ 닉네임은 한 번 바꾸면 3개월 뒤에 다시 바꿀 수 있어요', '🛡️ 신뢰 지수·받은 공감 확인', '⚙️ 설정: 공개 범위·차단 관리'] }
         };
         function tourShortKey(s, i) { return s.comm ? s.comm + ':' + s.part : (s.openComm ? 'comm' : i); }
+        // 사고 다발 지역 순위 안내 (PC: 분류 버튼 다음 · 휴대폰: 사건 목록 화면 맨 위 빨간 버튼)
+        const TOUR_HOT = { icon: '🚨', title: '사고 다발 지역 순위', _i: 'hot',
+            target: () => (isMobile() ? document.getElementById('mobileHotBtn') : (document.querySelector('#categoryBar [data-cat="범죄 다발 지역"]') || document.getElementById('catHotBtn'))),
+            text: '최근 7일 동안 사건이 많이 일어난 시·군·구를 순위로 보여 줘요. 순위를 누르면 그 지역 사건만 모아서 볼 수 있어요.',
+            bullets: ['같은 사건은 한 건으로 세어서 순위를 매겨요', '내가 사는 동네가 이번 주 얼마나 조용했는지 한눈에 알 수 있어요'] };
         function tourBuildSteps() {
-            if (!isMobile()) return TOUR_ALL;
+            if (!isMobile()) { const a = TOUR_ALL.slice(); a.splice(4, 0, TOUR_HOT); return a; }
             const steps = TOUR_ALL.map((s, i) => Object.assign({}, s, TOUR_SHORT[tourShortKey(s, i)] || {}, { tab: TOUR_TAB[i], _i: i })).filter(s => s._i !== 7).map(s => {
                 if (s._i === 3) return Object.assign(s, { title: '분류 버튼', tab: 'list', text: '[분류] 줄을 누르면 펼쳐져요. 교통·화재·범죄 같은 종류만 골라 볼 수 있어요. 기사를 누르면 원문 탭으로 넘어가요.', target: () => document.getElementById('listCatBar') });
                 if (s._i === 8) return Object.assign(s, { icon: '🌙', title: '라이트 / 다크 모드', text: '오른쪽 위 달 모양 버튼으로 밝은 화면과 어두운 화면을 바꿀 수 있어요. 이 안내는 왼쪽의 [?] 버튼으로 언제든 다시 볼 수 있어요.', target: () => document.getElementById('themeBtn') });
@@ -11108,7 +11113,8 @@
             // ── 순서 정리: 화면(탭)을 한 번씩만 지나가고, 한 화면 안에서는 위→아래, 왼쪽→오른쪽 순서로 안내 (왔다 갔다 하지 않게)
             //   ① 환영 → ② 사건 목록 화면(맨 위 종·달 → 브리핑·제보 → 지역 → 분류 → 날짜·목록 → 아래 아이콘) → ③ 원문 기사 화면 → ④ 사건 지도 화면 → ⑤ 커뮤니티
             const by = k => steps.find(x => x._i === k);
-            const listIds = [0, 'alert', 8, 5, 6, 1, 3, 2, 'tabs'];
+            steps.push(Object.assign({}, TOUR_HOT, { tab: 'list' }));
+            const listIds = [0, 'alert', 8, 5, 6, 'hot', 1, 3, 2, 'tabs'];
             [0, 'alert', 8, 5, 6, 'tabs'].forEach(k => { const s = by(k); if (s) s.tab = 'list'; });      // 이전/다음으로 오가도 항상 같은 화면에서 시작
             const art = { icon: '📰', title: '원문 기사 화면', tab: 'article', _i: 'article', target: () => document.getElementById('centerPane'),
                 text: '목록에서 사건을 누르면 이 화면으로 넘어와요. 기사 요약을 읽고, 위쪽 버튼으로 원문 보기·공유·새 창 열기를 할 수 있어요.',
