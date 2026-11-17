@@ -194,6 +194,7 @@
         #catToggleBtn:hover { background: #eef2ff; border-color: #a5b4fc; }
         .dark #catToggleBtn { background: #1e293b; border-color: #475569; color: #e2e8f0; }
         #catFoldBtn { display: none; }
+        #artBtnSlot { display: none; }
         #catToggleBtn .lbl { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         #catToggleBtn .chev { transition: transform .2s; font-size: 11px; opacity: .6; }
         #categoryBar:not(.cat-collapsed) #catToggleBtn .chev { transform: rotate(180deg); }
@@ -297,6 +298,8 @@
             #appHeader #heroBtns { order: 4; }
             #categoryBar:not(.cat-collapsed) #catFoldBtn { display: flex; align-items: center; justify-content: center; width: 100%; height: 26px; border-radius: 8px; background: #e0e7ff; color: #4338ca; font-size: 13px; }
             .dark #categoryBar:not(.cat-collapsed) #catFoldBtn { background: #312e81; color: #c7d2fe; }
+            #artBtnSlot:not(:empty) { display: flex; }
+            .art-bar { display: none !important; }     /* 모바일: 공유·원문·요약 버튼은 분류 줄 오른쪽(#artBtnSlot)에 함께 둠 */
             #catHotBtn.cat-back { background: #4f46e5; border-color: #4338ca; }
             #categoryBar:not(.cat-collapsed) #groupButtons { max-height: 42vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
             #groupButtons button[data-cat="범죄 다발 지역"] { display: none; }
@@ -774,6 +777,7 @@
                 <div id="catToggleRow">
                     <button id="catToggleBtn" type="button" onclick="toggleCatBar()" aria-expanded="false"><i class="fa-solid fa-filter text-indigo-500"></i><span class="lbl" id="catToggleLabel">분류: 전체</span><i class="fa-solid fa-chevron-down chev"></i></button>
                     <button type="button" id="catHotBtn" onclick="onCatHot()" class="cat-hot-btn shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white border border-rose-700">🚨 다발 지역</button>
+                    <span id="artBtnSlot" class="shrink-0 items-center gap-1"></span>
                 </div>
                 <div id="groupButtons" class="flex flex-wrap items-center gap-1.5"></div>
                 <div id="subButtons" class="flex flex-wrap items-center gap-1" style="display:none"></div>
@@ -2709,6 +2713,7 @@
             });
             if (!listHTML) listHTML = '<div class="text-center py-10 text-xs text-slate-400">위치가 확인된 기사가 아직 없습니다.</div>';
             container.style.padding = '';
+            setArtSlot('');
             container.innerHTML = `
                 <div class="space-y-4 flex-1 flex flex-col">
                     <div class="p-5 rounded-xl border-l-4 border-rose-600 bg-rose-50 dark:bg-rose-950/25">
@@ -2744,6 +2749,7 @@
 
         // ================= 가운데: 기사 원문 (가운데 정렬, 양옆 여백) =================
         function setDetailHTML(html) {
+            setArtSlot('');
             const container = document.getElementById('detailViewContainer');
             if (document.getElementById('hotspotList') && container.scrollTop) { hotspotScrollTop = container.scrollTop; hotspotScrollAt = Date.now(); }   // 순위 화면을 떠나기 직전 위치 저장
             container.style.padding = '';
@@ -2773,12 +2779,10 @@
                 let host = ''; try { host = new URL(link).hostname.replace(/^www\./, ''); } catch (e) {}
                 container.style.padding = '0';
                 container.innerHTML = `
-                    <div class="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900 text-[0.6875rem] text-slate-600 dark:text-slate-300">
+                    <div class="art-bar shrink-0 flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/40 border-b border-blue-200 dark:border-blue-900 text-[0.6875rem] text-slate-600 dark:text-slate-300">
                         <i class="fa-solid fa-circle-info text-blue-500"></i>
                         <span class="flex-1 min-w-0 truncate m-hide">기사가 안 보이거나 <b>'${esc(host || '언론사')}에서 연결을 거부했습니다'</b>가 뜨면 → 오른쪽 버튼으로 원문을 여세요</span>
-                        <button onclick="openShare(${news.id})" title="이 사건을 이웃·커뮤니티에 공유" aria-label="공유하기" class="art-ib shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white font-bold whitespace-nowrap"><i class="fa-solid fa-share-nodes"></i><span class="m-hide"> 공유하기</span></button>
-                        <a href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="원문으로 이동" aria-label="원문으로 이동" class="art-ib shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white font-bold whitespace-nowrap"><i class="fa-solid fa-arrow-up-right-from-square"></i><span class="m-hide"> 원문으로 이동</span></a>
-                        <button onclick="renderDetailView(${news.id}, true)" title="이 화면에서 기사 요약으로 보기" aria-label="요약 보기" class="art-ib shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-800 font-bold whitespace-nowrap"><i class="fa-solid fa-align-left"></i><span class="m-hide">요약 보기</span></button>
+                        ${articleBtns(news, link, isGoogle, 'embed')}
                     </div>
                     <div id="articleWrap" class="bg-slate-200 dark:bg-slate-950" style="position:relative; flex:1 1 auto; min-height:0; overflow:hidden;">
                         <iframe id="articleFrame" src="${esc(embedUrl)}" referrerpolicy="no-referrer"
@@ -2793,17 +2797,19 @@
                         </div>
                     </div>`;
                 fitArticleFrame();
+                setArtSlot(articleBtns(news, link, isGoogle, 'embed'));
                 return;
             }
 
             // 원문을 이 화면에 띄울 수 없는 기사 (언론사가 막아 둠 / 구글 뉴스 중계 주소 / 주소 없음)
             const notice = !link ? '이 기사는 원문 주소가 없습니다.'
-                : forceCard ? '기사 요약입니다. 아래 버튼으로 원문을 새 창에서 열 수 있습니다.'
+                : forceCard ? '기사 요약입니다. 위쪽 신문 아이콘(원문 보기)을 누르면 이 화면 안에서 원문을 다시 볼 수 있습니다.'
                 : isGoogle ? '이 기사는 아직 구글 뉴스 중계 주소라서 이 화면에 바로 띄울 수 없습니다. 아래 버튼으로 원문을 열어 주세요.'
                 : news.orig ? '해외 언론(' + esc(news.source || '') + ') 기사는 다른 사이트 화면 안에서 여는 것을 막아 둔 곳이 많아 번역한 제목으로 보여 드립니다. 아래 버튼으로 원문(영문)을 열어 주세요.'
                 : '이 언론사(' + esc(news.source || '') + ')는 다른 사이트 화면 안에서 기사를 여는 것을 막아 두었습니다. 아래 버튼으로 원문을 열어 주세요.';
             setDetailHTML(`
                 <div class="m-auto w-full max-w-2xl space-y-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+                    <div class="art-bar sticky top-0 z-10 -mt-2 -mx-2 flex items-center justify-end gap-2 px-2 py-1.5 rounded-xl bg-blue-50/95 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900 backdrop-blur">${articleBtns(news, link, isGoogle, 'card')}</div>
                     <div class="flex flex-wrap items-center justify-between gap-2 text-sm text-slate-500">
                         <span class="flex flex-wrap items-center gap-1">${tagBadges(news, 'lg')}</span>
                         <span class="truncate">${esc(news.source || '')} · ${esc(news.time || '')}</span>
@@ -2814,10 +2820,13 @@
                     ${news.summary && news.summary !== news.title ? `<p class="text-lg text-slate-700 dark:text-slate-200 leading-relaxed">${esc(news.content && news.content.length > news.summary.length ? news.content : news.summary)}</p>` : ''}
                     <p class="text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">${notice}</p>
                     <button onclick="openShare(${news.id})" class="w-full flex items-center justify-center gap-1.5 text-base font-bold text-white bg-emerald-600 hover:bg-emerald-500 px-4 py-3 rounded-lg shadow"><i class="fa-solid fa-share-nodes"></i> 이웃·커뮤니티에 공유하기</button>
-                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-1.5 text-base font-bold text-white bg-blue-600 hover:bg-blue-500 px-4 py-3 rounded-lg shadow"><i class="fa-solid fa-arrow-up-right-from-square"></i> 기사 원문 새 창으로 열기</a>` : ''}
-                    ${link && !isGoogle && (forceCard || news.orig) ? `<button onclick="tryEmbedArticle(${news.id})" class="w-full text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800">이 화면 안에서 원문 열어 보기 (언론사가 막아 두면 빈 화면이 뜹니다)</button>` : ''}
+                    ${link && !isGoogle ? `<button onclick="tryEmbedArticle(${news.id})" class="w-full flex items-center justify-center gap-1.5 text-base font-bold text-white bg-indigo-600 hover:bg-indigo-500 px-4 py-3 rounded-lg shadow"><i class="fa-solid fa-newspaper"></i> 이 화면에서 원문 보기</button>` : ''}
+                    ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800"><i class="fa-solid fa-arrow-up-right-from-square"></i> 새 창으로 열기 (이 사이트를 떠납니다)</a>` : ''}
                 </div>`);
+            setArtSlot(articleBtns(news, link, isGoogle, 'card'));
         }
+        // 휴대폰: 공유·원문 보기·요약 보기 버튼을 분류 줄 오른쪽 빈 자리에 둠 (따로 한 줄을 차지하지 않게)
+        function setArtSlot(html) { const el = document.getElementById('artBtnSlot'); if (el) el.innerHTML = html || ''; }
 
         // ================= 사건 공유하기 =================
         //  ① 📱 이웃에게 바로 공유: 휴대폰의 공유창(카카오톡·문자·밴드·메일 등)을 엶 — 공유창이 없는 PC 에서는 내용을 복사
@@ -2905,6 +2914,15 @@
             });
         }
 
+        // 원문·요약 화면 맨 위 버튼 줄 (모바일은 아이콘만). 요약 화면에서도 같은 줄이 남아 언제든 이 사이트 안에서 원문으로 돌아올 수 있음
+        function articleBtns(news, link, isGoogle, mode) {
+            const base = 'art-ib shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-bold whitespace-nowrap text-[0.6875rem]';
+            const share = `<button onclick="openShare(${news.id})" title="이 사건을 이웃·커뮤니티에 공유" aria-label="공유하기" class="${base} bg-emerald-600 hover:bg-emerald-500 text-white"><i class="fa-solid fa-share-nodes"></i><span class="m-hide"> 공유하기</span></button>`;
+            const ext = link ? `<a href="${esc(link)}" target="_blank" rel="noopener noreferrer" title="새 창으로 열기 (이 사이트를 떠납니다)" aria-label="새 창으로 열기" class="${base} bg-blue-600 hover:bg-blue-500 text-white"><i class="fa-solid fa-arrow-up-right-from-square"></i><span class="m-hide"> 새 창으로 열기</span></a>` : '';
+            const toSummary = `<button onclick="renderDetailView(${news.id}, true)" title="이 화면에서 기사 요약으로 보기" aria-label="요약 보기" class="${base} border border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-align-left"></i><span class="m-hide">요약 보기</span></button>`;
+            const toOrig = link && !isGoogle ? `<button onclick="tryEmbedArticle(${news.id})" title="이 화면에서 원문 보기" aria-label="원문 보기" class="${base} bg-indigo-600 hover:bg-indigo-500 text-white"><i class="fa-solid fa-newspaper"></i><span class="m-hide"> 원문 보기</span></button>` : '';
+            return share + (mode === 'embed' ? ext + toSummary : toOrig + ext);
+        }
         function tryEmbedArticle(id) {
             const n = newsData.find(x => x.id === id);
             if (!n) return;
