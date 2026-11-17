@@ -10413,9 +10413,46 @@
             ['보이스피싱 (일반)', /보이스\s*피싱|전화\s*금융\s*사기|수거책|현금\s*수거/, '돈을 직접 받으러 오겠다는 사람(수거책)에게 절대 현금을 건네지 마세요.']
         ];
         let briefCfg = (() => {
-            const base = { times: ['08:00'], scope: 'sigungu', radius: 10, autoOpen: true, notify: true, lastShown: '' };
-            try { return Object.assign(base, JSON.parse(lsGet('brief_cfg') || '{}')); } catch (e) { return base; }
+            const base = { times: ['08:00'], scope: 'sigungu', scopes: null, areas: [], radius: 10, autoOpen: true, notify: true, lastShown: '' };
+            let o = base;
+            try { o = Object.assign(base, JSON.parse(lsGet('brief_cfg') || '{}')); } catch (e) { o = base; }
+            if (!Array.isArray(o.scopes)) o.scopes = [o.scope || 'sigungu'];       // 예전에는 범위를 하나만 골랐음
+            if (!Array.isArray(o.areas)) o.areas = [];
+            return o;
         })();
+        const briefHas = s => briefCfg.scopes.includes(s);
+        let briefPick = { sido: '' };                         // 설정 화면에서 지역을 고르는 중인 시·도
+        function briefAreaMap() {
+            if (briefAreaMap._m) return briefAreaMap._m;
+            const m = {};
+            Object.keys(SIGUNGU_CENTERS).forEach(k => { const i = k.indexOf(' '); if (i > 0) (m[k.slice(0, i)] = m[k.slice(0, i)] || []).push(k.slice(i + 1)); });
+            return (briefAreaMap._m = m);
+        }
+        function briefToggleScope(s) {
+            const i = briefCfg.scopes.indexOf(s);
+            if (i >= 0) briefCfg.scopes.splice(i, 1); else briefCfg.scopes.push(s);
+            saveBriefCfg(); openBriefing('settings');
+        }
+        function briefAddArea() {
+            const a = document.getElementById('briefSido'), b = document.getElementById('briefSgg');
+            if (!a || !a.value) return;
+            const v = a.value + (b && b.value ? ' ' + b.value : '');
+            if (!briefCfg.areas.includes(v)) briefCfg.areas.push(v);
+            // 시·도 전체를 넣으면 그 안의 시·군·구는 따로 둘 필요가 없음
+            if (!(b && b.value)) briefCfg.areas = briefCfg.areas.filter(x => x === v || !x.startsWith(a.value + ' '));
+            else if (briefCfg.areas.includes(a.value)) briefCfg.areas = briefCfg.areas.filter(x => x !== v);
+            saveBriefCfg(); openBriefing('settings');
+        }
+        function briefRemoveArea(i) { briefCfg.areas.splice(i, 1); saveBriefCfg(); openBriefing('settings'); }
+        function briefLabelAll(c) {
+            if (briefHas('all')) return '전국';
+            const short = s => s.replace(/특별자치시|특별자치도|특별시|광역시/g, '').trim();
+            const parts = briefCfg.areas.map(short);
+            if (c && briefCfg.scopes.some(s => s !== 'all')) parts.unshift(c.label + (briefHas('near') ? ' 반경 ' + briefCfg.radius + 'km' : ''));
+            const u = parts.filter((x, i) => parts.indexOf(x) === i);
+            if (!u.length) return '전국';
+            return u.length > 3 ? u.slice(0, 3).join(' · ') + ' 외 ' + (u.length - 3) + '곳' : u.join(' · ');
+        }
         let briefTab = 'report';
         function saveBriefCfg() { lsSet('brief_cfg', JSON.stringify(briefCfg)); }
         function briefCenter() {
@@ -10423,21 +10460,34 @@
             const r = alertRegion();
             if (!r) return null;
             const c = SIGUNGU_CENTERS[r.sido + ' ' + r.sigungu] || SIGUNGU_CENTERS[r.sido + ' ' + (r.sigungu || '').split(' ')[0]];
-            return { lat: c ? c[0] : null, lng: c ? c[1] : null, sido: r.sido, sigungu: r.sigungu, dong: r.dong, label: [r.sido, r.sigungu, briefCfg.scope === 'dong' ? r.dong : ''].filter(Boolean).join(' ') };
+            return { lat: c ? c[0] : null, lng: c ? c[1] : null, sido: r.sido, sigungu: r.sigungu, dong: r.dong, label: [r.sido, r.sigungu, briefHas('dong') && !briefHas('sigungu') ? r.dong : ''].filter(Boolean).join(' ') };
         }
         const BRIEF_SCOPES = [['dong', '우리 동네(읍·면·동)'], ['sigungu', '우리 시·군·구'], ['near', '우리 동네 + 가까운 곳(반경)'], ['sido', '우리 시·도'], ['all', '전국']];
+        // 보고 범위는 여러 개를 함께 고를 수 있음: 내 동네·시군구·반경·시도·전국 중 여러 개 + 직접 고른 지역(시·도 전체 또는 시·군·구) 여러 곳. 하나라도 맞으면 포함
+        function briefAreaMatch(n, a) {
+            const loc = n.location || '', i = a.indexOf(' ');
+            const sido = i < 0 ? a : a.slice(0, i), sg = i < 0 ? '' : a.slice(i + 1);
+            if (!loc.includes(sido)) return false;
+            if (!sg) return true;
+            return loc.includes(sg) || (sg.includes(' ') && loc.split(' ').pop() === sg.split(' ')[0]);
+        }
         function briefMatch(n, c) {
             if (isOverseas(n)) return false;
-            if (briefCfg.scope === 'all' || !c) return true;
+            if (briefHas('all')) return true;
+            if (!c && !briefCfg.areas.length) return true;
+            if (briefCfg.areas.some(a => briefAreaMatch(n, a))) return true;
+            return !!c && briefCfg.scopes.some(s => s !== 'all' && briefMatchOne(n, c, s));
+        }
+        function briefMatchOne(n, c, scope) {
             const loc = n.location || '';
-            if (briefCfg.scope === 'sido') return loc.includes(c.sido);
-            if (briefCfg.scope === 'near') {
+            if (scope === 'sido') return loc.includes(c.sido);
+            if (scope === 'near') {
                 if (loc.includes(c.sido) && c.sigungu && loc.includes(c.sigungu)) return true;
                 return c.lat != null && hasCoords(n) && loc.includes(' ') && distKm(n.lat, n.lng, c.lat, c.lng) <= briefCfg.radius;
             }
             if (!loc.includes(c.sido)) return false;
             if (c.sigungu) { const city = c.sigungu.split(' ')[0]; if (!(loc.includes(c.sigungu) || (c.sigungu.includes(' ') && loc.split(' ').pop() === city))) return false; }
-            if (briefCfg.scope === 'dong' && c.dong) return loc.includes(c.dong) || loc.includes(dongStem(c.dong));
+            if (scope === 'dong' && c.dong) return loc.includes(c.dong) || loc.includes(dongStem(c.dong));
             return true;
         }
         // ---- 예방·대처 정보 기사 (tips.json) ----
@@ -10505,12 +10555,12 @@
             const num = (lbl, v, on) => `<div class="rounded-xl px-3 py-2 ${on ? 'bg-white text-indigo-700' : 'bg-white/15 text-white'}"><div class="text-[0.625rem] font-bold ${on ? 'text-indigo-500' : 'opacity-80'}">${lbl}</div><div class="text-3xl font-black leading-none mt-0.5">${v}<span class="text-sm font-bold ml-0.5">건</span></div></div>`;
             const hot = d.topGroups[0] ? `<div class="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs font-extrabold"><span>⚡ 오늘 주의</span>${d.topGroups.slice(0, 2).map(x => `<span class="px-2.5 py-0.5 rounded-full bg-amber-300 text-slate-900">${esc(briefGroupName(x.g))} ${x.n}</span>`).join('')}</div>` : '';
             return `<div class="rounded-2xl bg-gradient-to-br from-indigo-700 via-violet-700 to-fuchsia-700 text-white p-3.5 shadow-lg">
-                <div class="text-[0.6875rem] font-bold opacity-80">${now.getMonth() + 1}월 ${now.getDate()}일 ${p(now.getHours())}:${p(now.getMinutes())} · ${esc(c ? c.label : '전국')}</div>
+                <div class="text-[0.6875rem] font-bold opacity-80">${now.getMonth() + 1}월 ${now.getDate()}일 ${p(now.getHours())}:${p(now.getMinutes())} · ${esc(briefLabelAll(c))}</div>
                 <div class="mt-2 grid grid-cols-2 gap-2">${num('오늘', d.total, true)}${num('최근 7일', w.total, false)}</div>${hot}</div>`;
         }
         // 전국 위험 TOP3: 분류 이름 + 건수만
         function briefNationalHtml() {
-            if (briefCfg.scope === 'all') return '';          // 보고 범위가 이미 전국이면 같은 내용이 되풀이되므로 생략
+            if (briefHas('all')) return '';          // 보고 범위가 이미 전국이면 같은 내용이 되풀이되므로 생략
             const a = briefNational();
             if (!a.top.length) return '';
             return `<section class="space-y-1.5">${briefBanner('🇰🇷', '전국 위험 TOP3', '오늘 ' + a.today + ' · 주간 ' + a.week, 'bg-gradient-to-r from-sky-600 to-blue-700')}
@@ -10529,7 +10579,7 @@
                         <div class="mt-1 flex flex-wrap items-center gap-1 text-[0.625rem] text-slate-500 dark:text-slate-400">${tagBadges(n)}<span>${esc(shortTime(n))} · ${esc((n.location || '').replace('대한민국 (세부 위치 미상)', '위치 미상'))}</span>${k > 1 ? `<span class="px-1.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 font-black">기사 ${k}</span>` : ''}</div>
                     </div></li>`;
             };
-            const scope = esc(a.c ? a.c.label : '전국') + (briefCfg.scope === 'near' ? ' ' + briefCfg.radius + 'km' : '');
+            const scope = esc(briefLabelAll(a.c));
             if (!a.total) return `<div class="rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-700 p-4 text-center text-sm font-extrabold text-slate-500">${scope} · 보도된 사건 없음<div class="text-xs font-normal mt-0.5">⚙ 설정에서 범위를 넓혀 보세요</div></div>`;
             const tips = a.topGroups.slice(0, 3).map(x => { const t = (BRIEF_TIPS[x.g] || [])[0]; return t ? `<li class="flex gap-1.5"><b class="shrink-0 text-emerald-700 dark:text-emerald-300">${esc(briefGroupName(x.g))}</b><span>${esc(t)}</span></li>` : ''; }).join('');
             return `<div class="space-y-4">
@@ -10559,9 +10609,15 @@
                         <div class="flex flex-wrap items-center gap-2">${briefCfg.times.map((t, i) => `<span class="flex items-center gap-1"><input type="time" value="${esc(t)}" onchange="briefCfg.times[${i}] = this.value; saveBriefCfg()" class="${inp}"><button onclick="briefCfg.times.splice(${i}, 1); saveBriefCfg(); openBriefing('settings')" class="text-red-500 text-xs">삭제</button></span>`).join('')}
                         ${briefCfg.times.length < 4 ? `<button onclick="briefCfg.times.push('18:00'); saveBriefCfg(); openBriefing('settings')" class="px-2 py-1 rounded-lg border border-indigo-400 text-indigo-600 text-xs font-bold">+ 시간 추가</button>` : ''}</div>
                         <p class="text-[0.6875rem] text-slate-400 mt-1">정한 시간이 되면 화면에 브리핑이 자동으로 열리고 알림이 갑니다. (이 웹사이트를 열어 둔 상태에서 동작합니다. 휴대폰 앱으로 설치하면 더 편리합니다)</p></div>
-                    <div><div class="font-bold mb-1">📍 보고 범위</div>
-                        <div class="flex flex-wrap gap-1.5">${BRIEF_SCOPES.map(s => `<button onclick="briefCfg.scope = '${s[0]}'; saveBriefCfg(); openBriefing('settings')" class="px-2.5 py-1 rounded-full text-xs font-bold border ${briefCfg.scope === s[0] ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600'}">${s[1]}</button>`).join('')}</div>
-                        ${briefCfg.scope === 'near' ? `<div class="mt-2 flex items-center gap-2 text-xs">반경 <input type="range" min="3" max="50" step="1" value="${briefCfg.radius}" oninput="briefCfg.radius = Number(this.value); this.nextElementSibling.textContent = this.value + 'km'" onchange="saveBriefCfg()"><b>${briefCfg.radius}km</b></div>` : ''}
+                    <div><div class="font-bold mb-1">📍 보고 범위 <span class="text-xs font-normal text-slate-400">(여러 개 함께 고를 수 있어요)</span></div>
+                        <div class="flex flex-wrap gap-1.5">${BRIEF_SCOPES.map(s => `<button onclick="briefToggleScope('${s[0]}')" class="px-2.5 py-1 rounded-full text-xs font-bold border ${briefHas(s[0]) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 dark:border-slate-600'}">${briefHas(s[0]) ? '✓ ' : ''}${s[1]}</button>`).join('')}</div>
+                        <div class="mt-3 font-bold mb-1">🗺 다른 지역도 직접 추가 <span class="text-xs font-normal text-slate-400">(시·도 전체 또는 시·군·구, 원하는 만큼)</span></div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <select id="briefSido" onchange="briefPick.sido = this.value; openBriefing('settings')" class="${inp}"><option value="">시·도 선택</option>${Object.keys(briefAreaMap()).map(s => `<option value="${esc(s)}" ${briefPick.sido === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+                            <select id="briefSgg" class="${inp}"><option value="">${briefPick.sido ? '시·도 전체' : '—'}</option>${(briefAreaMap()[briefPick.sido] || []).map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
+                            <button onclick="briefAddArea()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">+ 추가</button></div>
+                        ${briefCfg.areas.length ? `<div class="mt-2 flex flex-wrap gap-1.5">${briefCfg.areas.map((a, i) => `<span class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-700 text-xs font-bold text-indigo-800 dark:text-indigo-200">${esc(a)}<button onclick="briefRemoveArea(${i})" aria-label="삭제" class="text-red-500 text-sm leading-none px-1">×</button></span>`).join('')}</div>` : ''}
+                        ${briefHas('near') ?`<div class="mt-2 flex items-center gap-2 text-xs">반경 <input type="range" min="3" max="50" step="1" value="${briefCfg.radius}" oninput="briefCfg.radius = Number(this.value); this.nextElementSibling.textContent = this.value + 'km'" onchange="saveBriefCfg()"><b>${briefCfg.radius}km</b></div>` : ''}
                         <p class="text-[0.6875rem] text-slate-400 mt-1">기준 지역: <b>${esc(c ? c.label : '아직 없음')}</b> — 커뮤니티 동네 인증, 지도 위 [알림 설정]의 지역, 또는 현재 위치 알림을 켜면 정해집니다.</p></div>
                     <label class="flex items-center gap-2"><input type="checkbox" ${briefCfg.autoOpen ? 'checked' : ''} onchange="briefCfg.autoOpen = this.checked; saveBriefCfg()"> 정한 시간에 브리핑 창 자동으로 열기</label>
                     <label class="flex items-center gap-2"><input type="checkbox" ${briefCfg.notify ? 'checked' : ''} onchange="briefCfg.notify = this.checked; saveBriefCfg(); if (this.checked && window.Notification && Notification.permission === 'default') Notification.requestPermission()"> 브라우저 알림으로도 받기</label>
@@ -10577,7 +10633,7 @@
                     <p class="text-[0.625rem] text-slate-400">언론 보도를 자동 요약한 참고용입니다. 제목을 누르면 원문으로 이동합니다.</p>
                 </div>`;
             }
-            const sub = `보고 시간 ${briefCfg.times.join(', ') || '없음'} · 범위: ${esc((BRIEF_SCOPES.find(s => s[0] === briefCfg.scope) || [, ''])[1])}`;
+            const sub = `보고 시간 ${briefCfg.times.join(', ') || '없음'} · 범위: ${esc(briefLabelAll(c))}`;
             if (docked) {
                 const pb = document.getElementById('briefPanelBody'), ps = document.getElementById('briefPanelSub');
                 if (ps) ps.innerHTML = sub + ' · ' + p(now.getHours()) + ':' + p(now.getMinutes()) + ' 기준';
