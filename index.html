@@ -833,6 +833,31 @@
             <div id="hotspotBar" class="hidden shrink-0 px-3 py-2 bg-rose-600 text-white text-xs font-bold items-center justify-between gap-2"></div>
 
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
+            <!-- 기사 목록 맨 위로 한 번에 올라가는 작은 버튼 (조금 내려가면 나타남) -->
+            <button id="listToTop" type="button" aria-label="목록 맨 위로" title="맨 위로" class="hidden absolute right-3 bottom-3 z-30 w-9 h-9 rounded-full items-center justify-center text-white bg-slate-800/85 dark:bg-slate-100/90 dark:text-slate-900 shadow-lg ring-1 ring-white/30 backdrop-blur hover:bg-slate-700 dark:hover:bg-white"><i class="fa-solid fa-angle-up"></i></button>
+            <script>
+            (function () {
+                var box = document.getElementById('newsListContainer'), btn = document.getElementById('listToTop');
+                if (!box || !btn) return;
+                var on = false;
+                function place() {   // 휴대폰: 아래 탭 막대(mobileDock) 위로 띄움 (탭을 가리지 않게)
+                    var dock = document.getElementById('mobileDock'), panel = document.getElementById('panel-list');
+                    var over = 0;
+                    if (dock && panel) { var d = dock.getBoundingClientRect(), p = panel.getBoundingClientRect(); if (d.height && d.top < p.bottom) over = p.bottom - d.top; }
+                    btn.style.bottom = (12 + Math.max(0, over)) + 'px';
+                }
+                function sync() { var want = box.scrollTop > 500; if (want) place(); if (want !== on) { on = want; btn.classList.toggle('hidden', !want); btn.classList.toggle('flex', want); } }
+                box.addEventListener('scroll', sync, { passive: true });
+                btn.addEventListener('click', function () {
+                    // 브라우저 부드러운 스크롤은 모바일에서 멈추는 경우가 있어 직접 짧게 애니메이션 (끝나면 맨 위로 확실히 맞춤)
+                    var from = box.scrollTop, t0 = performance.now(), dur = Math.min(450, 120 + from / 12);
+                    window._jump = null;
+                    function step(now) { var p = Math.min(1, (now - t0) / dur); box.scrollTop = from * (1 - (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(step); }
+                    requestAnimationFrame(step);
+                    setTimeout(function () { box.scrollTop = 0; sync(); }, dur + 80);
+                });
+            })();
+            </script>
             <!-- 휴대폰 전용: 다발 지역 순위를 목록 탭 안에서 바로 보여 줌 (원문 탭으로 왔다 갔다 하지 않게) -->
             <div id="mHotspot" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 select-text">
                 <div class="sticky -top-3 z-10 -mx-3 -mt-3 mb-2 px-3 py-2 flex items-center justify-between gap-2 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800"><button type="button" onclick="closeMobileHotspot()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-arrow-left"></i> 뒤로</button><span class="text-sm font-black text-rose-700 dark:text-rose-300">🚨 최근 7일 사고 다발 지역</span><button type="button" onclick="closeMobileHotspot()" aria-label="닫기" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-xmark"></i></button></div>
