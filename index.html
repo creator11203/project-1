@@ -2289,14 +2289,21 @@
             const b = document.getElementById('catToggleBtn'); if (b) b.setAttribute('aria-expanded', String(want));
             setTimeout(() => { if (map) map.invalidateSize(); fitArticleFrame(); }, 60);
         }
-        function updateCatToggle() {
-            const el = document.getElementById('catToggleLabel');
-            if (!el) return;
+        function catSummaryText() {
             const lab = g => (CATEGORY_GROUPS[g] && CATEGORY_GROUPS[g].label) || g;
             let t = '분류: 전체';
             if (currentCategory === '범죄 다발 지역') t = '분류: 7일 다발 지역';
             else if (selCats.size) { const a = Array.from(selCats); t = '분류: ' + lab(a[0]) + (a.length > 1 ? ' 외 ' + (a.length - 1) : ''); }
             else if (exCats.size) t = '분류: ' + exCats.size + '개 빼고 보기';
+            return t;
+        }
+        // 휴대폰: 사건 목록 탭에서도 분류를 바로 고를 수 있게 (원문 탭으로 갔다가 다시 목록으로 오지 않아도 됨). 평소엔 접어 두고 '분류: …' 줄만 보임
+        let mListCatOpen = false;
+        function toggleListCat(open) { mListCatOpen = typeof open === 'boolean' ? open : !mListCatOpen; renderCategoryBar(); }
+        function updateCatToggle() {
+            const el = document.getElementById('catToggleLabel');
+            if (!el) return;
+            const t = catSummaryText();
             el.textContent = t;
             // 다발 지역 순위를 보는 중이면 같은 자리의 버튼이 '← 원문'(바로 돌아가기)으로 바뀜
             const hb = document.getElementById('catHotBtn');
@@ -2380,7 +2387,20 @@
             updateCatToggle();
             // 기사 원문 화면을 3칸에 넣지 않았을 때: 사건 목록(요약) 위에 분류 버튼을 한 줄로 줄여서 보여 줌
             const lcb = document.getElementById('listCatBar');
-            if (lcb) {
+            const lcbMobile = isMobile();
+            if (lcb && lcbMobile) {
+                // 휴대폰: [분류: 전체 ▾] 줄 하나 + 펼치면 분류 버튼(줄바꿈) · 골라 보기/빼고 보기
+                lcb.classList.remove('hidden');
+                const chips = `${allBtn}${order.map(btn).join('')}<span class="flex items-center pl-1 ml-0.5 border-l-2 border-dashed border-slate-400 dark:border-slate-500">${btn(OVERSEAS)}</span>`;
+                lcb.innerHTML = `<button type="button" onclick="toggleListCat()" aria-expanded="${mListCatOpen}" class="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold ${selCats.size || exCats.size ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-200' : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200'}"><i class="fa-solid fa-filter text-indigo-500"></i><span class="flex-1 text-left truncate">${esc(catSummaryText())}</span><i class="fa-solid fa-chevron-${mListCatOpen ? 'up' : 'down'} text-[0.625rem] opacity-70"></i></button>`
+                    + (mListCatOpen ? `<div class="flex flex-wrap items-center gap-1 pt-2">${chips}</div>
+                    <div class="flex items-center gap-1.5 mt-1.5">
+                        <span class="flex items-center rounded-md border border-slate-300 dark:border-slate-600 shrink-0">${modeBtn('include', '✓ 골라 보기')}${modeBtn('exclude', '⊘ 빼고 보기').replace('tip-right', '')}</span>
+                        <span class="cat-hint truncate text-[0.625rem] ${(exMode ? exCats.size : selCats.size) ? 'font-bold ' + (exMode ? 'text-red-600 dark:text-red-300' : 'text-indigo-600 dark:text-indigo-300') : 'text-slate-400'}">${hint}</span>
+                        ${exCats.size ? `<button onclick="clearExcluded()" class="shrink-0 whitespace-nowrap text-[0.625rem] font-bold text-red-600 dark:text-red-300 border border-red-300 dark:border-red-700 rounded px-1.5 py-0.5">⊘ 해제</button>` : ''}
+                        <button type="button" onclick="toggleListCat(false)" class="ml-auto shrink-0 px-2 py-0.5 rounded-md text-[0.625rem] font-bold border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300">접기 <i class="fa-solid fa-chevron-up"></i></button>
+                    </div>` : '');
+            } else if (lcb) {
                 const show = !isDocked('article');
                 lcb.classList.toggle('hidden', !show);
                 lcb.innerHTML = show ? `<div class="hscroll gap-1 items-center pt-2 pb-0.5" title="옆으로 밀어서 더 보기">${allBtn}${order.map(btn).join('')}<span class="flex items-center pl-1 ml-0.5 border-l-2 border-dashed border-slate-400 dark:border-slate-500">${btn(OVERSEAS)}</span></div>
@@ -2407,7 +2427,7 @@
             const subBox = document.getElementById('subButtons');
             subBox.innerHTML = sub;
             subBox.style.display = sub ? 'flex' : 'none';
-            if (lcb && sub && !isDocked('article')) lcb.insertAdjacentHTML('beforeend', `<div class="hscroll gap-1 items-center mt-1">${sub}</div>`);
+            if (lcb && sub && ((lcbMobile && mListCatOpen) || (!lcbMobile && !isDocked('article')))) lcb.insertAdjacentHTML('beforeend', `<div class="hscroll gap-1 items-center mt-1">${sub}</div>`);
             renderDateBar();
         }
 
@@ -3263,6 +3283,7 @@
                 if (rd && el.id !== 'detailViewContainer' && el.id !== 'mHotspot') return;
                 const y = el.scrollTop, p = lastY.has(el) ? lastY.get(el) : 0, dy = y - p;
                 lastY.set(el, y);
+                if (el.id === 'newsListContainer' && mListCatOpen && y > 40 && dy > 10) toggleListCat(false);     // 목록을 내려 보면 펼친 분류 줄은 접어 자리를 비움
                 if (rd && y > 24 && dy > 6) {
                     document.body.classList.remove('m-hdr-open');
                     const cb = document.getElementById('categoryBar'); if (cb && !cb.classList.contains('cat-collapsed')) toggleCatBar(false);     // 펼친 분류 줄도 스크롤하면 접힘
