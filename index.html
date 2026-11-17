@@ -1606,6 +1606,35 @@
         // 같은 사건을 다룬 기사는 scraper.py 가 같은 사건번호(event)를 붙여 줍니다.
         function evOf(n) { return n.event || n.id; }
         // 기사 목록 → 사건 목록 [{ lead: 대표(가장 최근) 기사, items: 그 사건의 기사들 }]
+        // ── 같은 사건 안에서 '새로 드러난 내용'이 있는 기사 찾기 ──
+        //  이전 기사들에 없던 숫자(인원·금액·건수)나 진행 단계(사망·구속·검거·원인 확인·피해 확대·사과·복구 …)가 나오면 후속 소식으로 보고,
+        //  그 기사를 사건의 '최신 소식'으로 앞에 보여 줌 (분류와 상관없이 모든 사건에 똑같이 적용)
+        const UPD_STATUS = /사망|숨졌|숨진|숨져|부상|중상|실종|구속|입건|검거|체포|송치|기소|영장|원인|밝혀|드러|추가|확산|늘어|급증|재발|사과|보상|차단|복구|재개|진화|완진|수색|발견|신원|용의자|피의자|자수|국과수|감식|압수수색|수사\s*착수|피해\s*확인|유출\s*확인|확인됐|공식\s*확인|대피|통제|운행\s*재개|정상화/g;
+        const UPD_NUM = /\d[\d,.]*\s*(?:명|건|곳|억|만\s*원|원|%|대|개|마리|채|가구|톤|㎡)/g;
+        function infoOf(n) {
+            if (n._inf) return n._inf;
+            const text = (n.title || '') + ' ' + String(n.summary || '').slice(0, 160);
+            const words = new Set((text.match(/[가-힣A-Za-z]{3,}/g) || []).map(w => w.replace(/(?:에서|으로|에게|까지|부터|이라|라는|입니다|했다|한다|됐다|된다|했고|하며|하고)$/, '')).filter(w => w.length >= 3));
+            n._inf = { nums: new Set((text.match(UPD_NUM) || []).map(s => s.replace(/[\s,]/g, ''))), st: new Set(text.match(UPD_STATUS) || []), words };
+            return n._inf;
+        }
+        function markUpdates(ev) {
+            const arr = ev.items.slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            const seen = { nums: new Set(), st: new Set(), words: new Set() };
+            let head = null;
+            arr.forEach((n, i) => {
+                const f = infoOf(n);
+                if (i > 0) {
+                    const nn = [...f.nums].filter(x => !seen.nums.has(x)), ns = [...f.st].filter(x => !seen.st.has(x)), nw = [...f.words].filter(x => !seen.words.has(x));
+                    n._upd = nn.length > 0 || ns.length > 0 || (nw.length >= 5 && nw.length / Math.max(1, f.words.size) >= 0.6);
+                    n._updWhy = nn.length ? nn[0] : (ns.length ? ns[0] : '');
+                    if (n._upd) head = n;
+                } else n._upd = false;
+                f.nums.forEach(x => seen.nums.add(x)); f.st.forEach(x => seen.st.add(x)); f.words.forEach(x => seen.words.add(x));
+            });
+            ev.head = head;       // 새로 드러난 내용이 담긴 가장 최근 기사 (없으면 null)
+            ev.first = arr[0];
+        }
         function groupEvents(list) {
             const map = new Map();
             list.forEach(n => {
@@ -1626,6 +1655,7 @@
                 ev.items.forEach(n => { if ((n.timestamp || 0) >= newest - 12 * 3600 && score(n) > score(best) + 0.5) best = n; });
                 ev.lead = best;
             });
+            map.forEach(ev => { if (ev.items.length > 1) markUpdates(ev); });
             return Array.from(map.values());
         }
         function todayKey() { return dateKey(Date.now() / 1000); }
@@ -1753,6 +1783,7 @@
         async function loadIncidentsOnce(isManualRefresh = false) {
             let changed = false;
             const prevEvents = new Set(newsData.map(evOf));
+            const prevIds = new Set(newsData.map(n => n.id));
             if (!isManualRefresh && lastSig) {
                 try {
                     const head = await fetch('news.json?t=' + Date.now(), { method: 'HEAD', cache: 'no-store' });
@@ -1783,7 +1814,7 @@
                             data = data.filter(keepOnSite);   // 재판·판결 소식, 한국과 관련 없는 해외 소식은 화면에 올리지 않음
                             newsData = localReports.concat(data);
                             if (!first) {
-                                freshEventKeys = new Set(); newsData.forEach(n => { if (!prevEvents.has(evOf(n))) freshEventKeys.add(evOf(n)); });
+                                freshEventKeys = new Set(); newsData.forEach(n => { if (!prevEvents.has(evOf(n)) || (!prevIds.has(n.id) && n.timestamp >= Date.now() / 1000 - 1800)) freshEventKeys.add(evOf(n)); });
                                 const mark = freshEventKeys;   // 새 기사 'NEW' 표시는 3분 뒤 사라짐
                                 setTimeout(() => { if (freshEventKeys === mark) { freshEventKeys = new Set(); renderNewsList(); } }, 180000);
                             }
@@ -2571,6 +2602,8 @@
                     container.appendChild(h);
                 }
 
+                const hd = ev.head || news;                                    // 새 소식이 있으면 그 기사가 사건의 대표 제목
+                const hdPick = hasCoords(hd) ? hd : news;                       // 눌렀을 때 지도에 띄울 기사 (위치를 모르면 대표 기사)
                 const hasSelected = ev.items.some(n => n.id === selectedNewsId);
                 const open = expandedEvents.has(ev.key);
                 const card = document.createElement('div');
@@ -2581,23 +2614,25 @@
                 const main = document.createElement('div');
                 main.className = 'p-3 pl-3.5 cursor-pointer';
                 main.tabIndex = 0;
-                main.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectNews(news.id); } };
-                main.onclick = () => selectNews(news.id);
+                main.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectNews(hdPick.id); } };
+                main.onclick = () => selectNews(hdPick.id);
                 main.innerHTML = `
                     <div class="flex items-start justify-between mb-1.5 gap-1">
                         <span class="flex flex-wrap items-center gap-1 min-w-0">
                             ${freshEventKeys.has(ev.key) ? '<span class="new-badge"><i class="fa-solid fa-bolt"></i>NEW</span>' : ''}
+                            ${ev.head ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-amber-500 text-white font-extrabold" title="같은 사건에서 새로 드러난 내용이 있는 기사를 맨 위에 보여 줍니다">🆕 새 소식</span>' : ''}
                             ${isOverseas(news) ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-zinc-700 text-white font-extrabold">🌍 해외</span>' : ''}
                             ${isCourt(news) ? courtBadge() : ''}
                             ${tagBadges(news)}
                         </span>
                         <span class="text-[0.625rem] text-slate-500 whitespace-nowrap shrink-0 font-mono" title="${esc(ev.latest && ev.latest !== news ? '가장 최근 기사 ' + ev.latest.time + ' · 대표 기사(내용이 가장 자세한 기사) ' + news.time : news.time)}">${esc(shortTime(ev.latest || news))}</span>
                     </div>
-                    <h3 class="text-[0.8125rem] leading-snug font-bold text-slate-900 dark:text-white line-clamp-2 mb-1 tracking-tight">${esc(news.title)}</h3>
-                    <p class="text-[0.6875rem] text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">${esc(news.summary)}</p>
+                    <h3 class="text-[0.8125rem] leading-snug font-bold text-slate-900 dark:text-white line-clamp-2 mb-1 tracking-tight">${esc(hd.title)}</h3>
+                    <p class="text-[0.6875rem] text-slate-600 dark:text-slate-400 line-clamp-2 mb-2">${esc(hd.summary || news.summary)}</p>
+                    ${ev.head && ev.first && ev.first.id !== hd.id ? `<p class="text-[0.625rem] text-slate-500 mb-1.5 line-clamp-1">처음 보도: ${esc(ev.first.title)}</p>` : ''}
                     <div class="flex items-center justify-between gap-2 text-[0.625rem] text-slate-500 pt-1 border-t border-slate-100 dark:border-slate-800">
                         <span class="truncate"><i class="fa-solid fa-location-dot text-red-500"></i> ${esc(news.location)}</span>
-                        <span class="font-medium shrink-0 flex items-center gap-1.5">${esc(news.source)}<button type="button" onclick="event.stopPropagation(); openShare(${news.id})" title="이웃·커뮤니티에 공유" class="px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold"><i class="fa-solid fa-share-nodes"></i> 공유</button></span>
+                        <span class="font-medium shrink-0 flex items-center gap-1.5">${esc(hd.source || news.source)}<button type="button" onclick="event.stopPropagation(); openShare(${hdPick.id})" title="이웃·커뮤니티에 공유" class="px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 font-bold"><i class="fa-solid fa-share-nodes"></i> 공유</button></span>
                     </div>`;
                 card.appendChild(main);
 
@@ -2612,7 +2647,7 @@
                             const row = document.createElement('div');
                             row.className = `px-3 py-1.5 text-[0.6875rem] cursor-pointer border-t border-slate-100 dark:border-slate-800 ${n.id === selectedNewsId ? 'bg-red-50 dark:bg-red-950/30 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`;
                             row.onclick = () => selectNews(n.id);
-                            row.innerHTML = `<div class="text-slate-800 dark:text-slate-100 line-clamp-2">${isOverseas(n) ? '<b class="text-zinc-500">[해외]</b> ' : ''}${esc(n.title)}</div><div class="text-[0.625rem] text-slate-500">${esc(n.source)} · ${esc(shortTime(n))}</div>`;
+                            row.innerHTML = `<div class="text-slate-800 dark:text-slate-100 line-clamp-2">${n._upd ? '<b class="text-amber-600">🆕</b> ' : ''}${isOverseas(n) ? '<b class="text-zinc-500">[해외]</b> ' : ''}${esc(n.title)}</div><div class="text-[0.625rem] text-slate-500">${esc(n.source)} · ${esc(shortTime(n))}</div>`;
                             card.appendChild(row);
                         });
                     }
@@ -4019,6 +4054,15 @@
             // 새로 모인 기사라도 3시간보다 오래된 일(지난 날짜 채우기·구글 검색으로 뒤늦게 들어온 기사)은 '방금 난 사건'이 아니므로 알리지 않음
             const freshSince = Date.now() / 1000 - 3 * 3600;
             const live = fresh.filter(n => alertStageOk(n) && Number(n.timestamp) >= freshSince);
+            // 이미 알린 사건이라도 '새로 드러난 내용'이 담긴 후속 기사가 들어오면 그 내용을 다시 알림 (예: 피해 규모 확대·용의자 검거·원인 확인)
+            const newIds = new Set(newArticles.map(n => n.id));
+            const upd = groupEvents(list.filter(alertStageOk)).map(ev => ev.head).filter(h => h && newIds.has(h.id) && !live.includes(h) && Number(h.timestamp) >= freshSince);
+            const updHere = upd.filter(matchHere), updMine = upd.filter(n => !updHere.includes(n) && matchAlertRegion(n));
+            updHere.concat(updMine).slice(0, 3).forEach(n => showAlertToast({
+                head: '🆕 사건 새 소식', badge: n.category, title: n.title,
+                foot: (n.location || '') + ' · ' + (n.source || ''), newsId: n.id, here: updHere.includes(n)
+            }));
+            if (updHere.length || updMine.length) playAlertSound();
             const here = live.filter(matchHere);
             const mine = live.filter(n => !here.includes(n) && matchAlertRegion(n));
             if (here.length === 0 && mine.length === 0) return;
