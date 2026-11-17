@@ -292,8 +292,12 @@
             #commTabBar .comm-tab { padding: 7px 14px 7px 7px; font-size: 13px; }
             #commHeadBtns button[onclick="setFloatW(0)"], #commHeadBtns button[onclick="closeFloat()"] { display: none !important; }   /* 아래 알약 탭이 계속 보이므로 닫기·돌아가기 버튼 불필요 */
             #commHeadBtns .comm-head-btn { padding: 7px 10px; }
+            .float-grip { display: none !important; }     /* 창 너비를 끄는 손잡이(PC 전용): 휴대폰에서는 창이 화면 가득이라 필요 없음 */
             #catToggleRow { display: flex; }
             #catToggleRow .cat-hot-btn { display: inline-block; }
+            /* 휴대폰: 분류 고르기는 사건 목록 탭(#listCatBar)에서 함 → 원문 탭에는 분류 버튼·펼침 영역을 두지 않고, 줄에는 [다발 지역]과 공유·원문·요약 버튼만 남김 */
+            #catToggleBtn, #categoryBar #groupButtons, #categoryBar #subButtons, #categoryBar #catFoldBtn { display: none !important; }
+            #catToggleRow { justify-content: space-between; }
             /* 휴대폰 맨 위 줄 순서: [로고·제목] … [?(사용 안내)] [달(다크 모드)] → 그 아래 주요 버튼 3개 (PC 에서는 글씨 크기 바로 옆에 다크 모드) */
             #appHeader #themeGroup { order: 3; }
             #appHeader #heroBtns { order: 4; }
@@ -10708,7 +10712,7 @@
         function tourBuildSteps() {
             if (!isMobile()) return TOUR_ALL;
             const steps = TOUR_ALL.map((s, i) => Object.assign({}, s, TOUR_SHORT[tourShortKey(s, i)] || {}, { tab: TOUR_TAB[i], _i: i })).filter(s => s._i !== 7).map(s => {
-                if (s._i === 3) return Object.assign(s, { title: '분류 버튼 · 기사 원문', text: '[분류] 줄을 누르면 펼쳐져요. 교통·화재·범죄 같은 종류만 골라서 볼 수 있고, 다시 누르면 접혀서 기사 원문을 넓게 볼 수 있어요. 목록에서 기사를 누르면 원문 요약이 열려요.', target: () => document.getElementById('catToggleRow') });
+                if (s._i === 3) return Object.assign(s, { title: '분류 버튼', tab: 'list', text: '[분류] 줄을 누르면 펼쳐져요. 교통·화재·범죄 같은 종류만 골라 볼 수 있어요. 기사를 누르면 원문 탭으로 넘어가요.', target: () => document.getElementById('listCatBar') });
                 if (s._i === 8) return Object.assign(s, { icon: '🌙', title: '라이트 / 다크 모드', text: '오른쪽 위 달 모양 버튼으로 밝은 화면과 어두운 화면을 바꿀 수 있어요. 이 안내는 왼쪽의 [?] 버튼으로 언제든 다시 볼 수 있어요.', target: () => document.getElementById('themeBtn') });
                 return s;
             });
