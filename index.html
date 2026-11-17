@@ -2798,6 +2798,7 @@
                     </div>`;
                 fitArticleFrame();
                 setArtSlot(articleBtns(news, link, isGoogle, 'embed'));
+                addEdgeBack(id);
                 return;
             }
 
@@ -2922,6 +2923,36 @@
             const toSummary = `<button onclick="renderDetailView(${news.id}, true)" title="이 화면에서 기사 요약으로 보기" aria-label="요약 보기" class="${base} border border-slate-300 dark:border-slate-600 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-align-left"></i><span class="m-hide">요약 보기</span></button>`;
             const toOrig = link && !isGoogle ? `<button onclick="tryEmbedArticle(${news.id})" title="이 화면에서 원문 보기" aria-label="원문 보기" class="${base} bg-indigo-600 hover:bg-indigo-500 text-white"><i class="fa-solid fa-newspaper"></i><span class="m-hide"> 원문 보기</span></button>` : '';
             return share + (mode === 'embed' ? ext + toSummary : toOrig + ext);
+        }
+        // 휴대폰 '왼쪽 가장자리에서 가운데로 쓸기' = 뒤로가기: 원문 보기에서 기사 요약으로 돌아감
+        //  (원문은 iframe 이라 손가락 동작을 직접 받을 수 없어서, 왼쪽 끝에 얇은 투명 띠를 얹어 쓸기를 감지)
+        function addEdgeBack(id) {
+            const wrap = document.getElementById('articleWrap');
+            if (!wrap || !('ontouchstart' in window)) return;
+            const strip = document.createElement('div');
+            strip.id = 'edgeBack';
+            strip.setAttribute('aria-hidden', 'true');
+            strip.style.cssText = 'position:absolute;left:0;top:0;bottom:0;width:24px;z-index:6;touch-action:pan-y;';
+            const hint = document.createElement('div');
+            hint.style.cssText = 'position:absolute;left:-40px;top:50%;width:40px;height:40px;margin-top:-20px;border-radius:50%;background:rgba(15,23,42,.85);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;pointer-events:none;transition:opacity .15s;opacity:0;';
+            hint.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+            wrap.appendChild(hint);
+            let x0 = 0, y0 = 0, on = false;
+            const reset = () => { on = false; hint.style.transition = 'left .15s, opacity .15s'; hint.style.left = '-40px'; hint.style.opacity = '0'; };
+            strip.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; on = true; hint.style.transition = 'opacity .15s'; }, { passive: true });
+            strip.addEventListener('touchmove', e => {
+                if (!on) return;
+                const t = e.touches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
+                if (dx > 6 && dx > dy) { const p = Math.min(dx, 90); hint.style.left = (p - 40) + 'px'; hint.style.opacity = String(Math.min(1, dx / 60)); }
+            }, { passive: true });
+            strip.addEventListener('touchend', e => {
+                const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
+                const go = on && dx > 70 && dx > dy * 1.5;
+                reset();
+                if (go) renderDetailView(id, true);
+            }, { passive: true });
+            strip.addEventListener('touchcancel', reset, { passive: true });
+            wrap.appendChild(strip);
         }
         function tryEmbedArticle(id) {
             const n = newsData.find(x => x.id === id);
