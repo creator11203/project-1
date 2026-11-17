@@ -714,7 +714,7 @@
                         <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-500"></span></span>
                         실시간 업데이트 중 <span class="live-dots"><i></i><i></i><i></i></span>
                     </span>
-                    <span id="staleStatus" class="hidden ml-auto items-center gap-1 text-[0.6875rem] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0 whitespace-nowrap" title="수집 서버(GitHub Actions)가 잠시 멈췄을 수 있습니다. 보통 몇 분~수십 분 안에 다시 이어지고, 다시 이어지면 자동으로 '실시간 업데이트 중'으로 돌아갑니다."></span>
+                    <span id="staleStatus" class="hidden ml-auto items-center gap-1 text-[0.6875rem] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shrink-0 whitespace-nowrap" title="수집 서버가 잠시 멈췄을 수 있습니다. 보통 몇 분~수십 분 안에 다시 이어지고, 다시 이어지면 자동으로 '실시간 업데이트 중'으로 돌아갑니다."></span>
                 </div>
 
                 <div class="grid grid-cols-3 gap-1.5">
@@ -1693,7 +1693,7 @@
             el.textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
         }
         // 웹사이트 화면(index.html) 자체가 바뀌었는지 확인
-        //  ※ 예전에는 서버의 변경 표시(ETag)만 비교했는데, GitHub Pages 는 뉴스(news.json)가 올라올 때마다(약 6분마다) 사이트 전체를 다시 배포해서
+        //  ※ 예전에는 서버의 변경 표시(ETag)만 비교했는데, 호스팅 서버는 뉴스(news.json)가 올라올 때마다(약 6분마다) 사이트 전체를 다시 배포해서
         //    화면 내용이 그대로여도 표시가 바뀌었고, 그때마다 오른쪽 아래에 '새 버전' 안내가 잘못 떴습니다.
         //    → 이제 표시가 바뀌면 화면 파일 내용을 직접 받아 비교하고, 내용이 정말 달라졌을 때만 한 번 안내합니다.
         let siteHash = null, siteNotified = false;
@@ -1732,7 +1732,7 @@
                 warn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> 기사 수집 지연 중`;
                 // 몇 분 전 기사인지는 마우스를 올리면 보이게 (좁은 칸에서도 한 줄로 보이도록)
                 warn.title = (newestNewsTs && min >= 90 ? '가장 최근 기사: ' + (min >= 120 ? Math.floor(min / 60) + '시간 ' + (min % 60) + '분' : min + '분') + ' 전. ' : '기사 목록을 읽어 오지 못하고 있습니다. ')
-                    + '수집 서버(GitHub Actions)가 잠시 멈췄을 수 있습니다. 다시 이어지면 자동으로 \'실시간 업데이트 중\'으로 돌아갑니다.';
+                    + '수집 서버가 잠시 멈췄을 수 있습니다. 다시 이어지면 자동으로 \'실시간 업데이트 중\'으로 돌아갑니다.';
             }
         }
         setInterval(() => { if (!document.hidden) updateStaleBadge(); }, 60000);
