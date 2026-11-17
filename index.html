@@ -226,7 +226,7 @@
                 background: rgba(255,255,255,.9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(148,163,184,.5); box-shadow: 0 10px 28px rgba(15,23,42,.3);
                 transform: translateX(-50%); transform-origin: 50% 100%; transition: transform .28s cubic-bezier(.3,.8,.3,1), opacity .28s, box-shadow .28s; }
             .dark #mobileDock { background: rgba(15,23,42,.9); border-color: rgba(71,85,105,.8); }
-            body.m-compact #mobileDock { transform: translateX(-50%) scale(.68); opacity: .88; box-shadow: 0 4px 12px rgba(15,23,42,.25); }
+            body.m-compact:not(.m-dock-open) #mobileDock { transform: translateX(-50%) scale(.68); opacity: .88; box-shadow: 0 4px 12px rgba(15,23,42,.25); }
             #mobileTabs { display: flex; align-items: center; gap: 2px; }
             #mobileTabs button, #mobileCommBtn { position: relative; width: 46px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 999px; color: #64748b; }
             #mobileTabs button i, #mobileCommBtn i { font-size: 19px; }
@@ -280,6 +280,10 @@
             div:has(> #commTabBar):has(#pbBox[data-view="post"]) > #commTabBar, div:has(> #commTabBar):has(#pbBox[data-view="write"]) > #commTabBar,
             div:has(> #commTabBar):has(#pbBox[data-view="post"]) > button[onclick="toggleTabNotice()"], div:has(> #commTabBar):has(#pbBox[data-view="write"]) > button[onclick="toggleTabNotice()"] { display: none !important; }
             .pc-only { display: none !important; }
+            /* 글이 없을 때 목록 가운데의 [첫 글 쓰기]는 오른쪽 아래 둥근 [글쓰기] 버튼과 중복 → 휴대폰에서는 버튼 대신 안내 문구만 */
+            .pb-first-btn { display: none !important; } .pb-first-hint { display: block !important; }
+            /* 오른쪽 아래에 떠 있는 둥근 버튼(글쓰기·물건 올리기·방 만들기)에 목록 맨 아래가 가려지지 않게 아래 여백 */
+            .mk-list, .pb-fab-pad { padding-bottom: 6rem !important; }
             #pbTypes { grid-template-columns: 1fr !important; }
             #pbTypes > button { padding: 10px 12px !important; }
             /* 입력칸 글씨를 16px 이상으로: 아이폰에서 입력칸을 누를 때 화면이 저절로 확대되는 것을 막음 */
@@ -295,7 +299,7 @@
             .float-grip { display: none !important; }     /* 창 너비를 끄는 손잡이(PC 전용): 휴대폰에서는 창이 화면 가득이라 필요 없음 */
             #catToggleRow { display: flex; }
             #catToggleRow .cat-hot-btn { display: inline-block; }
-            /* 휴대폰: 분류 고르기는 사건 목록 탭(#listCatBar)에서 함 → 원문 탭에는 분류 버튼·펼침 영역을 두지 않고, 줄에는 [다발 지역]과 공유·원문·요약 버튼만 남김 */
+            /* 휴대폰: 분류 고르기는 사건 목록 탭(#listCatBar)에서 함 → 원문 탭에는 분류 버튼·펼침 영역을 두지 않고, 줄에는 [사고 다발 지역]과 공유·원문·요약 버튼만 남김 */
             #catToggleBtn, #categoryBar #groupButtons, #categoryBar #subButtons, #categoryBar #catFoldBtn { display: none !important; }
             #catToggleRow { justify-content: space-between; }
             /* 휴대폰 맨 위 줄 순서: [로고·제목] … [?(사용 안내)] [달(다크 모드)] → 그 아래 주요 버튼 3개 (PC 에서는 글씨 크기 바로 옆에 다크 모드) */
@@ -713,7 +717,7 @@
                     <span class="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1 min-w-0 overflow-hidden">
                         <i class="fa-solid fa-location-dot text-red-500"></i> 전국 지역별 상세 필터
                     </span>
-                    <button id="mobileHotBtn" type="button" onclick="openMobileHotspot()" class="shrink-0 items-center gap-1 px-2.5 py-1 rounded-lg text-[0.6875rem] font-black bg-rose-600 text-white border border-rose-700 shadow-sm">🚨 다발 지역</button>
+                    <button id="mobileHotBtn" type="button" onclick="openMobileHotspot()" class="shrink-0 items-center gap-1 px-2.5 py-1 rounded-lg text-[0.6875rem] font-black bg-rose-600 text-white border border-rose-700 shadow-sm">🚨 사고 다발 지역</button>
                     <!-- 평소: 초록 '실시간 업데이트 중' / 수집이 멈추면(최근 기사가 90분 넘게 없거나 news.json 을 못 읽으면): 같은 자리에 노란 '기사 수집 지연 중' -->
                     <span id="liveStatus" title="5초마다 새 기사를 확인하고(다른 탭을 보는 동안은 멈춤), 새 기사가 올라오면 새로고침 없이 바로 목록에 추가합니다" class="ml-auto flex items-center gap-1.5 text-[0.6875rem] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">
                         <span class="relative flex w-2 h-2"><span class="absolute inline-flex w-full h-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-500"></span></span>
@@ -771,7 +775,7 @@
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
             <!-- 휴대폰 전용: 다발 지역 순위를 목록 탭 안에서 바로 보여 줌 (원문 탭으로 왔다 갔다 하지 않게) -->
             <div id="mHotspot" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 select-text">
-                <div class="mb-2 flex items-center justify-between gap-2"><span class="text-sm font-black text-rose-700 dark:text-rose-300">🚨 최근 7일 다발 지역</span><button type="button" onclick="closeMobileHotspot()" class="px-3 py-1 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-xmark"></i> 닫기</button></div>
+                <div class="sticky -top-3 z-10 -mx-3 -mt-3 mb-2 px-3 py-2 flex items-center justify-between gap-2 bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur border-b border-slate-200 dark:border-slate-800"><button type="button" onclick="closeMobileHotspot()" class="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-arrow-left"></i> 뒤로</button><span class="text-sm font-black text-rose-700 dark:text-rose-300">🚨 최근 7일 사고 다발 지역</span><button type="button" onclick="closeMobileHotspot()" aria-label="닫기" class="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200"><i class="fa-solid fa-xmark"></i></button></div>
                 <div id="mHotspotBody"></div>
             </div>
         </div>
@@ -781,7 +785,7 @@
                 <!-- 휴대폰 전용: 분류 버튼 접기/펼치기 줄 (PC에서는 숨김) -->
                 <div id="catToggleRow">
                     <button id="catToggleBtn" type="button" onclick="toggleCatBar()" aria-expanded="false"><i class="fa-solid fa-filter text-indigo-500"></i><span class="lbl" id="catToggleLabel">분류: 전체</span><i class="fa-solid fa-chevron-down chev"></i></button>
-                    <button type="button" id="catHotBtn" onclick="onCatHot()" class="cat-hot-btn shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white border border-rose-700">🚨 다발 지역</button>
+                    <button type="button" id="catHotBtn" onclick="onCatHot()" class="cat-hot-btn shrink-0 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-rose-600 text-white border border-rose-700">🚨 사고 다발 지역</button>
                     <span id="artBtnSlot" class="shrink-0 items-center gap-1"></span>
                 </div>
                 <div id="groupButtons" class="flex flex-wrap items-center gap-1.5"></div>
@@ -2296,7 +2300,7 @@
         function catSummaryText() {
             const lab = g => (CATEGORY_GROUPS[g] && CATEGORY_GROUPS[g].label) || g;
             let t = '분류: 전체';
-            if (currentCategory === '범죄 다발 지역') t = '분류: 7일 다발 지역';
+            if (currentCategory === '범죄 다발 지역') t = '분류: 7일 사고 다발 지역';
             else if (selCats.size) { const a = Array.from(selCats); t = '분류: ' + lab(a[0]) + (a.length > 1 ? ' 외 ' + (a.length - 1) : ''); }
             else if (exCats.size) t = '분류: ' + exCats.size + '개 빼고 보기';
             return t;
@@ -2314,8 +2318,8 @@
             if (hb) {
                 const inHot = currentCategory === '범죄 다발 지역';
                 hb.classList.toggle('cat-back', inHot);
-                hb.innerHTML = inHot ? '<i class="fa-solid fa-arrow-left"></i> 원문' : '🚨 다발 지역';
-                hb.setAttribute('aria-label', inHot ? '기사 원문으로 돌아가기' : '다발 지역 보기');
+                hb.innerHTML = inHot ? '<i class="fa-solid fa-arrow-left"></i> 원문' : '🚨 사고 다발 지역';
+                hb.setAttribute('aria-label', inHot ? '기사 원문으로 돌아가기' : '사고 다발 지역 보기');
             }
         }
         function onCatHot() { if (currentCategory === '범죄 다발 지역') leaveHotspot(); else setCategoryFilter('범죄 다발 지역'); }
@@ -2413,7 +2417,7 @@
                         <span class="cat-hint truncate text-[0.625rem] ${(exMode ? exCats.size : selCats.size) ? 'font-bold ' + (exMode ? 'text-red-600 dark:text-red-300' : 'text-indigo-600 dark:text-indigo-300') : 'text-slate-400'}">${hint}</span>
                         ${exCats.size ? `<button onclick="clearExcluded()" class="shrink-0 whitespace-nowrap text-[0.625rem] font-bold text-red-600 dark:text-red-300 border border-red-300 dark:border-red-700 rounded px-1.5 py-0.5">⊘ 해제</button>` : ''}
                         ${courtBtn(true)}
-                        <button onclick="setCategoryFilter('범죄 다발 지역')" title="7일간 전국 사건사고 다발 지역 (기사 원문 창으로 열림)" class="cat-btn ml-auto shrink-0 px-2 py-0.5 rounded-md text-[0.625rem] border whitespace-nowrap bg-rose-600 text-white border-rose-700 font-bold">🚨 다발 지역</button>
+                        <button onclick="setCategoryFilter('범죄 다발 지역')" title="7일간 전국 사건사고 다발 지역 (기사 원문 창으로 열림)" class="cat-btn ml-auto shrink-0 px-2 py-0.5 rounded-md text-[0.625rem] border whitespace-nowrap bg-rose-600 text-white border-rose-700 font-bold">🚨 사고 다발 지역</button>
                     </div>` : '';
             }
 
@@ -2530,7 +2534,7 @@
             const hotBar = document.getElementById('hotspotBar');
             if (hotBar) {
                 if (currentCategory === '범죄 다발 지역' && selectedHotspotRegion) {
-                    hotBar.innerHTML = `<span class="truncate">🚨 ${esc(selectedHotspotRegion)} · 최근 7일 사건 ${events.length}건</span><button class="shrink-0 px-2 py-0.5 rounded bg-white/20 hover:bg-white/30">← 다발 지역 순위</button>`;
+                    hotBar.innerHTML = `<span class="truncate">🚨 ${esc(selectedHotspotRegion)} · 최근 7일 사건 ${events.length}건</span><button class="shrink-0 px-2 py-0.5 rounded bg-white/20 hover:bg-white/30">← 사고 다발 지역 순위</button>`;
                     hotBar.querySelector('button').onclick = backToHotspots;
                     hotBar.classList.remove('hidden'); hotBar.classList.add('flex');
                 } else {
@@ -3264,6 +3268,7 @@
             // 기사 원문을 읽는 탭: 위쪽 메뉴는 접고 아래 알약은 작게 (원문은 다른 사이트 화면이라 스크롤을 알 수 없어 처음부터 작게 둠)
             if (t !== 'list') closeMobileHotspot(true);
             document.body.classList.toggle('m-compact', isMobile() && t === 'article');
+            if (typeof dockShrinkNow === 'function') dockShrinkNow();
             document.body.classList.remove('m-hdr-open');
             syncMobReading();
             if (isMobile() && !document.getElementById('floatModal').classList.contains('hidden')) closeFloat();      // 커뮤니티 등 떠 있는 창이 열려 있으면 닫고 고른 탭으로
@@ -3297,6 +3302,25 @@
                 else if (dy < -6) document.body.classList.remove('m-compact');
             }, true);
         })();
+        // 원문 탭의 작은 알약: 원문은 언론사 화면이라 그 안의 스크롤을 알 수 없어 처음부터 작게 둠 →
+        //   작은 알약을 한 번 누르면 원래 크기로 커지고(그 터치로는 탭이 바뀌지 않음), 몇 초 뒤 또는 다른 탭으로 가면 다시 작아짐
+        let _dockTimer = 0;
+        function dockShrinkNow() { clearTimeout(_dockTimer); document.body.classList.remove('m-dock-open'); }
+        function dockExpand() {
+            document.body.classList.add('m-dock-open');
+            clearTimeout(_dockTimer);
+            _dockTimer = setTimeout(dockShrinkNow, 6000);
+        }
+        (function dockExpandInit() {
+            const dock = document.getElementById('mobileDock'); if (!dock) return;
+            dock.addEventListener('click', ev => {
+                const sc = document.getElementById('splitContainer');
+                if (!isMobile() || !sc || sc.dataset.m !== 'article') return;
+                const b = document.body;
+                if (b.classList.contains('m-compact') && !b.classList.contains('m-dock-open')) { ev.preventDefault(); ev.stopPropagation(); dockExpand(); }
+                else if (b.classList.contains('m-dock-open')) dockExpand();      // 커진 상태에서 누르면 시간을 다시 늘림 (누른 버튼은 그대로 동작)
+            }, true);
+        })();
         // 휴대폰: 다발 지역 순위를 목록 탭 안에서 바로 열기 (원문 탭으로 왔다 갔다 하지 않음)
         let mHotspotOpen = false;
         function syncMobileHotspot() {
@@ -3322,6 +3346,18 @@
             syncMobReading();
             if (!keep && currentCategory === '범죄 다발 지역' && !selectedHotspotRegion) setCategoryFilter('all');
         }
+        // 사고 다발 지역 순위: 화면 왼쪽 끝에서 가운데로 쓸면 닫고 목록으로 돌아감
+        (function hotEdgeInit() {
+            const m = document.getElementById('mHotspot'); if (!m) return;
+            let x0 = 0, y0 = 0, on = false;
+            m.addEventListener('touchstart', e => { const t = e.touches[0]; on = t.clientX < 28; x0 = t.clientX; y0 = t.clientY; }, { passive: true });
+            m.addEventListener('touchend', e => {
+                if (!on) return; on = false;
+                const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
+                if (dx > 70 && dx > dy * 1.5) closeMobileHotspot();
+            }, { passive: true });
+            m.addEventListener('touchcancel', () => { on = false; }, { passive: true });
+        })();
         // 아래 탭 순서 저장/적용 + 좌우 쓸어 넘기기 + 아이콘 꾹 눌러 끌어서 순서 바꾸기
         const MTAB_KEY = 'mtab_order';
         function mtabOrder() {
@@ -7300,11 +7336,11 @@
             // 3) 방 목록
             const list = roomVisible();
             const fb = (k, label) => `<button onclick="setRoomFilter('${k}')" class="px-2.5 py-1 rounded-full text-[0.6875rem] font-bold border ${roomFilter === k ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 border-slate-800 dark:border-slate-200' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-600'}">${label}</button>`;
-            main.innerHTML = head + `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2">
+            main.innerHTML = head + `<div class="pb-fab-pad flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2">
                 ${demo}
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <div class="flex gap-1.5">${fb('all', '전체')}${fb('text', '💬 글')}${fb('voice', '🎙 음성')}</div>
-                    <button onclick="openRoomNew()" class="px-3 py-1.5 rounded-full bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold">➕ 방 만들기</button>
+                    <button onclick="openRoomNew()" class="pb-write-fab px-3 py-1.5 rounded-full bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold">➕ 방 만들기</button>
                 </div>
                 ${msg}
                 ${list.length ? list.map(r => {
@@ -8005,7 +8041,7 @@
                 ${b === 'talk' ? '<div id="commLiveBar" class="shrink-0"></div>' : ''}
                 <div id="pbList" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar" style="padding-bottom: 5rem;">
                     ${all.length ? itemsHtml
-                        : `<div class="text-center py-16 px-6 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${esc(P.empty)}<br><button onclick="pbWrite('${b}')" class="mt-3 px-4 py-2 rounded-lg ${pbBtn(b)} text-white text-xs font-bold"><i class="fa-solid fa-pen"></i> 첫 글 쓰기</button></div>`}
+                        : `<div class="text-center py-16 px-6 text-xs text-slate-400 leading-relaxed" style="white-space: normal;">${esc(P.empty)}<br><button onclick="pbWrite('${b}')" class="pb-first-btn mt-3 px-4 py-2 rounded-lg ${pbBtn(b)} text-white text-xs font-bold"><i class="fa-solid fa-pen"></i> 첫 글 쓰기</button><span class="pb-first-hint hidden mt-3 text-slate-500 dark:text-slate-400 font-bold">오른쪽 아래 <b class="text-slate-700 dark:text-slate-200">✎ 글쓰기</b> 버튼으로 첫 글을 남겨 보세요</span></div>`}
                 </div>`;
         }
         // ---- 글 보기 ----
@@ -10720,7 +10756,7 @@
             steps.splice(1, 0, { icon: '👇', title: '아래 아이콘으로 화면 옮기기', pos: 'top', target: () => document.getElementById('mobileDock') || document.getElementById('mobileTabs'), _i: 'tabs',
                 arrows: { list: '사건 목록', article: '원문 기사', map: '사건 지도', comm: '커뮤니티' },
                 text: '한 번에 한 화면씩 보여 드려요. 화살표가 가리키는 아이콘을 누르거나 화면을 좌우로 쓸어 넘겨 보세요.',
-                bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '원문 기사: 기사 원문을 읽고, 종류별로 거르고, 다발 지역 순위를 봐요', '사건 지도: 사건 위치를 지도로 확인해요', '초록 버튼: 이웃과 소통하는 커뮤니티 (뒤에서 자세히 알려 드려요)'] });
+                bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '원문 기사: 기사 원문을 읽고, 종류별로 거르고, 사고 다발 지역 순위를 봐요', '사건 지도: 사건 위치를 지도로 확인해요', '초록 버튼: 이웃과 소통하는 커뮤니티 (뒤에서 자세히 알려 드려요)'] });
             // 커뮤니티 설명으로 넘어가기 전에, 커뮤니티는 맨 아래 초록 버튼으로 연다는 것을 먼저 알려 줌 (갑자기 창이 열리지 않게)
             const ci = steps.findIndex(x => x.openComm);
             if (ci > 0) steps.splice(ci, 0, { icon: '💬', title: '커뮤니티는 아래 초록 버튼', pos: 'top', target: () => document.getElementById('mobileCommBtn'), _i: 'commbtn',
