@@ -390,6 +390,9 @@
         @keyframes newPillGlow { 0% { box-shadow: 0 6px 18px -4px rgba(244,63,94,.65), 0 0 0 0 rgba(244,63,94,.55); } 70%, 100% { box-shadow: 0 6px 18px -4px rgba(244,63,94,.65), 0 0 0 12px rgba(244,63,94,0); } }
         @keyframes newPillShine { 0% { left: -60%; } 55%, 100% { left: 130%; } }
         @keyframes newBell { 0%, 60%, 100% { transform: rotate(0); } 10% { transform: rotate(16deg); } 20% { transform: rotate(-14deg); } 30% { transform: rotate(10deg); } 40% { transform: rotate(-6deg); } }
+        .news-flash { animation: newsFlash 2.2s ease-out; }
+        @keyframes newsFlash { 0%, 30% { box-shadow: 0 0 0 3px rgba(244,63,94,.85), 0 0 18px 2px rgba(244,63,94,.5); } 100% { box-shadow: 0 0 0 0 rgba(244,63,94,0); } }
+        @media (prefers-reduced-motion: reduce) { .news-flash { animation: none; box-shadow: 0 0 0 3px rgba(244,63,94,.85); } }
         .new-badge { display: inline-flex; align-items: center; gap: .2rem; font-size: .6875rem; padding: .1rem .45rem; border-radius: 6px; color: #fff; font-weight: 900; background: linear-gradient(135deg, #f43f5e, #f97316); box-shadow: 0 0 0 0 rgba(244,63,94,.6); animation: newPillGlow 1.8s ease-out infinite; }
         /* 내 위치 표시(파란 점) · 반경 레이더 */
         .myloc-dot { position: relative; width: 22px; height: 22px; }
@@ -1872,8 +1875,8 @@
                             newsData = localReports.concat(data);
                             if (!first) {
                                 freshEventKeys = new Set(); newsData.forEach(n => { if (!prevEvents.has(evOf(n)) || (!prevIds.has(n.id) && n.timestamp >= Date.now() / 1000 - 1800)) freshEventKeys.add(evOf(n)); });
-                                const mark = freshEventKeys;   // 새 기사 'NEW' 표시는 3분 뒤 사라짐
-                                setTimeout(() => { if (freshEventKeys === mark) { freshEventKeys = new Set(); renderNewsList(); } }, 180000);
+                                const mark = freshEventKeys;   // 새 기사 'NEW' 표시는 10분 뒤 사라짐 (3분이면 자리를 비운 사이 지나가 버림)
+                                setTimeout(() => { if (freshEventKeys === mark) { freshEventKeys = new Set(); renderNewsList(); } }, 600000);
                             }
                             checkNewIncidents(data);   // 우리 동네 새 사건 알림
                             lastSig = sig;
@@ -2736,16 +2739,28 @@
                 } else {
                     container.scrollTop = prevScroll + Math.max(0, container.scrollHeight - oldHeight);
                 }
-                // 아래쪽을 보고 있었다면: 위에 새 기사가 왔다는 작은 알림 (누르면 맨 위로)
-                if (freshN) {
+            } else container.scrollTop = prevScroll;
+            // 자동 갱신으로 새 기사가 들어왔는데 지금 화면 안에 안 보이면 알림 (위·중간·아래 어디에 끼어들었든)
+            //  → 시간순 배치는 그대로 두고, 누르면 가장 가까운 새 기사로 이동해 잠깐 반짝임 (2026-11-17: 발행 시각이 오래된 기사가 목록 중간에 조용히 끼어들던 문제)
+            if (anchor && freshEventKeys.size) {
+                const cr = container.getBoundingClientRect();
+                const hidden = Array.from(container.querySelectorAll('.news-card.news-new')).filter(c => { const r = c.getBoundingClientRect(); return r.bottom < cr.top + 8 || r.top > cr.bottom - 8; });
+                if (hidden.length) {
                     const pill = document.createElement('button');
                     pill.className = 'new-pill sticky top-1 z-30 mx-auto w-max';
-                    pill.innerHTML = '<i class="fa-solid fa-bell"></i> 새 기사 <b>' + freshN + '</b>건 <span>▲ 맨 위로</span>';
-                    pill.onclick = () => { container.scrollTo({ top: 0, behavior: 'smooth' }); pill.remove(); };
+                    const above = hidden.some(c => c.getBoundingClientRect().bottom < cr.top + 8);
+                    pill.innerHTML = '<i class="fa-solid fa-bell"></i> 새 기사 <b>' + hidden.length + '</b>건 <span>' + (above ? '▲' : '▼') + ' 보기</span>';
+                    pill.onclick = () => {
+                        const cr2 = container.getBoundingClientRect();
+                        const left = Array.from(container.querySelectorAll('.news-card.news-new')).filter(c => { const r = c.getBoundingClientRect(); return r.bottom < cr2.top + 8 || r.top > cr2.bottom - 8; });
+                        const t = left.slice().sort((a, b) => Math.abs(a.getBoundingClientRect().top - cr2.top) - Math.abs(b.getBoundingClientRect().top - cr2.top))[0];   // 지금 화면에서 가장 가까운 새 기사
+                        if (t) { t.style.scrollMarginTop = '56px'; t.scrollIntoView({ block: 'start', behavior: _reduceMotion() ? 'auto' : 'smooth' }); t.classList.add('news-flash'); setTimeout(() => t.classList.remove('news-flash'), 2200); }
+                        pill.remove();
+                    };
                     container.insertBefore(pill, container.firstChild);
-                    container.scrollTop += pill.offsetHeight;
+                    if (prevScroll > 20) container.scrollTop += pill.offsetHeight;
                 }
-            } else container.scrollTop = prevScroll;
+            }
         }
 
         // ================= 다발 지역 (사건 수 기준, 같은 사건의 기사 여러 개는 1건) =================
