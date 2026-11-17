@@ -2978,7 +2978,7 @@
                 const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
                 const go = on && dx > 70 && dx > dy * 1.5;
                 reset();
-                if (go) renderDetailView(id, true);
+                if (go) { if (isMobile() && typeof mobBackToList === 'function') mobBackToList(); else renderDetailView(id, true); }
             }, { passive: true });
             strip.addEventListener('touchcancel', reset, { passive: true });
             wrap.appendChild(strip);
@@ -3349,6 +3349,11 @@
             if (!keep && currentCategory === '범죄 다발 지역' && !selectedHotspotRegion) setCategoryFilter('all');
         }
         // ── 휴대폰 어디서든: 화면 왼쪽 끝에서 가운데로 쓸면 '바로 직전 화면'으로 (열린 창 → 글 보기 → 다발 지역 → 원문 → 이전 탭 순)
+        // 원문 기사에서 뒤로: 기사 요약 '목록' 화면으로 (원문 탭 안의 요약 화면이 아님)
+        function mobBackToList() {
+            if (_mtHist.length && _mtHist[_mtHist.length - 1] === 'list') _mtHist.pop();
+            _mtGoingBack = true; try { setMobTab('list'); } finally { _mtGoingBack = false; }
+        }
         function mobileGoBack() {
             const vis = id => { const e = document.getElementById(id); return e && !e.classList.contains('hidden'); };
             if (vis('commMediaView')) { closeMedia(); return true; }
@@ -3363,7 +3368,7 @@
             }
             if (mHotspotOpen) { closeMobileHotspot(); return true; }
             const sc = document.getElementById('splitContainer');
-            if (sc && sc.dataset.m === 'article' && selectedNewsId && document.getElementById('edgeBack')) { renderDetailView(selectedNewsId, true); return true; }
+            if (sc && sc.dataset.m === 'article' && document.getElementById('edgeBack')) { mobBackToList(); return true; }
             if (_mtHist.length) { _mtGoingBack = true; try { setMobTab(_mtHist.pop()); } finally { _mtGoingBack = false; } return true; }
             return false;
         }
