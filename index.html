@@ -11030,7 +11030,7 @@
             steps.splice(1, 0, { icon: '👇', title: '아래 아이콘으로 화면 옮기기', pos: 'top', target: () => document.getElementById('mobileDock') || document.getElementById('mobileTabs'), _i: 'tabs',
                 arrows: { list: '사건 목록', article: '원문 기사', map: '사건 지도', comm: '커뮤니티' },
                 text: '한 번에 한 화면씩 보여 드려요. 화살표가 가리키는 아이콘을 누르거나 화면을 좌우로 쓸어 넘겨 보세요.',
-                bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '원문 기사: 기사 원문을 읽고, 종류별로 거르고, 사고 다발 지역 순위를 봐요', '사건 지도: 사건 위치를 지도로 확인해요', '초록 버튼: 이웃과 소통하는 커뮤니티 (뒤에서 자세히 알려 드려요)'] });
+                bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '원문 기사: 사건을 누르면 기사 요약·원문을 읽어요', '사건 지도: 사건 위치를 지도로 확인해요', '초록 버튼: 이웃과 소통하는 커뮤니티 (뒤에서 자세히 알려 드려요)'] });
             // 사건 지도 다음에: 맨 위 알림 종 아이콘과 그 안의 설정 설명
             const mi = steps.findIndex(x => x._i === 4);
             if (mi >= 0) steps.splice(mi + 1, 0, { icon: '🔔', title: '맨 위 알림 종 아이콘', tab: 'map', _i: 'alert', target: () => document.getElementById('alertButton'),
@@ -11041,7 +11041,17 @@
             if (ci > 0) steps.splice(ci, 0, { icon: '💬', title: '커뮤니티는 아래 초록 버튼', pos: 'top', target: () => document.getElementById('mobileCommBtn'), _i: 'commbtn',
                 arrows: { comm: '여기를 눌러 열어요' },
                 text: '이웃과 소통하는 게시판은 맨 아래 초록 버튼으로 열어요. 다음 화면에서 직접 열어 하나씩 소개할게요.' });
-            return steps;
+            // ── 순서 정리: 화면(탭)을 한 번씩만 지나가고, 한 화면 안에서는 위→아래, 왼쪽→오른쪽 순서로 안내 (왔다 갔다 하지 않게)
+            //   ① 환영 → ② 사건 목록 화면(맨 위 종·달 → 브리핑·제보 → 지역 → 분류 → 날짜·목록 → 아래 아이콘) → ③ 원문 기사 화면 → ④ 사건 지도 화면 → ⑤ 커뮤니티
+            const by = k => steps.find(x => x._i === k);
+            const listIds = [0, 'alert', 8, 5, 6, 1, 3, 2, 'tabs'];
+            [0, 'alert', 8, 5, 6, 'tabs'].forEach(k => { const s = by(k); if (s) s.tab = 'list'; });      // 이전/다음으로 오가도 항상 같은 화면에서 시작
+            const art = { icon: '📰', title: '원문 기사 화면', tab: 'article', _i: 'article', target: () => document.getElementById('centerPane'),
+                text: '목록에서 사건을 누르면 이 화면으로 넘어와요. 기사 요약을 읽고, 위쪽 버튼으로 원문 보기·공유·새 창 열기를 할 수 있어요.',
+                bullets: ['원문 보기: 이 사이트 안에서 언론사 기사를 바로 읽어요', '공유하기: 이웃·커뮤니티에 사건을 알려요', '왼쪽 끝에서 가운데로 쓸면 목록으로 돌아가요'] };
+            const used = new Set(listIds.map(by).filter(Boolean).concat(by(4) ? [by(4)] : []));
+            const rest = steps.filter(x => !used.has(x));
+            return [].concat(listIds.map(by).filter(Boolean), [art], by(4) ? [by(4)] : [], rest);
         }
         let TOUR_STEPS = TOUR_ALL;
         const tourState = { i: 0, open: false, commOpen: false, tok: 0 };
