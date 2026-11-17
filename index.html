@@ -10666,7 +10666,7 @@
             5: { text: '오늘·이번 주 주요 사건을 요약해 드려요. 이것만 눌러도 동네 분위기를 알 수 있어요.' },
             6: { text: '목격한 사고·위험 상황을 이 버튼으로 바로 제보해요.' },
             // ※ 커뮤니티 단계는 '순서 번호'가 아니라 이름('묶음:tile/rest')으로 연결 — 일부 탭을 숨겨도 글이 어긋나지 않게 (tourShortKey)
-            comm: { text: '구글 로그인과 동네 인증을 하면 같은 동네 이웃과 소통하는 게시판을 쓸 수 있어요. 로그인 전에는 예시 글로 보여 드려요.', bullets: ['↔️ 위쪽 탭은 꾹 누른 채 끌어서 순서를 바꿀 수 있어요'] },
+            comm: { text: '방금 본 초록 버튼으로 열린 화면이에요. 구글 로그인과 동네 인증을 하면 같은 동네 이웃과 소통할 수 있어요. 로그인 전에는 예시 글로 보여 드려요.', bullets: ['↔️ 위쪽 탭은 꾹 누른 채 끌어서 순서를 바꿀 수 있어요'] },
             'safe:tile': { text: '우리 동네 사건·사고를 이웃에게 바로 알리는 곳이에요. 항상 맨 앞에 있어요.' },
             'safe:rest': { text: '글 종류마다 색 꼬리표가 붙어요. 글을 누르면 댓글·공감이 열려요.', bullets: ['📢 실시간 제보: 사진과 함께 알려요', '🚨 SOS: 급한 일에 이웃에게 도움 요청', '🏷️ 실종·교통사고·화재 등 글 종류 선택', '⚠️ 위급하면 먼저 112·119'] },
             'life:tile': { text: '이웃과 일상을 나누는 게시판 모음이에요. 안에 작은 탭이 여러 개 있어요.' },
@@ -10691,10 +10691,15 @@
                 return s;
             });
             // 환영 다음에: 맨 아래 탭 3개(아이콘만 있음)가 각각 무엇인지 설명. 이 단계만 설명 카드를 위쪽에 둠
-            steps.splice(1, 0, { icon: '👇', title: '아래 아이콘으로 화면 옮기기', pos: 'top', target: () => document.getElementById('mobileTabs'), _i: 'tabs',
-                arrows: { list: '사건 목록', article: '분류·기사', map: '사건 지도' },
+            steps.splice(1, 0, { icon: '👇', title: '아래 아이콘으로 화면 옮기기', pos: 'top', target: () => document.getElementById('mobileDock') || document.getElementById('mobileTabs'), _i: 'tabs',
+                arrows: { list: '사건 목록', article: '분류·기사', map: '사건 지도', comm: '커뮤니티' },
                 text: '한 번에 한 화면씩 보여 드려요. 화살표가 가리키는 아이콘을 누르거나 화면을 좌우로 쓸어 넘겨 보세요.',
-                bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '분류·기사: 종류별로 거르고 기사 원문·다발 지역 순위를 봐요', '사건 지도: 사건 위치를 지도로 확인해요', '👆 아이콘을 꾹 누른 채 끌면 순서를 바꿀 수 있어요'] });
+                bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '분류·기사: 종류별로 거르고 기사 원문·다발 지역 순위를 봐요', '사건 지도: 사건 위치를 지도로 확인해요', '초록 버튼: 이웃과 소통하는 커뮤니티 (뒤에서 자세히 알려 드려요)'] });
+            // 커뮤니티 설명으로 넘어가기 전에, 커뮤니티는 맨 아래 초록 버튼으로 연다는 것을 먼저 알려 줌 (갑자기 창이 열리지 않게)
+            const ci = steps.findIndex(x => x.openComm);
+            if (ci > 0) steps.splice(ci, 0, { icon: '💬', title: '커뮤니티는 아래 초록 버튼', pos: 'top', target: () => document.getElementById('mobileCommBtn'), _i: 'commbtn',
+                arrows: { comm: '여기를 눌러 열어요' },
+                text: '이웃과 소통하는 게시판은 맨 아래 초록 버튼으로 열어요. 다음 화면에서 직접 열어 하나씩 소개할게요.' });
             return steps;
         }
         let TOUR_STEPS = TOUR_ALL;
@@ -10824,27 +10829,34 @@
             if (!arr) { arr = document.createElement('div'); arr.id = 'tourArrows'; root.appendChild(arr); }
             arr.innerHTML = '';
             if (s.arrows && isMobile()) {
-                const btns = document.querySelectorAll('#mobileTabs button');
-                const nav = document.getElementById('mobileTabs');
-                const nb = nav && nav.getBoundingClientRect();
-                btns.forEach((b, k) => {
+                // 아이콘끼리 간격이 좁아 말풍선이 서로 겹치므로, 한 칸씩 번갈아 높이를 달리해 띄움 (홀수 번째는 위로 올리고 줄기를 길게)
+                const btns = Array.from(document.querySelectorAll('#mobileTabs button'));
+                const cb = document.getElementById('mobileCommBtn'); if (cb) { cb.dataset.mt = 'comm'; btns.push(cb); }
+                const dock = document.getElementById('mobileDock') || document.getElementById('mobileTabs');
+                const nb = dock.getBoundingClientRect();
+                let shown = 0;
+                btns.forEach(b => {
                     const bb = b.getBoundingClientRect();
                     if (!s.arrows[b.dataset.mt] || bb.width < 4) return;
-                    const el = document.createElement('div'); el.className = 'tour-arrow';
-                    el.style.left = (bb.left + bb.width / 2) + 'px'; el.style.bottom = (innerHeight - nb.top + 4) + 'px';
-                    el.innerHTML = '<span>' + esc(s.arrows[b.dataset.mt]) + '</span><i class="fa-solid fa-arrow-down"></i>';
+                    const hi = shown++ % 2 === 1 && Object.keys(s.arrows).length > 1;
+                    const el = document.createElement('div'); el.className = 'tour-arrow' + (hi ? ' hi' : '');
+                    const lbl = esc(s.arrows[b.dataset.mt]);
+                    const half = Math.min(60, lbl.length * 7 + 14);          // 말풍선이 화면 밖으로 나가지 않게 가로 위치 보정
+                    const cx = Math.max(half, Math.min(innerWidth - half, bb.left + bb.width / 2));
+                    el.style.left = cx + 'px'; el.style.bottom = (innerHeight - nb.top + 4) + 'px';
+                    el.innerHTML = '<span>' + lbl + '</span>' + (hi ? '<b class="tour-stem"></b>' : '') + '<i class="fa-solid fa-arrow-down" style="transform:translateX(' + Math.round(bb.left + bb.width / 2 - cx) + 'px)"></i>';
                     arr.appendChild(el);
                 });
             }
             // 어둡게 하는 층은 #tourSpot 의 큰 box-shadow 로 처리(구멍과 테두리가 같은 도형이라 틈·흰 선이 생기지 않음). #tourDim 은 클릭만 막는 투명 막
             if (r && s.arrows && isMobile()) {
-                Object.assign(spot.style, { display: 'block', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px' });
-                spot.classList.add('flat');
+                Object.assign(spot.style, { display: 'block', left: (r.left - 4) + 'px', top: (r.top - 4) + 'px', width: (r.width + 8) + 'px', height: (r.height + 8) + 'px' });
+                spot.classList.remove('flat'); spot.classList.add('pill');
                 dim.style.display = 'block';
                 root.classList.remove('tour-plain');
             } else if (r) {
                 Object.assign(spot.style, { display: 'block', left: (r.left - pad) + 'px', top: (r.top - pad) + 'px', width: (r.width + pad * 2) + 'px', height: (r.height + pad * 2) + 'px' });
-                spot.classList.remove('flat');
+                spot.classList.remove('flat', 'pill');
                 dim.style.display = 'block';
                 root.classList.remove('tour-plain');
             } else { spot.style.display = 'none'; dim.style.display = 'none'; root.classList.add('tour-plain'); }
@@ -10877,6 +10889,8 @@
                 #tourDim { position: fixed; inset: 0; background: transparent; }
                 #tourSpot { position: fixed; border-radius: 12px; box-shadow: 0 0 0 3px #818cf8, 0 0 22px 4px rgba(129,140,248,.7), 0 0 0 100vmax rgba(2,6,23,.62); pointer-events: none; animation: tourPulse 1.6s ease-in-out infinite; }
                 #tourSpot.flat { border-radius: 0; box-shadow: 0 0 0 100vmax rgba(2,6,23,.62); animation: none; }
+                #tourSpot.pill { border-radius: 999px; }
+                .tour-arrow.hi { gap: 0; } .tour-stem { display: block; width: 3px; height: 30px; margin: 2px 0 -4px; border-radius: 2px; background: #fff; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
                 .tour-arrow { position: fixed; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; pointer-events: none; animation: tourBob 1s ease-in-out infinite; }
                 .tour-arrow span { background: #4f46e5; color: #fff; font-size: .75rem; font-weight: 800; padding: .3rem .55rem; border-radius: 999px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.4); }
                 .tour-arrow i { color: #fff; font-size: 1.4rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
