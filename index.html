@@ -685,7 +685,7 @@
     <div id="mobileDock">
     <nav id="mobileTabs" aria-label="화면 전환">
         <button type="button" data-mt="list" class="on" onclick="setMobTab('list')" aria-label="사건 목록" title="사건 목록"><i class="fa-solid fa-list-ul"></i></button>
-        <button type="button" data-mt="article" onclick="setMobTab('article')" aria-label="분류·기사" title="분류·기사"><i class="fa-solid fa-newspaper"></i></button>
+        <button type="button" data-mt="article" onclick="setMobTab('article')" aria-label="원문 기사" title="원문 기사"><i class="fa-solid fa-newspaper"></i></button>
         <button type="button" data-mt="map" onclick="setMobTab('map')" aria-label="지도" title="지도"><i class="fa-solid fa-map-location-dot"></i></button>
     </nav>
     <button type="button" id="mobileCommBtn" onclick="openCommunity()" aria-label="우리동네 커뮤니티" title="우리동네 커뮤니티"><i class="fa-solid fa-people-group"></i><span id="mobileCommBadge" class="hidden"></span></button>
@@ -10692,9 +10692,9 @@
             });
             // 환영 다음에: 맨 아래 탭 3개(아이콘만 있음)가 각각 무엇인지 설명. 이 단계만 설명 카드를 위쪽에 둠
             steps.splice(1, 0, { icon: '👇', title: '아래 아이콘으로 화면 옮기기', pos: 'top', target: () => document.getElementById('mobileDock') || document.getElementById('mobileTabs'), _i: 'tabs',
-                arrows: { list: '사건 목록', article: '분류·기사', map: '사건 지도', comm: '커뮤니티' },
+                arrows: { list: '사건 목록', article: '원문 기사', map: '사건 지도', comm: '커뮤니티' },
                 text: '한 번에 한 화면씩 보여 드려요. 화살표가 가리키는 아이콘을 누르거나 화면을 좌우로 쓸어 넘겨 보세요.',
-                bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '분류·기사: 종류별로 거르고 기사 원문·다발 지역 순위를 봐요', '사건 지도: 사건 위치를 지도로 확인해요', '초록 버튼: 이웃과 소통하는 커뮤니티 (뒤에서 자세히 알려 드려요)'] });
+                bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '원문 기사: 기사 원문을 읽고, 종류별로 거르고, 다발 지역 순위를 봐요', '사건 지도: 사건 위치를 지도로 확인해요', '초록 버튼: 이웃과 소통하는 커뮤니티 (뒤에서 자세히 알려 드려요)'] });
             // 커뮤니티 설명으로 넘어가기 전에, 커뮤니티는 맨 아래 초록 버튼으로 연다는 것을 먼저 알려 줌 (갑자기 창이 열리지 않게)
             const ci = steps.findIndex(x => x.openComm);
             if (ci > 0) steps.splice(ci, 0, { icon: '💬', title: '커뮤니티는 아래 초록 버튼', pos: 'top', target: () => document.getElementById('mobileCommBtn'), _i: 'commbtn',
