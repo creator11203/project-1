@@ -71,6 +71,10 @@
         .dark #newsListContainer::-webkit-scrollbar-track { background: #0f172a; border-left-color: #1e293b; }
         .dark #newsListContainer::-webkit-scrollbar-thumb { background: #6366f1; border-color: #0f172a; }
         .dark #newsListContainer::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+        /* 같은 사건 관련 기사 꼬리표: 글자가 들어간 알약 모양 (색만으로 구분하지 않음) */
+        .rel-chip { display: inline-flex; align-items: center; flex: none; padding: .12rem .5rem; border-radius: 999px; font-size: .6875rem; font-weight: 800; line-height: 1.35; white-space: nowrap; }
+        .rel-new { background: #f59e0b; color: #fff; }
+        .rel-first { background: #e2e8f0; color: #334155; } .dark .rel-first { background: #334155; color: #e2e8f0; }
         #sheetBox #commBgDots button { width: 1.75rem; height: 1.75rem; }
         /* 모든 버튼: 누르면 살짝 눌리고 색이 부드럽게 바뀜 (특이도 0 이라 개별 버튼의 자체 효과는 그대로 우선) */
         :where(button, [role="button"], .tab-btn) { transition: transform .14s cubic-bezier(.3,.8,.3,1), background-color .22s ease, color .22s ease, border-color .22s ease, opacity .22s ease, box-shadow .22s ease; }
@@ -2667,7 +2671,7 @@
                     <div class="flex items-start justify-between mb-1.5 gap-1">
                         <span class="flex flex-wrap items-center gap-1 min-w-0">
                             ${freshEventKeys.has(ev.key) ? '<span class="new-badge"><i class="fa-solid fa-bolt"></i>NEW</span>' : ''}
-                            ${ev.head ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-amber-500 text-white font-extrabold" title="같은 사건에서 새로 드러난 내용이 있는 기사를 맨 위에 보여 줍니다">🆕 새 소식</span>' : ''}
+                            ${ev.head ? '<span class="rel-chip rel-new" title="같은 사건에서 새로 드러난 내용이 있는 기사를 맨 위에 보여 줍니다">새 소식</span>' : ''}
                             ${isOverseas(news) ? '<span class="text-[0.625rem] px-1.5 py-0.5 rounded bg-zinc-700 text-white font-extrabold">🌍 해외</span>' : ''}
                             ${isCourt(news) ? courtBadge() : ''}
                             ${tagBadges(news)}
@@ -2690,11 +2694,17 @@
                     tog.onclick = () => toggleEvent(ev.key);
                     card.appendChild(tog);
                     if (open) {
+                        // 안내 한 줄: 아래 꼬리표가 무슨 뜻인지
+                        const lg = document.createElement('div');
+                        lg.className = 'px-3 py-1.5 text-[0.6875rem] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center gap-x-3 gap-y-1';
+                        lg.innerHTML = `<span><span class="rel-chip rel-first">처음 보도</span> 이 사건의 첫 기사</span><span><span class="rel-chip rel-new">새 내용</span> 앞 기사에 없던 사실</span>`;
+                        card.appendChild(lg);
                         ev.items.forEach(n => {
                             const row = document.createElement('div');
-                            row.className = `px-3 py-1.5 text-[0.6875rem] cursor-pointer border-t border-slate-100 dark:border-slate-800 ${n.id === selectedNewsId ? 'bg-red-50 dark:bg-red-950/30 font-bold' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`;
+                            row.className = `px-3 py-2 cursor-pointer border-t border-slate-100 dark:border-slate-800 ${n.id === selectedNewsId ? 'bg-red-50 dark:bg-red-950/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/60'}`;
                             row.onclick = () => selectNews(n.id);
-                            row.innerHTML = `<div class="text-slate-800 dark:text-slate-100 line-clamp-2">${n._upd ? '<b class="text-amber-600">🆕</b> ' : ''}${isOverseas(n) ? '<b class="text-zinc-500">[해외]</b> ' : ''}${esc(n.title)}</div><div class="text-[0.625rem] text-slate-500">${esc(n.source)} · ${esc(shortTime(n))}</div>`;
+                            const chip = n._upd ? `<span class="rel-chip rel-new">새 내용${n._updWhy ? ' · ' + esc(String(n._updWhy).replace(/\s+/g, ' ').slice(0, 8)) : ''}</span>` : (ev.first && ev.first.id === n.id ? '<span class="rel-chip rel-first">처음 보도</span>' : '');
+                            row.innerHTML = `<div class="flex items-center gap-1.5 mb-1 text-[0.6875rem] text-slate-500">${chip}${isOverseas(n) ? '<span class="rel-chip rel-first">해외</span>' : ''}<span class="truncate">${esc(n.source)}</span><span class="shrink-0 font-mono ml-auto">${esc(shortTime(n))}</span></div><div class="text-[0.8125rem] leading-snug text-slate-800 dark:text-slate-100 line-clamp-2 ${n.id === selectedNewsId ? 'font-bold' : 'font-medium'}">${esc(n.title)}</div>`;
                             card.appendChild(row);
                         });
                     }
