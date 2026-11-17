@@ -208,7 +208,7 @@
             #appHeader > div:first-child > div:first-child { width: 36px; height: 36px; border-radius: 10px; }
             #appHeader h1 { font-size: 15px; white-space: nowrap; }
             #appHeader h1 span, #appHeader h1 + p { display: none; }
-            #appHeader > div:last-child { display: contents; }
+            #appHeader > div:last-of-type { display: contents; }
             #appHeader .tool-group { order: 2; flex-shrink: 0; }
             #appHeader #heroBtns { order: 3; width: 100%; gap: 6px; }
             #appHeader #heroBtns > button, #appHeader #floatBtnWrap > button { flex: 1 1 0; min-width: 0; justify-content: center; font-size: 12px; padding: 8px 4px; gap: 4px; }
@@ -247,8 +247,9 @@
             body.m-reading:not(.m-hdr-open) #hdrPeek { display: flex; position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 44; width: 54px; height: 18px; align-items: center; justify-content: center; border-radius: 0 0 14px 14px; background: rgba(79,70,229,.92); color: #fff; font-size: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.3); }
             /* 떠 있는 아래 막대에 본문이 가리지 않도록 아래 여백 */
             #newsListContainer, #detailViewContainer:not(:has(#articleWrap)) { padding-bottom: 76px !important; }
-            #mapLegend { bottom: 100px !important; }
-            #articleWrap .art-zoom input[type=range] { width: 6rem !important; }
+            #mapLegend { bottom: 100px !important; left: 8px !important; }
+            #mapLegend[data-open="0"] { bottom: calc(34px + env(safe-area-inset-bottom)) !important; left: 6px !important; padding: 0 !important; border-radius: 18px !important; }
+            #mapLegend[data-open="0"] > button { width: 36px; height: 36px; justify-content: center; font-size: 17px; }            #articleWrap .art-zoom input[type=range] { width: 6rem !important; }
             #mHotspot { padding-bottom: 76px; }
             #floatBox #commBody { padding-bottom: 82px; }
             body:has(#floatModal:not(.hidden)) #mobileTabs button.on { background: transparent; color: #64748b; box-shadow: none; }
@@ -259,8 +260,8 @@
             #panel-list.m-hot > #newsListContainer, #panel-list.m-hot > #dateBarWrap, #panel-list.m-hot > #hotspotBar { display: none !important; }
             #panel-list.m-hot > #mHotspot { display: block; }
             /* 아래로 스크롤하면 아래쪽 기능 버튼(지난 알림·글쓰기)도 같이 작아짐 */
-            #alertLogBtn, .pb-write-fab { transition: transform .28s cubic-bezier(.3,.8,.3,1), opacity .28s; transform-origin: 100% 100%; }
-            body.m-compact #alertLogBtn, body.m-compact .pb-write-fab { transform: scale(.68); opacity: .9; }
+            .pb-write-fab { transition: transform .28s cubic-bezier(.3,.8,.3,1), opacity .28s; transform-origin: 100% 100%; }
+            body.m-compact .pb-write-fab { transform: scale(.68); opacity: .9; }
             #layoutPanel { display: none !important; }
             /* 커뮤니티 맨 위 큰 탭(안전망·동네 이야기·장터…): 한 줄에 억지로 넣지 않고, 탭마다 글씨가 다 보이는 크기로 두고 옆으로 밀어서 봄 */
             #commTabBar > .grid, #commSampleBar > .grid { position: relative; display: flex !important; overflow-x: auto; overflow-y: hidden; gap: 6px; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 8px; }
@@ -297,8 +298,9 @@
             #groupButtons button[data-cat="범죄 다발 지역"] { display: none; }
             #groupButtons > span.ml-auto { flex-wrap: wrap; width: 100%; margin-left: 0; padding-left: 0; border-left: 0; }
             /* 오른쪽 아래 '지난 알림' 버튼: 맨 아래 모서리에 붙임 (아래 탭 바로 위, 푸터 오른쪽 빈 자리) */
-            #alertLogBtn { bottom: calc(36px + env(safe-area-inset-bottom)) !important; right: 8px !important; width: 42px !important; height: 42px !important; font-size: 16px !important; z-index: 1101 !important; }
-            #alertLogPanel { right: 8px !important; bottom: calc(88px + env(safe-area-inset-bottom)) !important; }
+            #alertLogBtn { display: none !important; }     /* 지난 알림은 위쪽 아이콘(사용 안내 옆)으로 옮김 */
+            #appHeader .mh-only { display: inline-flex; }
+            #alertLogPanel { top: 98px !important; bottom: auto !important; right: 8px !important; left: 8px !important; width: auto !important; max-width: none !important; max-height: 62vh !important; }
             #alertToasts { bottom: calc(92px + env(safe-area-inset-bottom)) !important; }
             #appHeader #floatBtnWrap .comm-btn { display: none !important; }    /* 커뮤니티는 아래 알약 탭으로 옮김 */
             #mobileHotBtn { display: inline-flex; }
@@ -476,6 +478,8 @@
         /* 머리글 도구 아이콘 버튼 (사용 안내·화면 설정·앱·다크/라이트): 같은 크기 · 아이콘마다 다른 색 · 마우스를 올리면 색 배경 */
         .tool-btn { width: 2rem; height: 2rem; display: inline-flex; align-items: center; justify-content: center; border-radius: .6rem; font-size: .95rem; transition: background-color .15s, color .15s, transform .15s; }
         .tool-btn:hover { transform: translateY(-1px); } .tool-btn:active { transform: none; } .tool-btn:focus-visible { outline: 2px solid #6366f1; outline-offset: 1px; }
+        .mh-only { display: none; }
+        .tool-alert { color: #7c3aed; } .tool-alert:hover { background: #7c3aed; color: #fff; } .dark .tool-alert { color: #c4b5fd; }
         .tool-help { color: #0284c7; } .tool-help:hover { background: #0284c7; color: #fff; }
         .tool-layout { color: #7c3aed; } .tool-layout:hover, .tool-layout[aria-expanded="true"] { background: #7c3aed; color: #fff; }
         .tool-app { color: #059669; } .tool-app:hover { background: #059669; color: #fff; }
@@ -634,6 +638,7 @@
             <!-- 도구 아이콘 3개(사용 안내 · 화면 설정 · 앱으로 이용): 글씨 없이 아이콘만. 아이콘마다 색이 달라 한눈에 구분되고, 마우스를 올리면 색 배경과 설명 말풍선이 나타남 -->
             <div class="tool-group flex items-center gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5">
                 <button onclick="openTour(0)" title="사용 안내 (처음 쓰는 분을 위한 단계별 안내)" aria-label="사용 안내" class="tool-btn tool-help"><i class="fa-regular fa-circle-question"></i></button>
+                <button id="alertLogBtnTop" onclick="toggleAlertLog()" title="지난 알림 보기" aria-label="지난 알림 보기" class="tool-btn tool-alert mh-only relative"><i class="fa-solid fa-bullhorn"></i><span id="alertLogBadgeTop" class="hidden absolute -top-1 -right-1 min-w-[1rem] h-4 px-1 rounded-full bg-rose-500 text-white text-[0.5625rem] font-black leading-4 text-center ring-2 ring-white dark:ring-slate-800"></span></button>
                 <div class="relative m-hide">
                     <button id="layoutBtn" onclick="toggleLayoutPanel()" title="화면 설정 (칸 나누기·배치)" aria-label="화면 설정" class="tool-btn tool-layout"><i class="fa-solid fa-table-columns"></i></button>
                     <div id="layoutPanel" class="hidden absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3 text-left" style="z-index: 1200;"></div>
@@ -2084,7 +2089,8 @@
         function renderMapLegend() {
             const lg = document.getElementById('mapLegend');
             if (!lg) return;
-            if (!legendOpen) { lg.innerHTML = safetyLegendHtml() + `<button onclick="toggleLegend()" class="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200"><i class="fa-solid fa-circle-info text-blue-500"></i> 지도 보는 법 <i class="fa-solid fa-chevron-up text-[0.625rem] opacity-60"></i></button>`; return; }
+            lg.dataset.open = legendOpen ? '1' : '0';
+            if (!legendOpen) { lg.innerHTML = safetyLegendHtml() + `<button onclick="toggleLegend()" class="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200"><i class="fa-solid fa-circle-info text-blue-500"></i><span class="m-hide">지도 보는 법</span><i class="fa-solid fa-chevron-up text-[0.625rem] opacity-60 m-hide"></i></button>`; return; }
             const pin = (cls, size, extra) => `<span class="pin ${cls}" style="display:inline-block;width:${size}px;height:${size}px;background:#ef4444;vertical-align:middle;${extra || ''}"></span>`;
             const bub = (n, size, color) => `<span class="cluster-bubble" style="display:inline-flex;width:${size}px;height:${size}px;background:${color};font-size:10px;border-width:2px;vertical-align:middle;">${n}</span>`;
             const row = (icon, text) => `<div class="flex items-center gap-2"><span class="w-7 flex justify-center shrink-0">${icon}</span><span>${text}</span></div>`;
@@ -3899,9 +3905,8 @@
         }
         function alertLogUnread() { const seen = Number(localStorage.getItem(ALERT_LOG_SEEN) || 0); return alertLogLoad().filter(x => x.ts > seen).length; }
         function alertLogBadge() {
-            const b = document.getElementById('alertLogBadge'); if (!b) return;
             const n = alertLogUnread();
-            b.textContent = n > 99 ? '99+' : String(n); b.classList.toggle('hidden', !n);
+            ['alertLogBadge', 'alertLogBadgeTop'].forEach(id => { const b = document.getElementById(id); if (!b) return; b.textContent = n > 99 ? '99+' : String(n); b.classList.toggle('hidden', !n); });
         }
         function toggleAlertLog(show) {
             const p = document.getElementById('alertLogPanel'); if (!p) return;
