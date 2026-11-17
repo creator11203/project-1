@@ -497,6 +497,39 @@
         .mh-only { display: none; }
         .tool-alert { color: #7c3aed; } .tool-alert:hover { background: #7c3aed; color: #fff; } .dark .tool-alert { color: #c4b5fd; }
         .tool-help { color: #0284c7; } .tool-help:hover { background: #0284c7; color: #fff; }
+        .tool-bell { color: #94a3b8; } .tool-bell.is-on { color: #d97706; } .tool-bell:hover { background: #f59e0b; color: #fff; } .dark .tool-bell.is-on { color: #fbbf24; }
+        /* 알림 설정 창: 컴퓨터는 🔔 아래에 뜨는 카드, 휴대폰은 화면 아래에서 올라오는 시트 (아래 알약 탭보다 위에 떠서 가려지지 않음) */
+        #alertPanel:not(.hidden) { display: flex; flex-direction: column; width: min(24rem, calc(100vw - 1rem)); max-height: min(82vh, 660px); background: #fff; border: 1px solid #e2e8f0; border-radius: 1.25rem; box-shadow: 0 24px 60px rgba(15,23,42,.3); overflow: hidden; animation: aPop .18s ease-out; }
+        .dark #alertPanel { background: #0f172a; border-color: #334155; }
+        #alertPanel.a-sheet:not(.hidden) { left: 0; right: 0; bottom: 0; top: auto; width: 100%; max-height: 88vh; border-radius: 1.5rem 1.5rem 0 0; border-bottom: 0; padding-bottom: env(safe-area-inset-bottom); animation: aUp .24s ease-out; }
+        .a-grip { display: none; width: 2.5rem; height: .3rem; margin: .55rem auto 0; border-radius: 999px; background: #cbd5e1; }
+        #alertPanel.a-sheet .a-grip { display: block; }
+        @keyframes aPop { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
+        @keyframes aUp { from { transform: translateY(36px); opacity: .5; } to { transform: none; opacity: 1; } }
+        .a-tabs { display: flex; gap: 4px; padding: 4px; margin: 0 1rem; background: #f1f5f9; border-radius: .9rem; }
+        .dark .a-tabs { background: #1e293b; }
+        .a-tab { flex: 1; padding: .5rem .2rem; border-radius: .7rem; font-size: .75rem; font-weight: 800; color: #64748b; transition: .15s; white-space: nowrap; }
+        .a-tab.on { background: #fff; color: #b45309; box-shadow: 0 1px 4px rgba(15,23,42,.16); }
+        .dark .a-tab.on { background: #334155; color: #fcd34d; }
+        .a-ico { width: 2rem; height: 2rem; flex: none; display: flex; align-items: center; justify-content: center; border-radius: .65rem; background: #fff7ed; font-size: 1rem; }
+        .dark .a-ico { background: #1e293b; }
+        .a-dim { opacity: .45; }
+        .abtn { padding: .5rem .5rem; border-radius: .75rem; font-size: .75rem; font-weight: 700; color: #334155; background: #fff; border: 1px solid #cbd5e1; transition: .15s; }
+        .abtn:hover { border-color: #f59e0b; background: #fffbeb; } .abtn.sm { padding: .25rem .55rem; font-size: .6875rem; border-radius: .6rem; }
+        .dark .abtn { background: #1e293b; color: #e2e8f0; border-color: #475569; } .dark .abtn:hover { background: #334155; }
+        .seg { display: flex; padding: 3px; gap: 3px; background: #e2e8f0; border-radius: .8rem; } .dark .seg { background: #0f172a; }
+        .seg button { flex: 1; padding: .45rem .3rem; border-radius: .65rem; font-size: .75rem; font-weight: 800; color: #64748b; transition: .15s; }
+        .seg button.on { background: #fff; color: #b45309; box-shadow: 0 1px 3px rgba(15,23,42,.18); } .dark .seg button.on { background: #334155; color: #fcd34d; }
+        .achip { display: inline-flex; align-items: center; gap: .3rem; padding: .42rem .75rem; border-radius: 999px; font-size: .75rem; font-weight: 700; border: 1px solid #cbd5e1; color: #64748b; background: #fff; transition: .15s; }
+        .achip[aria-pressed="true"] { background: #fef3c7; border-color: #f59e0b; color: #92400e; } .achip[aria-pressed="true"]::before { content: "✓"; font-weight: 900; }
+        .dark .achip { background: #1e293b; border-color: #475569; color: #94a3b8; } .dark .achip[aria-pressed="true"] { background: rgba(245,158,11,.18); border-color: #f59e0b; color: #fcd34d; }
+        .sw { position: relative; width: 2.6rem; height: 1.5rem; flex: none; display: inline-block; }
+        .sw input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+        .sw i { position: absolute; inset: 0; border-radius: 999px; background: #cbd5e1; transition: background .2s; }
+        .sw i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 1.25rem; height: 1.25rem; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .2s; }
+        .sw input:checked + i { background: #f59e0b; } .sw input:checked + i::after { transform: translateX(1.1rem); }
+        .sw.part input:checked + i { background: #fcd34d; } .sw.part input:checked + i::after { transform: translateX(.55rem); }
+        .dark .sw i { background: #475569; }
         .tool-layout { color: #7c3aed; } .tool-layout:hover, .tool-layout[aria-expanded="true"] { background: #7c3aed; color: #fff; }
         .tool-app { color: #059669; } .tool-app:hover { background: #059669; color: #fff; }
         .tool-theme { color: #4f46e5; } .tool-theme:hover { background: #4f46e5; color: #fff; }
@@ -654,6 +687,7 @@
             <!-- 도구 아이콘 3개(사용 안내 · 화면 설정 · 앱으로 이용): 글씨 없이 아이콘만. 아이콘마다 색이 달라 한눈에 구분되고, 마우스를 올리면 색 배경과 설명 말풍선이 나타남 -->
             <div class="tool-group flex items-center gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl p-0.5">
                 <button onclick="openTour(0)" title="사용 안내 (처음 쓰는 분을 위한 단계별 안내)" aria-label="사용 안내" class="tool-btn tool-help"><i class="fa-regular fa-circle-question"></i></button>
+                <button id="alertButton" type="button" onclick="toggleAlertPanel()" title="알림 설정 (내 지역 속보 받기)" aria-label="알림 설정" aria-haspopup="dialog" aria-expanded="false" class="tool-btn tool-bell relative"><i class="fa-regular fa-bell-slash"></i><span id="alertBellDot" class="hidden absolute top-0.5 right-0.5 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-slate-100 dark:ring-slate-800"></span></button>
                 <button id="alertLogBtnTop" onclick="toggleAlertLog()" title="지난 알림 보기" aria-label="지난 알림 보기" class="tool-btn tool-alert mh-only relative"><i class="fa-solid fa-bullhorn"></i><span id="alertLogBadgeTop" class="hidden absolute -top-1 -right-1 min-w-[1rem] h-4 px-1 rounded-full bg-rose-500 text-white text-[0.5625rem] font-black leading-4 text-center ring-2 ring-white dark:ring-slate-800"></span></button>
                 <div class="relative m-hide">
                     <button id="layoutBtn" onclick="toggleLayoutPanel()" title="화면 설정 (칸 나누기·배치)" aria-label="화면 설정" class="tool-btn tool-layout"><i class="fa-solid fa-table-columns"></i></button>
@@ -799,14 +833,12 @@
         <!-- 패널 3: 사건 발생 지도 -->
         <div id="panel-map" class="panel bg-white dark:bg-slate-900">
             <div class="absolute top-3 right-3 z-[400] flex flex-wrap items-center justify-end gap-2" style="max-width: calc(100% - 4rem);">
-                <button id="alertButton" onclick="toggleAlertPanel()" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-amber-400 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-800 whitespace-nowrap"><i class="fa-regular fa-bell"></i> 알림 설정</button>
                 <button onclick="toggleSafetyPanel()" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-red-400 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200 hover:bg-red-50 dark:hover:bg-slate-800 whitespace-nowrap"><i class="fa-solid fa-kit-medical text-red-500"></i> 내 주변 안전시설</button>
                 <select id="mapStyleSelect" onchange="setMapStyle(this.value)" title="지도 모양" class="bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-600 text-xs font-bold px-2 py-1.5 rounded-lg shadow-lg text-slate-700 dark:text-slate-200"></select>
             </div>
             <div id="map" class="flex-1 w-full h-full z-10"></div>
             <div id="mapLegend" class="absolute bottom-7 left-3 max-w-[17rem] bg-white/95 dark:bg-slate-900/95 backdrop-blur border border-slate-300 dark:border-slate-600 rounded-xl shadow-lg px-3 py-2 text-slate-600 dark:text-slate-300 leading-relaxed" style="z-index: 500;"></div>
             <div id="safetyPanel" class="hidden absolute top-14 left-3 w-72 max-h-[80%] overflow-y-auto custom-scrollbar bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3" style="z-index: 1100;"></div>
-            <div id="alertPanel" class="hidden absolute top-14 right-3 w-64 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl shadow-2xl p-3" style="z-index: 1100;"></div>
         </div>
         <!-- 패널 4: 우리동네 커뮤니티 -->
         <div id="panel-community" class="panel bg-white dark:bg-slate-900">
@@ -868,6 +900,8 @@
     <!-- 알림 창 (화면 오른쪽 아래. 지도가 어느 칸에 있든 항상 보임) -->
     <div id="alertToasts" class="fixed right-4 flex flex-col gap-2 items-end" style="z-index: 1300; bottom: 4.75rem;"></div>
     <!-- 지난 알림 보기: 오른쪽 아래 확성기 버튼. 알림창을 못 보고 지나가도 여기서 다시 볼 수 있음 -->
+    <div id="alertBackdrop" class="hidden fixed inset-0" style="z-index: 1289; background: rgba(15,23,42,.38);" onclick="toggleAlertPanel(false)"></div>
+    <div id="alertPanel" class="hidden fixed" role="dialog" aria-label="알림 설정" style="z-index: 1290;"></div>
     <button id="alertLogBtn" onclick="toggleAlertLog()" title="지난 알림 보기 (놓친 알림 다시 확인)" aria-label="지난 알림 보기" class="fixed bottom-4 right-4 w-12 h-12 rounded-full text-white text-lg flex items-center justify-center shadow-xl border-2 border-white" style="z-index: 1301; background: linear-gradient(135deg,#6366f1,#7c3aed);">
         <i class="fa-solid fa-bullhorn"></i><span id="alertLogBadge" class="hidden absolute -top-1.5 -right-1.5 min-w-[1.2rem] h-[1.2rem] px-1 rounded-full bg-rose-500 text-white text-[0.625rem] font-black leading-[1.2rem] text-center ring-2 ring-white"></span>
     </button>
@@ -3391,6 +3425,7 @@
         }
         function mobileGoBack() {
             const vis = id => { const e = document.getElementById(id); return e && !e.classList.contains('hidden'); };
+            if (vis('alertPanel')) { toggleAlertPanel(false); return true; }
             if (vis('commMediaView')) { closeMedia(); return true; }
             if (vis('sheetModal')) { closeSheet(); return true; }
             if (vis('appModal')) { closeAppModal(); return true; }
@@ -4042,7 +4077,7 @@
         function initAlerts() { updateAlertButton(); startHereWatch(); }
 
         // 알림을 보낼 단계인지: 발생·수사 기사는 알리고, 재판·판결 소식은 [알림 설정]에서 켠 사람에게만
-        function alertStageOk(n) { return !isCourt(n); }
+        function alertStageOk(n) { return !isCourt(n) && alertGroupOk(n); }
         // 새로 들어온 기사 확인 (loadIncidentsFromJSON 에서 호출)
         function checkNewIncidents(list) {
             if (alertSeenIds === null) { alertSeenIds = new Set(list.map(n => n.id)); alertSeenEvents = new Set(list.map(evOf)); return; }
@@ -4056,7 +4091,7 @@
             const live = fresh.filter(n => alertStageOk(n) && Number(n.timestamp) >= freshSince);
             // 이미 알린 사건이라도 '새로 드러난 내용'이 담긴 후속 기사가 들어오면 그 내용을 다시 알림 (예: 피해 규모 확대·용의자 검거·원인 확인)
             const newIds = new Set(newArticles.map(n => n.id));
-            const upd = groupEvents(list.filter(alertStageOk)).map(ev => ev.head).filter(h => h && newIds.has(h.id) && !live.includes(h) && Number(h.timestamp) >= freshSince);
+            const upd = alertCfg.upd === false ? [] : groupEvents(list.filter(alertStageOk)).map(ev => ev.head).filter(h => h && newIds.has(h.id) && !live.includes(h) && Number(h.timestamp) >= freshSince);
             const updHere = upd.filter(matchHere), updMine = upd.filter(n => !updHere.includes(n) && matchAlertRegion(n));
             updHere.concat(updMine).slice(0, 3).forEach(n => showAlertToast({
                 head: '🆕 사건 새 소식', badge: n.category, title: n.title,
@@ -4291,108 +4326,156 @@
             else if (kind === 'siren') { for (let i = 0; i < 6; i++) tone(i % 2 ? 980 : 720, i * 0.18, 0.18, 'square'); }
         }
 
-        // 알림 설정 창
-        function toggleAlertPanel(show) {
-            const p = document.getElementById('alertPanel');
-            const hidden = p.classList.contains('hidden');
-            const want = (typeof show === 'boolean') ? show : hidden;
-            if (want) { renderAlertPanel(); p.classList.remove('hidden'); ensureAudio(); } else p.classList.add('hidden');
+        // ================= 알림 설정 (맨 위 🔔 아이콘) =================
+        //  한 화면에 선택지가 너무 많아 보이지 않도록 3개 탭으로 나눔: ① 내 지역 ② 받을 소식(사건 분류·후속 소식·방송·브리핑·커뮤니티) ③ 표시·소리
+        //  사건 분류 19개는 큰 묶음 7개로 압축해서 보여 주고, 묶음 오른쪽 [세부]를 누르면 분류별로 하나씩 켜고 끌 수 있음
+        let alertTab = 'where', alertOpenBundle = null;
+        const ALERT_BUNDLES = [
+            { k: 'fire', icon: '🔥', name: '화재·사고·재난', groups: ['화재·사고', '자연재해', '감염병·보건'] },
+            { k: 'traffic', icon: '🚗', name: '교통사고·교통범죄', groups: ['교통사고', '교통범죄'] },
+            { k: 'violent', icon: '🚨', name: '강력·성범죄·테러', groups: ['생명·신체 범죄', '자유·인격 범죄', '성범죄', '공공안전 범죄', '국가안보·테러'] },
+            { k: 'fraud', icon: '💸', name: '사기·재산·사이버', groups: ['재산 범죄', '경제·금융범죄', '사이버범죄'] },
+            { k: 'public', icon: '🏛️', name: '공무·마약·특별법', groups: ['공무·사법 범죄', '마약·보건범죄', '기타 특별법 범죄'] },
+            { k: 'life', icon: '🔎', name: '실종·생활안전', groups: ['실종·변사', '생활안전·소동'] },
+            { k: 'world', icon: '🌍', name: '해외 (한국 관련)', groups: ['해외'] }
+        ];
+        function alertOffSet() { return new Set(alertCfg.offGroups || []); }
+        function alertGroupOk(n) { try { return !alertOffSet().has(groupOf(n)); } catch (e) { return true; } }
+        function alertGroupName(g) { return ((CATEGORY_GROUPS[g] || {}).label || g).replace(/^[^\s가-힣]+\s/, ''); }
+        function alertToggleGroups(list, on) {
+            const s = alertOffSet();
+            list.forEach(g => { if (on) s.delete(g); else s.add(g); });
+            alertCfg.offGroups = Array.from(s); saveAlertCfg(); renderAlertPanel();
         }
+        function alertAllGroups(on) { alertToggleGroups(ALERT_BUNDLES.reduce((a, b) => a.concat(b.groups), []), on); }
+        function alertTabSet(t) { alertTab = t; renderAlertPanel(); const b = document.getElementById('alertBody'); if (b) b.scrollTop = 0; }
+        function alertBundleOpen(k) { alertOpenBundle = (alertOpenBundle === k) ? null : k; renderAlertPanel(); }
+        function alertChip(key, label, on) { return `<button type="button" class="achip" aria-pressed="${on ? 'true' : 'false'}" onclick="setAlertCfg('${key}', ${on ? 'false' : 'true'}); renderAlertPanel();">${label}</button>`; }
+        function aSw(checked, js, label, part) { return `<label class="sw${part ? ' part' : ''}"><input type="checkbox" ${checked ? 'checked' : ''} onchange="${js}" aria-label="${esc(label)}"><i></i></label>`; }
+        function aRow(icon, title, desc, sw) {
+            return `<div class="flex items-center gap-3 py-2.5"><span class="a-ico">${icon}</span><div class="min-w-0 flex-1"><div class="text-[0.8125rem] font-bold text-slate-800 dark:text-slate-100 leading-snug">${title}</div>${desc ? `<div class="text-[0.6875rem] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">${desc}</div>` : ''}</div>${sw}</div>`;
+        }
+        function aCard(inner) { return `<div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 px-3 mb-3 divide-y divide-slate-200/70 dark:divide-slate-700/70">${inner}</div>`; }
+        function alertSummaryCounts() {
+            const all = ALERT_BUNDLES.reduce((a, b) => a.concat(b.groups), []), off = alertOffSet();
+            return { on: all.filter(g => !off.has(g)).length, total: all.length };
+        }
+
+        function toggleAlertPanel(show) {
+            const p = document.getElementById('alertPanel'), bd = document.getElementById('alertBackdrop');
+            if (!p) return;
+            const want = (typeof show === 'boolean') ? show : p.classList.contains('hidden');
+            if (want) {
+                renderAlertPanel(); placeAlertPanel();
+                p.classList.remove('hidden'); if (bd) bd.classList.remove('hidden');
+                ensureAudio();
+            } else { p.classList.add('hidden'); if (bd) bd.classList.add('hidden'); }
+            const b = document.getElementById('alertButton'); if (b) b.setAttribute('aria-expanded', want ? 'true' : 'false');
+        }
+        function alertPanelOpen() { const p = document.getElementById('alertPanel'); return !!(p && !p.classList.contains('hidden')); }
+        function placeAlertPanel() {
+            const p = document.getElementById('alertPanel'), b = document.getElementById('alertButton');
+            if (!p) return;
+            p.style.top = p.style.right = p.style.left = p.style.bottom = '';
+            const sheet = isMobile();
+            p.classList.toggle('a-sheet', sheet);
+            if (!sheet && b) {
+                const r = b.getBoundingClientRect();
+                p.style.top = Math.round(r.bottom + 8) + 'px';
+                p.style.right = Math.max(8, Math.round(window.innerWidth - r.right - 8)) + 'px';
+            }
+        }
+        window.addEventListener('resize', () => { if (alertPanelOpen()) placeAlertPanel(); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && alertPanelOpen()) toggleAlertPanel(false); });
+
         function renderAlertPanel() {
             const p = document.getElementById('alertPanel');
-            const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded px-2 py-1 text-xs text-slate-800 dark:text-slate-100';
-            p.innerHTML = `
-                <div class="flex items-center justify-between mb-2">
-                    <b class="text-sm text-slate-900 dark:text-white">🔔 우리 동네 알림 설정</b>
-                    <button onclick="toggleAlertPanel(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white">✕</button>
-                </div>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>알림 받기</span>
-                    <input type="checkbox" ${alertCfg.enabled ? 'checked' : ''} onchange="setAlertCfg('enabled', this.checked)">
-                </label>
-                <div class="text-[0.6875rem] text-slate-500 mb-1">알림 지역: <b class="text-slate-800 dark:text-slate-100">${esc(alertRegionText())}</b></div>
-                <div class="grid grid-cols-2 gap-1 mb-2">
-                    <button onclick="setAlertRegionFromTown()" class="px-2 py-1 rounded text-[0.6875rem] border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">인증한 동네로</button>
-                    <button onclick="setAlertRegionFromFilter()" class="px-2 py-1 rounded text-[0.6875rem] border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700">왼쪽 필터 지역으로</button>
-                </div>
-                <div class="text-[0.6875rem] text-slate-500 mb-1">알림 범위</div>
-                <select onchange="setAlertCfg('scope', this.value)" class="${inp} mb-2">
-                    <option value="sigungu" ${alertCfg.scope === 'sigungu' ? 'selected' : ''}>시·군·구 전체</option>
-                    <option value="dong" ${alertCfg.scope === 'dong' ? 'selected' : ''}>우리 읍·면·동만</option>
-                </select>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>🇰🇷 전국 단위 소식도 받기 <span class="text-slate-400">(전국 단속·한파특보 등)</span></span>
-                    <input type="checkbox" ${alertCfg.nation === true ? 'checked' : ''} onchange="setAlertCfg('nation', this.checked)">
-                </label>
-                <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>📍 현재 위치 기반 알림</span>
-                    <input type="checkbox" ${alertCfg.useLocation ? 'checked' : ''} onchange="setAlertCfg('useLocation', this.checked); startHereWatch();">
-                </label>
-                ${alertCfg.useLocation ? `
-                <div class="text-[0.6875rem] text-slate-500 mb-1">현재 위치: <b class="text-slate-800 dark:text-slate-100">${esc(hereText() || '확인 중...')}</b> <button onclick="refreshHere(showHereSummary)" class="text-blue-500 hover:underline">다시 확인</button></div>
-                ${alertHereMsg ? `<div class="text-[0.625rem] text-red-500 mb-1">${esc(alertHereMsg)}</div>` : ''}
-                <select onchange="setAlertCfg('radiusKm', Number(this.value))" class="${inp} mb-2">
-                    ${[3, 5, 10, 20].map(k => `<option value="${k}" ${alertCfg.radiusKm === k ? 'selected' : ''}>내 위치에서 ${k}km 이내</option>`).join('')}
-                </select>` : '<div class="text-[0.625rem] text-slate-400 mb-2">켜 두면 지금 있는 곳 주변에서 사건이 나면 알려 줍니다. 위치는 이 기기 안에서만 쓰이고 저장·전송되지 않습니다.</div>'}
-                <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-                <div class="text-[0.6875rem] text-slate-500 mb-1">커뮤니티 알림</div>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>🚨 이웃의 SOS 알림 받기</span>
-                    <input type="checkbox" ${alertCfg.sos !== false ? 'checked' : ''} onchange="setAlertCfg('sos', this.checked)">
-                </label>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>📢 이웃의 사건사고 제보 알림 받기</span>
-                    <input type="checkbox" ${alertCfg.report !== false ? 'checked' : ''} onchange="setAlertCfg('report', this.checked)">
-                </label>
-                ${!commOpen('people') ? '' : `<label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>✉ 1:1 메시지 알림 받기</span>
-                    <input type="checkbox" ${alertCfg.dm !== false ? 'checked' : ''} onchange="setAlertCfg('dm', this.checked)">
-                </label>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>💬 대화 요청 알림 받기</span>
-                    <input type="checkbox" ${alertCfg.chatReq !== false ? 'checked' : ''} onchange="setAlertCfg('chatReq', this.checked)">
-                </label>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>➕ 새 팔로워 알림 받기</span>
-                    <input type="checkbox" ${alertCfg.follow !== false ? 'checked' : ''} onchange="setAlertCfg('follow', this.checked)">
-                </label>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>📰 팔로잉 새 게시물 알림 받기</span>
-                    <input type="checkbox" ${alertCfg.feed !== false ? 'checked' : ''} onchange="setAlertCfg('feed', this.checked)">
-                </label>`}
-                <div class="text-[0.6875rem] text-slate-500 mt-2 mb-1">커뮤니티 알림 표시 방법 <span class="text-slate-400">(커뮤니티를 칸에 띄워 두지 않았을 때)</span></div>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>🔴 커뮤니티 버튼에 빨간 숫자 표시</span>
-                    <input type="checkbox" ${alertCfg.commBadge !== false ? 'checked' : ''} onchange="setAlertCfg('commBadge', this.checked); updateCommBadge();">
-                </label>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>🔔 화면 오른쪽 아래 알림창 띄우기</span>
-                    <input type="checkbox" ${alertCfg.commToast !== false ? 'checked' : ''} onchange="setAlertCfg('commToast', this.checked)">
-                </label>
-                <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-                <label class="flex items-center justify-between text-xs text-slate-700 dark:text-slate-200 mb-1">
-                    <span>🖥️ 다른 창에서 작업 중에도 알림 (바탕화면 오른쪽 아래)</span>
-                    <input type="checkbox" ${alertCfg.desktop !== false ? 'checked' : ''} onchange="setDesktopNotice(this.checked)">
-                </label>
-                <div class="text-[0.625rem] ${desktopNoticeState() === 'granted' && alertCfg.desktop !== false ? 'text-emerald-600' : 'text-slate-500'} mb-1 leading-relaxed">${esc(desktopNoticeHint())}</div>
-                ${(desktopNoticeState() === 'default' && alertCfg.desktop !== false) ? '<button onclick="setDesktopNotice(true)" class="w-full mb-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">허용하기</button>' : ''}
-                <div class="border-t border-slate-200 dark:border-slate-700 my-2"></div>
-                <div class="text-[0.6875rem] text-slate-500 mb-1">알림 소리</div>
-                <select onchange="setAlertCfg('sound', this.value); playAlertSound();" class="${inp} mb-2">
-                    ${Object.keys(ALERT_SOUNDS).map(k => `<option value="${k}" ${alertCfg.sound === k ? 'selected' : ''}>${ALERT_SOUNDS[k]}</option>`).join('')}
-                </select>
-                <div class="flex items-center justify-between text-[0.6875rem] text-slate-500 mb-1"><span>볼륨</span><span id="alertVolText">${alertCfg.volume}%</span></div>
-                <input type="range" min="0" max="100" step="5" value="${alertCfg.volume}" oninput="setAlertCfg('volume', Number(this.value)); document.getElementById('alertVolText').textContent = this.value + '%';" onchange="playAlertSound()" class="w-full mb-2">
-                <button onclick="testAlert()" class="w-full py-1.5 rounded bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold">알림 미리 보기 (소리 테스트 · 5초 뒤 바탕화면 알림도 확인)</button>
-                <p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 mt-2 leading-relaxed">이 사이트 탭을 닫지 않고 열어 둔 동안 알림이 옵니다(다른 창에서 작업 중이어도 됩니다). 새 기사는 보고 있을 때 5초마다 확인하고, 다른 탭을 보는 동안은 (바탕화면 알림을 허용한 경우에만) 1분마다 확인합니다. 기사에 읍·면·동이나 장소(요금소·역 등)가 적혀 있으면 그 지점 기준으로 알립니다.</p>`;
-        }
-        function setAlertCfg(key, value) { alertCfg[key] = value; saveAlertCfg(); if (key === 'scope' || key === 'enabled' || key === 'useLocation') renderAlertPanel(); updateAlertButton(); if (typeof updateCommBadge === 'function') updateCommBadge(); }
-        function setAlertRegionFromTown() {
-            if (typeof myTown === 'undefined' || !myTown) {
-                document.getElementById('alertPanelMsg').textContent = '먼저 상단의 [우리동네 커뮤니티]에서 동네 인증을 해 주세요.';
-                return;
+            if (!p) return;
+            const prev = document.getElementById('alertBody'), keep = prev ? prev.scrollTop : 0;
+            const on = alertCfg.enabled !== false;
+            const cnt = alertSummaryCounts();
+            const tabs = [['where', '📍 내 지역'], ['what', '📰 받을 소식'], ['how', '🔊 표시·소리']];
+            let body = '';
+
+            if (alertTab === 'where') {
+                body += aCard(`
+                    <div class="py-3">
+                        <div class="text-[0.6875rem] font-bold text-slate-500 mb-1">알림 받을 지역</div>
+                        <div class="text-sm font-extrabold text-slate-900 dark:text-white mb-2">📍 ${esc(alertRegionText())}</div>
+                        <div class="grid grid-cols-2 gap-1.5 mb-2.5">
+                            <button type="button" onclick="setAlertRegionFromTown()" class="abtn">🏠 인증한 동네로</button>
+                            <button type="button" onclick="setAlertRegionFromFilter()" class="abtn">🗺️ 목록 필터 지역으로</button>
+                        </div>
+                        <div class="seg">
+                            <button type="button" class="${alertCfg.scope !== 'dong' ? 'on' : ''}" onclick="setAlertCfg('scope','sigungu')">시·군·구 전체</button>
+                            <button type="button" class="${alertCfg.scope === 'dong' ? 'on' : ''}" onclick="setAlertCfg('scope','dong')">우리 읍·면·동만</button>
+                        </div>
+                    </div>`);
+                body += aCard(
+                    aRow('🌏', '전국 단위 소식도 받기', '전국 단속·한파특보처럼 한 지역이 아닌 소식', aSw(alertCfg.nation === true, "setAlertCfg('nation', this.checked)", '전국 단위 소식')) +
+                    aRow('📍', '지금 있는 곳 주변 알림', alertCfg.useLocation ? '내 위치는 이 기기 안에서만 쓰이고 저장·전송되지 않아요' : '켜 두면 지금 있는 곳 가까이에서 난 사건을 알려 줘요', aSw(!!alertCfg.useLocation, "setAlertCfg('useLocation', this.checked); startHereWatch();", '현재 위치 알림')) +
+                    (alertCfg.useLocation ? `<div class="py-3">
+                        <div class="text-[0.6875rem] text-slate-500 mb-1.5">현재 위치: <b class="text-slate-800 dark:text-slate-100">${esc(hereText() || '확인 중...')}</b> <button type="button" onclick="refreshHere(showHereSummary)" class="text-blue-500 font-bold hover:underline">다시 확인</button></div>
+                        ${alertHereMsg ? `<div class="text-[0.625rem] text-red-500 mb-1.5">${esc(alertHereMsg)}</div>` : ''}
+                        <div class="flex flex-wrap gap-1.5">${[3, 5, 10, 20].map(k => `<button type="button" class="achip" aria-pressed="${alertCfg.radiusKm === k}" onclick="setAlertCfg('radiusKm', ${k}); renderAlertPanel();">${k}km</button>`).join('')}</div>
+                    </div>` : ''));
+            } else if (alertTab === 'what') {
+                const off = alertOffSet();
+                body += `<div class="flex items-center justify-between mb-2 px-1"><div class="text-[0.75rem] font-extrabold text-slate-700 dark:text-slate-200">사건사고 종류 <span class="text-amber-600">${cnt.on}/${cnt.total}</span></div>
+                    <div class="flex gap-1"><button type="button" class="abtn sm" onclick="alertAllGroups(true)">모두 켜기</button><button type="button" class="abtn sm" onclick="alertAllGroups(false)">모두 끄기</button></div></div>`;
+                body += aCard(ALERT_BUNDLES.map(b => {
+                    const n = b.groups.filter(g => !off.has(g)).length, all = n === b.groups.length, none = n === 0, open = alertOpenBundle === b.k;
+                    const sub = b.groups.length > 1 ? `<button type="button" class="text-[0.6875rem] font-bold text-slate-500 hover:text-amber-600 shrink-0" onclick="alertBundleOpen('${b.k}')">${n}/${b.groups.length} · 세부 ${open ? '▲' : '▼'}</button>` : '';
+                    return `<div class="py-2.5"><div class="flex items-center gap-3"><span class="a-ico">${b.icon}</span><div class="min-w-0 flex-1 text-[0.8125rem] font-bold text-slate-800 dark:text-slate-100 leading-snug">${b.name}</div>${sub}${aSw(all || (!none && !all), `alertToggleGroups(${JSON.stringify(b.groups).replace(/"/g, '&quot;')}, ${all ? 'false' : 'true'})`, b.name, !all && !none)}</div>
+                        ${open ? `<div class="flex flex-wrap gap-1.5 mt-2.5 pl-11">${b.groups.map(g => `<button type="button" class="achip" aria-pressed="${!off.has(g)}" onclick="alertToggleGroups(['${g}'], ${off.has(g) ? 'true' : 'false'})">${esc(alertGroupName(g))}</button>`).join('')}</div>` : ''}</div>`;
+                }).join(''));
+                body += `<div class="text-[0.75rem] font-extrabold text-slate-700 dark:text-slate-200 mb-2 px-1">이어서 받는 소식</div>`;
+                body += aCard(
+                    aRow('🆕', '같은 사건의 새 소식', '피해 규모·검거·원인처럼 새로 드러난 내용이 올라올 때', aSw(alertCfg.upd !== false, "setAlertCfg('upd', this.checked)", '같은 사건의 새 소식')) +
+                    aRow('🔴', '이웃 실시간 방송', '우리 동네 이웃이 현장 생중계를 시작할 때', aSw(alertCfg.live !== false, "setAlertCfg('live', this.checked)", '이웃 실시간 방송')) +
+                    aRow('📋', '안전 브리핑 시간 알림', '정해 둔 시간에 오늘의 안전 브리핑을 알려 줘요 (시간은 브리핑 설정에서)', aSw(alertCfg.briefAlert !== false, "setAlertCfg('briefAlert', this.checked)", '안전 브리핑 시간 알림')));
+                const cm = [['sos', '🚨 이웃 SOS'], ['report', '📢 이웃 제보']];
+                if (commOpen('people')) cm.push(['dm', '✉ 1:1 메시지'], ['chatReq', '💬 대화 요청'], ['follow', '➕ 새 팔로워'], ['feed', '📰 팔로잉 글']);
+                body += `<div class="text-[0.75rem] font-extrabold text-slate-700 dark:text-slate-200 mb-2 px-1">우리동네 커뮤니티</div>`;
+                body += `<div class="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/40 p-3 mb-3"><div class="flex flex-wrap gap-1.5">${cm.map(([k, l]) => alertChip(k, l, alertCfg[k] !== false)).join('')}</div></div>`;
+            } else {
+                body += aCard(`<div class="py-3">
+                    <div class="text-[0.6875rem] font-bold text-slate-500 mb-1.5">알림 소리</div>
+                    <div class="flex flex-wrap gap-1.5 mb-3">${Object.keys(ALERT_SOUNDS).map(k => `<button type="button" class="achip" aria-pressed="${alertCfg.sound === k}" onclick="setAlertCfg('sound','${k}'); renderAlertPanel(); playAlertSound();">${ALERT_SOUNDS[k]}</button>`).join('')}</div>
+                    <div class="flex items-center justify-between text-[0.6875rem] text-slate-500 mb-1"><span>볼륨</span><span id="alertVolText">${alertCfg.volume}%</span></div>
+                    <input type="range" min="0" max="100" step="5" value="${alertCfg.volume}" oninput="setAlertCfg('volume', Number(this.value)); document.getElementById('alertVolText').textContent = this.value + '%';" onchange="playAlertSound()" class="w-full accent-amber-500">
+                </div>`);
+                body += aCard(
+                    aRow('🔔', '화면에 알림창 띄우기', '커뮤니티 소식이 오면 화면 구석에 잠깐 보여 줘요', aSw(alertCfg.commToast !== false, "setAlertCfg('commToast', this.checked)", '알림창')) +
+                    aRow('🔴', '커뮤니티 버튼에 빨간 숫자', '확인하지 않은 소식 개수를 표시해요', aSw(alertCfg.commBadge !== false, "setAlertCfg('commBadge', this.checked); updateCommBadge();", '빨간 숫자')) +
+                    aRow('🖥️', '다른 창에서도 알림', `<span class="${desktopNoticeState() === 'granted' && alertCfg.desktop !== false ? 'text-emerald-600' : ''}">${esc(desktopNoticeHint())}</span>`, aSw(alertCfg.desktop !== false, "setDesktopNotice(this.checked)", '바탕화면 알림')) +
+                    ((desktopNoticeState() === 'default' && alertCfg.desktop !== false) ? `<div class="py-2.5"><button type="button" onclick="setDesktopNotice(true)" class="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold">알림 허용하기</button></div>` : ''));
+                body += `<button type="button" onclick="testAlert()" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white text-sm font-extrabold shadow mb-2">🔔 알림 미리 보기</button>
+                    <p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 leading-relaxed mb-1">이 사이트를 열어 둔 동안 알림이 와요. 보고 있을 때는 5초마다, 다른 탭을 보는 동안은 (바탕화면 알림을 허용한 경우) 1분마다 새 기사를 확인해요.</p>`;
             }
+            if (alertTab !== 'how') body += `<p id="alertPanelMsg" class="text-[0.625rem] text-slate-400 leading-relaxed px-1 mb-1">${alertTab === 'where' ? '기사에 읍·면·동이나 장소(요금소·역 등)가 적혀 있으면 그 지점을 기준으로 알려요.' : '끈 종류의 사건은 알림만 오지 않고, 목록과 지도에는 그대로 보여요.'}</p>`;
+
+            p.innerHTML = `
+                <div class="a-grip"></div>
+                <div class="flex items-center gap-3 px-4 pt-3 pb-2">
+                    <div class="w-9 h-9 rounded-xl flex items-center justify-center text-lg ${on ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20' : 'bg-slate-100 text-slate-400 dark:bg-slate-800'}"><i class="fa-${on ? 'solid fa-bell' : 'regular fa-bell-slash'}"></i></div>
+                    <div class="min-w-0 flex-1 leading-tight"><div class="text-sm font-black text-slate-900 dark:text-white">알림 ${on ? '켜짐' : '꺼짐'}</div><div class="text-[0.6875rem] text-slate-500 truncate">${on ? esc(alertRegionText()) + ' · 사건 ' + cnt.on + '/' + cnt.total : '켜면 내 지역 속보를 바로 알려 드려요'}</div></div>
+                    ${aSw(on, "setAlertCfg('enabled', this.checked)", '알림 받기')}
+                    <button type="button" onclick="toggleAlertPanel(false)" class="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-white" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="a-tabs">${tabs.map(([k, l]) => `<button type="button" class="a-tab ${alertTab === k ? 'on' : ''}" onclick="alertTabSet('${k}')">${l}</button>`).join('')}</div>
+                <div id="alertBody" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-4 pt-3 pb-4 ${on ? '' : 'a-dim'}">${body}</div>`;
+            const nb = document.getElementById('alertBody'); if (nb) nb.scrollTop = keep;
+        }
+        function setAlertCfg(key, value) {
+            alertCfg[key] = value; saveAlertCfg();
+            if (key === 'scope' || key === 'enabled' || key === 'useLocation') renderAlertPanel();
+            updateAlertButton();
+            if (typeof updateCommBadge === 'function') updateCommBadge();
+        }
+        function alertPanelMsg(t) { const m = document.getElementById('alertPanelMsg'); if (m) m.textContent = t; }
+        function setAlertRegionFromTown() {
+            if (typeof myTown === 'undefined' || !myTown) { alertPanelMsg('먼저 아래 [우리동네 커뮤니티]에서 동네 인증을 해 주세요.'); return; }
             alertCfg.region = { sido: myTown.sido, sigungu: myTown.sigungu, dong: myTown.dong };
             saveAlertCfg(); renderAlertPanel(); updateAlertButton();
         }
@@ -4400,10 +4483,7 @@
             const sido = document.getElementById('sidoSelect').value;
             const sigungu = document.getElementById('sigunguSelect').value;
             const dong = document.getElementById('dongSelect').value;
-            if (sido === 'all') {
-                document.getElementById('alertPanelMsg').textContent = '왼쪽 위 [전국 지역별 상세 필터]에서 시·도와 시·군·구를 먼저 골라 주세요.';
-                return;
-            }
+            if (sido === 'all') { alertPanelMsg('사건 목록 위쪽 [전국 지역별 상세 필터]에서 시·도와 시·군·구를 먼저 골라 주세요.'); return; }
             alertCfg.region = { sido: sido, sigungu: (sigungu !== 'all' && sigungu !== '전체') ? sigungu : '', dong: (dong !== 'all' && dong !== '전체') ? dong : '' };
             saveAlertCfg(); renderAlertPanel(); updateAlertButton();
         }
@@ -4413,11 +4493,17 @@
             // 다른 창으로 옮겨 가 있으면 5초 뒤 바탕화면 알림도 한 번 띄워 확인
             setTimeout(() => { try { showDesktopNotice({ test: true, head: '🔔 우리 동네 새 사건사고', badge: '알림 미리 보기', title: '다른 창에서 작업 중에도 이렇게 보입니다.', foot: alertRegionText() }, null); } catch (e) {} }, 5000);
         }
+        // 맨 위 🔔 아이콘: 켜져 있으면 노란 종 + 점, 꺼져 있으면 빗금 종
         function updateAlertButton() {
             const b = document.getElementById('alertButton');
             if (!b) return;
             const on = alertCfg.enabled && (!!alertRegion() || alertCfg.useLocation);
-            b.innerHTML = (on ? '<i class="fa-solid fa-bell text-amber-500"></i> 알림 켜짐' : '<i class="fa-regular fa-bell-slash"></i> 알림 설정');
+            const ic = b.querySelector('i'), dot = document.getElementById('alertBellDot');
+            if (ic) ic.className = on ? 'fa-solid fa-bell' : 'fa-regular fa-bell-slash';
+            b.classList.toggle('is-on', !!on);
+            if (dot) dot.classList.toggle('hidden', !on);
+            const t = on ? '알림 켜짐 — 눌러서 설정' : '알림 설정 (내 지역 속보 받기)';
+            b.title = t; b.setAttribute('aria-label', t);
         }
 
         // ================= 우리동네 커뮤니티 =================
@@ -9034,7 +9120,7 @@
                 const prev = new Set(commLives.map(l => l.id));
                 commLives = snap.docs.map(d => Object.assign({ id: d.id }, d.data())).filter(l => liveActive(l) && !isBlocked(l.uid));
                 if (livesLoadedOnce) commLives.forEach(l => {
-                    if (!prev.has(l.id) && l.uid !== COMM_UID) { showAlertToast({ head: '🔴 우리 동네 실시간 방송', title: (l.nick || '이웃') + '님: ' + (l.title || '현장 생중계'), foot: '누르면 바로 시청합니다', live: l.id, danger: true }); playAlertSound('bell'); }
+                    if (!prev.has(l.id) && l.uid !== COMM_UID && alertCfg.enabled && alertCfg.live !== false) { showAlertToast({ head: '🔴 우리 동네 실시간 방송', title: (l.nick || '이웃') + '님: ' + (l.title || '현장 생중계'), foot: '누르면 바로 시청합니다', live: l.id, danger: true }); playAlertSound('bell'); }
                 });
                 livesLoadedOnce = true;
                 renderLiveBar(); renderCommMessages();
@@ -10674,7 +10760,7 @@
                             <button onclick="briefAddArea()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">+ 추가</button></div>
                         ${briefCfg.areas.length ? `<div class="mt-2 flex flex-wrap gap-1.5">${briefCfg.areas.map((a, i) => `<span class="inline-flex items-center gap-1 pl-2.5 pr-1.5 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-700 text-xs font-bold text-indigo-800 dark:text-indigo-200">${esc(a.replace('|', ' '))}<button onclick="briefRemoveArea(${i})" aria-label="삭제" class="text-red-500 text-sm leading-none px-1">×</button></span>`).join('')}</div>` : ''}
                         ${briefHas('near') ?`<div class="mt-2 flex items-center gap-2 text-xs">반경 <input type="range" min="3" max="50" step="1" value="${briefCfg.radius}" oninput="briefCfg.radius = Number(this.value); this.nextElementSibling.textContent = this.value + 'km'" onchange="saveBriefCfg()"><b>${briefCfg.radius}km</b></div>` : ''}
-                        <p class="text-[0.6875rem] text-slate-400 mt-1">기준 지역: <b>${esc(c ? c.label : '아직 없음')}</b> — 커뮤니티 동네 인증, 지도 위 [알림 설정]의 지역, 또는 현재 위치 알림을 켜면 정해집니다.</p></div>
+                        <p class="text-[0.6875rem] text-slate-400 mt-1">기준 지역: <b>${esc(c ? c.label : '아직 없음')}</b> — 커뮤니티 동네 인증, 맨 위 🔔 알림 설정의 지역, 또는 현재 위치 알림을 켜면 정해집니다.</p></div>
                     <label class="flex items-center gap-2"><input type="checkbox" ${briefCfg.autoOpen ? 'checked' : ''} onchange="briefCfg.autoOpen = this.checked; saveBriefCfg()"> 정한 시간에 브리핑 창 자동으로 열기</label>
                     <label class="flex items-center gap-2"><input type="checkbox" ${briefCfg.notify ? 'checked' : ''} onchange="briefCfg.notify = this.checked; saveBriefCfg(); if (this.checked && window.Notification && Notification.permission === 'default') Notification.requestPermission()"> 브라우저 알림으로도 받기</label>
                     <button onclick="openBriefing('report')" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold">저장하고 보고서 보기</button>
@@ -10721,7 +10807,7 @@
             briefCfg.lastShown = key; saveBriefCfg();
             const d = briefAnalyze(1);
             const dot = document.getElementById('briefDot'); if (dot) dot.classList.remove('hidden');
-            showAlertToast({ head: '📋 ' + due + ' 안전 브리핑', title: '오늘 ' + (d.c ? d.c.label : '전국') + ' 사건사고 ' + d.total + '건. 누르면 보고서를 엽니다.', briefing: true });
+            if (alertCfg.briefAlert !== false) showAlertToast({ head: '📋 ' + due + ' 안전 브리핑', title: '오늘 ' + (d.c ? d.c.label : '전국') + ' 사건사고 ' + d.total + '건. 누르면 보고서를 엽니다.', briefing: true });
             if (briefCfg.notify && window.Notification && Notification.permission === 'granted') {
                 try { new Notification('우리동네 안전 브리핑 (' + due + ')', { body: '오늘 ' + (d.c ? d.c.label : '전국') + ' 사건사고 ' + d.total + '건' + (d.attention[0] ? ' · ' + d.attention[0].lead.title : '') }); } catch (e) {}
             }
@@ -10817,7 +10903,7 @@
             { icon: '📍', title: '내 동네만 골라 보기', text: '시·도 → 시·군·구 → 읍·면·동 순서로 고르면 우리 동네 사건만 모아 볼 수 있어요. 기본은 전국 전체예요.', target: () => tourPanel('list', '#sidoSelect') },
             { icon: '📅', title: '날짜 · 사건 목록', text: '화살표나 날짜 버튼으로 지난 날짜의 사건도 볼 수 있어요. 목록은 새 기사가 올라오면 새로고침 없이 자동으로 추가돼요.', target: () => tourPanel('list', '#dateButton') },
             { icon: '🗂️', title: '분류 버튼 · 기사 원문', text: '교통·화재·범죄 같은 분류 버튼으로 보고 싶은 종류만 걸러 볼 수 있어요. 목록에서 기사를 누르면 원문 요약이 열려요.', target: () => tourPanel('article', '#categoryBar') },
-            { icon: '🗺️', title: '사건 지도', text: '사건이 일어난 위치를 지도에서 확인해요. 지도 위 [알림 설정]으로 내 지역 속보를 받고, [내 주변 안전시설]로 가까운 병원·소방서·경찰서를 찾을 수 있어요.', target: () => tourPanel('map') },
+            { icon: '🗺️', title: '사건 지도', text: '사건이 일어난 위치를 지도에서 확인해요. 맨 위 🔔 아이콘으로 내 지역 속보를 받고, [내 주변 안전시설]로 가까운 병원·소방서·경찰서를 찾을 수 있어요.', target: () => tourPanel('map') },
             { icon: '📋', title: '안전 브리핑', text: '오늘·이번 주 주요 사건을 비서처럼 요약해 드려요. 바쁠 때 이것만 눌러도 오늘 동네 분위기를 알 수 있어요.', target: () => isDocked('briefing') ? panelEl('briefing') : document.querySelector('#heroBtns > button:first-child') },
             { icon: '📢', title: '실시간 제보하기', text: '목격한 사고나 위험 상황은 이 버튼으로 바로 제보할 수 있어요. 우리동네 안전망의 실시간 제보 작성 화면이 열려요.', target: () => document.querySelector('#heroBtns > button:last-child') },
             { icon: '⚙️', title: '내 화면으로 꾸미기', text: '[화면 설정]에서 화면을 2칸 또는 3칸으로 나누고, 칸마다 사건 목록·기사 원문·사건 지도·커뮤니티·안전 브리핑 중 원하는 화면을 배치할 수 있어요. 커뮤니티를 칸에 넣어 두면 항상 열어 두고 볼 수 있어요.', target: () => document.getElementById('layoutBtn') },
@@ -10859,7 +10945,7 @@
             0: { text: '전국 사건·사고를 실시간으로 모아 보여 주는 사이트예요. 핵심 사용법을 [다음]으로 넘기며 확인해 보세요.' },
             1: { text: '시·도 → 시·군·구 → 읍·면·동 순서로 고르면 우리 동네 사건만 볼 수 있어요.' },
             2: { text: '화살표나 날짜 버튼으로 지난 날짜도 볼 수 있어요. 새 기사는 자동으로 추가돼요.' },
-            4: { text: '사건 위치를 지도에서 봐요. [알림 설정]으로 내 지역 속보를, [내 주변 안전시설]로 가까운 병원·소방서·경찰서를 찾아요.' },
+            4: { text: '사건 위치를 지도에서 봐요. 맨 위 🔔 아이콘으로 내 지역 속보를, [내 주변 안전시설]로 가까운 병원·소방서·경찰서를 찾아요.' },
             5: { text: '오늘·이번 주 주요 사건을 요약해 드려요. 이것만 눌러도 동네 분위기를 알 수 있어요.' },
             6: { text: '목격한 사고·위험 상황을 이 버튼으로 바로 제보해요.' },
             // ※ 커뮤니티 단계는 '순서 번호'가 아니라 이름('묶음:tile/rest')으로 연결 — 일부 탭을 숨겨도 글이 어긋나지 않게 (tourShortKey)
