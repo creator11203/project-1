@@ -71,6 +71,10 @@
         .dark #newsListContainer::-webkit-scrollbar-track { background: #0f172a; border-left-color: #1e293b; }
         .dark #newsListContainer::-webkit-scrollbar-thumb { background: #6366f1; border-color: #0f172a; }
         .dark #newsListContainer::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+        /* 모든 버튼: 누르면 살짝 눌리고 색이 부드럽게 바뀜 (특이도 0 이라 개별 버튼의 자체 효과는 그대로 우선) */
+        :where(button, [role="button"], .tab-btn) { transition: transform .14s cubic-bezier(.3,.8,.3,1), background-color .22s ease, color .22s ease, border-color .22s ease, opacity .22s ease, box-shadow .22s ease; }
+        :where(button, [role="button"]):active:not(:disabled) { transform: scale(.96); }
+        @media (prefers-reduced-motion: reduce) { :where(button, [role="button"]) { transition: none; } :where(button, [role="button"]):active { transform: none; } }
         @keyframes radar-sweep { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .animate-radar-sweep { animation: radar-sweep 3s linear infinite; }
         
@@ -3041,15 +3045,16 @@
             strip.addEventListener('touchmove', e => {
                 if (!on) return;
                 const t = e.touches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
-                if (dx > 6 && dx > dy) { const p = Math.min(dx, 90); hint.style.left = (p - 40) + 'px'; hint.style.opacity = String(Math.min(1, dx / 60)); }
+                if (dx > 6 && dx > dy) { const p = Math.min(dx, 90); hint.style.left = (p - 40) + 'px'; hint.style.opacity = String(Math.min(1, dx / 60)); if (isMobile() && typeof mobDrag === 'function' && dx > 8) mobDrag(dx); }
             }, { passive: true });
             strip.addEventListener('touchend', e => {
                 const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
                 const go = on && dx > 70 && dx > dy * 1.5;
                 reset();
-                if (go) { if (isMobile() && typeof mobBackToList === 'function') mobBackToList(); else renderDetailView(id, true); }
+                if (isMobile() && typeof mobDragEnd === 'function') mobDragEnd(go, () => { mobBackToList(); });
+                else if (go) renderDetailView(id, true);
             }, { passive: true });
-            strip.addEventListener('touchcancel', reset, { passive: true });
+            strip.addEventListener('touchcancel', () => { reset(); if (typeof mobDragEnd === 'function') mobDragEnd(false); }, { passive: true });
             wrap.appendChild(strip);
         }
         function tryEmbedArticle(id) {
@@ -3334,7 +3339,9 @@
         function setMobTab(t) {
             const sc = document.getElementById('splitContainer');
             if (sc && sc.dataset.m && sc.dataset.m !== t && !_mtGoingBack) { _mtHist.push(sc.dataset.m); if (_mtHist.length > 20) _mtHist.shift(); }
+            const _prevTab = sc ? sc.dataset.m : t;
             if (sc) sc.dataset.m = t;
+            if (sc && _prevTab !== t) { const o = mtabOrder(); mobPaneEnter(mobActivePane(), _mtGoingBack ? -1 : (o.indexOf(t) > o.indexOf(_prevTab) ? 1 : -1)); }
             document.querySelectorAll('#mobileTabs [data-mt]').forEach(b => b.classList.toggle('on', b.dataset.mt === t));
             // 기사 원문을 읽는 탭: 위쪽 메뉴는 접고 아래 알약은 작게 (원문은 다른 사이트 화면이라 스크롤을 알 수 없어 처음부터 작게 둠)
             if (t !== 'list') closeMobileHotspot(true);
@@ -3419,6 +3426,43 @@
         }
         // ── 휴대폰 어디서든: 화면 왼쪽 끝에서 가운데로 쓸면 '바로 직전 화면'으로 (열린 창 → 글 보기 → 다발 지역 → 원문 → 이전 탭 순)
         // 원문 기사에서 뒤로: 기사 요약 '목록' 화면으로 (원문 탭 안의 요약 화면이 아님)
+        // ── 부드러운 화면 전환: 탭을 바꾸면 새 화면이 살짝 밀려 들어오며 나타나고, 뒤로 쓸 때는 손가락을 따라 화면이 같이 밀려남
+        const _reduceMotion = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+        function mobActivePane() {
+            const sc = document.getElementById('splitContainer'), m = sc ? sc.dataset.m : 'list';
+            return document.getElementById(m === 'article' ? 'centerPane' : m === 'map' ? 'rightPane' : 'leftPane');
+        }
+        function mobPaneEnter(el, dir) {
+            if (!el || !el.animate || _reduceMotion() || !isMobile()) return;
+            try { el.animate([{ transform: 'translateX(' + (dir * 32) + 'px)', opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], { duration: 280, easing: 'cubic-bezier(.22,.8,.3,1)' }); } catch (e) {}
+        }
+        function mobOverlayOpen() {
+            return ['alertPanel', 'commMediaView', 'sheetModal', 'appModal', 'commProfileCard', 'floatModal'].some(id => { const e = document.getElementById(id); return e && !e.classList.contains('hidden'); });
+        }
+        let _mbEl = null;
+        function mobDrag(dx) {
+            const el = _mbEl || mobActivePane(); if (!el) return;
+            _mbEl = el;
+            const p = Math.max(0, dx);
+            el.style.transition = 'none'; el.style.willChange = 'transform';
+            el.style.transform = 'translateX(' + p + 'px)';
+            el.style.opacity = String(1 - Math.min(.4, p / 500));
+            el.style.boxShadow = '-14px 0 28px rgba(15,23,42,.22)';
+        }
+        function mobDragEnd(go, cb) {
+            const el = _mbEl; _mbEl = null;
+            const clear = () => { if (el) { el.style.transition = el.style.transform = el.style.opacity = el.style.boxShadow = el.style.willChange = ''; } };
+            if (!el) { if (go && cb) cb(); return; }
+            if (!go) {
+                el.style.transition = 'transform .26s cubic-bezier(.2,.8,.2,1), opacity .26s';
+                el.style.transform = 'translateX(0)'; el.style.opacity = '1';
+                setTimeout(clear, 280); return;
+            }
+            if (_reduceMotion()) { clear(); if (cb) cb(); return; }
+            el.style.transition = 'transform .2s cubic-bezier(.4,0,1,1), opacity .2s';
+            el.style.transform = 'translateX(' + Math.max(window.innerWidth, 320) + 'px)'; el.style.opacity = '.3';
+            setTimeout(() => { clear(); if (cb) cb(); }, 200);
+        }
         function mobBackToList() {
             if (_mtHist.length && _mtHist[_mtHist.length - 1] === 'list') _mtHist.pop();
             _mtGoingBack = true; try { setMobTab('list'); } finally { _mtGoingBack = false; }
@@ -3449,12 +3493,21 @@
                 on = isMobile() && e.touches.length === 1 && t.clientX < 28 && !document.getElementById('tourRoot') && !(e.target.closest && e.target.closest('#edgeBack'));
                 x0 = t.clientX; y0 = t.clientY;
             }, { passive: true });
+            let follow = false;
+            document.addEventListener('touchmove', e => {
+                if (!on) return;
+                const t = e.touches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
+                if (!follow && dx > 8 && dx > dy * 1.2 && !mobOverlayOpen()) follow = true;
+                if (follow) mobDrag(dx);       // 손가락을 따라 화면이 같이 밀려 나옴
+            }, { passive: true });
             document.addEventListener('touchend', e => {
                 if (!on) return; on = false;
                 const t = e.changedTouches[0], dx = t.clientX - x0, dy = Math.abs(t.clientY - y0);
-                if (dx > 70 && dx > dy * 1.5) mobileGoBack();
+                const go = dx > 70 && dx > dy * 1.5;
+                if (follow) { follow = false; mobDragEnd(go, () => { if (!mobileGoBack()) mobPaneEnter(mobActivePane(), -1); }); }
+                else if (go) mobileGoBack();
             }, { passive: true });
-            document.addEventListener('touchcancel', () => { on = false; }, { passive: true });
+            document.addEventListener('touchcancel', () => { on = false; if (follow) { follow = false; mobDragEnd(false); } }, { passive: true });
         })();
         // 아래 탭 순서 저장/적용 + 좌우 쓸어 넘기기 + 아이콘 꾹 눌러 끌어서 순서 바꾸기
         const MTAB_KEY = 'mtab_order';
@@ -10945,7 +10998,7 @@
             0: { text: '전국 사건·사고를 실시간으로 모아 보여 주는 사이트예요. 핵심 사용법을 [다음]으로 넘기며 확인해 보세요.' },
             1: { text: '시·도 → 시·군·구 → 읍·면·동 순서로 고르면 우리 동네 사건만 볼 수 있어요.' },
             2: { text: '화살표나 날짜 버튼으로 지난 날짜도 볼 수 있어요. 새 기사는 자동으로 추가돼요.' },
-            4: { text: '사건 위치를 지도에서 봐요. 맨 위 🔔 아이콘으로 내 지역 속보를, [내 주변 안전시설]로 가까운 병원·소방서·경찰서를 찾아요.' },
+            4: { text: '사건 위치를 지도에서 봐요. [내 주변 안전시설]로 가까운 병원·소방서·경찰서를 찾을 수 있어요.' },
             5: { text: '오늘·이번 주 주요 사건을 요약해 드려요. 이것만 눌러도 동네 분위기를 알 수 있어요.' },
             6: { text: '목격한 사고·위험 상황을 이 버튼으로 바로 제보해요.' },
             // ※ 커뮤니티 단계는 '순서 번호'가 아니라 이름('묶음:tile/rest')으로 연결 — 일부 탭을 숨겨도 글이 어긋나지 않게 (tourShortKey)
@@ -10978,6 +11031,11 @@
                 arrows: { list: '사건 목록', article: '원문 기사', map: '사건 지도', comm: '커뮤니티' },
                 text: '한 번에 한 화면씩 보여 드려요. 화살표가 가리키는 아이콘을 누르거나 화면을 좌우로 쓸어 넘겨 보세요.',
                 bullets: ['사건 목록: 지역·날짜를 고르고 사건을 훑어봐요', '원문 기사: 기사 원문을 읽고, 종류별로 거르고, 사고 다발 지역 순위를 봐요', '사건 지도: 사건 위치를 지도로 확인해요', '초록 버튼: 이웃과 소통하는 커뮤니티 (뒤에서 자세히 알려 드려요)'] });
+            // 사건 지도 다음에: 맨 위 알림 종 아이콘과 그 안의 설정 설명
+            const mi = steps.findIndex(x => x._i === 4);
+            if (mi >= 0) steps.splice(mi + 1, 0, { icon: '🔔', title: '맨 위 알림 종 아이콘', tab: 'map', _i: 'alert', target: () => document.getElementById('alertButton'),
+                text: '내 지역에 새 사건이 올라오면 알려 드려요. 종을 눌러 받고 싶은 소식만 골라 보세요. 꺼져 있으면 종에 빗금이 보여요.',
+                bullets: ['📍 내 지역: 알림받을 동네 정하기 (인증한 동네·필터 지역)', '📰 받을 소식: 묶음별 스위치로 켜고 끄고, 펼쳐서 세부 종류도 고르기', '🔊 표시·소리: 소리·화면 알림·후속 소식 알림 켜고 끄기'] });
             // 커뮤니티 설명으로 넘어가기 전에, 커뮤니티는 맨 아래 초록 버튼으로 연다는 것을 먼저 알려 줌 (갑자기 창이 열리지 않게)
             const ci = steps.findIndex(x => x.openComm);
             if (ci > 0) steps.splice(ci, 0, { icon: '💬', title: '커뮤니티는 아래 초록 버튼', pos: 'top', target: () => document.getElementById('mobileCommBtn'), _i: 'commbtn',
