@@ -5504,7 +5504,7 @@
                 text: '대화방을 만들어(글·음성, 인원수 선택) 관심 있는 이웃이 들어오길 기다리거나, 열려 있는 방에 들어가 이야기할 수 있습니다. 방은 같은 시·군·구 이웃에게만 보이고 하루 뒤 사라집니다. 음성 대화는 서로의 기기가 직접 연결되므로 상대에게 내 인터넷 주소(IP)가 보일 수 있습니다. 개인정보·연락처는 알려 주지 마세요. 대화 내용에 대한 책임은 말한 사람 본인에게 있습니다.' },
             friends: { title: '팔로잉 소식', cls: 'bg-fuchsia-50 dark:bg-fuchsia-950/40 text-fuchsia-800 dark:text-fuchsia-200 border-fuchsia-200 dark:border-fuchsia-900',
                 text: '내가 팔로우한 이웃이 올린 일상 게시물이 실시간으로 올라오는 곳입니다. 이웃 프로필에서 [팔로우]를 누르면 바로 소식을 받아 볼 수 있고, 서로 팔로우(맞팔)하면 대화 요청 없이 1:1 대화를 할 수 있습니다.' },
-            food: { title: '우리동네 맛집', cls: 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-900',
+            food: { title: '맛집', cls: 'bg-orange-50 dark:bg-orange-950/40 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-900',
                 text: '직접 가 본 동네 맛집을 상호명·위치·별점(5점 만점)·짧은 후기·사진으로 소개하는 곳입니다. 같은 가게 후기는 하나로 모여 평균 별점이 보이고, 상호명을 누르면 후기 모음과 지도(네이버·카카오)로 바로 이어집니다. 광고·협찬 후기는 올리지 말아 주세요.' },
             spot: { title: '우리동네 핫플', cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900',
                 text: '산책길·공원·쉼터·전시·아이와 가기 좋은 곳 등 동네에서 가 볼 만한 곳을 추천하는 곳입니다. 장소 이름을 누르면 추천 모음과 지도로 이어집니다.' },
@@ -5680,8 +5680,8 @@
                         { color: '#0ea5e9', chip: chip('sky', '👋 이사왔어요'), title: '👋 단비님이 이사 왔어요', meta: '단비 · 2시간 전 · 환영해요 12', cmt: 4, fresh: 1 },
                         { color: '#0ea5e9', chip: chip('sky', '👋 이사왔어요'), title: '👋 산책러님이 이사 왔어요', meta: '산책러 · 어제 · 환영해요 9', cmt: 2 }],
                     food: [
-                        { color: '#f97316', chip: chip('orange', '🍜 동네 맛집 · 분식'), title: '○○시장 입구 떡볶이집, 양 많고 맛있어요 ⭐4.5', meta: '단비 · 어제 · 조회 77 · 공감 12', cmt: 3, thumb: '🍢', fresh: 1 },
-                        { color: '#f97316', chip: chip('orange', '🍜 동네 맛집 · 카페'), title: '조용한 동네 카페 발견! 콘센트 많아요 ⭐4.2', meta: '봄이네 · 2일 전 · 조회 54 · 공감 9', cmt: 1, thumb: '☕' }],
+                        { color: '#f97316', chip: chip('orange', '🍜 맛집 · 분식'), title: '○○시장 입구 떡볶이집, 양 많고 맛있어요 ⭐4.5', meta: '단비 · 어제 · 조회 77 · 공감 12', cmt: 3, thumb: '🍢', fresh: 1 },
+                        { color: '#f97316', chip: chip('orange', '🍜 맛집 · 카페'), title: '조용한 동네 카페 발견! 콘센트 많아요 ⭐4.2', meta: '봄이네 · 2일 전 · 조회 54 · 공감 9', cmt: 1, thumb: '☕' }],
                     spot: [
                         { color: '#10b981', chip: chip('emerald', '🔥 핫플 · 산책'), title: '해 질 녘 ○○천 산책길 추천해요 ⭐4.8', meta: '산책러 · 3시간 전 · 조회 91 · 공감 23', cmt: 5, thumb: '🌇', fresh: 1 },
                         { color: '#10b981', chip: chip('emerald', '🔥 핫플 · 전시'), title: '○○문화센터 무료 전시 보고 왔어요 ⭐4.4', meta: '단비 · 어제 · 조회 40 · 공감 6', cmt: 2, thumb: '🖼️' }],
@@ -8202,7 +8202,7 @@
             { k: 'me', label: '내 프로필', fa: 'fa-circle-user', c: 'fuchsia', tabs: ['me'] }
         ];
         const COMM_GROUPS = COMM_GROUPS_ALL.filter(g => COMM_OPEN.includes(g.k));
-        const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '동네 맛집', spot: '핫플',
+        const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '맛집', spot: '핫플',
             market: '동네 장터', popular: '우리동네 TOP10', meet: '대화방', friends: '팔로잉 소식', random: '랜덤 채팅', dm: '내 친구', national: '이달의 전국 TOP10', me: '내 프로필' };
         const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-face-sad-tear', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-fire',
             popular: 'fa-ranking-star', meet: 'fa-comments', friends: 'fa-newspaper', random: 'fa-shuffle', dm: 'fa-envelope' };
@@ -8751,7 +8751,7 @@
         //  맛집·핫플: 같은 가게(장소) 후기는 이름으로 하나로 묶어 평균 별점·후기 수를 보여 주고, 이름을 누르면 후기 모음 + 지도(네이버·카카오)로 이어짐
         //  이사왔어요: 새 이웃의 인사 글 + 👋 환영해요 + 짧은 댓글
         const BOARDS = {
-            food: { col: 'food', name: '우리동네 맛집', icon: '🍜', place: true, kinds: ['한식', '중식', '일식', '양식', '분식', '고기·구이', '카페·디저트', '빵집', '술집', '기타'],
+            food: { col: 'food', name: '맛집', icon: '🍜', place: true, kinds: ['한식', '중식', '일식', '양식', '분식', '고기·구이', '카페·디저트', '빵집', '술집', '기타'],
                 nameLabel: '상호명', namePh: '예) ○○칼국수', textPh: '예) 바지락이 듬뿍, 국물이 시원해요. 점심엔 줄을 서요.', ratingLabel: '별점', btn: 'bg-orange-500 hover:bg-orange-400', ring: 'border-orange-300 dark:border-orange-800', chip: 'bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-200', write: '맛집 후기 쓰기' },
             spot: { col: 'spots', name: '우리동네 핫플', icon: '🔥', place: true, kinds: ['공원·산책길', '카페·쉼터', '문화·전시', '아이와 함께', '운동·체육', '야경·풍경', '기타'],
                 nameLabel: '장소 이름', namePh: '예) ○○천 벚꽃길', textPh: '예) 저녁 산책하기 좋아요. 4월엔 벚꽃이 장관이에요.', ratingLabel: '추천도', btn: 'bg-emerald-600 hover:bg-emerald-500', ring: 'border-emerald-300 dark:border-emerald-800', chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200', write: '핫플 추천하기' },
@@ -8855,6 +8855,67 @@
                 : `<button type="button" onclick="document.getElementById('bdFile').click()" class="px-3 py-1.5 rounded-lg border border-dashed border-slate-400 text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">📷 사진 올리기 (선택)</button>`;
         }
         function boardMsg(m) { const el = document.getElementById('bdMsg'); if (el) el.textContent = m || ''; }
+        // ---- 맛집·핫플: 내가 인증한 시·군·구 안의 가게·장소만 등록 ----
+        // 1) 위치 글자 검사: 다른 시·도, 같은 시·도의 다른 시·군·구, 같은 시·군·구가 아닌 동 이름이 적혀 있으면 막음
+        function placeAreaCheck(text) {
+            if (!myTown || typeof regionHierarchy === 'undefined' || !regionHierarchy[myTown.sido]) return '';
+            const place = ' ' + text + ' ', mySido = myTown.sido, mySg = myTown.sigungu;
+            const han = ch => /[가-힣]/.test(ch || '');
+            const sidoNames = []; Object.keys(regionHierarchy).forEach(s => { sidoNames.push(s); (SIDO_ALIASES[s] || []).forEach(a => sidoNames.push(a)); });
+            const has = (tok, nextBad) => {
+                let i = place.indexOf(tok);
+                while (i >= 0) {
+                    const prevOk = !han(place[i - 1]) || sidoNames.some(s => place.slice(0, i).endsWith(s));
+                    const next = place.slice(i + tok.length, i + tok.length + 1);
+                    if (prevOk && !(nextBad && nextBad.includes(next))) return true;
+                    i = place.indexOf(tok, i + 1);
+                }
+                return false;
+            };
+            const bad = (what) => '“' + text + '”은(는) 내가 인증한 ' + mySg + ' 밖의 ' + what + '로 보여요. 인증한 지역 안의 가게·장소만 올릴 수 있어요.';
+            // 다른 시·도
+            for (const s of Object.keys(regionHierarchy)) {
+                if (s === mySido) continue;
+                const names = [s].concat(SIDO_ALIASES[s] || []);
+                if (names.some(n => has(n, n === '광주' ? '시' : ''))) return bad('주소');
+            }
+            const sgs = Object.keys(regionHierarchy[mySido]);
+            const mine = mySg.split(' ').every(p => has(p));
+            if (!mine) {
+                // 같은 시·도의 다른 시·군·구
+                for (const sg of sgs) { if (sg !== mySg && sg.split(' ').every(p => has(p))) return bad('주소'); }
+                // 시·도를 안 쓰고 시·군·구만 적은 다른 지역 (예: 서울에서 인증했는데 '해운대구')
+                const mySet = new Set(sgs);
+                for (const s of Object.keys(regionHierarchy)) {
+                    if (s === mySido) continue;
+                    for (const sg of Object.keys(regionHierarchy[s])) { if (!mySet.has(sg) && sg.split(' ').every(p => has(p))) return bad('주소'); }
+                }
+            }
+            // 같은 시·도 안 다른 시·군·구의 동 이름 (내 시·군·구에도 있는 이름이면 통과)
+            const base = d => d.replace(/[0-9·.]+/g, '');      // 삼성1동·삼성2동 → 삼성동 (행정동 번호를 떼고 비교)
+            const myDongs = new Set((regionHierarchy[mySido][mySg] || []).map(base));
+            for (const sg of sgs) {
+                if (sg === mySg) continue;
+                for (const d of regionHierarchy[mySido][sg]) { if (d !== '전체' && d.length >= 3 && !myDongs.has(base(d)) && (has(d) || has(base(d)))) return bad('동네'); }
+            }
+            return '';
+        }
+        // 2) 도로명·지번 주소처럼 보이면 지도 데이터(OpenStreetMap)로 한 번 더 확인. 결과를 못 찾거나 오류가 나면 통과시킴
+        async function placeGeoCheck(text) {
+            if (!myTown || !/[가-힣0-9]+(로|길)\s*\d|\d+-\d+|[가-힣]+동\s*\d/.test(text)) return '';
+            const ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const timer = setTimeout(() => { if (ctrl) ctrl.abort(); }, 5000);
+            try {
+                const res = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&accept-language=ko&countrycodes=kr&limit=3&q=' + encodeURIComponent(text), ctrl ? { signal: ctrl.signal } : undefined);
+                if (!res.ok) return '';
+                const arr = await res.json();
+                if (!arr || !arr.length) return '';
+                const where = arr.map(j => matchTownFromText(Object.values(j.address || {}).join(' ') + ' ' + (j.display_name || ''))).filter(x => x && x.sigungu);
+                if (!where.length) return '';
+                if (where.some(w => w.sido === myTown.sido && w.sigungu === myTown.sigungu)) return '';
+                return '이 주소는 ' + where[0].sido + ' ' + where[0].sigungu + '(으)로 확인돼요. 내가 인증한 ' + myTown.sigungu + ' 안의 가게·장소만 올릴 수 있어요.';
+            } catch (e) { return ''; } finally { clearTimeout(timer); }
+        }
         async function boardPost(b) {
             const B = BOARDS[b], v = id => ((document.getElementById(id) || {}).value || '').trim();
             if (!myTown) return;
@@ -8863,6 +8924,9 @@
             if (B.place) {
                 msg.name = v('bdName').slice(0, 30); msg.place = v('bdPlace').slice(0, 40); msg.kind = v('bdKind') || '기타'; msg.rating = boardDraft.rating;
                 if (!msg.name) { boardMsg(B.nameLabel + '을 적어 주세요.'); return; }
+                if (!msg.place) { boardMsg('위치(주소)를 적어 주세요. 내가 인증한 ' + myTown.sigungu + ' 안의 ' + (b === 'food' ? '가게' : '장소') + '만 올릴 수 있어요.'); return; }
+                const outMsg = placeAreaCheck(msg.place);          // 주소 글자에 다른 시·도/시·군·구/동이 적혀 있으면 막음
+                if (outMsg) { boardMsg(outMsg); return; }
                 if (!msg.rating) { boardMsg(B.ratingLabel + '을 별로 매겨 주세요.'); return; }
                 if (!text) { boardMsg('짧은 평가를 한 줄 적어 주세요.'); return; }
             } else {
@@ -8871,6 +8935,12 @@
             }
             if (text.length > BOARD_TEXT_MAX) { boardMsg(BOARD_TEXT_MAX + '자 이내로 짧게 적어 주세요.'); return; }
             if (boardDraft.img) msg.img = boardDraft.img;
+            if (B.place) {                                          // 도로명·지번 주소면 지도 데이터로 한 번 더 확인 (확인이 안 되면 통과)
+                boardMsg('📍 위치 확인 중…');
+                const geoMsg = await placeGeoCheck(msg.place);
+                if (geoMsg) { boardMsg(geoMsg); return; }
+                boardMsg('');
+            }
             try {
                 const db = await commInit();
                 if (db) await boardCol(b).add(msg);
@@ -8937,8 +9007,9 @@
                 ${B.place ? `
                 <div class="grid grid-cols-2 gap-2">
                     <label class="block text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300">${B.nameLabel} *<input id="bdName" list="bdNames" maxlength="30" value="${esc(pre.name || '')}" placeholder="${B.namePh}" class="${inp} mt-0.5"><datalist id="bdNames">${names.map(n => `<option value="${esc(n)}">`).join('')}</datalist></label>
-                    <label class="block text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300">위치<input id="bdPlace" maxlength="40" value="${esc(pre.place || '')}" placeholder="예) ○○역 2번 출구 앞" class="${inp} mt-0.5"></label>
+                    <label class="block text-[0.6875rem] font-bold text-slate-600 dark:text-slate-300">위치(주소) *<input id="bdPlace" maxlength="40" value="${esc(pre.place || '')}" placeholder="예) ○○동 ○○로 12 / ○○역 2번 출구 앞" class="${inp} mt-0.5"></label>
                 </div>
+                <div class="text-[0.6875rem] text-emerald-700 dark:text-emerald-300" style="white-space:normal;">📍 내가 인증한 <b>${esc(myTown ? myTown.sigungu : '우리 동네')}</b> 안의 ${b === 'food' ? '가게' : '장소'}만 올릴 수 있어요. 다른 지역 주소는 등록되지 않아요.</div>
                 <div class="flex flex-wrap items-center gap-2">
                     <select id="bdKind" class="${inp} !w-auto py-1.5">${B.kinds.map(k => `<option ${pre.kind === k ? 'selected' : ''}>${k}</option>`).join('')}</select>
                     <div id="bdStars" class="flex items-center">${starPickerInner()}</div>
@@ -11264,7 +11335,7 @@
                 bullets: ['📢 실시간 제보: 목격한 사고·위험 상황을 사진과 함께 알려요 (언론사·방송사에도 함께 보낼 수 있어요)', '🚨 SOS: 아이를 잃어버리는 등 급한 일에 이웃에게 긴급 도움을 요청해요', '🏷️ 글 종류(실종·교통사고·화재·범죄 의심·수상한 사람·안전사고·재난·날씨·도로·시설)를 골라 올려요', '⚠️ 생명이 위급하면 먼저 112·119에 신고하세요'] },
             { icon: '🏘️', title: '동네 이야기', comm: 'life', part: 'tile', text: '이웃과 일상을 나누는 게시판 모음이에요. 이 큰 탭 안에 작은 탭이 여러 개 들어 있어요.' },
             { icon: '📑', title: '동네 이야기 · 하위 탭과 게시물', comm: 'life', part: 'rest', text: '작은 탭은 왼쪽부터 오른쪽으로 이런저런 → 칭찬해요 → 아쉬워요 → 이사왔어요 → 동네 맛집 → 핫플 → 우리동네 TOP10 순서예요. 끌어서 순서를 바꿀 수도 있어요.',
-                bullets: ['☕ 이런저런: 날씨·소식·수다 뭐든 편하게', '👏 칭찬해요: 고마웠던 이웃·공간을 사진과 함께 소개', '🥺 아쉬워요: 가로등·도로·쓰레기 등 동네 개선 요청 (공감이 많으면 위로!)', '👋 이사왔어요: 새 이웃의 첫인사, 반갑게 맞아 주세요', '🍜 동네 맛집: 가게 이름·별점(5점)·후기·사진, 같은 가게는 평균 별점으로 모여요', '🔥 핫플: 산책길·공원·전시 등 가 볼 만한 곳 추천 (장소를 누르면 지도로 연결)', '🏆 우리동네 TOP10 (맨 오른쪽): 이번 달 우리 동네 인기 글과 인기쟁이'] },
+                bullets: ['☕ 이런저런: 날씨·소식·수다 뭐든 편하게', '👏 칭찬해요: 고마웠던 이웃·공간을 사진과 함께 소개', '🥺 아쉬워요: 가로등·도로·쓰레기 등 동네 개선 요청 (공감이 많으면 위로!)', '👋 이사왔어요: 새 이웃의 첫인사, 반갑게 맞아 주세요', '🍜 맛집: 내가 인증한 지역의 가게만 이름·위치·별점·후기·사진으로 등록해요 (다른 지역 주소는 등록 불가)', '🔥 핫플: 우리 지역 안의 산책길·공원·전시 등 장소만 추천할 수 있어요 (누르면 지도로 연결)', '🏆 우리동네 TOP10 (맨 오른쪽): 이번 달 우리 동네 인기 글과 인기쟁이'] },
             { icon: '🛒', title: '동네 장터', comm: 'market', part: 'tile', text: '이웃끼리 물건을 사고팔고, 교환·나눔을 하는 곳이에요.' },
             { icon: '🛍️', title: '동네 장터 · 게시물', comm: 'market', part: 'rest', text: '판매·구매·나눔 글이 이렇게 올라와요. 거래 후 남긴 별점은 신뢰 지수에 반영되고, 거래는 사람이 많은 곳에서 직접 만나 하세요.' },
             { icon: '💬', title: '이웃 대화방', comm: 'chat', part: 'tile', text: '같은 시·군·구 이웃과 글이나 음성으로 이야기하고, 친구가 되면 1:1로 대화하는 곳이에요. 처음 들어가면 주의사항 안내가 한 번 나와요.' },
