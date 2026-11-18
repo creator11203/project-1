@@ -3303,6 +3303,14 @@
         }
 
         function filterByRegion() {
+            // 2026-11-18: '사고 다발 지역'에서 지역을 하나 고른 상태(또는 다발 지역 순위 화면)에서는 getFilteredNews 가 시·도 선택을 무시하고 그 지역 사건만 돌려줘서
+            //   위쪽 [시·도 / 시·군·구 / 읍·면·동] 필터를 눌러도 목록이 안 바뀌는 것처럼 보였음 → 필터를 고르면 다발 지역 고르기를 풀고 일반 목록으로 돌아감
+            if (selectedHotspotRegion || currentCategory === '범죄 다발 지역') {
+                selectedHotspotRegion = null; hotspotArticleOpen = false;
+                if (currentCategory === '범죄 다발 지역') currentCategory = 'all';
+                currentSub = null;
+                if (typeof mHotspotOpen !== 'undefined' && mHotspotOpen) closeMobileHotspot(true);
+            }
             renderLimit = 100;
             renderCategoryBar();
             renderNewsList();
