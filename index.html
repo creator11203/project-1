@@ -218,10 +218,12 @@
             #appHeader > div:first-child { flex: 1 1 0; min-width: 0; gap: 7px; }
             #appHeader > div:first-child > * + * { margin-left: 0 !important; }
             #appHeader > div:first-child > div:first-child { width: 36px; height: 36px; border-radius: 10px; }
-            #appHeader h1 { font-size: 15px; white-space: nowrap; }
+            #appHeader > div:first-child { align-items: center; }
+            #appHeader > div:first-child > div:last-child { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; }
+            #appHeader h1 { font-size: 16px; line-height: 1.2; letter-spacing: -.02em; white-space: nowrap; margin: 0; }
             #appHeader h1 span { display: none; }
-            /* 제목 아래 한 줄 소개 (좁은 화면용 압축 문구): 넘치면 … 로 줄임 */
-            #appHeader h1 + p { display: block; margin-top: 1px; font-size: 9.5px; line-height: 1.22; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+            /* 제목 아래 한 줄 소개 (좁은 화면용 압축 문구): 제목과 왼쪽 끝을 맞추고, 넘치면 … 로 줄임 */
+            #appHeader h1 + p { display: block; margin: 0; font-size: 11px; line-height: 1.2; letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
             #appHeader h1 + p .desk-txt { display: none; } #appHeader h1 + p .mob-txt { display: block; }
             #appHeader h1 + p .mob-txt b, #appHeader h1 + p .mob-txt i { display: block; font-style: normal; overflow: hidden; text-overflow: ellipsis; }
             #appHeader h1 + p .mob-txt b { color: #047857; font-weight: 800; } .dark #appHeader h1 + p .mob-txt b { color: #34d399; }
@@ -688,7 +690,7 @@
                 <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     우리동네 사건사고 
                     <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-mono shadow-sm">전국 실시간 관제</span>                </h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400"><span class="desk-txt">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</span><span class="mob-txt"><b>전국 실시간 관제</b><i>시·군·구·동 단위 밀착 모니터링</i></span></p>
+                <p class="text-xs text-slate-500 dark:text-slate-400"><span class="desk-txt">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</span><span class="mob-txt"><b>전국 실시간 관제</b></span></p>
             </div>
         </div>
 
