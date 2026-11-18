@@ -2769,44 +2769,74 @@
             } else container.scrollTop = prevScroll;
             if (window._jump && Date.now() < window._jump.until) {       // '새 기사 보기'로 이동하는 도중 목록이 다시 그려져도 그 카드로 이동한 자리를 유지
                 const jc = Array.from(container.querySelectorAll('.news-card')).find(x => x.dataset.evk === window._jump.key);
-                if (jc) { container.scrollTop = Math.max(0, container.scrollTop + jc.getBoundingClientRect().top - container.getBoundingClientRect().top - 10); jc.classList.add('news-flash'); }
+                if (jc) { container.scrollTop = Math.max(0, container.scrollTop + jc.getBoundingClientRect().top - container.getBoundingClientRect().top - (window._jump.off || 10)); jc.classList.add('news-flash'); }
             }
             // 자동 갱신으로 새 기사가 들어왔는데 지금 화면 안에 안 보이면 알림 (위·중간·아래 어디에 끼어들었든)
             //  → 시간순 배치는 그대로 두고, 누르면 가장 가까운 새 기사로 이동해 잠깐 반짝임 (2026-11-17: 발행 시각이 오래된 기사가 목록 중간에 조용히 끼어들던 문제)
-            if (anchor && freshEventKeys.size) {
-                const cr = container.getBoundingClientRect();
-                const hidden = Array.from(container.querySelectorAll('.news-card.news-new')).filter(c => { const r = c.getBoundingClientRect(); return r.bottom < cr.top + 8 || r.top > cr.bottom - 8; });
-                if (hidden.length) {
-                    const pill = document.createElement('button');
-                    pill.className = 'new-pill sticky top-1 z-30 mx-auto w-max';
-                    const above = hidden.some(c => c.getBoundingClientRect().bottom < cr.top + 8);
-                    pill.innerHTML = '<i class="fa-solid fa-bell"></i> 새 기사 <b>' + hidden.length + '</b>건 <span>' + (above ? '▲' : '▼') + ' 보기</span>';
-                    pill.onclick = () => {
-                        const cr2 = container.getBoundingClientRect();
-                        const left = Array.from(container.querySelectorAll('.news-card.news-new')).filter(c => { const r = c.getBoundingClientRect(); return r.bottom < cr2.top + 8 || r.top > cr2.bottom - 8; });
-                        const t = left.slice().sort((a, b) => Math.abs(a.getBoundingClientRect().top - cr2.top) - Math.abs(b.getBoundingClientRect().top - cr2.top))[0];   // 지금 화면에서 가장 가까운 새 기사
-                        pill.remove();          // 알림 알약을 먼저 치워야 아래 위치 계산이 어긋나지 않음 (알약만큼 목록이 위로 당겨짐)
-                        if (t) {
-                            // 브라우저 '부드러운 스크롤'(scrollIntoView smooth)은 모바일에서 아무 일도 안 일어나거나, 움직이는 도중 목록이 다시 그려지면 멈춰 버림
-                            //  → 직접 짧게 애니메이션하고, 끝난 뒤 정확한 위치로 한 번 더 맞추며, 1.5초 안에 목록이 다시 그려져도 같은 카드 위치를 유지
-                            const key = t.dataset.evk;
-                            const goal = () => { const c2 = container.getBoundingClientRect(); const el = Array.from(container.querySelectorAll('.news-card')).find(x => x.dataset.evk === key); return el ? Math.max(0, container.scrollTop + el.getBoundingClientRect().top - c2.top - 10) : null; };
-                            window._jump = { key: key, until: Date.now() + 1500 };
-                            const from = container.scrollTop, to = goal();
-                            if (to != null) {
-                                const t0 = performance.now(), dur = _reduceMotion() ? 0 : 320;
-                                const step = (now) => { const p = dur ? Math.min(1, (now - t0) / dur) : 1; container.scrollTop = from + (to - from) * (1 - Math.pow(1 - p, 3)); if (p < 1) requestAnimationFrame(step); };
-                                requestAnimationFrame(step);
-                                setTimeout(() => { const g = goal(); if (g != null) container.scrollTop = g; }, dur + 80);   // 화면이 가려져 애니메이션이 멈춰도 끝 위치에는 반드시 도착
-                            }
-                            t.classList.add('news-flash'); setTimeout(() => t.classList.remove('news-flash'), 2200);
-                        }
-                    };
-                    container.insertBefore(pill, container.firstChild);
-                    if (prevScroll > 20) container.scrollTop += pill.offsetHeight;
-                }
-            }
+            if (anchor && freshEventKeys.size) newPillSync(container, prevScroll > 20);
         }
+
+        // ── 새 기사 알약: 화면 밖에 있는 새 기사를 '하나씩' 차례로 보여 줌 ──
+        //  · 누를 때마다 다음 새 기사 한 건으로 이동 (위쪽에 있는 것부터 위→아래 순서, 위쪽이 없으면 아래쪽을 가까운 순서로)
+        //  · 이동해서 화면에 한 번이라도 보인 새 기사는 '확인한 것'으로 세어 숫자가 줄고(6 → 5 → 4 …), 모두 확인하면 알약이 사라짐
+        //  · 스크롤로 직접 지나가며 본 새 기사도 똑같이 확인한 것으로 처리
+        function newPillState(container) {
+            if (window._newSeenFor !== freshEventKeys) { window._newSeenFor = freshEventKeys; window._newSeen = new Set(); }
+            const seen = window._newSeen, cr = container.getBoundingClientRect();
+            const above = [], below = [];
+            container.querySelectorAll('.news-card.news-new').forEach(c => {
+                const r = c.getBoundingClientRect(), k = c.dataset.evk;
+                if (r.bottom < cr.top + 8) { if (!seen.has(k)) above.push(c); }
+                else if (r.top > cr.bottom - 8) { if (!seen.has(k)) below.push(c); }
+                else seen.add(k);                                 // 화면 안에 보인 새 기사는 확인한 것
+            });
+            return { above: above, below: below, total: above.length + below.length };
+        }
+        function newPillSync(container, compensate) {
+            let pill = container.querySelector('.new-pill');
+            const st = newPillState(container);
+            if (!st.total) {
+                if (pill) { const h = pill.offsetHeight; pill.remove(); if (container.scrollTop > 20) container.scrollTop = Math.max(0, container.scrollTop - h); }
+                return;
+            }
+            if (!pill) {
+                pill = document.createElement('button');
+                pill.className = 'new-pill sticky top-1 z-30 mx-auto w-max';
+                pill.onclick = () => newPillGo(container, pill);
+                container.insertBefore(pill, container.firstChild);
+                if (compensate) container.scrollTop += pill.offsetHeight;
+            }
+            pill.innerHTML = '<i class="fa-solid fa-bell"></i> 새 기사 <b>' + st.total + '</b>건 <span>' + (st.above.length ? '▲' : '▼') + ' 하나씩 보기</span>';
+            pill.title = '누를 때마다 다음 새 기사로 이동해요';
+        }
+        function newPillGo(container, pill) {
+            const st = newPillState(container), t = st.above[0] || st.below[0];
+            if (!t) { newPillSync(container, false); return; }
+            const key = t.dataset.evk, off = pill.offsetHeight + 14;       // 맨 위에 붙어 있는 알약이 카드를 가리지 않게 그만큼 띄움
+            // 브라우저 '부드러운 스크롤'(scrollIntoView smooth)은 모바일에서 아무 일도 안 일어나거나, 움직이는 도중 목록이 다시 그려지면 멈춰 버림
+            //  → 직접 짧게 애니메이션하고, 끝난 뒤 정확한 위치로 한 번 더 맞추며, 1.5초 안에 목록이 다시 그려져도 같은 카드 위치를 유지
+            const goal = () => { const c2 = container.getBoundingClientRect(); const el = Array.from(container.querySelectorAll('.news-card')).find(x => x.dataset.evk === key); return el ? Math.max(0, container.scrollTop + el.getBoundingClientRect().top - c2.top - off) : null; };
+            window._jump = { key: key, until: Date.now() + 1500, off: off };
+            window._newSeen.add(key);                                       // 이 카드는 이제 확인하는 중 → 숫자에서 뺌
+            const from = container.scrollTop, to = goal();
+            if (to != null) {
+                const t0 = performance.now(), dur = _reduceMotion() ? 0 : 320;
+                const step = (now) => { const p = dur ? Math.min(1, (now - t0) / dur) : 1; container.scrollTop = from + (to - from) * (1 - Math.pow(1 - p, 3)); if (p < 1) requestAnimationFrame(step); };
+                requestAnimationFrame(step);
+                setTimeout(() => { const g = goal(); if (g != null) container.scrollTop = g; newPillSync(container, false); }, dur + 80);   // 화면이 가려져 애니메이션이 멈춰도 끝 위치에는 반드시 도착
+            }
+            t.classList.add('news-flash'); setTimeout(() => t.classList.remove('news-flash'), 2200);
+            newPillSync(container, false);
+        }
+        (function bindNewPillScroll() {
+            const c = document.getElementById('newsListContainer');
+            if (!c) return;
+            let raf = 0;
+            c.addEventListener('scroll', () => {
+                if (raf || !c.querySelector('.new-pill')) return;
+                raf = requestAnimationFrame(() => { raf = 0; newPillSync(c, false); });
+            }, { passive: true });
+        })();
 
         // ================= 다발 지역 (사건 수 기준, 같은 사건의 기사 여러 개는 1건) =================
         // 기사의 시·군·구 (다발 지역 집계용). 해외·북한·위치 미상·시도만 아는 기사와 법원·검찰 소재지로만 위치가 잡힌 기사는 제외
