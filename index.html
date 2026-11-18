@@ -691,7 +691,7 @@
                 <h1 class="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
                     우리동네 사건사고 
                     <span class="text-xs px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-mono shadow-sm">전국 실시간 관제</span>                </h1>
-                <p class="text-xs text-slate-500 dark:text-slate-400"><span class="desk-txt">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</span><span class="mob-txt"><b>전국 시·군·구·동 밀착 모니터링</b></span></p>
+                <p class="text-xs text-slate-500 dark:text-slate-400"><span class="desk-txt">전국 모든 시·군·구·동 단위 안전 및 사건사고 밀착 모니터링</span><span class="mob-txt"><b>전국 사건사고 실시간 모니터링</b></span></p>
             </div>
         </div>
 
@@ -837,19 +837,16 @@
 
             <div id="newsListContainer" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2.5"></div>
             <!-- 기사 목록 맨 위로 한 번에 올라가는 작은 버튼 (조금 내려가면 나타남) -->
-            <button id="listToTop" type="button" aria-label="목록 맨 위로" title="맨 위로" class="hidden absolute right-3 bottom-3 z-30 w-9 h-9 rounded-full items-center justify-center text-white bg-slate-800/85 dark:bg-slate-100/90 dark:text-slate-900 shadow-lg ring-1 ring-white/30 backdrop-blur hover:bg-slate-700 dark:hover:bg-white"><i class="fa-solid fa-angle-up"></i></button>
+            <button id="listToTop" type="button" aria-label="목록 맨 위로" title="맨 위로" class="hidden absolute right-3 top-2 z-30 w-9 h-9 rounded-full items-center justify-center text-white bg-slate-800/85 dark:bg-slate-100/90 dark:text-slate-900 shadow-lg ring-1 ring-white/30 backdrop-blur hover:bg-slate-700 dark:hover:bg-white"><i class="fa-solid fa-angle-up"></i></button>
             <script>
             (function () {
                 var box = document.getElementById('newsListContainer'), btn = document.getElementById('listToTop');
                 if (!box || !btn) return;
                 var on = false;
-                function place() {   // 휴대폰: 아래 탭 막대(mobileDock) 위로 띄움 (탭을 가리지 않게)
-                    var dock = document.getElementById('mobileDock'), panel = document.getElementById('panel-list');
-                    var over = 0;
-                    if (dock && panel) { var d = dock.getBoundingClientRect(), p = panel.getBoundingClientRect(); if (d.height && d.top < p.bottom) over = p.bottom - d.top; }
-                    btn.style.bottom = (12 + Math.max(0, over)) + 'px';
+                function place() {   // 기사 목록 위쪽(날짜 줄 바로 아래, 오른쪽)에 띄움. 새 기사 알림은 아래쪽에 떠서 겹치지 않음
+                    btn.style.bottom = 'auto'; btn.style.top = (box.offsetTop + 8) + 'px';
                 }
-                function sync() { var want = box.scrollTop > 500; if (want) place(); if (want !== on) { on = want; btn.classList.toggle('hidden', !want); btn.classList.toggle('flex', want); } }
+                function sync() { var want = box.scrollTop > 300; if (want) place(); if (want !== on) { on = want; btn.classList.toggle('hidden', !want); btn.classList.toggle('flex', want); } }
                 box.addEventListener('scroll', sync, { passive: true });
                 btn.addEventListener('click', function () {
                     // 브라우저 부드러운 스크롤은 모바일에서 멈추는 경우가 있어 직접 짧게 애니메이션 (끝나면 맨 위로 확실히 맞춤)
@@ -5929,7 +5926,9 @@
             const mine = uid === COMM_UID;
             let m = commMembers.find(x => x.uid === uid);
             if (!m) {
-                const last = commMessages.concat(freeMessages, marketItems, marketNation).find(x => x.uid === uid) || dmThreads.find(x => x.uid === uid);
+                const rm = (typeof roomOpenId !== 'undefined' && roomOpenId) ? roomGet(roomOpenId) : null;      // 대화방 안 이웃: 방에 적힌 닉네임·아이콘으로 보여 줌
+                const rmm = rm && rm.members && rm.members[uid];
+                const last = commMessages.concat(freeMessages, marketItems, marketNation).find(x => x.uid === uid) || dmThreads.find(x => x.uid === uid) || (rmm ? { nick: rmm.nick, emoji: rmm.emoji, photo: rmm.photo, area: rmm.area } : null);
                 m = last ? { uid: uid, nick: last.nick, emoji: last.emoji, photo: last.photo, area: last.area } : (natPeopleInfo[uid] ? Object.assign({ uid: uid }, natPeopleInfo[uid]) : { uid: uid });
             }
             const natTop = !mine && !!natPeopleInfo[uid];        // 이달의 전국 인기 이웃 TOP10
@@ -7479,7 +7478,8 @@
                   members: mem([['책벌레', '📚'], ['소설덕후', '📖'], ['에세이좋아', '☕']]), msgs: [] }
             ];
         })();
-        let sampleRooms = ROOM_SAMPLES.map(r => JSON.parse(JSON.stringify(r)));     // 예시 방은 이 화면 안에서만 바뀜 (저장하지 않음)
+        // 서비스 시작: 실제 대화방 탭에는 예시 방을 넣지 않음 (예시는 안내 투어의 예시 화면에서만 보임)
+        let sampleRooms = [];
         let meetRooms = [], roomListUnsub = null, roomFilter = 'all', roomMsg = '', roomNewKind = 'text';
         let roomOpenId = null, roomMsgs = [], roomMsgUnsub = null, roomLive = null;
         function roomLocalKey() { return 'meet_rooms_' + (myTown ? meetKey() : ''); }
@@ -7613,10 +7613,10 @@
                 const m = r.members[u], me = u === COMM_UID;
                 const muted = me && roomLive && roomLive.stream && !roomLive.stream.getAudioTracks().some(t => t.enabled);
                 const clickable = !me && !String(u).startsWith('sm_');       // 이웃 아이콘을 누르면 프로필(차단·신고)
-                return `<div class="flex flex-col items-center gap-0.5 ${voice ? 'w-16' : 'w-14'} ${clickable ? 'cursor-pointer' : ''}" ${clickable ? `onclick="showProfile('${esc(u)}')" title="프로필 보기 · 차단·신고"` : ''}>
-                    <div class="relative w-12 h-12 rounded-full bg-white dark:bg-slate-800 border-2 ${me ? 'border-pink-500' : 'border-slate-300 dark:border-slate-600'} flex items-center justify-center text-2xl">${esc(m.emoji || '🙂')}${voice ? `<span class="absolute -right-1 -bottom-1 text-[0.6875rem] bg-white dark:bg-slate-900 rounded-full border border-slate-300 dark:border-slate-600 px-0.5">${muted ? '🔇' : '🎙'}</span>` : ''}</div>
-                    <div class="text-[0.625rem] text-slate-700 dark:text-slate-200 truncate w-full text-center">${me ? '나' : esc(m.nick || '이웃')}</div></div>`;
-            }).join('') + Array.from({ length: Math.max(0, r.max - ids.length) }, () => `<div class="flex flex-col items-center gap-0.5 ${voice ? 'w-16' : 'w-14'}"><div class="w-12 h-12 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-300 dark:text-slate-600 text-lg">＋</div><div class="text-[0.625rem] text-slate-400">빈 자리</div></div>`).join('');
+                return `<div class="flex flex-col items-center gap-0.5 ${voice ? 'w-12' : 'w-11'} ${clickable ? 'cursor-pointer' : ''}" ${clickable ? `onclick="showProfile('${esc(u)}')" title="눌러서 프로필 보기 · 친구 신청 · 차단·신고"` : ''}>
+                    <div class="relative w-9 h-9 rounded-full bg-white dark:bg-slate-800 border-2 ${me ? 'border-pink-500' : (clickable ? 'border-violet-400' : 'border-slate-300 dark:border-slate-600')} flex items-center justify-center text-lg">${esc(m.emoji || '🙂')}${voice ? `<span class="absolute -right-1 -bottom-1 text-[0.5625rem] bg-white dark:bg-slate-900 rounded-full border border-slate-300 dark:border-slate-600 px-0.5">${muted ? '🔇' : '🎙'}</span>` : ''}</div>
+                    <div class="text-[0.5625rem] text-slate-700 dark:text-slate-200 truncate w-full text-center">${me ? '나' : esc(m.nick || '이웃')}</div></div>`;
+            }).join('') + Array.from({ length: Math.max(0, r.max - ids.length) }, () => `<div class="flex flex-col items-center gap-0.5 ${voice ? 'w-12' : 'w-11'}"><div class="w-9 h-9 rounded-full border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center text-slate-300 dark:text-slate-600 text-sm">＋</div><div class="text-[0.5625rem] text-slate-400">빈 자리</div></div>`).join('');
         }
         function roomUpdateView(r) {
             const c = document.getElementById('rmCount'), p = document.getElementById('rmPeople'), w = document.getElementById('rmWait');
@@ -7757,7 +7757,7 @@
         }
         function renderRooms(main, head) {
             const msg = roomMsg ? `<p class="text-xs text-amber-600 dark:text-amber-400 text-center">${esc(roomMsg)}</p>` : '';
-            const demo = FIREBASE_CONFIG ? '' : '<div class="text-[0.6875rem] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg px-2.5 py-1.5 leading-relaxed">체험 모드: 아래 <b>예시 방 5개</b>로 화면을 보여 드려요. 지금 만든 방은 내 기기에만 보이며, 서버를 연결하면 이웃에게 보이고 음성방에서 실제로 말소리가 연결됩니다.</div>';
+            const demo = FIREBASE_CONFIG ? '' : '<div class="text-[0.6875rem] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg px-2.5 py-1.5 leading-relaxed">체험 모드: 지금 만든 방은 내 기기에만 보이며, 서버를 연결하면 이웃에게 보이고 음성방에서 실제로 말소리가 연결됩니다.</div>';
             // 1) 방 만들기
             if (meetView === 'roomNew') {
                 const inp = 'w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white';
@@ -7787,7 +7787,7 @@
                         <div class="min-w-0 flex-1 text-center"><div class="text-sm font-extrabold text-slate-900 dark:text-white truncate">${roomKindBadge(r)} ${esc(r.title)}</div></div>
                         <span id="rmCount" class="text-xs font-bold text-pink-600 shrink-0">${roomCount(r)}/${r.max}명</span>
                     </div>
-                    <div class="px-3 py-2 flex flex-wrap gap-2 justify-center border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/60"><div id="rmPeople" class="flex flex-wrap gap-2 justify-center">${roomPeopleHtml(r)}</div></div>
+                    <div class="px-3 py-1.5 flex flex-wrap gap-1.5 justify-center border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50 dark:bg-slate-900/60"><div id="rmPeople" class="flex flex-wrap gap-1.5 justify-center">${roomPeopleHtml(r)}</div></div>
                     <div id="rmWait" class="${roomCount(r) > 1 ? 'hidden' : ''} text-center text-[0.6875rem] text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-950/30 py-1.5 shrink-0">⏳ 이웃이 들어오길 기다리는 중이에요. 방은 목록에 올라가 있어요.</div>
                     ${voice ? `<div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 flex flex-col items-center justify-center gap-3 text-center">
                         <div class="text-5xl">🎙</div>
@@ -8203,7 +8203,7 @@
         ];
         const COMM_GROUPS = COMM_GROUPS_ALL.filter(g => COMM_OPEN.includes(g.k));
         const COMM_TAB_LABEL = { talk: '우리동네 안전망', free: '이런저런', hello: '이사왔어요', wish: '아쉬워요', praise: '칭찬해요', food: '동네 맛집', spot: '핫플',
-            market: '동네 장터', popular: '우리동네 TOP10', meet: '대화방', friends: '팔로잉 소식', random: '랜덤 채팅', dm: '내 친구 · 1:1', national: '이달의 전국 TOP10', me: '내 프로필' };
+            market: '동네 장터', popular: '우리동네 TOP10', meet: '대화방', friends: '팔로잉 소식', random: '랜덤 채팅', dm: '내 친구', national: '이달의 전국 TOP10', me: '내 프로필' };
         const COMM_TAB_FA = { free: 'fa-mug-hot', hello: 'fa-hand', wish: 'fa-face-sad-tear', praise: 'fa-thumbs-up', food: 'fa-bowl-food', spot: 'fa-fire',
             popular: 'fa-ranking-star', meet: 'fa-comments', friends: 'fa-newspaper', random: 'fa-shuffle', dm: 'fa-envelope' };
         // 맨 위 큰 탭(묶음) 순서: 끌어서 바꾸고 저장. 안전망은 항상 맨 앞에 고정, 새로 생긴 묶음은 뒤에 붙음
@@ -11268,9 +11268,9 @@
             { icon: '🛒', title: '동네 장터', comm: 'market', part: 'tile', text: '이웃끼리 물건을 사고팔고, 교환·나눔을 하는 곳이에요.' },
             { icon: '🛍️', title: '동네 장터 · 게시물', comm: 'market', part: 'rest', text: '판매·구매·나눔 글이 이렇게 올라와요. 거래 후 남긴 별점은 신뢰 지수에 반영되고, 거래는 사람이 많은 곳에서 직접 만나 하세요.' },
             { icon: '💬', title: '이웃 대화방', comm: 'chat', part: 'tile', text: '같은 시·군·구 이웃과 글이나 음성으로 이야기하고, 친구가 되면 1:1로 대화하는 곳이에요. 처음 들어가면 주의사항 안내가 한 번 나와요.' },
-            { icon: '🎙', title: '대화방 (왼쪽 작은 탭)', comm: 'chat', part: 'rest', text: '왼쪽 「대화방」 탭에서 방을 만들거나 열려 있는 방에 들어가요. 오른쪽 「내 친구 · 1:1」 탭은 다음 단계에서 설명해요.',
+            { icon: '🎙', title: '대화방 (왼쪽 작은 탭)', comm: 'chat', part: 'rest', text: '왼쪽 「대화방」 탭에서 방을 만들거나 열려 있는 방에 들어가요. 오른쪽 「내 친구」 탭은 다음 단계에서 설명해요.',
                 bullets: ['➕ 방 만들기: 글 채팅·음성 채팅을 고르고 제목과 인원수(2~5명, 나 포함)를 정해요', '🚪 입장: 자리가 남은 방을 골라 들어가요. 방은 하루 뒤 사라져요', '🔴 방 안 왼쪽 위 빨간 「나가기」 버튼으로 언제든 나올 수 있어요', '🎙 음성 방은 기기끼리 직접 연결돼 상대에게 내 IP가 보일 수 있어요 (녹음·저장 안 함)', '👤 방 안 이웃의 아이콘을 누르면 프로필·친구 신청·차단·신고가 열려요'] },
-            { icon: '👥', title: '내 친구 · 1:1 (오른쪽 작은 탭)', comm: 'chat', sub: 'dm', part: 'rest', text: '대화방에서 알게 된 이웃에게 친구 신청을 보내고, 상대가 수락하면 채팅 앱처럼 친구마다 1:1 채팅방이 생겨요.',
+            { icon: '👥', title: '내 친구 (오른쪽 작은 탭)', comm: 'chat', sub: 'dm', part: 'rest', text: '대화방에서 알게 된 이웃에게 친구 신청을 보내고, 상대가 수락하면 채팅 앱처럼 친구마다 1:1 채팅방이 생겨요.',
                 bullets: ['① 이웃 아이콘 → 프로필 → 「친구 신청」 (한마디 메시지 가능)', '② 상대가 「수락」하면 두 사람 목록에 서로 채팅방이 생겨요 (거절하면 아무 일도 없어요)', '③ 왼쪽은 「받은 친구 신청」과 「내 친구 · 채팅방」 목록, 오른쪽은 고른 친구와의 대화창이에요', '④ 대화창 위쪽 「🚫 차단」·빨간 「나가기」 버튼으로 관계를 정리해요', '⚠️ 친구여도 개인정보·금전 요구는 사기일 수 있어요. 조심하세요'] },
             { icon: '🏆', title: '이달의 전국 TOP10', comm: 'nation', part: 'tile', text: '전국 모든 동네를 합쳐 이번 달 가장 인기 있는 글·장소·이웃을 모아 보는 곳이에요.' },
             { icon: '🥇', title: '전국 TOP10 · 게시물', comm: 'nation', part: 'rest', text: '공감을 가장 많이 받은 글·장소·이웃을 10위까지 보여 줘요. 다른 동네 글에도 공감(❤)을 보낼 수 있고, 인기 이웃에게는 팔로우·대화 요청도 할 수 있어요. 순위는 매달 1일에 새로 시작해요.' },
@@ -11302,7 +11302,7 @@
             'market:rest': { text: '판매·구매·나눔 글이 올라와요. 거래 후 별점은 신뢰 지수에 반영돼요. 거래는 사람 많은 곳에서 직접 만나 하세요.' },
             'chat:tile': { text: '이웃과 글·음성으로 대화하고, 친구가 되면 1:1 채팅도 해요. 처음엔 주의사항이 나와요.' },
             'chat:rest': { text: '왼쪽 「대화방」 탭: 방 만들기·입장이에요.', bullets: ['➕ 글·음성, 제목, 인원수(2~5명)로 방 만들기', '🔴 방 안 빨간 「나가기」로 언제든 나오기', '🎙 음성은 기기끼리 직접 연결 (IP가 보일 수 있고 저장 안 함)', '⚠️ 개인정보 금지 · 불쾌한 상대는 아이콘 눌러 차단·신고'] },
-            'chat:rest:dm': { text: '오른쪽 「내 친구 · 1:1」 탭: 채팅 앱처럼 써요.', bullets: ['① 이웃 아이콘 → 「친구 신청」', '② 상대가 「수락」하면 채팅방 생성', '③ 왼쪽 친구 목록 → 오른쪽 대화창', '④ 「🚫 차단」·빨간 「나가기」로 정리'] },
+            'chat:rest:dm': { text: '오른쪽 「내 친구」 탭: 채팅 앱처럼 써요.', bullets: ['① 이웃 아이콘 → 「친구 신청」', '② 상대가 「수락」하면 채팅방 생성', '③ 왼쪽 친구 목록 → 오른쪽 대화창', '④ 「🚫 차단」·빨간 「나가기」로 정리'] },
             'nation:tile': { text: '전국 동네를 합쳐 이번 달 인기 글·장소·이웃을 모아 봐요.' },
             'nation:rest': { text: '공감이 많은 순서로 10위까지 보여 줘요. 다른 동네 글에도 공감(❤)을 보낼 수 있고, 순위는 매달 1일에 새로 시작해요.' },
             'me:tile': { text: '나만의 공간이에요.' },
