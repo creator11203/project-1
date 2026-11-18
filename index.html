@@ -937,13 +937,11 @@
 
     <!-- 음성·영상 통화 화면 -->
     <div id="callOverlay" class="hidden fixed inset-0 bg-black/95 flex flex-col items-center justify-center" style="z-index: 1270;">
-        <div id="callInfo" class="absolute top-6 left-0 right-0 text-center text-white text-sm font-bold"></div>
-        <div id="callAvatar" class="text-7xl" style="display:none;">📞</div>
+        <div id="callInfo" class="absolute top-6 left-0 right-0 text-center text-white text-sm font-bold"></div>        <div id="callAvatar" class="text-7xl" style="display:none;">📞</div>
         <video id="callRemote" autoplay playsinline class="max-w-full max-h-full"></video>
         <video id="callLocal" autoplay playsinline muted class="absolute bottom-24 right-4 w-32 rounded-lg border border-white/40 bg-black"></video>
         <div class="absolute bottom-6 flex gap-3">
-            <button id="callMute" onclick="toggleMute()" class="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white text-sm font-bold">마이크 끄기</button>
-            <button onclick="endCall()" class="px-6 py-2 rounded-full bg-red-600 hover:bg-red-500 text-white text-sm font-bold"><i class="fa-solid fa-phone-slash"></i> 통화 종료</button>
+            <button id="callMute" onclick="toggleMute()" class="px-4 py-2 rounded-full bg-white/20 hover:bg-white/30 text-white text-sm font-bold">마이크 끄기</button>            <button onclick="endCall()" class="px-6 py-2 rounded-full bg-red-600 hover:bg-red-500 text-white text-sm font-bold"><i class="fa-solid fa-phone-slash"></i> 통화 종료</button>
         </div>
     </div>
     <!-- 🔴 실시간 방송 화면 (방송하는 사람 · 시청하는 이웃 공용) -->
@@ -5689,7 +5687,7 @@
                         <div class="min-w-0 flex-1"><div class="text-[0.9375rem] font-extrabold text-slate-900 dark:text-white">내 닉네임 <i class="fa-solid fa-pen text-[0.625rem] text-slate-400"></i></div>
                             <div class="text-xs text-slate-500">한 줄 소개를 적어 보세요.</div>
                             <div class="mt-1.5"><span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 border text-[0.6875rem] font-bold border-blue-300 bg-blue-50 text-blue-700"><i class="fa-solid fa-shield-halved text-[0.625rem]"></i>신뢰 50 · 보통</span></div></div></div>
-                    <div class="mt-2 text-[0.6875rem] text-slate-500">📷 게시물 <b>3</b> · ❤ 받은 감정 <b>24</b> · 💬 댓글 <b>6</b></div></div>
+                    <div class="mt-2 text-[0.6875rem] text-slate-500">게시물 <b>3</b> · ❤ 받은 감정 <b>24</b> · 💬 댓글 <b>6</b></div></div>
                 <div class="mx-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3"><b class="text-sm text-slate-900 dark:text-white"><i class="fa-solid fa-table-cells text-rose-500"></i> 내 일상 <span class="text-xs font-semibold text-slate-400">3</span></b>
                     <div class="mt-2 grid grid-cols-3 gap-1.5">${tile('from-amber-200 to-orange-300', '🌅')}${tile('from-sky-200 to-indigo-300', '🌳')}${tile('from-rose-200 to-pink-300', '🍲')}</div></div>`;
         }
@@ -5993,9 +5991,9 @@
             const n = list ? list.length : '–';
             const hearts = list ? list.reduce((a, p) => a + feedCount(p.hearts) + feedCount(p.reacts), 0) : '–';
             const cmts = list ? list.reduce((a, p) => a + (p.comments || 0), 0) : '–';
-            // 한 줄로 작게: '📷 게시물 3 · ❤ 받은 감정 12 · 💬 댓글 4'
-            const cell = (icon, v, l) => `<span class="inline-flex items-center gap-1"><span class="opacity-70">${icon}</span>${l} <b class="text-slate-800 dark:text-slate-100">${v}</b></span>`;
-            return `<div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.6875rem] text-slate-500">${cell('📷', n, '게시물')}${cell('❤', hearts, '받은 감정')}${cell('💬', cmts, '댓글')}</div>`;
+            // 한 줄로 작게: '게시물 3 · ❤ 받은 감정 12 · 💬 댓글 4' (게시물 앞 카메라 이모지는 뺌)
+            const cell = (icon, v, l) => `<span class="inline-flex items-center gap-1">${icon ? `<span class="opacity-70">${icon}</span>` : ''}${l} <b class="text-slate-800 dark:text-slate-100">${v}</b></span>`;
+            return `<div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[0.6875rem] text-slate-500">${cell('', n, '게시물')}${cell('❤', hearts, '받은 감정')}${cell('💬', cmts, '댓글')}</div>`;
         }
         // 작게 줄인 신뢰 지수 (내 프로필용): 점수·등급 한 줄. 누르면 신뢰 지수 기준 안내
         function trustChipHtml(t) {
@@ -6045,7 +6043,7 @@
             const list = feedCache[uid] || [];
             const st = document.getElementById('pfStats'); if (st) st.innerHTML = feedStatsHtml(list);
             if (!list.length) {
-                box.innerHTML = `<div class="text-center py-10 text-slate-400"><div class="text-3xl mb-1">📷</div><div class="text-xs">${uid === COMM_UID ? '아직 게시물이 없습니다. 오른쪽 위 ＋ 버튼으로 오늘의 일상을 기록해 보세요.' : '아직 올린 게시물이 없습니다.'}</div></div>`;
+                box.innerHTML = `<div class="text-center py-10 text-slate-400"><div class="text-xs">${uid === COMM_UID ? '아직 게시물이 없습니다. 오른쪽 위 ＋ 버튼으로 오늘의 일상을 기록해 보세요.' : '아직 올린 게시물이 없습니다.'}</div></div>`;
                 return;
             }
             // 칸 크기는 커뮤니티 화면 너비와 상관없이 고정(최대 7rem): 화면이 넓어도 커지지 않고, 아주 좁을 때만 3칸이 나란히 줄어듦
@@ -9326,8 +9324,7 @@
                             <span class="flex items-center gap-1.5 shrink-0">
                                 <button onclick="startCall('${esc(dmWith.uid)}', dmWith.nick, false)" class="${callBtn}"><i class="fa-solid fa-phone"></i> 음성</button>
                                 <button onclick="startCall('${esc(dmWith.uid)}', dmWith.nick, true)" class="${callBtn}"><i class="fa-solid fa-video"></i> 영상</button>
-                                <button onclick="blockUser('${esc(dmWith.uid)}', dmWith.nick, dmWith.emoji)" title="차단하기" class="${callBtn}">🚫</button>
-                            </span>
+                                <button onclick="blockUser('${esc(dmWith.uid)}', dmWith.nick, dmWith.emoji)" title="차단하기" class="${callBtn}">🚫</button>                            </span>
                         </div>
                         <div id="dmChat" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
                         <div class="border-t border-slate-200 dark:border-slate-800 p-2 space-y-1.5 shrink-0 bg-white dark:bg-slate-900">
@@ -11227,8 +11224,32 @@
             target: () => (isMobile() ? document.getElementById('mobileHotBtn') : (document.querySelector('#categoryBar [data-cat="범죄 다발 지역"]') || document.getElementById('catHotBtn'))),
             text: '최근 7일 동안 사건이 많이 일어난 시·군·구를 순위로 보여 줘요. 순위를 누르면 그 지역 사건만 모아서 볼 수 있어요.',
             bullets: ['같은 사건은 한 건으로 세어서 순위를 매겨요', '내가 사는 동네가 이번 주 얼마나 조용했는지 한눈에 알 수 있어요'] };
+        // 기사 원문 화면 안내 2단계: ① 왼쪽 위 [Aa] 글씨 크기 버튼 → ② 공유·원문 홈페이지 이동·요약 버튼 3개를 한 번에 비춤
+        //  · 기사가 한 건도 안 열려 있으면 안내가 첫 번째 열 수 있는 기사를 대신 열어 줌 (tourEnsureArticle)
+        //  · PC 는 원문 화면 위쪽 막대(.art-bar), 휴대폰은 분류 줄 오른쪽(#artBtnSlot)에 버튼이 있음
+        function tourEnsureArticle() {
+            try {
+                if (document.getElementById('articleZoomToggle') || !articleVisible()) return;
+                const c = newsData.find(n => { const l = safeUrl(n.link); return l && !/news\.google\.com/.test(l) && (n.orig ? n.embed === true : n.embed !== false); });
+                if (c) selectNews(c.id, true);
+            } catch (e) {}
+        }
+        function tourArtBtnsUnion() {
+            const bs = Array.from(document.querySelectorAll(isMobile() ? '#artBtnSlot .art-ib' : '#detailViewContainer .art-bar .art-ib, .art-bar .art-ib'))
+                .filter(b => { const r = b.getBoundingClientRect(); return r.width > 4 && r.height > 4 && !b.closest('#panelStore'); });
+            if (!bs.length) return isMobile() ? document.getElementById('artBtnSlot') : tourPanel('article');
+            return bs.reduce((u, b) => u ? tourUnion(u, b) : b, null);
+        }
+        const TOUR_ART = [
+            { id: 'artfont', icon: '🔠', title: '기사 글씨 크기 조절', needArt: true, tab: 'article',
+              target: () => document.getElementById('articleZoomToggle') || tourPanel('article'),
+              text: '원문 기사 화면 오른쪽 아래의 둥근 [Aa] 버튼을 누르면 막대가 펼쳐져요. 막대를 좌우로 움직여 기사 글씨를 50%~250%까지 크게 또는 작게 볼 수 있고, 숫자를 누르면 100%로 돌아가요.' },
+            { id: 'artbtns', icon: '🧰', title: '공유 · 원문 이동 · 요약 버튼', needArt: true, tab: 'article', target: tourArtBtnsUnion,
+              text: '원문 기사 화면 오른쪽 위에 있는 버튼 3개예요. 기사를 볼 때 필요한 기능이 여기 모여 있어요.',
+              bullets: ['🟢 공유하기: 이 사건을 이웃·커뮤니티·문자로 알려요', '🔵 새 창으로 열기: 언론사 원문 홈페이지로 이동해요 (이 사이트를 떠나요)', '📄 요약 보기: 원문 대신 기사 요약 화면으로 바꿔 봐요 (다시 [원문 보기]로 돌아올 수 있어요)'] }
+        ];
         function tourBuildSteps() {
-            if (!isMobile()) { const a = TOUR_ALL.slice(); a.splice(a.findIndex(s => s.id === 'cat') + 1, 0, TOUR_HOT); return a; }
+            if (!isMobile()) { const a = TOUR_ALL.slice(); const ci = a.findIndex(s => s.id === 'cat') + 1; a.splice(ci, 0, TOUR_HOT, ...TOUR_ART); return a; }
             const steps = TOUR_ALL.filter(s => s.id !== 'layout').map(s => Object.assign({}, s, TOUR_SHORT[tourShortKey(s)] || {}, TOUR_TAB[s.id] ? { tab: TOUR_TAB[s.id] } : {}));
             const by = k => steps.find(x => x.id === k);
             Object.assign(by('cat') || {}, { title: '분류 버튼', text: '[분류] 줄을 누르면 펼쳐져요. 교통·화재·범죄 같은 종류만 골라 볼 수 있어요. 기사를 누르면 원문 탭으로 넘어가요.', target: () => document.getElementById('listCatBar') });
@@ -11246,7 +11267,11 @@
                 bullets: ['원문 보기: 이 사이트 안에서 언론사 기사를 바로 읽어요', '공유하기: 이웃·커뮤니티에 사건을 알려요', '왼쪽 끝에서 가운데로 쓸면 목록으로 돌아가요'] });
             // ── 순서: 화면(탭)을 한 번씩만 지나가고, 한 화면 안에서는 PC와 같은 순서로 안내 (왔다 갔다 하지 않게)
             //   요약 목록(환영 → 아래 아이콘 → 내 동네 → 사고 다발 → 날짜·목록 → 분류) → 원문 기사 → 사건 지도 → 위쪽 버튼(휴대폰은 화면 왼쪽부터: 알림 종 → 지난 알림 → 다크 모드) → 브리핑 → 제보 → 커뮤니티 버튼 → 커뮤니티
-            const order = ['welcome', 'tabs', 'region', 'hot', 'date', 'cat', 'art', 'map', 'alert', 'alertlog', 'font', 'brief', 'report', 'commbtn'];
+            //   휴대폰 원문 기사 화면: 기사 화면 소개 → [Aa] 글씨 크기 → 오른쪽 버튼 3개
+            steps.push(Object.assign({}, TOUR_ART[0], { text: '기사 화면 왼쪽 위의 둥근 [Aa] 버튼을 누르면 막대가 펼쳐져요. 좌우로 밀어 기사 글씨를 크게·작게 바꾸고, 숫자를 누르면 100%로 돌아가요.' }));
+            steps.push(Object.assign({}, TOUR_ART[1], { title: '공유 · 원문 이동 · 요약 버튼', text: '[분류] 줄 오른쪽에 있는 아이콘 3개예요. 한 번에 소개할게요.',
+                bullets: ['🟢 공유: 이 사건을 이웃·커뮤니티에 알려요', '🔵 새 창 열기: 언론사 원문 홈페이지로 이동해요', '📄 요약: 원문 대신 기사 요약으로 바꿔 봐요'] }));
+            const order = ['welcome', 'tabs', 'region', 'hot', 'date', 'cat', 'art', 'artfont', 'artbtns', 'map', 'alert', 'alertlog', 'font', 'brief', 'report', 'commbtn'];
             return order.map(by).filter(Boolean).concat(steps.filter(x => !order.includes(x.id)));
         }
         let TOUR_STEPS = TOUR_ALL;
@@ -11322,6 +11347,7 @@
             if (!root) return;
             const n = TOUR_STEPS.length, i = tourState.i, s = TOUR_STEPS[i], last = i === n - 1;
             if (isMobile() && s.tab) setMobTab(s.tab);          // 휴대폰: 이 단계가 설명하는 화면(탭)으로 먼저 넘김
+            if (s.needArt) tourEnsureArticle();                  // 기사 원문 버튼을 설명하려면 열린 기사가 있어야 함
             if (s.comm || s.openComm) tourOpenComm(s.comm); else tourCloseComm();      // 커뮤니티 단계에서만 커뮤니티를 열어 둠 (소개 단계부터 미리 열어 두어, 다음 단계에서 창이 새로 뜨는 움직임이 없게)
             const cardEl0 = document.getElementById('tourCard');
             if (cardEl0) cardEl0.classList.toggle('tour-compact', isMobile() && !!s.comm);   // 휴대폰 커뮤니티 단계: 설명 카드를 작게 줄여 게시물이 보이게
