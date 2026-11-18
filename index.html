@@ -4147,7 +4147,15 @@
         let alertCfg = (() => {
             // court: 재판·판결 소식도 알릴지 (기본 꺼짐 — 지금 일어난 사건이 아니므로)
             const base = { enabled: true, sound: 'dingdong', volume: 70, scope: 'sigungu', region: null, useLocation: false, radiusKm: 5, sos: true, report: true, dm: true, court: false };
-            try { return Object.assign(base, JSON.parse(localStorage.getItem('alert_cfg') || '{}')); } catch (e) { return base; }
+            let o = base;
+            try { o = Object.assign(base, JSON.parse(localStorage.getItem('alert_cfg') || '{}')); } catch (e) { o = base; }
+            // 예전에는 알림 지역을 하나만(region + scope) 정했음 → 여러 곳을 고를 수 있는 목록(areas)으로 옮김. 형식은 안전 브리핑과 같음: '시·도 시·군·구|읍·면·동'
+            if (!Array.isArray(o.areas)) {
+                o.areas = [];
+                const r = o.region;
+                if (r && r.sido) o.areas.push(r.sido + (r.sigungu ? ' ' + r.sigungu : '') + (r.sigungu && r.dong && o.scope === 'dong' ? '|' + r.dong : ''));
+            }
+            return o;
         })();
         let alertSeenIds = null;      // 이미 본 기사 번호 (처음 불러올 때는 알림을 띄우지 않음)
         let alertAudioCtx = null;
@@ -4157,30 +4165,30 @@
         let alertHereTimer = null, alertSummaryArea = '';
 
         function saveAlertCfg() { try { localStorage.setItem('alert_cfg', JSON.stringify(alertCfg)); } catch (e) {} }
-        function alertRegion() {
-            if (alertCfg.region && alertCfg.region.sido) return alertCfg.region;
-            if (typeof myTown !== 'undefined' && myTown) return { sido: myTown.sido, sigungu: myTown.sigungu, dong: myTown.dong };
-            return null;
+        // 알림 받을 지역 목록: 직접 고른 곳(여러 개). 하나도 안 골랐으면 인증한 동네의 시·군·구를 기본으로 씀
+        function alertAreaList() {
+            if (alertCfg.areas && alertCfg.areas.length) return alertCfg.areas;
+            if (typeof myTown !== 'undefined' && myTown) return [myTown.sido + (myTown.sigungu ? ' ' + myTown.sigungu : '')];
+            return [];
         }
+        function alertAreaParse(a) {
+            const dp = a.indexOf('|'), base = dp < 0 ? a : a.slice(0, dp), i = base.indexOf(' ');
+            return { sido: i < 0 ? base : base.slice(0, i), sigungu: i < 0 ? '' : base.slice(i + 1), dong: dp < 0 ? '' : a.slice(dp + 1) };
+        }
+        function alertRegion() { const l = alertAreaList(); return l.length ? alertAreaParse(l[0]) : null; }   // 대표 지역(안전 브리핑 기준점 등)
+        function alertAreaShort(a) { return a.replace(/특별자치시|특별자치도|특별시|광역시/g, '').trim().replace('|', ' '); }
         function alertRegionText() {
-            const r = alertRegion();
-            if (!r) return '아직 정하지 않음';
-            return [r.sido, r.sigungu, (alertCfg.scope === 'dong' ? r.dong : '')].filter(Boolean).join(' ');
+            const l = alertAreaList();
+            if (!l.length) return '아직 정하지 않음';
+            const t = l.map(alertAreaShort);
+            return t.length > 2 ? t.slice(0, 2).join(' · ') + ' 외 ' + (t.length - 2) + '곳' : t.join(' · ');
         }
         function matchAlertRegion(news) {
-            const r = alertRegion();
-            if (!r) return false;
+            const l = alertAreaList();
+            if (!l.length) return false;
             const loc = news.location || '';
             if (loc === '전국') return alertCfg.nation === true;   // 전국 단위 소식은 [전국 소식도 받기]를 켠 사람에게만
-            if (!loc.includes(r.sido)) return false;
-            if (r.sigungu) {
-                const city = r.sigungu.split(' ')[0];
-                if (!(loc.includes(r.sigungu) || (r.sigungu.includes(' ') && loc.split(' ').pop() === city))) return false;
-            }
-            if (alertCfg.scope === 'dong' && r.dong) {
-                if (!(loc.includes(r.dong) || loc.includes(dongStem(r.dong)))) return false;
-            }
-            return true;
+            return l.some(a => briefAreaMatch(news, a));
         }
 
         // 새로 들어온 기사 확인 (loadIncidentsFromJSON 에서 호출)
@@ -4571,17 +4579,25 @@
             let body = '';
 
             if (alertTab === 'where') {
-                body += aHead('알림 받을 지역');
+                body += aHead('알림 받을 지역', '', '여러 곳 선택 가능');
+                const sel = 'w-full min-w-0 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-2 text-[0.8125rem] text-slate-800 dark:text-slate-100 disabled:opacity-50';
+                const dongs = alertPick.sgg ? (() => { try { return (townDongs(alertPick.sido, alertPick.sgg) || []).slice().sort(briefKo); } catch (e) { return []; } })() : [];
+                const list = alertCfg.areas || [], usingDefault = !list.length && alertAreaList().length;
                 body += aCard(`
                     <div class="py-3">
-                        <div class="text-lg font-black text-slate-900 dark:text-white mb-2.5 leading-tight">📍 ${esc(alertRegionText())}</div>
-                        <div class="grid grid-cols-2 gap-2 mb-2.5">
-                            <button type="button" onclick="setAlertRegionFromTown()" class="abtn">🏠 인증한 동네로</button>
-                            <button type="button" onclick="setAlertRegionFromFilter()" class="abtn">🗺️ 필터 지역으로</button>
+                        <div class="text-[0.8125rem] font-bold text-slate-500 mb-2">지금 알림 받는 곳</div>
+                        ${list.length ? `<div class="flex flex-wrap gap-1.5 mb-3">${list.map((a, i) => `<span class="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-600 text-[0.8125rem] font-bold text-amber-900 dark:text-amber-200">📍 ${esc(alertAreaShort(a))}<button type="button" onclick="alertRemoveArea(${i})" aria-label="${esc(alertAreaShort(a))} 삭제" class="w-6 h-6 rounded-full text-red-500 text-base leading-none hover:bg-red-50 dark:hover:bg-red-500/10">×</button></span>`).join('')}</div>`
+                            : `<div class="text-[0.8125rem] mb-3 ${usingDefault ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}">${usingDefault ? '📍 ' + esc(alertRegionText()) + ' <span class="text-slate-400">(인증한 동네 기준 · 아래에서 직접 고르면 바뀌어요)</span>' : '아직 고른 지역이 없어요. 아래에서 추가해 주세요.'}</div>`}
+                        <div class="text-[0.8125rem] font-bold text-slate-500 mb-1.5">지역 추가하기 <span class="font-normal text-slate-400">시·도 → 시·군·구 → 읍·면·동</span></div>
+                        <div class="grid grid-cols-3 gap-1.5 mb-2">
+                            <select id="alertSido" onchange="alertPick.sido = this.value; alertPick.sgg = ''; renderAlertPanel()" class="${sel}"><option value="">시·도</option>${Object.keys(briefAreaMap()).sort(briefKo).map(s => `<option value="${esc(s)}" ${alertPick.sido === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+                            <select id="alertSgg" ${alertPick.sido ? '' : 'disabled'} onchange="alertPick.sgg = this.value; renderAlertPanel()" class="${sel}"><option value="">${alertPick.sido ? '시·도 전체' : '시·군·구'}</option>${(briefAreaMap()[alertPick.sido] || []).slice().sort(briefKo).map(s => `<option value="${esc(s)}" ${alertPick.sgg === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select>
+                            <select id="alertDong" ${alertPick.sgg ? '' : 'disabled'} class="${sel}"><option value="">${alertPick.sgg ? '시·군·구 전체' : '읍·면·동'}</option>${dongs.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
                         </div>
-                        <div class="seg">
-                            <button type="button" class="${alertCfg.scope !== 'dong' ? 'on' : ''}" onclick="setAlertCfg('scope','sigungu')">시·군·구 전체</button>
-                            <button type="button" class="${alertCfg.scope === 'dong' ? 'on' : ''}" onclick="setAlertCfg('scope','dong')">우리 읍·면·동만</button>
+                        <button type="button" onclick="alertAddArea()" class="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-white text-sm font-extrabold mb-2.5">+ 이 지역 추가</button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="alertAddFromTown()" class="abtn">🏠 내 인증 동네 추가</button>
+                            <button type="button" onclick="alertAddFromFilter()" class="abtn">🗺️ 목록에서 보는 지역 추가</button>
                         </div>
                     </div>`);
                 body += aHead('추가로 받기');
@@ -4649,18 +4665,37 @@
             if (typeof updateCommBadge === 'function') updateCommBadge();
         }
         function alertPanelMsg(t) { const m = document.getElementById('alertPanelMsg'); if (m) m.textContent = t; }
-        function setAlertRegionFromTown() {
-            if (typeof myTown === 'undefined' || !myTown) { alertPanelMsg('먼저 아래 [우리동네 커뮤니티]에서 동네 인증을 해 주세요.'); return; }
-            alertCfg.region = { sido: myTown.sido, sigungu: myTown.sigungu, dong: myTown.dong };
-            saveAlertCfg(); renderAlertPanel(); updateAlertButton();
+        let alertPick = { sido: '', sgg: '' };      // 알림 지역을 고르는 중인 시·도·시·군·구
+        // 지역 하나를 목록에 넣음. 이미 더 넓은 범위(시·도 전체, 시·군·구 전체)가 들어 있으면 좁은 곳은 따로 안 넣고, 넓은 곳을 넣으면 그 안의 좁은 곳은 정리
+        function alertAddRaw(v) {
+            if (!Array.isArray(alertCfg.areas)) alertCfg.areas = [];
+            const covered = alertCfg.areas.some(x => x !== v && (v.startsWith(x + ' ') || v.startsWith(x + '|')));
+            if (covered) { alertPanelMsg('이미 더 넓은 범위로 들어 있어요.'); return false; }
+            if (alertCfg.areas.includes(v)) { alertPanelMsg('이미 추가된 지역이에요.'); return false; }
+            alertCfg.areas.push(v);
+            alertCfg.areas = alertCfg.areas.filter(x => x === v || !(x.startsWith(v + ' ') || x.startsWith(v + '|')));
+            alertCfg.region = null; saveAlertCfg(); renderAlertPanel(); updateAlertButton();
+            return true;
         }
-        function setAlertRegionFromFilter() {
-            const sido = document.getElementById('sidoSelect').value;
-            const sigungu = document.getElementById('sigunguSelect').value;
-            const dong = document.getElementById('dongSelect').value;
-            if (sido === 'all') { alertPanelMsg('사건 목록 위쪽 [전국 지역별 상세 필터]에서 시·도와 시·군·구를 먼저 골라 주세요.'); return; }
-            alertCfg.region = { sido: sido, sigungu: (sigungu !== 'all' && sigungu !== '전체') ? sigungu : '', dong: (dong !== 'all' && dong !== '전체') ? dong : '' };
-            saveAlertCfg(); renderAlertPanel(); updateAlertButton();
+        function alertAddArea() {
+            const a = document.getElementById('alertSido'), b = document.getElementById('alertSgg'), d = document.getElementById('alertDong');
+            if (!a || !a.value) { alertPanelMsg('시·도를 먼저 골라 주세요.'); return; }
+            alertAddRaw(a.value + (b && b.value ? ' ' + b.value : '') + (b && b.value && d && d.value ? '|' + d.value : ''));
+        }
+        function alertRemoveArea(i) {
+            const had = alertCfg.areas.slice();
+            alertCfg.areas.splice(i, 1); alertCfg.region = null; saveAlertCfg(); renderAlertPanel(); updateAlertButton();
+            if (!alertCfg.areas.length && had.length) alertPanelMsg('고른 지역이 없으면 인증한 동네 기준으로 알려요.');
+        }
+        function alertAddFromTown() {
+            if (typeof myTown === 'undefined' || !myTown) { alertPanelMsg('먼저 아래 [우리동네 커뮤니티]에서 동네 인증을 해 주세요.'); return; }
+            alertAddRaw(myTown.sido + (myTown.sigungu ? ' ' + myTown.sigungu : '') + (myTown.sigungu && myTown.dong ? '|' + myTown.dong : ''));
+        }
+        function alertAddFromFilter() {
+            const sido = document.getElementById('sidoSelect').value, sg = document.getElementById('sigunguSelect').value, dong = document.getElementById('dongSelect').value;
+            if (sido === 'all') { alertPanelMsg('사건 목록 위쪽 [전국 지역별 상세 필터]에서 시·도부터 골라 주세요.'); return; }
+            const hasSg = sg !== 'all' && sg !== '전체', hasDong = hasSg && dong !== 'all' && dong !== '전체';
+            alertAddRaw(sido + (hasSg ? ' ' + sg : '') + (hasDong ? '|' + dong : ''));
         }
         function testAlert() {
             showAlertToast({ head: '🔔 우리 동네 새 사건사고', badge: '알림 미리 보기', title: '이런 모양으로 알림이 표시됩니다.', foot: alertRegionText() });
@@ -11173,7 +11208,7 @@
             // 사건 지도 다음에: 맨 위 알림 종 아이콘과 그 안의 설정 설명
             steps.push({ id: 'alert', icon: '🔔', title: '맨 위 알림 종 아이콘', tab: 'map', target: () => document.getElementById('alertButton'),
                 text: '내 지역에 새 사건이 올라오면 알려 드려요. 종을 눌러 받고 싶은 소식만 골라 보세요. 꺼져 있으면 종에 빗금이 보여요.',
-                bullets: ['📍 내 지역: 알림받을 동네 정하기 (인증한 동네·필터 지역)', '📰 받을 소식: 묶음별 스위치로 켜고 끄고, 펼쳐서 세부 종류도 고르기', '🔊 표시·소리: 소리·화면 알림·후속 소식 알림 켜고 끄기'] });
+                bullets: ['📍 내 지역: 알림받을 지역을 시·도 → 시·군·구 → 읍·면·동까지, 원하는 만큼 골라 추가', '📰 받을 소식: 묶음별 스위치로 켜고 끄고, 펼쳐서 세부 종류도 고르기', '🔊 표시·소리: 소리·화면 알림·후속 소식 알림 켜고 끄기'] });
             steps.push(Object.assign({}, TOUR_HOT, { tab: 'list' }));
             steps.push({ id: 'art', icon: '📰', title: '원문 기사 화면', tab: 'article', target: () => document.getElementById('centerPane'),
                 text: '목록에서 사건을 누르면 이 화면으로 넘어와요. 기사 요약을 읽고, 위쪽 버튼으로 원문 보기·공유·새 창 열기를 할 수 있어요.',
