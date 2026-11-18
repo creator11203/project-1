@@ -1,66 +1,40 @@
 name: Auto Update Incidents and News
 
+# scraper.py 는 비공개 저장소(PRIVATE_REPO)에 두고, 실행할 때만 가져와 씁니다.
+# 수집은 이 공개 저장소의 Actions 에서 돌리므로 사용 시간 제한이 없습니다.
 on:
   schedule:
-    # 10분마다 시작 요청. 한 번 실행이 약 55분 동안 계속 수집하므로 실행이 겹치면 하나만 대기했다가 앞 실행이 끝나면 바로 이어받습니다.
-    # (GitHub 사정에 따라 정기 실행이 몇십 분씩 시작되지 않기도 해서, 한 번 실행을 길게 잡아 수집이 끊기지 않게 함)
     - cron: '*/10 * * * *'
-  workflow_dispatch:   # Actions 탭에서 수동으로 "Run workflow" 버튼으로 실행할 수도 있습니다
-  # scraper.py 를 새로 올리면 곧바로 '고장 검사'만 한 번 돌림 (1분 안에 결과: 초록 ✓ 정상 / 빨간 ✗ 고장)
-  push:
-    paths:
-      - 'scraper.py'
-      - '.github/workflows/auto_update.yml'
+  workflow_dispatch:
 
-# 이전 실행이 아직 끝나지 않았으면 겹쳐서 실행하지 않고 기다렸다가 이어서 실행 (고장 검사는 따로 바로 실행)
 concurrency:
-  group: ${{ github.event_name == 'push' && 'scraper-check' || 'auto-update-news' }}
+  group: auto-update-news
   cancel-in-progress: false
 
 jobs:
-  # ── ① 올린 scraper.py 고장 검사 (업로드 직후) ──
-  #   예) 2026-11-15 19:07 이후: 정규식 괄호 하나가 더 들어간 scraper.py 가 올라와 '파일을 읽는 순간' 멈췄고, 1시간 넘게 기사가 안 올라왔음
-  #   → 이제는 올리자마자 이 검사가 빨간 ✗ 로 알려 줌 (수집은 아래 ②의 자동 복구 덕분에 계속됨)
-  check-scraper:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install feedparser pytz
-      - name: scraper.py 자가 진단
-        run: |
-          if python scraper.py --selftest; then
-            echo "::notice::scraper.py 정상 — 다음 수집부터 이 버전으로 기사를 모읍니다."
-          else
-            echo "::error::방금 올린 scraper.py 가 고장 났습니다 (위 오류 줄 확인). 고칠 때까지 수집은 '직전 정상 버전'으로 자동 진행됩니다."
-            exit 1
-          fi
-
-  # ── ② 기사 수집 ──
   update-news:
-    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 75
     permissions:
       contents: write
 
     env:
-      LOOP_MINUTES: 55        # 한 번 실행될 때 계속 수집하는 시간 (분). 길게 잡은 이유: GitHub 정기 실행(cron)이 가끔 몇십 분씩 시작되지 않아
-                              #  수집이 끊긴 적이 있음(2026-11-16 17:42~18:37). 한 번 실행이 길면 정기 실행이 빠져도 앞선 실행이 계속 수집함
-                              #  (실행이 끝날 즈음엔 대기 중이던 다음 실행이 바로 이어받음)
-      CYCLE_SECONDS: 420      # 수집 간격 (초). 7분 = 한 시간에 최대 약 8번 올림 → GitHub Pages 배포 한도(시간당 약 10회)에 여유를 둠
-                              #   (6분이면 정확히 10회라, 사람이 index.html 을 한 번만 올려도 한도를 넘어 배포가 밀리고 사이트가 한동안 안 바뀔 수 있음)
-      GOOGLE_EVERY_SEC: 900   # 구글 뉴스 검색은 15분마다 한 번 (너무 자주 하면 구글이 막음). 언론사 직접 RSS 는 매번
+      PRIVATE_REPO: creator11203/scraper-private     # ← 비공개 저장소 이름 (만든 이름으로 바꾸세요)
+      LOOP_MINUTES: 55
+      CYCLE_SECONDS: 420
+      GOOGLE_EVERY_SEC: 900
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Checkout private scraper
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 60       # 자동 복구 때 예전 scraper.py 를 꺼내 쓰려고 최근 기록까지 받음
+          repository: ${{ env.PRIVATE_REPO }}
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          path: _priv
+          fetch-depth: 60
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -68,23 +42,20 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install feedparser pytz
+        run: pip install feedparser pytz
 
-      # 수집에 쓸 scraper.py 고르기 (자동 복구)
-      #  · 지금 scraper.py 가 정상이면 그대로 사용
-      #  · 고장이면(문법·정규식 오류, 분류 함수 오류 등) git 기록에서 '정상 동작하는 가장 최근 버전'을 꺼내 scraper_fallback.py 로 수집
-      #    → 잘못된 파일을 올려도 기사 업데이트는 멈추지 않음. 대신 이 실행은 노란 경고 + 빨간 ✗ 로 표시되어 고장을 알 수 있음
+      # 정상 동작하는 scraper.py 고르기 (고장이면 비공개 저장소 기록에서 직전 정상 버전 사용)
+      # 공개 로그에 소스 코드 줄이 새지 않도록 오류 출력은 마지막 한 줄만 보여 주고, 실행은 컴파일본(.pyc)으로 합니다.
       - name: Pick a working scraper (auto-recover)
         id: pick
         run: |
+          echo "_priv/" >> .git/info/exclude
           cat > /tmp/ci_check.py <<'PY'
-          # 어느 버전의 scraper.py 든 '읽어 들이기 + 분류·위치 계산'이 되는지 인터넷 없이 확인 (예전 버전엔 --selftest 가 없어서 따로 둠)
-          import importlib.util, sys, json
+          import importlib.util, sys
           path = sys.argv[1]
           spec = importlib.util.spec_from_file_location("scraper_under_test", path)
           m = importlib.util.module_from_spec(spec)
-          spec.loader.exec_module(m)                      # ← 정규식 괄호·문법 오류는 여기서 걸림
+          spec.loader.exec_module(m)
           for t in ["서울 강남구 역삼동 오피스텔 화재로 1명 숨져", "부산 해운대구서 음주운전 차량이 보행자 들이받아…50대 입건", "아이유 신곡 '살인자의 고백' 차트 1위"]:
               r = m.classify(t, t)
               if r:
@@ -93,34 +64,39 @@ jobs:
           out = m.reprocess_existing(old)
           if old and len(out) == 0:
               raise SystemExit("기존 기사를 하나도 다시 계산하지 못함")
-          print("check ok:", path)
+          print("check ok")
           PY
-          if python /tmp/ci_check.py scraper.py; then
-            echo "script=scraper.py" >> "$GITHUB_OUTPUT"
+          build() {  # $1 = 소스 파일 → scraper.pyc 로 컴파일하고 소스는 지움
+            python -m py_compile "$1" && python - "$1" <<'PY'
+          import sys, py_compile
+          py_compile.compile(sys.argv[1], cfile="scraper_run.pyc", doraise=True)
+          PY
+            rm -f "$1"
+          }
+          cp _priv/scraper.py scraper.py
+          if python /tmp/ci_check.py scraper.py >/tmp/out.txt 2>/tmp/err.txt; then
+            build scraper.py
             echo "fallback=0" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo "::error::지금 저장소의 scraper.py 가 고장 났습니다 (위 오류 줄 확인). git 기록에서 직전 정상 버전을 찾아 대신 수집합니다."
-          for h in $(git log --format=%H -n 40 -- scraper.py | tail -n +2); do
-            git show "$h:scraper.py" > scraper_fallback.py 2>/dev/null || continue
-            if python /tmp/ci_check.py scraper_fallback.py >/dev/null 2>&1; then
-              echo "::warning::자동 복구: ${h:0:7} 버전의 scraper.py 로 수집합니다 ($(git log -1 --format='%ci' $h)). scraper.py 를 고쳐 다시 올려 주세요."
-              echo "script=scraper_fallback.py" >> "$GITHUB_OUTPUT"
+          echo "::error::scraper.py 가 고장 났습니다 ($(tail -n 1 /tmp/err.txt | cut -c1-120)). 직전 정상 버전을 찾습니다."
+          rm -f scraper.py
+          for h in $(git -C _priv log --format=%H -n 40 -- scraper.py | tail -n +2); do
+            git -C _priv show "$h:scraper.py" > scraper.py 2>/dev/null || continue
+            if python /tmp/ci_check.py scraper.py >/dev/null 2>&1; then
+              echo "::warning::자동 복구: ${h:0:7} 버전으로 수집합니다. scraper.py 를 고쳐 다시 올려 주세요."
+              build scraper.py
               echo "fallback=1" >> "$GITHUB_OUTPUT"
               exit 0
             fi
+            rm -f scraper.py
           done
-          echo "::error::정상 동작하는 예전 scraper.py 도 찾지 못했습니다. 기사를 모을 수 없습니다."
+          echo "::error::정상 동작하는 scraper.py 를 찾지 못했습니다."
           exit 1
 
-      # 공개(public) 저장소는 Actions 사용 시간이 무제한 무료라서, 한 번 실행될 때 약 20분 동안 7분마다 수집·저장을 반복합니다.
-      # 새 기사가 있을 때만 저장(commit)하고, 웹사이트는 news.json 을 주기적으로 확인해서 새로고침 없이 바로 보여 줍니다.
       - name: Scrape and push repeatedly
         env:
-          SCRAPER: ${{ steps.pick.outputs.script }}
           FALLBACK: ${{ steps.pick.outputs.fallback }}
-          # (선택) AI 기사 심사: 저장소 Settings → Secrets and variables → Actions 에 ANTHROPIC_API_KEY 를 등록하면 켜지고, 없으면 규칙만 사용 (아무 문제 없음)
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -130,30 +106,23 @@ jobs:
           while true; do
             ROUND=$((ROUND + 1))
             START=$(date +%s)
-            echo "::group::수집 ${ROUND}회차 ($(TZ=Asia/Seoul date '+%H:%M:%S')) · ${SCRAPER}"
-            if ! python "$SCRAPER"; then
+            echo "::group::수집 ${ROUND}회차 ($(TZ=Asia/Seoul date '+%H:%M:%S'))"
+            if ! python scraper_run.pyc; then
               FAILS=$((FAILS + 1))
-              echo "::error::${SCRAPER} 실행 실패 (${ROUND}회차) — 위 오류 메시지를 확인하세요. 다음 회차에 다시 시도합니다."
+              echo "::error::실행 실패 (${ROUND}회차) — 다음 회차에 다시 시도합니다."
             fi
             git add news.json
-            # tips.json: 안전 브리핑에 보여 줄 예방·대처 정보 기사 (사건 목록과 따로 모음)
             if [ -f tips.json ]; then git add tips.json; fi
-            # blocked.json: 본문을 읽어 해외·비사건으로 판명된 기사 목록 (같은 기사가 다시 들어오지 않게)
             if [ -f blocked.json ]; then git add blocked.json; fi
-            # geocache.json: 동(洞)·장소 좌표를 한 번 찾으면 저장해 두는 파일 (scraper.py 가 자동으로 만듭니다)
             if [ -f geocache.json ]; then git add geocache.json; fi
-            # stations.json: 전국 경찰·소방 시설 목록 (지도의 [경찰·소방 표시]를 즉시 보여 주려고 3일에 한 번 갱신)
             if [ -f stations.json ]; then git add stations.json; fi
-            # dropped_log.json: 규칙으로 걸러진 제목 점검 기록 (화면에는 안 나옴). 매 회차 바뀌므로 다른 파일이 바뀌어 저장할 때만 함께 올림
+            # dropped_log.json: 규칙으로 걸러진 제목 점검 기록 (화면에는 안 나옴). 다른 파일이 바뀌어 저장할 때만 함께 올림
             if ! git diff --staged --quiet && [ -f dropped_log.json ]; then git add dropped_log.json; fi
             if git diff --staged --quiet; then
               echo "변경된 뉴스가 없어 저장을 건너뜁니다."
             else
-              # 주의: 커밋 메시지에 [skip ci] 를 넣으면 GitHub Pages 배포까지 건너뛰어 웹사이트가 안 바뀔 수 있어서 넣지 않습니다.
               git commit -m "Auto-update latest news dataset ($(TZ=Asia/Seoul date '+%m-%d %H:%M'))"
               if ! git pull --rebase --autostash origin ${{ github.ref_name }}; then
-                # 사람이 같은 때 파일을 올려 합치기가 꼬이면: 이번 회차에 모은 데이터 파일을 따로 챙겨 두고,
-                #  저장소 최신 상태로 되돌린 뒤 그 데이터 파일만 다시 얹어서 저장 (예전에는 이 회차 결과를 그냥 버렸음)
                 git rebase --abort || true
                 mkdir -p /tmp/keep
                 for f in news.json tips.json blocked.json geocache.json stations.json; do
@@ -165,11 +134,10 @@ jobs:
                   if [ -f "/tmp/keep/$f" ]; then cp "/tmp/keep/$f" "$f"; git add "$f"; fi
                 done
                 if git diff --staged --quiet; then
-                  echo "::warning::다른 변경과 겹쳤지만 저장할 새 내용이 없어 건너뜁니다."
+                  echo "::warning::저장할 새 내용이 없어 건너뜁니다."
                 else
                   git commit -m "Auto-update latest news dataset ($(TZ=Asia/Seoul date '+%m-%d %H:%M'), 겹침 복구)"
-                  git push || echo "::warning::겹침 복구 후 올리기 실패 — 다음 회차에 다시 시도합니다."
-                  echo "::warning::다른 변경과 겹쳤지만 이번 회차 결과를 최신 저장소 위에 다시 저장했습니다."
+                  git push || echo "::warning::올리기 실패 — 다음 회차에 다시 시도합니다."
                 fi
               else
                 git push || echo "::warning::올리기 실패 — 다음 회차에 다시 시도합니다."
@@ -181,13 +149,11 @@ jobs:
             if [ $NEXT -ge $END ]; then break; fi
             if [ $NEXT -gt $NOW ]; then sleep $(( NEXT - NOW )); fi
           done
-          # 모든 회차가 실패했으면 실행 결과를 빨간색 '실패'로 표시 → Actions 탭에서 바로 알 수 있게
           if [ $FAILS -ge $ROUND ]; then
-            echo "::error::이번 실행의 수집 ${ROUND}회가 모두 실패했습니다. 기사가 업데이트되지 않고 있습니다."
+            echo "::error::이번 실행의 수집 ${ROUND}회가 모두 실패했습니다."
             exit 1
           fi
-          # 자동 복구로 수집했으면 기사는 올라갔어도 빨간 ✗ 로 남겨, scraper.py 를 고쳐야 한다는 걸 알 수 있게
           if [ "$FALLBACK" = "1" ]; then
-            echo "::error::기사는 직전 정상 버전 scraper.py 로 수집했습니다. 저장소의 scraper.py 를 고쳐 다시 올려 주세요."
+            echo "::error::기사는 직전 정상 버전으로 수집했습니다. scraper.py 를 고쳐 다시 올려 주세요."
             exit 1
           fi
