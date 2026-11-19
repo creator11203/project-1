@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-566SNNGH"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리동네 사건사고 · 홍보 영상</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #020617; color: #e2e8f0; font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; }
+  #wrap { width: min(1100px, 100%); aspect-ratio: 16 / 9; border-radius: 18px; overflow: hidden; background: #000; }
+  canvas { width: 100%; height: 100%; display: block; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  button { font: inherit; font-weight: 800; font-size: 14px; padding: 10px 18px; border-radius: 999px; border: 0; cursor: pointer; color: #fff; background: linear-gradient(90deg, #4f46e5, #7c3aed); }
+  button.sub { background: #1e293b; color: #cbd5e1; }
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="cv" width="1280" height="720"></canvas></div>
+<div class="bar"><button id="bPlay">▶ 처음부터 재생</button></div>
+
+<script>
+const W = 1280, H = 720, DUR = 36;
+const cv = document.getElementById('cv'), g = cv.getContext('2d');
+const FONT = "'Malgun Gothic','Apple SD Gothic Neo','Noto Sans KR',sans-serif";
+const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeBack = x => { const c = 1.7; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
+function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function txt(s, x, y, size, color, weight = 800, align = 'left', alpha = 1) { g.save(); g.globalAlpha *= alpha; g.font = `${weight} ${size}px ${FONT}`; g.fillStyle = color; g.textAlign = align; g.textBaseline = 'middle'; g.fillText(s, x, y); g.restore(); }
+function rnd(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
+const R = rnd(7), DOTS = [];
+[[.42,.20],[.47,.24],[.52,.22],[.60,.27],[.44,.33],[.40,.42],[.50,.40],[.60,.44],[.68,.50],[.45,.52],[.36,.58],[.42,.66],[.52,.60],[.60,.62],[.66,.68],[.50,.76],[.38,.82],[.30,.74],[.20,.90],[.74,.58]].forEach(c => DOTS.push({ x: c[0], y: c[1], p: R() * 6 }));
+
+function bg(t, a = '#0f172a', b = '#312e81') {
+  const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, a); gr.addColorStop(1, b); g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.save(); g.globalAlpha = .08; g.strokeStyle = '#fff'; g.lineWidth = 1;
+  for (let x = -((t * 20) % 60); x < W; x += 60) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  for (let y = 0; y < H; y += 60) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  g.restore();
+}
+function badge(label, t0, t) {
+  const a = easeOut(seg(t, t0, t0 + .4)); g.font = `800 20px ${FONT}`; const bw = g.measureText(label).width + 44;
+  g.save(); g.globalAlpha = a; g.translate(0, (1 - a) * -14); rr(48, 40, bw, 40, 20); g.fillStyle = 'rgba(99,102,241,.9)'; g.fill(); g.restore();
+  txt(label, 70, 61, 20, '#fff', 800, 'left', a);
+}
+function caption(lines, t0, t, color = '#fff') {
+  lines.forEach((s, i) => { const a = easeBack(seg(t, t0 + i * .25, t0 + .55 + i * .25)); g.save(); g.translate(0, (1 - a) * 30); txt(s, 64, 568 + i * 60, 50, color, 900, 'left', clamp(a)); g.restore(); });
+}
+
+function sceneHook(t) {
+  bg(t, '#020617', '#7f1d1d'); const cx = W / 2, cy = 300;
+  for (let i = 0; i < 4; i++) { const p = ((t * .6 + i / 4) % 1); g.strokeStyle = `rgba(248,113,113,${(1 - p) * .55})`; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, 40 + p * 260, 0, 7); g.stroke(); }
+  g.save(); g.translate(cx, cy); g.rotate(t * 3); const sw = g.createLinearGradient(0, 0, 200, 0); sw.addColorStop(0, 'rgba(248,113,113,.75)'); sw.addColorStop(1, 'rgba(248,113,113,0)');
+  g.fillStyle = sw; g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 220, -.35, 0); g.closePath(); g.fill(); g.restore();
+  txt('🚨', cx, cy, 90, '#fff', 800, 'center', clamp(easeBack(seg(t, .1, .7))));
+  const a1 = easeOut(seg(t, .5, 1.2)), a2 = easeOut(seg(t, 1.6, 2.3));
+  g.save(); g.translate(0, (1 - a1) * 40); txt('우리 동네,', cx, 560, 66, '#fff', 900, 'center', a1); g.restore();
+  g.save(); g.translate(0, (1 - a2) * 40); txt('지금 무슨 일이 일어나고 있을까?', cx, 635, 56, '#fca5a5', 900, 'center', a2); g.restore();
+}
+const HEADS = ['[속보] 서울 마포구 골목 정전 복구 중', '경기 수원 영통사거리 접촉사고 · 우회 안내', '부산 해운대 해안도로 차량 화재 진화', '강원 강릉 산불 주의보 · 입산 통제', '대전 유성구 실종자 수색 협조 요청', '제주 애월 해상 기상 악화 · 여객선 결항'];
+function sceneLive(t) {
+  bg(t, '#0b1220', '#0f3d3e'); badge('① 전국 실시간 관제', 0, t);
+  const ox = 700, oy = 70, mw = 460, mh = 600;
+  rr(ox - 20, oy - 10, mw + 40, mh + 20, 28); g.fillStyle = 'rgba(15,23,42,.55)'; g.fill(); g.strokeStyle = 'rgba(94,234,212,.35)'; g.lineWidth = 2; g.stroke();
+  DOTS.forEach((d, i) => { const a = clamp(easeBack(seg(t, .3 + i * .12, .7 + i * .12))); if (a <= 0) return; const x = ox + d.x * mw, y = oy + d.y * mh, pul = (Math.sin(t * 4 + d.p) + 1) / 2;
+    g.fillStyle = `rgba(239,68,68,${.25 * (1 - pul)})`; g.beginPath(); g.arc(x, y, (10 + pul * 26) * a, 0, 7); g.fill(); g.fillStyle = i % 4 === 0 ? '#f97316' : '#ef4444'; g.beginPath(); g.arc(x, y, 8 * a, 0, 7); g.fill(); });
+  const bw = 600; rr(48, 150, bw, 54, 14); g.fillStyle = 'rgba(15,23,42,.85)'; g.fill(); rr(48, 150, 96, 54, 14); g.fillStyle = '#dc2626'; g.fill(); txt('속보', 96, 177, 24, '#fff', 900, 'center');
+  g.save(); rr(150, 150, bw - 108, 54, 10); g.clip(); const off = (t * 150) % 3120; HEADS.concat(HEADS).forEach((h, i) => txt(h, 170 + i * 520 - off, 177, 22, '#e2e8f0', 700)); g.restore();
+  [['🔥', '화재', '상가 1층 연기, 소방차 2대 출동', '#f97316'], ['🚗', '교통사고', '사거리 접촉사고 · 부상자 없음', '#3b82f6'], ['🔎', '실종', '80대 어르신 찾습니다', '#a855f7']].forEach((c, i) => {
+    const a = easeOut(seg(t, 1.2 + i * .45, 1.9 + i * .45)); g.save(); g.globalAlpha = a; g.translate((1 - a) * -60, 0);
+    rr(48, 240 + i * 92, bw, 78, 16); g.fillStyle = 'rgba(255,255,255,.95)'; g.fill(); rr(48, 240 + i * 92, 8, 78, 4); g.fillStyle = c[3]; g.fill();
+    txt(c[0], 92, 279 + i * 92, 34, '#000', 800, 'center'); txt(c[1], 126, 262 + i * 92, 15, c[3], 900); txt(c[2], 126, 292 + i * 92, 20, '#0f172a', 800); g.restore(); });
+  caption(['전국 사건·사고를', '실시간으로 한눈에'], 3.0, t);
+}
+function sceneRegion(t) {
+  bg(t, '#0f172a', '#1e3a8a'); badge('② 내 동네만 골라 보기', 0, t);
+  [['시·도', '경기도'], ['시·군·구', '남양주시'], ['읍·면·동', '화도읍']].forEach((s, i) => {
+    const a = easeOut(seg(t, .3 + i * .9, .8 + i * .9)), done = t > 1.0 + i * .9; g.save(); g.globalAlpha = a; g.translate(0, (1 - a) * 30);
+    rr(120 + i * 360, 130, 330, 84, 18); g.fillStyle = '#fff'; g.fill(); if (done) { g.lineWidth = 4; g.strokeStyle = '#6366f1'; g.stroke(); }
+    txt(s[0], 148 + i * 360, 156, 16, '#64748b', 700); txt(done ? s[1] : '선택하세요', 148 + i * 360, 190, 30, done ? '#0f172a' : '#94a3b8', 900); txt('▾', 420 + i * 360, 172, 26, '#64748b', 800, 'center'); g.restore();
+    if (i < 2) txt('→', 462 + i * 360, 172, 36, '#a5b4fc', 900, 'center', a); });
+  [['🚧', '도로 공사', '화도읍 마석 사거리 한 차로 통제', '#f59e0b'], ['🚓', '교통', '경춘로 정체 · 우회 권장', '#3b82f6'], ['🌧️', '생활안전', '호우 대비 배수로 점검 안내', '#14b8a6']].forEach((c, i) => {
+    const a = easeOut(seg(t, 3.0 + i * .4, 3.6 + i * .4)); g.save(); g.globalAlpha = a; g.translate(0, (1 - a) * 40);
+    rr(120, 250 + i * 86, 1040, 74, 18); g.fillStyle = 'rgba(255,255,255,.96)'; g.fill(); rr(120, 250 + i * 86, 8, 74, 4); g.fillStyle = c[3]; g.fill();
+    txt(c[0], 176, 287 + i * 86, 36, '#000', 800, 'center'); txt(c[1], 224, 271 + i * 86, 16, c[3], 900); txt(c[2], 224, 302 + i * 86, 25, '#0f172a', 800); g.restore(); });
+  caption(['시·군·구·동 단위로', '우리 동네 소식만 쏙'], 3.4, t);
+}
+function sceneBrief(t) {
+  bg(t, '#1e1b4b', '#4c1d95'); badge('③ 안전 브리핑 · 지도 · 알림', 0, t);
+  const a = easeBack(seg(t, .3, 1)); g.save(); g.translate(0, (1 - clamp(a)) * 50); g.globalAlpha = clamp(a);
+  rr(90, 120, 520, 360, 26); g.fillStyle = '#fff'; g.fill(); rr(90, 120, 520, 74, 26); g.fillStyle = '#4f46e5'; g.fill(); g.fillRect(90, 160, 520, 34);
+  txt('📋 오늘의 안전 브리핑', 124, 158, 26, '#fff', 900);
+  [['오늘 전국 사건', '1,284건'], ['우리 동네 주의', '교통 3 · 화재 1'], ['이번 주 다발 지역', '수원 · 부산 · 창원']].forEach((r, i) => { const b = easeOut(seg(t, 1.0 + i * .5, 1.5 + i * .5)); g.save(); g.globalAlpha = b; txt(r[0], 124, 238 + i * 76, 20, '#64748b', 700); txt(r[1], 124, 270 + i * 76, 30, '#0f172a', 900); g.restore(); });
+  g.restore();
+  const b = easeOut(seg(t, .6, 1.4)); g.save(); g.globalAlpha = b; rr(680, 120, 510, 360, 26); g.fillStyle = '#dbeafe'; g.fill(); g.clip();
+  g.strokeStyle = '#fff'; g.lineWidth = 12; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(680 + i * 130, 120); g.lineTo(780 + i * 110, 480); g.stroke(); }
+  g.lineWidth = 9; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(680, 190 + i * 120); g.lineTo(1190, 240 + i * 100); g.stroke(); }
+  [[820, 250], [1010, 330], [920, 420], [1100, 200]].forEach((p, i) => { const k = clamp(easeBack(seg(t, 1.2 + i * .35, 1.7 + i * .35))); if (k <= 0) return; const pul = (Math.sin(t * 5 + i) + 1) / 2;
+    g.fillStyle = `rgba(239,68,68,${.3 * (1 - pul)})`; g.beginPath(); g.arc(p[0], p[1], (14 + pul * 22) * k, 0, 7); g.fill(); g.fillStyle = '#ef4444'; g.beginPath(); g.arc(p[0], p[1], 11 * k, 0, 7); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 3; g.stroke(); });
+  g.restore();
+  const n = easeBack(seg(t, 3.0, 3.7)); g.save(); g.translate((1 - clamp(n)) * 400, 0); g.globalAlpha = clamp(n);
+  rr(740, 515, 450, 84, 20); g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 24; g.fill(); g.shadowBlur = 0;
+  txt('🔔', 786, 557, 36, '#000', 800, 'center'); txt('내 동네 속보 알림', 826, 541, 16, '#dc2626', 900); txt('화도읍 사거리 접촉사고 발생', 826, 573, 22, '#0f172a', 900); g.restore();
+  caption(['브리핑 · 지도 · 알림으로', '놓치지 않게'], 3.2, t);
+}
+function sceneTop(t) {
+  bg(t, '#422006', '#9a3412'); badge('④ 우리동네 커뮤니티 · 이달의 전국 TOP10', 0, t);
+  const h = easeOut(seg(t, .2, .8)); g.save(); g.globalAlpha = h; rr(90, 110, 1100, 96, 24); const gr = g.createLinearGradient(90, 0, 1190, 0); gr.addColorStop(0, '#f59e0b'); gr.addColorStop(1, '#ea580c'); g.fillStyle = gr; g.fill();
+  txt('🏆 이달의 전국 TOP10', 130, 150, 36, '#fff', 900); txt('전국 동네를 합쳐 공감 가장 많은 글 · 장소 · 이웃', 130, 186, 18, '#ffedd5', 700); g.restore();
+  [['🥇', '서울 마포구 연남동', '골목 정전, 한 시간째 복구 중이에요', 42], ['🥈', '부산 해운대구 우동', '주민센터 직원분 너무 친절하세요', 38], ['🥉', '강원 강릉시 교동', '새벽 산책길 노을이 장관이에요', 35], ['4', '제주 제주시 애월읍', '제주 애월로 이사 왔어요, 반갑습니다!', 33], ['5', '경기 수원시 영통동', '영통 사거리 보행 신호가 너무 짧아요', 31]].forEach((r, i) => {
+    const a = easeOut(seg(t, 1.0 + i * .5, 1.6 + i * .5)); g.save(); g.globalAlpha = a; g.translate((1 - a) * 120, 0); const y = 222 + i * 58;
+    rr(90, y, 1100, 50, 14); g.fillStyle = 'rgba(255,255,255,.96)'; g.fill(); txt(r[0], 128, y + 26, i < 3 ? 28 : 22, '#92400e', 900, 'center');
+    g.fillStyle = `hsl(${[200, 160, 20, 280, 340][i]} 70% 42%)`; rr(168, y + 12, 270, 26, 13); g.fill(); txt('📍 ' + r[1], 182, y + 26, 15, '#fff', 800);
+    txt(r[2], 460, y + 26, 21, '#0f172a', 800); txt('❤ ' + r[3], 1160, y + 26, 21, '#e11d48', 900, 'right'); g.restore(); });
+  caption(['이웃과 소통하고', '전국 인기 글까지 한눈에'], 3.8, t);
+}
+function sceneReport(t) {
+  bg(t, '#450a0a', '#be123c'); badge('⑤ 실시간 제보', 0, t);
+  const b = clamp(easeBack(seg(t, .3, 1))), pul = (Math.sin(t * 6) + 1) / 2;
+  g.save(); g.translate(W / 2, 250); g.scale(.6 + .4 * b, .6 + .4 * b); g.globalAlpha = b;
+  g.fillStyle = `rgba(255,255,255,${.12 + .12 * pul})`; rr(-250 - pul * 14, -56 - pul * 14, 500 + pul * 28, 112 + pul * 28, 56); g.fill();
+  rr(-240, -46, 480, 92, 46); g.fillStyle = '#fff'; g.fill(); txt('📢 실시간 제보하기', 0, 0, 36, '#be123c', 900, 'center'); g.restore();
+  const c = easeOut(seg(t, 1.4, 2.1)); g.save(); g.globalAlpha = c; g.translate(0, (1 - c) * 30);
+  rr(300, 360, 680, 100, 24); g.fillStyle = 'rgba(255,255,255,.96)'; g.fill(); txt('👀 목격한 사고, 이웃에게 바로 알려요', 340, 394, 28, '#0f172a', 900); txt('언론사 제보도 함께 · 이웃이 함께 확인해요', 340, 432, 20, '#64748b', 700); g.restore();
+  caption(['내가 본 사고,', '이웃의 안전이 됩니다'], 2.0, t);
+}
+function sceneCta(t) {
+  bg(t, '#1e1b4b', '#4f46e5');
+  for (let i = 0; i < 3; i++) { const p = ((t * .5 + i / 3) % 1); g.strokeStyle = `rgba(165,180,252,${(1 - p) * .5})`; g.lineWidth = 3; g.beginPath(); g.arc(W / 2, 250, 60 + p * 300, 0, 7); g.stroke(); }
+  txt('🚨', W / 2, 250, 120, '#fff', 800, 'center', clamp(easeBack(seg(t, .1, .7))));
+  const b = easeOut(seg(t, .5, 1.1)); g.save(); g.translate(0, (1 - b) * 30); txt('우리동네 사건사고', W / 2, 400, 84, '#fff', 900, 'center', b); g.restore();
+  txt('전국 실시간 안전 관제 · 무료로 지금 확인하세요', W / 2, 480, 32, '#c7d2fe', 800, 'center', easeOut(seg(t, 1.0, 1.6)));
+  const d = clamp(easeBack(seg(t, 1.5, 2.1))); g.save(); g.translate(W / 2, 580); g.scale(d, d); rr(-210, -42, 420, 84, 42); g.fillStyle = '#fff'; g.fill(); txt('지금 바로 접속 ▶', 0, 0, 34, '#4f46e5', 900, 'center'); g.restore();
+}
+const SCENES = [[0, 4, sceneHook], [4, 10, sceneLive], [10, 16, sceneRegion], [16, 22, sceneBrief], [22, 29, sceneTop], [29, 33, sceneReport], [33, 36, sceneCta]];
+function draw(t) {
+  g.clearRect(0, 0, W, H);
+  const s = SCENES.find(s => t >= s[0] && t < s[1]) || SCENES[SCENES.length - 1]; const lt = t - s[0]; s[2](lt);
+  const fin = 1 - seg(lt, 0, .35), fout = seg(lt, s[1] - s[0] - .3, s[1] - s[0]);
+  const f = Math.max(s[0] === 0 ? 0 : fin, s[1] >= DUR ? 0 : fout); if (f > 0) { g.fillStyle = `rgba(2,6,23,${f})`; g.fillRect(0, 0, W, H); }
+}
+// 재생: 시계 기반 (녹화 스크립트는 window.__T 로 시간을 직접 지정할 수 있음)
+let start = performance.now();
+function frame() { const t = window.__T != null ? window.__T : ((performance.now() - start) / 1000) % (DUR + 1); draw(Math.min(t, DUR - .001)); requestAnimationFrame(frame); }
+document.getElementById('bPlay').onclick = () => { start = performance.now(); };
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
