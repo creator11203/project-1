@@ -2920,11 +2920,14 @@
         // 재판·판결 소식(court)은 예전 사건의 후속 보도라 세지 않음 (같은 사건에 발생·수사 기사가 있으면 그 기사로 셈)
         function hotspotEvents() {
             const evs = groupEvents(newsData.filter(n => inLast7(n) && n.source !== '시스템' && !isCourt(n) && catPass(n)));
-            evs.forEach(ev => { ev.region = eventRegion(ev); });
+            // 2026-11-26 사용자 지적: 전주시 다발 지역에 '전국' 표시 기사(전국 독감 통계)가 들어 있었음 → 기사 절반 이상이 '전국 단위 소식'인 사건은 어느 시·군·구 사건도 아니므로 집계에서 뺌
+            const isNat = n => precOf(n) === 'nation' || (n.location || '').startsWith('전국');
+            evs.forEach(ev => { ev.nat = ev.items.filter(isNat).length * 2 >= ev.items.length; ev.region = ev.nat ? null : eventRegion(ev); });
             // 집계에서 빠진 사건이 얼마나 되는지 (화면 안내문에 보여 줌: 위치를 못 찾았거나 시·도까지만 알려진 사건은 어느 시·군·구인지 몰라 셀 수 없음)
             const st = { total: evs.length, counted: 0, abroad: 0, sido: 0, unknown: 0 };
             evs.forEach(ev => {
                 if (ev.region) { st.counted++; return; }
+                if (ev.nat) { st.unknown++; return; }
                 if (ev.items.every(n => isOverseas(n) || (n.location || '').startsWith('북한'))) st.abroad++;
                 else if (ev.items.some(n => (n.location || '') && precOf(n) === 'sido')) st.sido++;
                 else st.unknown++;
