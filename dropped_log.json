@@ -1,5 +1,9 @@
 [
 {
+"title": "뉴욕증시, AI·기술주 반등에 일제히 상승…나스닥 2.3%↑",
+"rule": "followup"
+},
+{
 "title": "美보험사 올스테이트 닷새째 전산 장애…연휴 고객 불편 가중",
 "rule": "n24_foreign_lead"
 },
@@ -900,16 +904,16 @@
 "rule": "n25_quote_only"
 },
 {
+"title": "정부 “야간근무, 연속 3일 이하로”",
+"rule": "n25_quote_only"
+},
+{
 "title": "[팔면봉] 與 법사위원 뜬금없이 지역구 예산 질문, 與 출신 장관 “답변 않겠다. 법사위 이러니 문제” 폭발. 외",
 "rule": "soft2"
 },
 {
 "title": "與, 2037년 정년 65세로… 2029년부터 단계적 연장",
 "rule": "n25_discuss_plan"
-},
-{
-"title": "정부 “야간근무, 연속 3일 이하로”",
-"rule": "n25_quote_only"
 },
 {
 "title": "中대사 “한미동맹 현대화, 中 겨냥 안 돼”",
@@ -925,6 +929,10 @@
 },
 {
 "title": "화웨이 “美제재 덕에 기술 자립”… 中 ‘AI 반도체 3종 세트’ 가속도",
+"rule": "n25_quote_only"
+},
+{
+"title": "미래기금 끌어다 곳곳 예산 증액… 與서도 “정부 흥청망청” 질타",
 "rule": "n25_quote_only"
 },
 {
@@ -948,10 +956,6 @@
 "rule": "n25_quote_only"
 },
 {
-"title": "미래기금 끌어다 곳곳 예산 증액… 與서도 “정부 흥청망청” 질타",
-"rule": "n25_quote_only"
-},
-{
 "title": "울릉도 표류 北어선 송환… 어민 7명 중 1명 귀순",
 "rule": "n25_stat_ratio"
 },
@@ -968,10 +972,6 @@
 "rule": "n25_quote_only"
 },
 {
-"title": "배수아·안태운 ‘현대문학상’",
-"rule": "n24_poem_book"
-},
-{
 "title": "손연재 부부, 연세의료원에 30억원 기부",
 "rule": "n26_supply_equip"
 },
@@ -980,16 +980,16 @@
 "rule": "nonevent3"
 },
 {
-"title": "AI가 하는 다이어트 조언 효과적일까",
-"rule": "soft2"
-},
-{
 "title": "남들이 다 사 갈까 봐 급히 또 주문했다",
 "rule": "policymark"
 },
 {
 "title": "트레비 분수의 동전이 줄어든 이유",
 "rule": "n24_why_question"
+},
+{
+"title": "AI가 하는 다이어트 조언 효과적일까",
+"rule": "soft2"
 },
 {
 "title": "“노력은 부질없고 앞날은 막막”… 번지는 ‘AI 블루’",
@@ -1084,12 +1084,12 @@
 "rule": "followup"
 },
 {
-"title": "[굿모닝 멤버십] “지름길 찾다 뇌 굳어”… AI로 공부한 학생의 최후",
-"rule": "n25_quote_only"
-},
-{
 "title": "미국 동전 25센트는 quarter, 5센트와 10센트짜리는?",
 "rule": "n24_foreign_lead"
+},
+{
+"title": "[굿모닝 멤버십] “지름길 찾다 뇌 굳어”… AI로 공부한 학생의 최후",
+"rule": "n25_quote_only"
 },
 {
 "title": "철도망 구축하려 ‘원팀’ 된 충청… KTX 세종역 신설엔 딴 목소리",
@@ -3692,6 +3692,10 @@
 "rule": "n25_quote_only"
 },
 {
+"title": "[사진]치어리더 임혜진,'즐거워요'",
+"rule": "n25_cheer_gravure"
+},
+{
 "title": "[사진]치어리더 임혜진,'미소가 아름다워'",
 "rule": "n25_cheer_gravure"
 },
@@ -3705,10 +3709,6 @@
 },
 {
 "title": "[사진]치어리더 임혜진,'금발 휘날리며'",
-"rule": "n25_cheer_gravure"
-},
-{
-"title": "[사진]치어리더 임혜진,'즐거워요'",
 "rule": "n25_cheer_gravure"
 },
 {
